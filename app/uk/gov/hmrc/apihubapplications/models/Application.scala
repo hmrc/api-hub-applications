@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models
 
-import play.api.libs.json.{Format, Json, OFormat}
+import play.api.libs.json.{Format, Json}
 
 case class Application (id: Option[String], name: String)
 
