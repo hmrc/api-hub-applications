@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.repositories
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
@@ -25,6 +25,7 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class ApplicationsRepository @Inject()
   (mongoComponent: MongoComponent)
   (implicit ec: ExecutionContext)

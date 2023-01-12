@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents, Request}
@@ -26,6 +26,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class ApplicationsController @Inject()
   (cc: ControllerComponents, applicationsRepository: ApplicationsRepository)
   (implicit ec: ExecutionContext)
