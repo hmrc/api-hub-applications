@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.controllers
 
 import com.google.inject.Inject
+import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.models.Application
@@ -28,7 +29,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApplicationsController @Inject()
   (cc: ControllerComponents, applicationsRepository: ApplicationsRepository)
   (implicit ec: ExecutionContext)
-  extends BackendController(cc) {
+  extends BackendController(cc)
+  with Logging {
 
   def createApplication(): Action[JsValue] = Action(parse.json).async {
     request: Request[JsValue] =>
@@ -38,7 +40,7 @@ class ApplicationsController @Inject()
             .insert(application.copy(id = None))
             .map(saved => Created(Json.toJson(saved)))
         case e: JsError =>
-          println(s"Errors: ${JsError.toJson(e)}")
+          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
   }
