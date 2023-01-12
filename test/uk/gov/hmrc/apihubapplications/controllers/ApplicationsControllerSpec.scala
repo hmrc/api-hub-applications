@@ -35,14 +35,18 @@ import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.models.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ApplicationsControllerSpec
   extends AnyFreeSpec
   with Matchers
   with MockitoSugar
-  with OptionValues {
+  with OptionValues{
+
+
 
   "createApplication" - {
     "must return 201 Created for a valid request" in {
@@ -81,6 +85,26 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.BAD_REQUEST
       }
     }
+
+  }
+  "retrieve all Applications" - {
+    "must return 201 Created for a valid request" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val application1 = Application(Some("1"), "test-app-1")
+        val application2 = Application(Some("2"), "test-app-2")
+
+        val expected_apps = Seq(application1, application2)
+        val expected_json = Json.toJson(expected_apps)
+
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications.url)
+
+        when(fixture.repository.findAll()).thenReturn(Future.successful(expected_apps))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe expected_json
+      }}
 
   }
 
