@@ -1,3 +1,3 @@
 # microservice specific routes
 
-GET        /hello-world             uk.gov.hmrc.apihubapplications.controllers.MicroserviceHelloWorldController.hello
+POST       /applications            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.createApplication

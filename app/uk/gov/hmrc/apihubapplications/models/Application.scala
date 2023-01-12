@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.controllers
+package uk.gov.hmrc.apihubapplications.models
 
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future
+import play.api.libs.json.{Format, Json}
 
-@Singleton()
-class MicroserviceHelloWorldController @Inject()(cc: ControllerComponents)
-    extends BackendController(cc) {
+case class Application (id: Option[String], name: String)
 
-  def hello(): Action[AnyContent] = Action.async {
-    Future.successful(Ok("Hello world"))
-  }
+object Application {
+
+  implicit val applicationFormat: Format[Application] = Json.format[Application]
+
 }
