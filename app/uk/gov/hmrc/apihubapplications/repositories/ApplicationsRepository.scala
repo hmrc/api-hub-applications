@@ -52,6 +52,33 @@ class ApplicationsRepository @Inject()
 
 object ApplicationsRepository {
 
+  /*
+    We have a JSON serializer/deserializer for the Application case class. This
+    reads and writes the "id" element. If its value is None then it is not output.
+
+    Mongo wants the "id" element to be called "_id" with this structure:
+      "_id" : {
+        "$oid" : "63bebf8bbbeccc26c12294e5"
+      }
+
+    The gibberish string is a hex string based on Mongo's internal Id value.
+
+    When we read/write JSON with Mongo we need to transform between the "id"
+    and "_id" structures:
+      1) When reading from Mongo we transform from "_id" to "id" and then use
+         our standard reads to deserialize to an Application object
+      2) When writing to Mongo we need to serialize an Application object using
+         our standard writes and then transform from "id" to "_id"
+
+    Read about Play's JSON transformers here:
+      https://www.playframework.com/documentation/2.8.x/ScalaJsonTransformers
+
+    One problem wth transformers is that they don't work well with optional
+    elements. We only want to apply our write transform when we have Some(id).
+    When we have None we can use the standard write which simply omits id's
+    element.
+   */
+
   private val mongoApplicationWithIdWrites: Writes[Application] =
     Application.applicationFormat.transform(
       json => json.transform(
