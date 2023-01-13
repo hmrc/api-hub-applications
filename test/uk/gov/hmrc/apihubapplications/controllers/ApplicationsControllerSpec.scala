@@ -88,7 +88,7 @@ class ApplicationsControllerSpec
 
   }
   "retrieve all Applications" - {
-    "must return 201 Created for a valid request" in {
+    "must return 200 and a JSON array representing all applications in db" in {
       val fixture = buildFixture()
       running(fixture.application) {
         val application1 = Application(Some("1"), "test-app-1")
