@@ -83,8 +83,7 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
-      }
-    }
+      }}
 
   }
   "retrieve all Applications" - {
