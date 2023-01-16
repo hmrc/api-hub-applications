@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, ControllerComponents, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.models.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -44,6 +44,10 @@ class ApplicationsController @Inject()
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
+  }
+
+  def getApplications: Action[AnyContent] = Action.async { request =>
+    applicationsRepository.findAll().map(apps => Json.toJson(apps)).map(Ok(_))
   }
 
 }
