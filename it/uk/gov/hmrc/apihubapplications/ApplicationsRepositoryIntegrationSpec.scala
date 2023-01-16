@@ -48,4 +48,21 @@ class ApplicationsRepositoryIntegrationSpec
     }
   }
 
+  "read all" - {
+    "must retrieve all applications from MongoDb" in {
+      val application1 = Application(None, "test-app-1")
+      val application2 = Application(None, "test-app-2")
+
+      val result1 = repository.insert(application1).futureValue
+      val result2 = repository.insert(application2).futureValue
+
+      val actual: Set[Application] = repository.findAll().futureValue.toSet
+
+      val expected = Set(result1, result2)
+
+      actual mustEqual expected
+
+    }
+  }
+
 }
