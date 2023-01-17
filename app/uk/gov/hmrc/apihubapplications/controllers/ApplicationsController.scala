@@ -46,8 +46,12 @@ class ApplicationsController @Inject()
       }
   }
 
-  def getApplications: Action[AnyContent] = Action.async { request =>
+  def getApplications: Action[AnyContent] = Action.async {
     applicationsRepository.findAll().map(apps => Json.toJson(apps)).map(Ok(_))
+  }
+
+  def getApplication(id: String): Action[AnyContent] = Action.async {
+    Future.successful(Ok)
   }
 
 }

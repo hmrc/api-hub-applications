@@ -3,3 +3,4 @@
 POST       /applications            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.createApplication
 
 GET       /applications            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications
+GET       /applications/:id        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String)

@@ -35,6 +35,11 @@ class ApplicationsRepository @Inject()
     domainFormat   = mongoApplicationFormat,
     indexes        = Seq.empty
   ) {
+
+  def findById(id: String): Future[Option[Application]] = {
+    Future.successful(None)
+  }
+
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
 
   def insert(application: Application): Future[Application] = {
