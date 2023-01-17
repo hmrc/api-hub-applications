@@ -83,6 +83,13 @@ class ApplicationsRepositoryIntegrationSpec
 
       actual mustBe None
     }
+
+    "must return None when the Id is not a valid Object Id" in {
+      val id = "invalid"
+      val actual = repository.findById(id).futureValue
+
+      actual mustBe None
+    }
   }
 
 }

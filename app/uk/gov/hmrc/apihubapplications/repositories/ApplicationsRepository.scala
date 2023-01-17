@@ -21,11 +21,12 @@ import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.Application
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
 class ApplicationsRepository @Inject()
@@ -41,9 +42,13 @@ class ApplicationsRepository @Inject()
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
 
   def findById(id: String): Future[Option[Application]] = {
-    collection
-      .find(Filters.equal("_id", new ObjectId(id)))
-      .headOption()
+    stringToObjectId(id) match {
+      case Some(objectId) =>
+        collection
+          .find (Filters.equal ("_id", objectId ) )
+          .headOption ()
+      case None => Future.successful(None)
+    }
   }
 
   def insert(application: Application): Future[Application] = {
@@ -111,5 +116,10 @@ object ApplicationsRepository {
       .andThen(Application.applicationFormat)
 
   val mongoApplicationFormat: Format[Application] = Format(mongoApplicationReads, mongoApplicationWrites)
+
+  def stringToObjectId(id: String): Option[ObjectId] = {
+    Try(new ObjectId(id))
+      .toOption
+  }
 
 }
