@@ -17,6 +17,8 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
+import org.bson.types.ObjectId
+import org.mongodb.scala.model.Filters
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
@@ -36,11 +38,13 @@ class ApplicationsRepository @Inject()
     indexes        = Seq.empty
   ) {
 
-  def findById(id: String): Future[Option[Application]] = {
-    Future.successful(None)
-  }
-
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
+
+  def findById(id: String): Future[Option[Application]] = {
+    collection
+      .find(Filters.equal("_id", new ObjectId(id)))
+      .headOption()
+  }
 
   def insert(application: Application): Future[Application] = {
     collection

@@ -21,6 +21,7 @@ import org.scalatest.matchers.must.Matchers
 import models.Application
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
+import org.scalatest.OptionValues
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -29,7 +30,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ApplicationsRepositoryIntegrationSpec
   extends AnyFreeSpec
   with Matchers
-  with DefaultPlayMongoRepositorySupport[Application] {
+  with DefaultPlayMongoRepositorySupport[Application]
+  with OptionValues {
 
   override protected lazy val repository: ApplicationsRepository = {
     new ApplicationsRepository(mongoComponent)
@@ -43,7 +45,7 @@ class ApplicationsRepositoryIntegrationSpec
       println(result.id)
       result.id mustBe defined
 
-      val persisted = find(Filters.equal("_id", new ObjectId(result.id.get))).futureValue.head
+      val persisted = find(Filters.equal("_id", new ObjectId(result.id.value))).futureValue.head
       persisted mustEqual result
     }
   }
@@ -62,6 +64,24 @@ class ApplicationsRepositoryIntegrationSpec
 
       actual mustEqual expected
 
+    }
+  }
+
+  "findById" - {
+    "must return an application when it exists in MongoDb" in {
+      val application = Application(None, "test-app")
+
+      val expected = repository.insert(application).futureValue
+      val actual = repository.findById(expected.id.value).futureValue
+
+      actual mustBe Some(expected)
+    }
+
+    "must return None when the application does not exist in MongoDb" in {
+      val id = List.fill(24)("0").mkString
+      val actual = repository.findById(id).futureValue
+
+      actual mustBe None
     }
   }
 
