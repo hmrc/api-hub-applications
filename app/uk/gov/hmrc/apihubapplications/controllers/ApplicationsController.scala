@@ -51,7 +51,11 @@ class ApplicationsController @Inject()
   }
 
   def getApplication(id: String): Action[AnyContent] = Action.async {
-    Future.successful(Ok)
+    applicationsRepository.findById(id)
+      .map {
+        case Some(application) => Ok(Json.toJson(application))
+        case None => NotFound
+      }
   }
 
 }

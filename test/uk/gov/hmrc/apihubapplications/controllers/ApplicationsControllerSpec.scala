@@ -35,10 +35,8 @@ import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.models.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class ApplicationsControllerSpec
   extends AnyFreeSpec
@@ -103,6 +101,39 @@ class ApplicationsControllerSpec
         contentAsJson(result) mustBe expected_json
       }}
 
+  }
+
+  "getApplication" - {
+    "must return 200 Ok and a JSON body representing the application when it exists in the repository" in {
+      val id = "id"
+      val expected = Application(Some(id), "test-app-name")
+
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.findById(any())).thenReturn(Future.successful(Some(expected)))
+
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(expected)
+
+        verify(fixture.repository).findById(ArgumentMatchers.eq(id))
+      }
+    }
+
+    "must return 404 Not Found when the application does not exist in the repository" in {
+      val id = "id"
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.findById(any())).thenReturn(Future.successful(None))
+
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+      }
+    }
   }
 
 }
