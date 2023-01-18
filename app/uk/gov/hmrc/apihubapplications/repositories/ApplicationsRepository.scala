@@ -17,9 +17,12 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
+import org.bson.types.ObjectId
+import org.mongodb.scala.model.Filters
+import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.Application
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -35,7 +38,18 @@ class ApplicationsRepository @Inject()
     domainFormat   = mongoApplicationFormat,
     indexes        = Seq.empty
   ) {
+
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
+
+  def findById(id: String): Future[Option[Application]] = {
+    stringToObjectId(id) match {
+      case Some(objectId) =>
+        collection
+          .find (Filters.equal ("_id", objectId ) )
+          .headOption ()
+      case None => Future.successful(None)
+    }
+  }
 
   def insert(application: Application): Future[Application] = {
     collection
@@ -52,7 +66,7 @@ class ApplicationsRepository @Inject()
 
 }
 
-object ApplicationsRepository {
+object ApplicationsRepository extends Logging {
 
   /*
     We have a JSON serializer/deserializer for the Application case class. This
@@ -102,5 +116,16 @@ object ApplicationsRepository {
       .andThen(Application.applicationFormat)
 
   val mongoApplicationFormat: Format[Application] = Format(mongoApplicationReads, mongoApplicationWrites)
+
+  def stringToObjectId(id: String): Option[ObjectId] = {
+    try {
+      Some(new ObjectId(id))
+    }
+    catch {
+      case _: IllegalArgumentException =>
+        logger.debug(s"Invalid ObjectId specified: $id")
+        None
+    }
+  }
 
 }
