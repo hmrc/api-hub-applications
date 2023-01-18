@@ -14,13 +14,30 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models
+package uk.gov.hmrc.apihubapplications.models.application
 
 import play.api.libs.json.{Format, Json}
 
-case class Application (id: Option[String], name: String)
+import java.time.LocalDateTime
+
+case class Application (
+  id: Option[String],
+  name: String,
+  created: Option[LocalDateTime],
+  lastUpdated: Option[LocalDateTime],
+  teamMembers: Seq[TeamMember],
+  environments: Environments
+)
 
 object Application {
+
+  def apply(id: Option[String], name: String): Application = {
+    Application(id, name, None, None, Seq.empty, Environments())
+  }
+
+  def apply(name: String): Application = {
+    apply(None, name)
+  }
 
   implicit val applicationFormat: Format[Application] = Json.format[Application]
 

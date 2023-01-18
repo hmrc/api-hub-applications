@@ -33,7 +33,7 @@ import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
-import uk.gov.hmrc.apihubapplications.models.Application
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import scala.concurrent.Future

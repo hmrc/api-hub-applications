@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.Application
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
 
 class ApplicationsRepositorySpec
@@ -34,7 +34,26 @@ class ApplicationsRepositorySpec
           |  "_id" : {
           |    "$oid" : "63bebf8bbbeccc26c12294e5"
           |  },
-          |  "name" : "test-app"
+          |  "name" : "test-app",
+          |  "teamMembers": [],
+          |  "environments": {
+          |    "dev": {
+          |      "scopes": [],
+          |      "credentials": []
+          |    },
+          |    "test": {
+          |      "scopes": [],
+          |      "credentials": []
+          |    },
+          |    "preProd": {
+          |      "scopes": [],
+          |      "credentials": []
+          |    },
+          |    "prod": {
+          |      "scopes": [],
+          |      "credentials": []
+          |    }
+          |  }
           |}
           |""".stripMargin)
 

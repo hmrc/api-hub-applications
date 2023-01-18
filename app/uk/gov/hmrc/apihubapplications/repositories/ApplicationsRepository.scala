@@ -20,12 +20,14 @@ import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import play.api.Logging
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Environments, TeamMember}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -52,13 +54,20 @@ class ApplicationsRepository @Inject()
   }
 
   def insert(application: Application): Future[Application] = {
+    val now = LocalDateTime.now()
+
+    val timestamped = application.copy(
+      created = Some(now),
+      lastUpdated = Some(now)
+    )
+
     collection
       .insertOne(
-        document = application
+        document = timestamped
       )
       .toFuture()
       .map(
-        result => application.copy(
+        result => timestamped.copy(
           id = Some(result.getInsertedId.asObjectId().getValue.toString)
         )
       )
@@ -110,10 +119,33 @@ object ApplicationsRepository extends Logging {
     }
   }
 
-  private val mongoApplicationReads: Reads[Application] =
-    JsPath.json.update((JsPath \ "id").json
-      .copyFrom((JsPath \ "_id" \ "$oid").json.pick))
-      .andThen(Application.applicationFormat)
+//  private val mongoApplicationReads: Reads[Application] =
+//    JsPath.json.update((JsPath \ "id").json
+//      .copyFrom((JsPath \ "_id" \ "$oid").json.pick))
+//      .andThen(Application.applicationFormat)
+
+  private val mongoApplicationReads: Reads[Application] = (
+    (JsPath \ "_id" \ "$oid").read[String] and
+      (JsPath \ "name").read[String] and
+      (JsPath \ "created").readNullable[LocalDateTime] and
+      (JsPath \ "lastUpdated").readNullable[LocalDateTime] and
+      (JsPath \ "teamMembers").readNullable[Seq[TeamMember]] and
+      (JsPath \ "environments").readNullable[Environments]
+  )((
+    id: String,
+    name: String,
+    created: Option[LocalDateTime],
+    lastUpdated: Option[LocalDateTime],
+    teamMembers: Option[Seq[TeamMember]],
+    environments: Option[Environments]
+  ) => Application(
+    Some(id),
+    name,
+    created,
+    lastUpdated,
+    teamMembers.getOrElse(Seq.empty),
+    environments.getOrElse(Environments())
+  ))
 
   val mongoApplicationFormat: Format[Application] = Format(mongoApplicationReads, mongoApplicationWrites)
 

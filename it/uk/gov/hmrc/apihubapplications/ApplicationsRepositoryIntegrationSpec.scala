@@ -18,10 +18,10 @@ package uk.gov.hmrc.apihubapplications
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import models.Application
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
