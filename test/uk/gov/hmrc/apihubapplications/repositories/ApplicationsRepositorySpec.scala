@@ -19,8 +19,10 @@ package uk.gov.hmrc.apihubapplications.repositories
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Environments}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
+
+import java.time.LocalDateTime
 
 class ApplicationsRepositorySpec
   extends AnyFreeSpec
@@ -35,6 +37,8 @@ class ApplicationsRepositorySpec
           |    "$oid" : "63bebf8bbbeccc26c12294e5"
           |  },
           |  "name" : "test-app",
+          |  "created": "2023-01-18T17:00:24.000",
+          |  "lastUpdated": "2023-01-19T17:00:24.000",
           |  "teamMembers": [],
           |  "environments": {
           |    "dev": {
@@ -60,7 +64,15 @@ class ApplicationsRepositorySpec
       val result = json.validate(mongoApplicationFormat)
       result mustBe a [JsSuccess[_]]
 
-      val expected = Application(Some("63bebf8bbbeccc26c12294e5"), "test-app")
+      val expected = Application(
+        Some("63bebf8bbbeccc26c12294e5"),
+        "test-app",
+        LocalDateTime.of(2023, 1, 18, 17, 0 ,24),
+        LocalDateTime.of(2023, 1, 19, 17, 0 ,24),
+        Seq.empty,
+        Environments()
+      )
+
       result.get mustBe expected
     }
 

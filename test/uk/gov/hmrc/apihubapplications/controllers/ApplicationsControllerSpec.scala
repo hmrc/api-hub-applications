@@ -19,9 +19,9 @@ package uk.gov.hmrc.apihubapplications.controllers
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import org.mockito.ArgumentMatchers.any
-import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.mockito.{ArgumentCaptor, ArgumentMatchers, MockitoSugar}
 import org.mockito.MockitoSugar.mock
-import org.scalatest.OptionValues
+import org.scalatest.{OptionValues, color}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.{Application => PlayApplication}
@@ -33,9 +33,10 @@ import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Environments, NewApplication}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
+import java.time.LocalDateTime
 import scala.concurrent.Future
 
 class ApplicationsControllerSpec
@@ -46,10 +47,11 @@ class ApplicationsControllerSpec
 
   "createApplication" - {
     "must return 201 Created for a valid request" in {
+      val start = LocalDateTime.now()
       val fixture = buildFixture()
       running(fixture.application) {
-        val application = Application(None, "test-app")
-        val json = Json.toJson(application)
+        val newApplication = NewApplication("test-app")
+        val json = Json.toJson(newApplication)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.createApplication.url)
           .withHeaders(
@@ -57,14 +59,23 @@ class ApplicationsControllerSpec
           )
           .withBody(json)
 
-        val expected = application.copy(id = Some("test-id"))
+        val expected = Application(newApplication).copy(id = Some("test-id"))
         when(fixture.repository.insert(any())).thenReturn(Future.successful(expected))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
         contentAsJson(result) mustBe Json.toJson(expected)
 
-        verify(fixture.repository).insert(ArgumentMatchers.eq(application))
+        val captor: ArgumentCaptor[Application] = ArgumentCaptor.forClass(classOf[Application])
+        verify(fixture.repository).insert(captor.capture())
+
+        val actual: Application = captor.getValue
+        actual.id mustBe None
+        actual.name mustBe newApplication.name
+        actual.created.isAfter(start) mustBe true
+        actual.lastUpdated mustBe actual.created
+        actual.teamMembers mustBe empty
+        actual.environments mustBe Environments()
       }
     }
 

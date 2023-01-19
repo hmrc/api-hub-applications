@@ -27,6 +27,7 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongo
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.sql.Timestamp
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -54,20 +55,13 @@ class ApplicationsRepository @Inject()
   }
 
   def insert(application: Application): Future[Application] = {
-    val now = LocalDateTime.now()
-
-    val timestamped = application.copy(
-      created = Some(now),
-      lastUpdated = Some(now)
-    )
-
     collection
       .insertOne(
-        document = timestamped
+        document = application
       )
       .toFuture()
       .map(
-        result => timestamped.copy(
+        result => application.copy(
           id = Some(result.getInsertedId.asObjectId().getValue.toString)
         )
       )
@@ -141,8 +135,8 @@ object ApplicationsRepository extends Logging {
   ) => Application(
     Some(id),
     name,
-    created,
-    lastUpdated,
+    created.getOrElse(createdTimestampFromId(id)),
+    lastUpdated.getOrElse(createdTimestampFromId(id)),
     teamMembers.getOrElse(Seq.empty),
     environments.getOrElse(Environments())
   ))
@@ -158,6 +152,10 @@ object ApplicationsRepository extends Logging {
         logger.debug(s"Invalid ObjectId specified: $id")
         None
     }
+  }
+
+  private def createdTimestampFromId(id: String): LocalDateTime = {
+    new Timestamp(new ObjectId(id).getDate.getTime).toLocalDateTime
   }
 
 }

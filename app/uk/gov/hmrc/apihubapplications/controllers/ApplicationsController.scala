@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, NewApplication}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -35,10 +35,10 @@ class ApplicationsController @Inject()
 
   def createApplication(): Action[JsValue] = Action(parse.json).async {
     request: Request[JsValue] =>
-      request.body.validate[Application] match {
-        case JsSuccess(application, _) =>
+      request.body.validate[NewApplication] match {
+        case JsSuccess(newApplication, _) =>
           applicationsRepository
-            .insert(application.copy(id = None))
+            .insert(Application(newApplication))
             .map(saved => Created(Json.toJson(saved)))
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
