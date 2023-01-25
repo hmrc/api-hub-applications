@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications.models.application
 
+import uk.gov.hmrc.apihubapplications.models._
+
 sealed trait EnvironmentName
 
 case object Dev extends WithName("dev") with EnvironmentName

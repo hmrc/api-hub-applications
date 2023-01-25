@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{any, argThat}
 import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.mockito.MockitoSugar.mock
 import org.scalatest.OptionValues
@@ -33,9 +33,10 @@ import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
-import uk.gov.hmrc.apihubapplications.models.Application
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
+import java.time.LocalDateTime
 import scala.concurrent.Future
 
 class ApplicationsControllerSpec
@@ -48,23 +49,23 @@ class ApplicationsControllerSpec
     "must return 201 Created for a valid request" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val application = Application(None, "test-app")
-        val json = Json.toJson(application)
+        val newApplication = NewApplication("test-app",Creator("test1@test.com"))
+        val json = Json.toJson(newApplication)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.createApplication.url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
           .withBody(json)
-
-        val expected = application.copy(id = Some("test-id"))
+        val repositoryArg = Application(newApplication)
+        val expected = repositoryArg.copy(id=Some("test-id"))
         when(fixture.repository.insert(any())).thenReturn(Future.successful(expected))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
         contentAsJson(result) mustBe Json.toJson(expected)
 
-        verify(fixture.repository).insert(ArgumentMatchers.eq(application))
+        verify(fixture.repository).insert(argThat((arg: Application) => arg.copy(created = repositoryArg.created, lastUpdated = repositoryArg.lastUpdated) == repositoryArg))
       }
     }
 
@@ -85,9 +86,10 @@ class ApplicationsControllerSpec
   "retrieve all Applications" - {
     "must return 200 and a JSON array representing all applications in db" in {
       val fixture = buildFixture()
+      val now = LocalDateTime.now()
       running(fixture.application) {
-        val application1 = Application(Some("1"), "test-app-1")
-        val application2 = Application(Some("2"), "test-app-2")
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments())
 
         val expected_apps = Seq(application1, application2)
         val expected_json = Json.toJson(expected_apps)
@@ -105,8 +107,9 @@ class ApplicationsControllerSpec
 
   "getApplication" - {
     "must return 200 Ok and a JSON body representing the application when it exists in the repository" in {
-      val id = "id"
-      val expected = Application(Some(id), "test-app-name")
+      val id = "1"
+      val now = LocalDateTime.now()
+      val expected = Application(Some(id), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val fixture = buildFixture()
       running(fixture.application) {

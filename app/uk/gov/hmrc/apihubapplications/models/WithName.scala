@@ -14,22 +14,8 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.application
+package uk.gov.hmrc.apihubapplications.models
 
-
-import uk.gov.hmrc.apihubapplications.models._
-
-sealed trait ScopeStatus
-
-case object Pending extends WithName("PENDING") with ScopeStatus
-case object Approved extends WithName("APPROVED") with ScopeStatus
-case object Denied extends WithName("DENIED") with ScopeStatus
-
-object ScopeStatus extends Enumerable.Implicits {
-
-  val values: Seq[ScopeStatus] = Seq(Pending, Approved, Denied)
-
-  implicit val enumerable: Enumerable[ScopeStatus] =
-    Enumerable(values.map(value => value.toString -> value): _*)
-
+class WithName(string: String) {
+  override val toString: String = string
 }

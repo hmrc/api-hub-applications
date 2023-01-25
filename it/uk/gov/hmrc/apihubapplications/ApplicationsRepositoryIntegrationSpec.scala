@@ -18,13 +18,15 @@ package uk.gov.hmrc.apihubapplications
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import models.Application
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
+import uk.gov.hmrc.apihubapplications.models.application
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
+import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class ApplicationsRepositoryIntegrationSpec
@@ -39,7 +41,8 @@ class ApplicationsRepositoryIntegrationSpec
 
   "insert" - {
     "must persist an application in MongoDb" in {
-      val application = Application(None, "test-app")
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val result = repository.insert(application).futureValue
       println(result.id)
@@ -52,8 +55,9 @@ class ApplicationsRepositoryIntegrationSpec
 
   "read all" - {
     "must retrieve all applications from MongoDb" in {
-      val application1 = Application(None, "test-app-1")
-      val application2 = Application(None, "test-app-2")
+      val now = LocalDateTime.now()
+      val application1 = Application(None, "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application2 = Application(None, "test-app-2", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val result1 = repository.insert(application1).futureValue
       val result2 = repository.insert(application2).futureValue
@@ -69,7 +73,8 @@ class ApplicationsRepositoryIntegrationSpec
 
   "findById" - {
     "must return an application when it exists in MongoDb" in {
-      val application = Application(None, "test-app")
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val expected = repository.insert(application).futureValue
       val actual = repository.findById(expected.id.value).futureValue
