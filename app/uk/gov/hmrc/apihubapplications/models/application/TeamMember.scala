@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models
+package uk.gov.hmrc.apihubapplications.models.application
 
 import play.api.libs.json.{Format, Json}
 
-case class Application (id: Option[String], name: String)
+case class TeamMember(email: String)
 
-object Application {
+object TeamMember {
 
-  implicit val applicationFormat: Format[Application] = Json.format[Application]
+  implicit val teamMemberFormat: Format[TeamMember] = Json.format[TeamMember]
 
 }
