@@ -21,7 +21,7 @@ import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import play.api.Logging
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.Application
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
