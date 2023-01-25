@@ -19,8 +19,10 @@ package uk.gov.hmrc.apihubapplications.repositories
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.Application
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
+
+import java.time.LocalDateTime
 
 class ApplicationsRepositorySpec
   extends AnyFreeSpec
@@ -28,34 +30,44 @@ class ApplicationsRepositorySpec
 
   "JSON serialisation and deserialisation" - {
     "must successfully deserialise JSON to create an Application object" in {
+      val now = LocalDateTime.now()
       val json = Json.parse(
-        """
-          |{
-          |  "_id" : {
-          |    "$oid" : "63bebf8bbbeccc26c12294e5"
-          |  },
-          |  "name" : "test-app"
-          |}
-          |""".stripMargin)
+        s"""
+           |{
+           |"lastUpdated":"${now.toString}",
+           |"createdBy":{"email":"test1@test.com"},
+           |"environments":{
+           |  "dev":{"scopes":[],"credentials":[]},
+           |  "test":{"scopes":[],"credentials":[]},
+           |  "preProd":{"scopes":[],"credentials":[]},
+           |  "prod":{"scopes":[],"credentials":[]}},
+           |"created":"${now.toString}",
+           |"name":"test-app-1",
+           |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},
+           |"teamMembers":[]
+           |}
+           |""".stripMargin)
 
       val result = json.validate(mongoApplicationFormat)
       result mustBe a [JsSuccess[_]]
 
-      val expected = Application(Some("63bebf8bbbeccc26c12294e5"), "test-app")
+      val expected = Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+
       result.get mustBe expected
     }
 
     "must successfully serialise an Application with an Id" in {
-      val application = Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-with-id")
+      val now = LocalDateTime.now()
+      val application = Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val result = Json.toJson(application)(mongoApplicationFormat)
       (result \ "id") mustBe a [JsUndefined]
       (result \ "_id" \ "$oid") mustBe JsDefined(JsString("63bebf8bbbeccc26c12294e5"))
-      (result \ "name") mustBe JsDefined(JsString("test-app-with-id"))
+      (result \ "name") mustBe JsDefined(JsString("test-app-1"))
     }
 
     "must successfully serialise an Application without an Id" in {
-      val application = Application(None, "test-app-without-id")
+      val application = Application(NewApplication("test-app-without-id",Creator("test1@test.com")))
 
       val result = Json.toJson(application)(mongoApplicationFormat)
       (result \ "id") mustBe a [JsUndefined]
