@@ -33,7 +33,7 @@ class ApplicationsController @Inject()
   extends BackendController(cc)
   with Logging {
 
-  def createApplication(): Action[JsValue] = Action(parse.json).async {
+  def registerApplication(): Action[JsValue] = Action(parse.json).async {
     request: Request[JsValue] =>
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>

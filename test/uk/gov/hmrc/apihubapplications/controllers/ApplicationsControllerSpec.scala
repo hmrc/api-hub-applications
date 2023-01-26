@@ -45,14 +45,14 @@ class ApplicationsControllerSpec
   with MockitoSugar
   with OptionValues {
 
-  "createApplication" - {
+  "registerApplication" - {
     "must return 201 Created for a valid request" in {
       val fixture = buildFixture()
       running(fixture.application) {
         val newApplication = NewApplication("test-app",Creator("test1@test.com"))
         val json = Json.toJson(newApplication)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.createApplication.url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -72,7 +72,7 @@ class ApplicationsControllerSpec
     "must return 400 Bad Request when the JSON is not a valid application" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.createApplication.url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
