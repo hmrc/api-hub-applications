@@ -1,6 +1,6 @@
 # microservice specific routes
 
-POST       /applications            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.createApplication
+POST       /applications            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.registerApplication
 
 GET       /applications            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications
 GET       /applications/:id        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String)
