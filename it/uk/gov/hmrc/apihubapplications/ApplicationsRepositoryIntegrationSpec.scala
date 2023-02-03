@@ -21,7 +21,6 @@ import org.scalatest.matchers.must.Matchers
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
-import uk.gov.hmrc.apihubapplications.models.application
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -45,7 +44,7 @@ class ApplicationsRepositoryIntegrationSpec
       val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val result = repository.insert(application).futureValue
-      println(result.id)
+
       result.id mustBe defined
 
       val persisted = find(Filters.equal("_id", new ObjectId(result.id.value))).futureValue.head
