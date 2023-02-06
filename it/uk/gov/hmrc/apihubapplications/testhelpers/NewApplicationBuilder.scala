@@ -19,15 +19,10 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 import play.api.libs.json.{Json, JsValue}
 import uk.gov.hmrc.apihubapplications.models.application._
 
-
-
-case class NewApplicationBuilder (name: String = "new-app-it-test",
-                                  createdBy: Creator = Creator("new-app-builder-it-tests@hmrc.gov.uk")) {
-
-  def build: NewApplication = NewApplication(name, createdBy)
-}
-
 object NewApplicationBuilder {
+
+  def apply(name: String = "new-app-it-test",
+            createdBy: Creator = Creator("new-app-builder-it-tests@hmrc.gov.uk")): NewApplication = NewApplication(name, createdBy)
 
   implicit class NewApplicationTestExtensions(app: NewApplication) {
     def toJson: JsValue = Json.parse(

@@ -58,7 +58,7 @@ class ApplicationsIntegrationSpec
 
   "POST to register a new application" should {
     "respond with a 201 Created" in {
-      val newApplication = NewApplicationBuilder().build
+      val newApplication = NewApplicationBuilder()
 
       val response =
         wsClient
@@ -73,7 +73,7 @@ class ApplicationsIntegrationSpec
     "add a full Application to the database" in {
       val expectedAppName = "it test new app name"
       val expectedCreatedBy = Creator(email = "it-test-new-app-created-by@email.com")
-      val newApplication = NewApplicationBuilder(name = expectedAppName, createdBy = expectedCreatedBy).build
+      val newApplication = NewApplicationBuilder(name = expectedAppName, createdBy = expectedCreatedBy)
 
        wsClient
           .url(s"$baseUrl/api-hub-applications/applications")
@@ -98,7 +98,7 @@ class ApplicationsIntegrationSpec
         lastUpdated = actualCreationTime,
         teamMembers = Seq.empty,
         environments = Environments(Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty))
-      ).build
+      )
 
       actualApplication shouldBe expectedApplication
     }
@@ -106,8 +106,8 @@ class ApplicationsIntegrationSpec
 
   "GET all application" should {
     "respond with 200 status" in {
-      val insertedApp1 = repository.insert(ApplicationBuilder(name = "app1").build).futureValue
-      val insertedApp2 = repository.insert(ApplicationBuilder(name = "app2").build).futureValue
+      val insertedApp1 = repository.insert(ApplicationBuilder(name = "app1")).futureValue
+      val insertedApp2 = repository.insert(ApplicationBuilder(name = "app2")).futureValue
 
       val response =
         wsClient
