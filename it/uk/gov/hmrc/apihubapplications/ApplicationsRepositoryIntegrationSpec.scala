@@ -115,7 +115,7 @@ class ApplicationsRepositoryIntegrationSpec
         NewScope("scope1", Seq(Dev, Test)),
         NewScope("scope2", Seq(Dev))
       )
-      val expected = repository.addScopes("63daa73a7203df78dcfc89e8", scopes).futureValue
+      val expected = repository.addScopes("63daa73a7203df78dcfc88e9", scopes).futureValue
 
       Some(false) mustBe expected
     }
