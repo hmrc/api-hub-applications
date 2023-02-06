@@ -96,5 +96,39 @@ class ApplicationsRepositoryIntegrationSpec
       actual mustBe None
     }
   }
+  "add scopes" - {
+    "must return true if mongoDB was updated successfully" in {
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev))
+      )
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val result = repository.insert(application).futureValue
+      val expected = repository.addScopes(result.id.get, scopes).futureValue
+
+      Some(true) mustBe expected
+    }
+
+    "must return None when the application does not exist in MongoDb" in {
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev))
+      )
+      val expected = repository.addScopes("63daa73a7203df78dcfc89e8", scopes).futureValue
+
+      Some(false) mustBe expected
+    }
+
+    "must return None when the Id is not a valid Object Id" in {
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev))
+      )
+      val expected = repository.addScopes("invalid", scopes).futureValue
+
+      None mustBe expected
+    }
+  }
 
 }

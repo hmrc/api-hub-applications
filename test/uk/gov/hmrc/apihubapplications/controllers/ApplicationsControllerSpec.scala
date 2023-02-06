@@ -172,7 +172,6 @@ class ApplicationsControllerSpec
       val scopes: Seq[NewScope] = Seq(
         NewScope("scope1", Seq(Dev, Test)),
         NewScope("scope2", Seq(Dev))
-
       )
       val json = Json.toJson(scopes)
       val fixture = buildFixture()
