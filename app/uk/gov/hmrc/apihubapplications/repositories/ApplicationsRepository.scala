@@ -19,12 +19,13 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Updates.{combine, pushEach}
 import play.api.Logging
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,6 +37,7 @@ class ApplicationsRepository @Inject()
     collectionName = "applications",
     mongoComponent = mongoComponent,
     domainFormat   = mongoApplicationFormat,
+    extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat)),
     indexes        = Seq.empty
   ) {
 
@@ -62,6 +64,32 @@ class ApplicationsRepository @Inject()
           id = Some(result.getInsertedId.asObjectId().getValue.toString)
         )
       )
+  }
+
+  def addScopes(applicationId:String, newScopes: Seq[NewScope]) = {
+    stringToObjectId(applicationId) match {
+      case Some(appIdObject) =>
+             val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq[(EnvironmentName,String)]())((m, sc) => m++sc.environments.map(env => (env,sc.name)))
+             val updates = envScopes.groupBy(_._1).map(kv => {
+                val (env, scopes) = (kv._1, kv._2.map(newScope => kv._1 match{
+                  case Prod => Scope(newScope._2, Pending)
+                  case _ => Scope(newScope._2, Approved)
+                }))
+                pushEach(f"environments.$env.scopes", scopes: _*)
+             }).toSeq
+              val res: Future[Some[Boolean]] = collection.updateOne(
+                Filters.equal("_id", appIdObject),
+                combine(updates: _*) //
+              ).toFuture().map(res => {
+                if (res.getMatchedCount==1 && res.getModifiedCount==1)
+                  Some(true)
+                else
+                  Some(false)
+
+              })
+              res
+      case None => Future.successful(None)
+    }
   }
 
 }
