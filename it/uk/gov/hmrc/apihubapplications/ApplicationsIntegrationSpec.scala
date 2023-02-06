@@ -18,22 +18,26 @@ package uk.gov.hmrc.apihubapplications
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.OptionValues
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.{Application => GuideApplication}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Environment, Environments}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.ApplicationBuilder._
+import uk.gov.hmrc.apihubapplications.NewApplicationBuilder._
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import ApplicationBuilder._
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
 
 class ApplicationsIntegrationSpec
   extends AnyWordSpec
      with Matchers
+     with OptionValues
      with GuiceOneServerPerSuite
      with DefaultPlayMongoRepositorySupport[Application] {
 
@@ -52,20 +56,69 @@ class ApplicationsIntegrationSpec
     new ApplicationsRepository(mongoComponent)
   }
 
+  "POST to register a new application" should {
+    "respond with a 201 Created" in {
+      val newApplication = NewApplicationBuilder().build
+
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications")
+          .addHttpHeaders(("Content", "application/json"))
+          .post(newApplication.toJson)
+          .futureValue
+
+      response.status shouldBe 201
+    }
+
+    "add a full Application to the database" in {
+      val expectedAppName = "it test new app name"
+      val expectedCreatedBy = Creator(email = "it-test-new-app-created-by@email.com")
+      val newApplication = NewApplicationBuilder(name = expectedAppName, createdBy = expectedCreatedBy).build
+
+       wsClient
+          .url(s"$baseUrl/api-hub-applications/applications")
+          .addHttpHeaders(("Content", "application/json"))
+          .post(newApplication.toJson)
+          .futureValue
+
+      val applications = repository.findAll().futureValue
+      applications.size shouldBe 1
+
+      val actualApplication = applications.head
+      val hexStringLength = 24
+      actualApplication.id.value.length shouldBe hexStringLength
+
+
+      val actualCreationTime = actualApplication.created
+      val expectedApplication = ApplicationBuilder(
+        id = actualApplication.id,
+        name = expectedAppName,
+        createdBy = expectedCreatedBy,
+        created = actualCreationTime,
+        lastUpdated = actualCreationTime,
+        teamMembers = Seq.empty,
+        environments = Environments(Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty))
+      ).build
+
+      actualApplication shouldBe expectedApplication
+    }
+  }
+
   "GET all application" should {
     "respond with 200 status" in {
       val insertedApp1 = repository.insert(ApplicationBuilder(name = "app1").build).futureValue
       val insertedApp2 = repository.insert(ApplicationBuilder(name = "app2").build).futureValue
 
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications")
-            .addHttpHeaders(("Accept", "application/json"))
-            .get()
-            .futureValue
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications")
+          .addHttpHeaders(("Accept", "application/json"))
+          .get()
+          .futureValue
 
-        response.status shouldBe 200
-        response.json shouldBe Json.arr(insertedApp1.toJson, insertedApp2.toJson)
+      response.status shouldBe 200
+
+      response.json shouldBe Json.arr(insertedApp1.toJson, insertedApp2.toJson)
     }
   }
 

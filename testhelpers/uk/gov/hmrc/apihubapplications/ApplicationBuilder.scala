@@ -7,16 +7,16 @@ import uk.gov.hmrc.apihubapplications.models.application._
 import java.time.LocalDateTime
 
 
-
-case class ApplicationBuilder (name: String = "app-it-test",
-                               created: LocalDateTime = LocalDateTime.now(),
+case class ApplicationBuilder (id: Option[String] = None,
+                               name: String = "app-it-test",
+                               created: LocalDateTime = LocalDateTime.parse("2023-02-06T15:50:36.629"),
                                createdBy: Creator = Creator("app-builder-it-tests@hmrc.gov.uk"),
-                               lastUpdated: LocalDateTime = LocalDateTime.now(),
+                               lastUpdated: LocalDateTime = LocalDateTime.parse("2023-02-06T15:50:36.629"),
                                teamMembers: Seq[TeamMember] = Seq.empty,
                                environments: Environments = Environments(Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty))
                               ) {
 
-  def build: Application = Application(None, name, created, createdBy, lastUpdated, teamMembers, environments)
+  def build: Application = Application(id, name, created, createdBy, lastUpdated, teamMembers, environments)
 }
 
 object ApplicationBuilder {
