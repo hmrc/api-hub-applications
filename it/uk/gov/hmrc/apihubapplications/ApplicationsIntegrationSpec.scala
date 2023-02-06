@@ -27,12 +27,12 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Environment, Environments}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.ApplicationBuilder._
-import uk.gov.hmrc.apihubapplications.NewApplicationBuilder._
+import testhelpers.{ApplicationBuilder, NewApplicationBuilder}
+import testhelpers.NewApplicationBuilder._
+import testhelpers.ApplicationBuilder._
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Random
 
 class ApplicationsIntegrationSpec
   extends AnyWordSpec
