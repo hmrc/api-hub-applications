@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Updates.{combine, pushEach}
+import org.mongodb.scala.model.Updates.{combine, pushEach, set}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -27,6 +27,7 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongo
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
+import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -76,7 +77,7 @@ class ApplicationsRepository @Inject()
                   case _ => Scope(newScope._2, Approved)
                 }))
                 pushEach(f"environments.$env.scopes", scopes: _*)
-             }).toSeq
+             }).toSeq:+set("lastUpdated", LocalDateTime.now().toString)
               collection.updateOne(
                 Filters.equal("_id", appIdObject),
                 combine(updates: _*) //
