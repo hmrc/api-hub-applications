@@ -77,7 +77,7 @@ class ApplicationsRepository @Inject()
                 }))
                 pushEach(f"environments.$env.scopes", scopes: _*)
              }).toSeq
-              val res: Future[Some[Boolean]] = collection.updateOne(
+              collection.updateOne(
                 Filters.equal("_id", appIdObject),
                 combine(updates: _*) //
               ).toFuture().map(res => {
@@ -85,9 +85,7 @@ class ApplicationsRepository @Inject()
                   Some(true)
                 else
                   Some(false)
-
               })
-              res
       case None => Future.successful(None)
     }
   }
