@@ -81,12 +81,7 @@ class ApplicationsRepository @Inject()
               collection.updateOne(
                 Filters.equal("_id", appIdObject),
                 combine(updates: _*) //
-              ).toFuture().map(res => {
-                if (res.getMatchedCount==1 && res.getModifiedCount==1)
-                  Some(true)
-                else
-                  Some(false)
-              })
+              ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
       case None => Future.successful(None)
     }
   }
