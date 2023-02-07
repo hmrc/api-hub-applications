@@ -70,7 +70,7 @@ class ApplicationsRepository @Inject()
   def addScopes(applicationId:String, newScopes: Seq[NewScope]): Future[Option[Boolean]] = {
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
-             val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq[(EnvironmentName,String)])((m, sc) => m++sc.environments.map(env => (env,sc.name)))
+             val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq[(EnvironmentName,String)])((envToScopes, newScope) =>envToScopes++newScope.environments.map(env => (env,newScope.name)))
              val updates = envScopes.groupBy(_._1).map(kv => {
                 val (env, scopes) = (kv._1, kv._2.map(newScope => kv._1 match{
                   case Prod => Scope(newScope._2, Pending)
