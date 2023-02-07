@@ -225,27 +225,15 @@ class ApplicationsControllerSpec
         .addProdScope(Scope("app-1-scope-1", Pending))
         .addProdScope(Scope("app-1-scope-2", Approved))
 
-      val application2 = testApplication
-        .addProdScope(Scope("app-2-scope-1", Approved))
-
-      val application3 = testApplication
-        .addPreProdScope(Scope("app-3-scope-1", Pending))
-
-      val application4 = testApplication
-        .addTestScope(Scope("app-4-scope-1", Pending))
-
-      val application5 = testApplication
-        .addDevScope(Scope("app-5-scope-1", Pending))
-
       val application6 = testApplication
         .addProdScope(Scope("app-6-scope-1", Pending))
 
       val applications = Seq(
         application1,
-        application2,
-        application3,
-        application4,
-        application5,
+        testApplication.addProdScope(Scope("app-2-scope-1", Approved)),
+        testApplication.addPreProdScope(Scope("app-3-scope-1", Pending)),
+        testApplication.addTestScope(Scope("app-4-scope-1", Pending)),
+        testApplication.addDevScope(Scope("app-5-scope-1", Pending)),
         application6
       )
 
