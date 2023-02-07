@@ -21,6 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, NewApplication, NewScope}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -74,6 +75,16 @@ class ApplicationsController @Inject()
           Future.successful(BadRequest)
       }
     }
+  }
+
+  def pendingScopes: Action[AnyContent] = Action.async {
+    applicationsRepository.findAll()
+      .map(
+        applications =>
+          applications.filter(_.hasProdPendingScope)
+      )
+      .map(Json.toJson(_))
+      .map(Ok(_))
   }
 
 }

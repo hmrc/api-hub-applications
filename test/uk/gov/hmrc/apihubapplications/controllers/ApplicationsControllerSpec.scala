@@ -35,9 +35,11 @@ import play.api.test.{FakeRequest, Helpers}
 import sttp.model.StatusCode.NoContent
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import java.time.LocalDateTime
+import java.util.UUID
 import scala.concurrent.Future
 
 class ApplicationsControllerSpec
@@ -215,7 +217,52 @@ class ApplicationsControllerSpec
       }
     }
 
+  }
 
+  "pendingScopes" - {
+    "must return 200 and only applications with pending production scopes" in {
+      val application1 = testApplication
+        .addProdScope(Scope("app-1-scope-1", Pending))
+        .addProdScope(Scope("app-1-scope-2", Approved))
+
+      val application2 = testApplication
+        .addProdScope(Scope("app-2-scope-1", Approved))
+
+      val application3 = testApplication
+        .addPreProdScope(Scope("app-3-scope-1", Pending))
+
+      val application4 = testApplication
+        .addTestScope(Scope("app-4-scope-1", Pending))
+
+      val application5 = testApplication
+        .addDevScope(Scope("app-5-scope-1", Pending))
+
+      val application6 = testApplication
+        .addProdScope(Scope("app-6-scope-1", Pending))
+
+      val applications = Seq(
+        application1,
+        application2,
+        application3,
+        application4,
+        application5,
+        application6
+      )
+
+      val expected = Seq(application1, application6)
+
+      val fixture = buildFixture()
+      when(fixture.repository.findAll()).thenReturn(Future.successful(applications))
+
+      running(fixture.application) {
+        val request = FakeRequest(GET, routes.ApplicationsController.pendingScopes.url)
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(expected)
+      }
+    }
   }
 
 }
@@ -239,6 +286,12 @@ object ApplicationsControllerSpec {
       .build()
 
     Fixture(application, repository)
+  }
+
+  private val testCreator = Creator("test@email.com")
+
+  def testApplication: Application = {
+    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator)
   }
 
 }
