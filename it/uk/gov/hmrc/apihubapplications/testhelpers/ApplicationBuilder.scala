@@ -33,57 +33,5 @@ object ApplicationBuilder {
             environments: Environments = Environments(Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty), Environment(Seq.empty, Seq.empty))
            ): Application = Application(id, name, created, createdBy, lastUpdated, teamMembers, environments)
 
-  implicit class ApplicationTestExtensions(app: Application) {
-    def toJson: JsonNode = Json.parse(
-      s"""
-         |{
-         |  "id" : "${app.id.getOrElse("")}",
-         |  "name" : "${app.name}",
-         |  "created" : "${app.created}",
-         |  "createdBy" : {
-         |    "email" : "${app.createdBy.email}"
-         |  },
-         |  "lastUpdated" : "${app.lastUpdated}",
-         |  "teamMembers" : [
-         |
-         |  ],
-         |  "environments" : {
-         |    "dev" : {
-         |      "scopes" : [
-         |
-         |      ],
-         |      "credentials" : [
-         |
-         |      ]
-         |    },
-         |    "test" : {
-         |      "scopes" : [
-         |
-         |      ],
-         |      "credentials" : [
-         |
-         |      ]
-         |    },
-         |    "preProd" : {
-         |      "scopes" : [
-         |
-         |      ],
-         |      "credentials" : [
-         |
-         |      ]
-         |    },
-         |    "prod" : {
-         |      "scopes" : [
-         |
-         |      ],
-         |      "credentials" : [
-         |
-         |      ]
-         |    }
-         |  }
-         |}
-         |""".stripMargin)
-  }
-
 
 }

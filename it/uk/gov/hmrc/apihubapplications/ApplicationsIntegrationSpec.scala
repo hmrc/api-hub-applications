@@ -28,8 +28,6 @@ import play.api.libs.ws.WSClient
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Environment, Environments}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import testhelpers.{ApplicationBuilder, NewApplicationBuilder}
-import testhelpers.NewApplicationBuilder._
-import testhelpers.ApplicationBuilder._
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -64,7 +62,7 @@ class ApplicationsIntegrationSpec
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications")
           .addHttpHeaders(("Content", "application/json"))
-          .post(newApplication.toJson)
+          .post(Json.toJson(newApplication))
           .futureValue
 
       response.status shouldBe 201
@@ -78,7 +76,7 @@ class ApplicationsIntegrationSpec
        wsClient
           .url(s"$baseUrl/api-hub-applications/applications")
           .addHttpHeaders(("Content", "application/json"))
-          .post(newApplication.toJson)
+          .post(Json.toJson(newApplication))
           .futureValue
 
       val applications = repository.findAll().futureValue
@@ -118,7 +116,7 @@ class ApplicationsIntegrationSpec
 
       response.status shouldBe 200
 
-      response.json shouldBe Json.arr(insertedApp1.toJson, insertedApp2.toJson)
+      response.json shouldBe Json.toJson(Seq(insertedApp1, insertedApp2))
     }
   }
 

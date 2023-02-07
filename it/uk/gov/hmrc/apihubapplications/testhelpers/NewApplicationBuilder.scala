@@ -24,17 +24,4 @@ object NewApplicationBuilder {
   def apply(name: String = "new-app-it-test",
             createdBy: Creator = Creator("new-app-builder-it-tests@hmrc.gov.uk")): NewApplication = NewApplication(name, createdBy)
 
-  implicit class NewApplicationTestExtensions(app: NewApplication) {
-    def toJson: JsValue = Json.parse(
-      s"""
-         |{
-         |  "name" : "${app.name}",
-         |  "createdBy" : {
-         |    "email" : "${app.createdBy.email}"
-         |  }
-         |}
-         |""".stripMargin)
-  }
-
-
 }
