@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Updates.{combine, pushEach, set}
+import org.mongodb.scala.model.Updates.{addEachToSet, addToSet, combine, pushEach, set}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -67,7 +67,7 @@ class ApplicationsRepository @Inject()
       )
   }
 
-  def addScopes(applicationId:String, newScopes: Seq[NewScope]) = {
+  def addScopes(applicationId:String, newScopes: Seq[NewScope]): Future[Option[Boolean]] = {
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
              val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq[(EnvironmentName,String)]())((m, sc) => m++sc.environments.map(env => (env,sc.name)))
@@ -76,7 +76,7 @@ class ApplicationsRepository @Inject()
                   case Prod => Scope(newScope._2, Pending)
                   case _ => Scope(newScope._2, Approved)
                 }))
-                pushEach(f"environments.$env.scopes", scopes: _*)
+                addEachToSet(f"environments.$env.scopes", scopes: _*)
              }).toSeq:+set("lastUpdated", LocalDateTime.now().toString)
               collection.updateOne(
                 Filters.equal("_id", appIdObject),

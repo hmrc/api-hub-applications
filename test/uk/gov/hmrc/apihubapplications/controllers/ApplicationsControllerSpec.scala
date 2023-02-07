@@ -205,7 +205,6 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        //when(fixture.repository.addScopes(any(),any())).thenReturn(Future.successful(None))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
