@@ -39,7 +39,6 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import java.time.LocalDateTime
 import scala.concurrent.Future
-import scala.util.Success
 
 class ApplicationsControllerSpec
   extends AnyFreeSpec
