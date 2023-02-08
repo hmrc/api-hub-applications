@@ -125,4 +125,40 @@ class ApplicationsIntegrationSpec
     }
   }
 
+  "GET application by ID" should {
+    "respond with 200 status and the found application" in {
+      val applicationWithIdGenerator = applicationGenerator.arbitrary.suchThat(_.id.isDefined)
+
+      forAll (applicationWithIdGenerator) { (application: Application) =>
+        deleteAll().futureValue
+
+        insert(application).futureValue
+
+        val storedApplication = findAll().futureValue.head
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .addHttpHeaders(("Accept", "application/json"))
+            .get()
+            .futureValue
+
+        response.status shouldBe 200
+        response.json shouldBe Json.toJson(storedApplication)
+      }
+    }
+
+    "respond with 404 status if the application cannot be found" in {
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id")
+          .addHttpHeaders(("Accept", "application/json"))
+          .get()
+          .futureValue
+
+      response.status shouldBe 404
+
+    }
+  }
+
 }
