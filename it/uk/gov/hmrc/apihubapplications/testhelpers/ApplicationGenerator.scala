@@ -23,11 +23,11 @@ import java.time.{Instant, LocalDateTime, ZoneId}
 
 trait ApplicationGenerator {
 
-  implicit val appIdGenerator: Gen[Option[String]] = {
-    Gen.option(Gen.listOfN(24, Gen.hexChar).map(_.mkString))
+  val appIdGenerator: Gen[Option[String]] = {
+    Gen.option(Gen.listOfN(24, Gen.hexChar).map(_.mkString.toLowerCase))
   }
 
-  implicit val localDateTimeGenerator: Gen[LocalDateTime] = {
+  val localDateTimeGenerator: Gen[LocalDateTime] = {
     for {
       calendar <- Gen.calendar
     } yield LocalDateTime.ofInstant(Instant.ofEpochMilli(calendar.getTimeInMillis), ZoneId.of("GMT"))
@@ -40,40 +40,40 @@ trait ApplicationGenerator {
     } yield s"$username$emailDomain"
   }
 
-  implicit val creatorGenerator: Gen[Creator] = {
+  val creatorGenerator: Gen[Creator] = {
     for {
       email <- emailGenerator
     } yield Creator(email)
   }
 
-  implicit val teamMemberGenerator: Gen[TeamMember] = {
+  val teamMemberGenerator: Gen[TeamMember] = {
     for {
       email <- emailGenerator
     } yield TeamMember(email)
   }
 
-  implicit val scopeGenerator: Gen[Scope] = {
+  val scopeGenerator: Gen[Scope] = {
     for {
       name <- Gen.alphaStr
       status <- Gen.oneOf(ScopeStatus.values)
     } yield Scope(name, status)
   }
 
-  implicit val credentialGenerator: Gen[Credential] = {
+  val credentialGenerator: Gen[Credential] = {
     for {
       clientId <- Gen.uuid
       clientSecret <- Gen.uuid
     } yield Credential(clientId.toString, clientSecret.toString)
   }
 
-  implicit val environmentGenerator: Gen[Environment] = {
+  val environmentGenerator: Gen[Environment] = {
     for {
       scopes <- Gen.listOf(scopeGenerator)
       credentials <- Gen.listOf(credentialGenerator)
     } yield Environment(scopes, credentials)
   }
 
-  implicit val environmentsGenerator: Gen[Environments] = {
+  val environmentsGenerator: Gen[Environments] = {
     for {
       dev <- environmentGenerator
       test <- environmentGenerator
@@ -82,8 +82,7 @@ trait ApplicationGenerator {
     } yield Environments(dev, test, preProd, prod)
   }
 
-  implicit val applicationGenerator: Arbitrary[Application] =
-  Arbitrary {
+  implicit val applicationGenerator: Arbitrary[Application] = Arbitrary {
     for {
       appId <- appIdGenerator
       name <- Gen.alphaStr
@@ -104,6 +103,8 @@ trait ApplicationGenerator {
     )
   }
 
+  val applicationWithIdGenerator: Gen[Application] = applicationGenerator.arbitrary.suchThat(_.id.isDefined)
+
   implicit val newApplicationGenerator: Arbitrary[NewApplication] =
     Arbitrary {
       for {
@@ -115,6 +116,17 @@ trait ApplicationGenerator {
           createdBy
         )
     }
+
+  val newScopeGenerator: Gen[NewScope] = {
+    for {
+      name <- Gen.alphaStr.suchThat(_.nonEmpty)
+      environments <- Gen.atLeastOne(EnvironmentName.values)
+    } yield NewScope(name, environments.toSeq)
+  }
+
+  implicit val newScopesGenerator: Gen[Seq[NewScope]] = {
+    Gen.listOf(newScopeGenerator)
+  }
 
 
 }

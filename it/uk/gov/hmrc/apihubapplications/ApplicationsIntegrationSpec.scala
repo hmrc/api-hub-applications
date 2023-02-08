@@ -26,7 +26,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Environment, NewApplication}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Environment, Environments, NewApplication, NewScope, Pending, ScopeStatus}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -127,8 +127,6 @@ class ApplicationsIntegrationSpec
 
   "GET application by ID" should {
     "respond with 200 status and the found application" in {
-      val applicationWithIdGenerator = applicationGenerator.arbitrary.suchThat(_.id.isDefined)
-
       forAll (applicationWithIdGenerator) { (application: Application) =>
         deleteAll().futureValue
 
@@ -158,6 +156,25 @@ class ApplicationsIntegrationSpec
 
       response.status shouldBe 404
 
+    }
+  }
+
+  "POST to add scopes to environments of an application" should {
+    "respond with a 204 No Content" in {
+      forAll (applicationWithIdGenerator, newScopesGenerator) { (application: Application, newScopes: Seq[NewScope]) =>
+        deleteAll().futureValue
+
+        insert(application).futureValue
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+            .addHttpHeaders(("Content", "application/json"))
+            .post(Json.toJson(newScopes))
+            .futureValue
+
+        response.status shouldBe 204
+      }
     }
   }
 
