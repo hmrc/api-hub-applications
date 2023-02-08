@@ -20,7 +20,8 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, NewApplication}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, NewApplication, NewScope}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -56,6 +57,34 @@ class ApplicationsController @Inject()
         case Some(application) => Ok(Json.toJson(application))
         case None => NotFound
       }
+  }
+
+  def addScopes(id: String): Action[JsValue] = Action(parse.json).async{
+    request: Request[JsValue] => {
+      val jsReq = request.body
+      jsReq.validate[Seq[NewScope]] match {
+        case JsSuccess(scopes, _) =>
+          applicationsRepository
+            .addScopes(id, scopes)
+            .map(_ match {
+              case Some(true) => NoContent
+              case _ => NotFound
+            })
+        case e: JsError =>
+          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+    }
+  }
+
+  def pendingScopes: Action[AnyContent] = Action.async {
+    applicationsRepository.findAll()
+      .map(
+        applications =>
+          applications.filter(_.hasProdPendingScope)
+      )
+      .map(Json.toJson(_))
+      .map(Ok(_))
   }
 
 }

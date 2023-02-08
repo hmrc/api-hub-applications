@@ -32,11 +32,14 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
+import sttp.model.StatusCode.NoContent
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import java.time.LocalDateTime
+import java.util.UUID
 import scala.concurrent.Future
 
 class ApplicationsControllerSpec
@@ -139,6 +142,117 @@ class ApplicationsControllerSpec
     }
   }
 
+  "add scopes" - {
+    "must return 204 NoContent" in {
+      val id = "1"
+      val scopes:Seq[NewScope] = Seq(
+        NewScope("scope1",Seq(Dev,Test)),
+        NewScope("scope2", Seq(Dev))
+
+      )
+      val json = Json.toJson(scopes)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.addScopes(id,scopes)).thenReturn(Future.successful(Some(true) ))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+        .withHeaders(
+          CONTENT_TYPE -> "application/json"
+        )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe NoContent.code
+
+        verify(fixture.repository).addScopes(ArgumentMatchers.eq(id), ArgumentMatchers.eq(scopes))
+      }
+    }
+
+    "must return 404 Not Found when adding new scopes but the application does not exist in the repository" in {
+      val id = "id"
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev))
+      )
+      val json = Json.toJson(scopes)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.addScopes(any(),any())).thenReturn(Future.successful(None))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+      }
+    }
+    "must return 400 badRequest when adding new scopes with invalid environment value" in {
+      val id = "id"
+      val json = Json.parse(
+        s"""
+           |[
+           |  {
+           |    "name": "my-scope-name-1",
+           |    "environments": ["dev", "test"]
+           |  },
+           |  {
+           |    "name": "my-scope-name-2",
+           |    "environments": ["invalid"]
+           |  }
+           |]
+           |""".stripMargin)
+
+      val fixture = buildFixture()
+      running(fixture.application) {
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
+    }
+
+  }
+
+  "pendingScopes" - {
+    "must return 200 and only applications with pending production scopes" in {
+      val application1 = testApplication
+        .addProdScope(Scope("app-1-scope-1", Pending))
+        .addProdScope(Scope("app-1-scope-2", Approved))
+
+      val application6 = testApplication
+        .addProdScope(Scope("app-6-scope-1", Pending))
+
+      val applications = Seq(
+        application1,
+        testApplication.addProdScope(Scope("app-2-scope-1", Approved)),
+        testApplication.addPreProdScope(Scope("app-3-scope-1", Pending)),
+        testApplication.addTestScope(Scope("app-4-scope-1", Pending)),
+        testApplication.addDevScope(Scope("app-5-scope-1", Pending)),
+        application6
+      )
+
+      val expected = Seq(application1, application6)
+
+      val fixture = buildFixture()
+      when(fixture.repository.findAll()).thenReturn(Future.successful(applications))
+
+      running(fixture.application) {
+        val request = FakeRequest(GET, routes.ApplicationsController.pendingScopes.url)
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(expected)
+      }
+    }
+  }
+
 }
 
 object ApplicationsControllerSpec {
@@ -160,6 +274,12 @@ object ApplicationsControllerSpec {
       .build()
 
     Fixture(application, repository)
+  }
+
+  private val testCreator = Creator("test@email.com")
+
+  def testApplication: Application = {
+    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator)
   }
 
 }

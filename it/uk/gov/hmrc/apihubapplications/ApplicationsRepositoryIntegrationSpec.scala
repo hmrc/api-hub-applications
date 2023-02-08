@@ -95,5 +95,102 @@ class ApplicationsRepositoryIntegrationSpec
       actual mustBe None
     }
   }
+  "add scopes" - {
+    "must return true if mongoDB was updated successfully with multiple scopes" in {
+
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev)),
+        NewScope("scope3", Seq(PreProd)),
+        NewScope("scope4", Seq(Prod)),
+      )
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val result = repository.insert(application).futureValue
+      val expected = repository.addScopes(result.id.get, scopes).futureValue
+      val actual_app = repository.findById(result.id.get).futureValue.value
+      Some(true) mustBe expected
+      val expectedEnvs = Environments(
+        Environment(Seq(
+          Scope("scope1", Approved),
+          Scope("scope2", Approved)
+        ), Seq.empty),
+        Environment(Seq(
+          Scope("scope1", Approved)
+        ), Seq.empty),
+        Environment(Seq(
+          Scope("scope3", Approved)
+        ), Seq.empty),
+        Environment(Seq(
+          Scope("scope4", Pending)
+        ), Seq.empty)
+      )
+      Some(true) mustBe expected
+      actual_app.environments mustBe expectedEnvs
+
+    }
+
+    "must update db with new scopes, some of which are duplicating existing application's scopes. Duplicates must be void" in {
+
+      val now = LocalDateTime.now()
+      val envs = Environments(Environment(Seq(
+        Scope("existing dev scope", Approved)
+      ), Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq(
+          Scope("existing prod scope", Pending)
+        ),
+          Seq.empty))
+
+      val scopes = Seq(
+        NewScope("new dev scope", Seq(Dev)),
+        NewScope("existing dev scope", Seq(Dev)),//this one must be ignored
+        NewScope("new prod scope", Seq(Prod))
+      )
+
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, envs)
+      val result = repository.insert(application).futureValue
+      val expected = repository.addScopes(result.id.get, scopes).futureValue
+      val actual_app = repository.findById(result.id.get).futureValue.value
+      Some(true) mustBe expected
+      val expectedEnvs = Environments(
+        Environment(Seq(
+          Scope("existing dev scope", Approved),
+          Scope("new dev scope", Approved)
+        ), Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq(
+          Scope("existing prod scope", Pending),
+          Scope("new prod scope", Pending)
+        ), Seq.empty),
+      )
+      Some(true) mustBe expected
+      actual_app.environments mustBe expectedEnvs
+    }
+
+
+    "Must return None when when attempting to add scopes and the application does not exist in MongoDb" in {
+
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev))
+      )
+      val expected = repository.addScopes("9999999999999aaaaaaaaaaa", scopes).futureValue
+
+      Some(false) mustBe expected
+    }
+
+    "must return None when the Id is not a valid Object Id" in {
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev))
+      )
+      val expected = repository.addScopes("invalid", scopes).futureValue
+
+      None mustBe expected
+    }
+  }
 
 }
