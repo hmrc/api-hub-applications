@@ -32,6 +32,7 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
+import sttp.model.StatusCode.NoContent
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
@@ -137,6 +138,84 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.NOT_FOUND
       }
     }
+  }
+
+  "add scopes" - {
+    "must return 204 NoContent" in {
+      val id = "1"
+      val scopes:Seq[NewScope] = Seq(
+        NewScope("scope1",Seq(Dev,Test)),
+        NewScope("scope2", Seq(Dev))
+
+      )
+      val json = Json.toJson(scopes)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.addScopes(id,scopes)).thenReturn(Future.successful(Some(true) ))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+        .withHeaders(
+          CONTENT_TYPE -> "application/json"
+        )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe NoContent.code
+
+        verify(fixture.repository).addScopes(ArgumentMatchers.eq(id), ArgumentMatchers.eq(scopes))
+      }
+    }
+
+    "must return 404 Not Found when adding new scopes but the application does not exist in the repository" in {
+      val id = "id"
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Dev, Test)),
+        NewScope("scope2", Seq(Dev))
+      )
+      val json = Json.toJson(scopes)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.addScopes(any(),any())).thenReturn(Future.successful(None))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+      }
+    }
+    "must return 400 badRequest when adding new scopes with invalid environment value" in {
+      val id = "id"
+      val json = Json.parse(
+        s"""
+           |[
+           |  {
+           |    "name": "my-scope-name-1",
+           |    "environments": ["dev", "test"]
+           |  },
+           |  {
+           |    "name": "my-scope-name-2",
+           |    "environments": ["invalid"]
+           |  }
+           |]
+           |""".stripMargin)
+
+      val fixture = buildFixture()
+      running(fixture.application) {
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
+    }
+
+
   }
 
 }

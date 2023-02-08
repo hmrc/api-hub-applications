@@ -75,6 +75,16 @@ class ApplicationsRepositorySpec
       (result \ "name") mustBe JsDefined(JsString("test-app-without-id"))
     }
 
+    "must successfully serialise a collection of new scopes" in {
+      val newScopes = Seq(NewScope("scope1", Seq(Dev,Test)), NewScope("scope2", Seq(Prod)))
+      val result = Json.toJson(newScopes)
+      (result \ 0 \"name") mustBe JsDefined(JsString("scope1"))
+      (result \ 0 \"environments" \ 0) mustBe JsDefined(JsString("dev"))
+      (result \ 0 \"environments" \ 1) mustBe JsDefined(JsString("test"))
+      (result \ 1 \"name") mustBe JsDefined(JsString("scope2"))
+      (result \ 1 \"environments" \ 0) mustBe JsDefined(JsString("prod"))
+    }
+
   }
 
 }

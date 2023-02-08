@@ -19,13 +19,15 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
 import play.api.Logging
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
+import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -36,6 +38,7 @@ class ApplicationsRepository @Inject()
     collectionName = "applications",
     mongoComponent = mongoComponent,
     domainFormat   = mongoApplicationFormat,
+    extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat)),
     indexes        = Seq.empty
   ) {
 
@@ -62,6 +65,25 @@ class ApplicationsRepository @Inject()
           id = Some(result.getInsertedId.asObjectId().getValue.toString)
         )
       )
+  }
+
+  def addScopes(applicationId:String, newScopes: Seq[NewScope]): Future[Option[Boolean]] = {
+    stringToObjectId(applicationId) match {
+      case Some(appIdObject) =>
+             val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq.empty[(EnvironmentName,String)])((envToScopes, newScope) =>envToScopes++newScope.environments.map(env => (env,newScope.name)))
+             val updates = envScopes.groupBy(_._1).map(kv => {
+                val (env, scopes) = (kv._1, kv._2.map(newScope => kv._1 match{
+                  case Prod => Scope(newScope._2, Pending)
+                  case _ => Scope(newScope._2, Approved)
+                }))
+                addEachToSet(f"environments.$env.scopes", scopes: _*)
+             }).toSeq:+set("lastUpdated", LocalDateTime.now().toString)
+              collection.updateOne(
+                Filters.equal("_id", appIdObject),
+                combine(updates: _*) //
+              ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
+      case None => Future.successful(None)
+    }
   }
 
 }
