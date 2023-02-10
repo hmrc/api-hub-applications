@@ -205,4 +205,26 @@ class ApplicationsIntegrationSpec
     }
   }
 
+  "GET pending scopes" should {
+    "respond with a 200 and a list applications that have the status of pending for prod" in {
+      val pendingScopes = Seq(Scope("my-scope", Pending))
+
+      val appWithPendingTestScopes = applicationWithIdGenerator.sample.get.setTestScopes(pendingScopes)
+      val appWithPendingProdScopes = applicationWithIdGenerator.sample.get.setProdScopes(pendingScopes)
+
+      deleteAll().futureValue
+      insert(appWithPendingTestScopes).futureValue
+      insert(appWithPendingProdScopes).futureValue
+
+      val response = wsClient
+        .url(s"$baseUrl/api-hub-applications/applications/pending-scopes")
+        .addHttpHeaders(("Accept", "application/json"))
+        .get()
+        .futureValue
+
+     response.status shouldBe 200
+      response.json shouldBe Json.toJson(Seq(appWithPendingProdScopes))
+    }
+  }
+
 }
