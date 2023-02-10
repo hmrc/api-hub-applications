@@ -29,8 +29,8 @@ import play.api.libs.ws.WSClient
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
+import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses._
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -240,7 +240,7 @@ class ApplicationsIntegrationSpec
 
     "set the status of scopes to approved in all environments except prod, and pending in prod" in {
       forAll { application: Application =>
-        val emptyScopesApp = application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
+        val emptyScopesApp = application.withEmptyScopes
 
         deleteAll().futureValue
         insert(emptyScopesApp).futureValue
@@ -268,10 +268,8 @@ class ApplicationsIntegrationSpec
   "GET pending scopes" should {
     "respond with a 200 and a list applications that have the status of pending for prod" in {
       forAll { (application1: Application, application2: Application) =>
-        val pendingScopes = Seq(Scope("my-scope", Pending))
-
-        val appWithPendingTestScopes = application1.setTestScopes(pendingScopes).setDevScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
-        val appWithPendingProdScopes = application2.setProdScopes(pendingScopes).setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty)
+        val appWithPendingTestScopes = application1.withEmptyScopes.withTestPendingScopes
+        val appWithPendingProdScopes = application2.withEmptyScopes.withProdPendingScopes
 
         deleteAll().futureValue
         insert(appWithPendingTestScopes).futureValue
