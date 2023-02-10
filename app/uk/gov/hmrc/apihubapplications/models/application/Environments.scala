@@ -23,7 +23,15 @@ case class Environments(
   test: Environment,
   preProd: Environment,
   prod: Environment
-)
+){
+  def getEnvironment(environmentName: String): Option[Environment] = environmentName.toLowerCase() match {
+    case "dev" => Some(dev)
+    case "test" => Some(test)
+    case "preprod" => Some(preProd)
+    case "prod" => Some(prod)
+    case _ => None
+  }
+}
 
 object Environments {
 

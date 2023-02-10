@@ -20,8 +20,9 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, NewApplication, NewScope}
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -85,6 +86,27 @@ class ApplicationsController @Inject()
       )
       .map(Json.toJson(_))
       .map(Ok(_))
+  }
+
+  def setPendingScope(id:String,environment:String, scopename:String): Action[JsValue] = Action(parse.json).async {
+    request: Request[JsValue] => {
+      val jsReq = request.body
+      jsReq.validate[UpdateScopeStatus] match {
+        case JsSuccess(updateStatus@UpdateScopeStatus(Approved), _) =>
+          applicationsRepository
+            .setScope(id, environment, scopename,updateStatus).map(_ match {
+            case Some(true) => NoContent
+            case _ => NotFound
+          })
+        case JsSuccess(bla,_)  => {
+          println(f"BLA: $bla")
+          Future.successful(BadRequest)
+        }
+        case e: JsError =>
+          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+    }
   }
 
 }

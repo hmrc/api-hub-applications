@@ -1,8 +1,10 @@
 # microservice specific routes
 
-POST       /applications                                uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.registerApplication
-POST       /applications/:id/environments/scopes        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addScopes(id: String)
+PUT        /applications/:id/environment/:environment/scopes/:scopename            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.setPendingScope(id:String,environment:String, scopename:String)
+POST       /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.registerApplication
+POST       /applications/:id/environments/scopes                                    uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addScopes(id: String)
 
-GET        /applications/pending-scopes                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.pendingScopes
-GET        /applications                                uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications
-GET        /applications/:id                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String)
+
+GET        /applications/pending-scopes                                             uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.pendingScopes
+GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications
+GET        /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String)
