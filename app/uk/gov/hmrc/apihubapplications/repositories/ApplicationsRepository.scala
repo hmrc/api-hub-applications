@@ -93,11 +93,10 @@ class ApplicationsRepository @Inject()
   }
 
   def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus)= {
-    val status_value= updateStatus.status.toString
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
           val updates = Seq(
-            set(f"environments.$env.scopes.$$.status", status_value),
+            set(f"environments.$env.scopes.$$.status", updateStatus.status.toString),
             set("lastUpdated", LocalDateTime.now().toString)
           )
           collection.updateOne(

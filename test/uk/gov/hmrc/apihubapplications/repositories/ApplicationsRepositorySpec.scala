@@ -20,6 +20,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
 
 import java.time.LocalDateTime
@@ -83,6 +84,23 @@ class ApplicationsRepositorySpec
       (result \ 0 \"environments" \ 1) mustBe JsDefined(JsString("test"))
       (result \ 1 \"name") mustBe JsDefined(JsString("scope2"))
       (result \ 1 \"environments" \ 0) mustBe JsDefined(JsString("prod"))
+    }
+
+    "must successfully de-serialise a collection of new scopes" in {
+      val newScopeJson: JsValue = Json.parse(s"""[{"name":"scope1","environments":["dev","test"]},{"name":"scope2","environments":["prod"]}]""".stripMargin)
+      val result = newScopeJson.validate[Seq[NewScope]]
+      result mustBe a[JsSuccess[_]]
+    }
+
+    "must successfully serialise UpdateScopeStatus Request" in {
+      val request = UpdateScopeStatus(Approved)
+      val result = Json.toJson(request)
+      (result \ "status") mustBe JsDefined(JsString("APPROVED"))
+    }
+    "must successfully de-serialise UpdateScopeStatus Request" in {
+      val json = Json.parse(s"""{"status": "PENDING"}""".stripMargin)
+      val result = json.validate(UpdateScopeStatus.updateScopeStatusFormat)
+      result mustBe a[JsSuccess[_]]
     }
 
   }

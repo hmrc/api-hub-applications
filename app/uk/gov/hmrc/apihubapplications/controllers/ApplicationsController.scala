@@ -88,20 +88,18 @@ class ApplicationsController @Inject()
       .map(Ok(_))
   }
 
-  def setPendingScope(id:String,environment:String, scopename:String): Action[JsValue] = Action(parse.json).async {
+  def setApprovedScope(id:String,environment:String, scopename:String): Action[JsValue] = Action(parse.json).async {
     request: Request[JsValue] => {
       val jsReq = request.body
       jsReq.validate[UpdateScopeStatus] match {
         case JsSuccess(updateStatus@UpdateScopeStatus(Approved), _) =>
           applicationsRepository
-            .setScope(id, environment, scopename,updateStatus).map(_ match {
+            .setScope(id, environment, scopename, updateStatus).map(_ match {
             case Some(true) => NoContent
             case _ => NotFound
           })
-        case JsSuccess(bla,_)  => {
-          println(f"BLA: $bla")
-          Future.successful(BadRequest)
-        }
+        case JsSuccess(_,_)  => Future.successful(BadRequest)
+
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
