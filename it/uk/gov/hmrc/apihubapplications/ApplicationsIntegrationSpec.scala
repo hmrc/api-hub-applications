@@ -178,6 +178,21 @@ class ApplicationsIntegrationSpec
       }
     }
 
+    "respond with a 404 NotFound if the application does not exist" in {
+      forAll(applicationWithIdGenerator, newScopesGenerator) { (application: Application, newScopes: Seq[NewScope]) =>
+        deleteAll().futureValue
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+            .addHttpHeaders(("Content", "application/json"))
+            .post(Json.toJson(newScopes))
+            .futureValue
+
+        response.status shouldBe 404
+      }
+    }
+
     "set the status of scopes to approved in all environments except prod, and pending in prod" in {
       val application = applicationWithIdGenerator.sample.get
       val emptyScopesApp = application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
