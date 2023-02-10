@@ -164,7 +164,6 @@ class ApplicationsIntegrationSpec
     "respond with a 204 No Content" in {
       forAll (applicationWithIdGenerator, newScopesGenerator) { (application: Application, newScopes: Seq[NewScope]) =>
         deleteAll().futureValue
-
         insert(application).futureValue
 
         val response =
@@ -190,6 +189,32 @@ class ApplicationsIntegrationSpec
             .futureValue
 
         response.status shouldBe 404
+      }
+    }
+
+    "respond with a 400 BadRequest if the application exist but we try to add scopes to an environment that does not exist" in {
+      forAll(applicationWithIdGenerator) { application: Application =>
+        deleteAll().futureValue
+        insert(application).futureValue
+
+        val invalidEnvironmentRequest = Json.parse(
+          s"""
+             |[
+             |  {
+             |    "name": "scope1",
+             |    "environments": ["env-does-not-exist"]
+             |  }
+             |]
+             |""".stripMargin)
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+            .addHttpHeaders(("Content", "application/json"))
+            .post(invalidEnvironmentRequest)
+            .futureValue
+
+        response.status shouldBe 400
       }
     }
 
