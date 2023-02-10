@@ -24,7 +24,7 @@ import java.time.{Instant, LocalDateTime, ZoneId}
 trait ApplicationGenerator {
 
   val appIdGenerator: Gen[Option[String]] = {
-    Gen.option(Gen.listOfN(24, Gen.hexChar).map(_.mkString.toLowerCase))
+    Gen.some(Gen.listOfN(24, Gen.hexChar).map(_.mkString.toLowerCase))
   }
 
   val localDateTimeGenerator: Gen[LocalDateTime] = {
@@ -103,8 +103,6 @@ trait ApplicationGenerator {
     )
   }
 
-  val applicationWithIdGenerator: Gen[Application] = applicationGenerator.arbitrary.suchThat(_.id.isDefined)
-
   implicit val newApplicationGenerator: Arbitrary[NewApplication] =
     Arbitrary {
       for {
@@ -124,9 +122,10 @@ trait ApplicationGenerator {
     } yield NewScope(name, environments.toSeq)
   }
 
-  implicit val newScopesGenerator: Gen[Seq[NewScope]] = {
-    Gen.listOf(newScopeGenerator)
-  }
+  implicit val newScopesGenerator: Arbitrary[Seq[NewScope]] =
+    Arbitrary {
+      Gen.listOf(newScopeGenerator)
+    }
 
 
 }

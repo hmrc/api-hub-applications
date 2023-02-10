@@ -148,7 +148,7 @@ class ApplicationsIntegrationSpec
 
   "GET application by ID" should {
     "respond with 200 status and the found application" in {
-      forAll (applicationWithIdGenerator) { (application: Application) =>
+      forAll { (application: Application) =>
         deleteAll().futureValue
 
         insert(application).futureValue
@@ -182,7 +182,7 @@ class ApplicationsIntegrationSpec
 
   "POST to add scopes to environments of an application" should {
     "respond with a 204 No Content" in {
-      forAll (applicationWithIdGenerator, newScopesGenerator) { (application: Application, newScopes: Seq[NewScope]) =>
+      forAll { (application: Application, newScopes: Seq[NewScope]) =>
         deleteAll().futureValue
         insert(application).futureValue
 
@@ -198,7 +198,7 @@ class ApplicationsIntegrationSpec
     }
 
     "respond with a 404 NotFound if the application does not exist" in {
-      forAll(applicationWithIdGenerator, newScopesGenerator) { (application: Application, newScopes: Seq[NewScope]) =>
+      forAll { (application: Application, newScopes: Seq[NewScope]) =>
         deleteAll().futureValue
 
         val response =
@@ -213,7 +213,7 @@ class ApplicationsIntegrationSpec
     }
 
     "respond with a 400 BadRequest if the application exist but we try to add scopes to an environment that does not exist" in {
-      forAll(applicationWithIdGenerator) { application: Application =>
+      forAll { application: Application =>
         deleteAll().futureValue
         insert(application).futureValue
 
@@ -239,7 +239,7 @@ class ApplicationsIntegrationSpec
     }
 
     "set the status of scopes to approved in all environments except prod, and pending in prod" in {
-      forAll(applicationWithIdGenerator) { application: Application =>
+      forAll { application: Application =>
         val emptyScopesApp = application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
 
         deleteAll().futureValue
@@ -267,7 +267,7 @@ class ApplicationsIntegrationSpec
 
   "GET pending scopes" should {
     "respond with a 200 and a list applications that have the status of pending for prod" in {
-      forAll (applicationWithIdGenerator, applicationWithIdGenerator) { (application1: Application, application2: Application) =>
+      forAll { (application1: Application, application2: Application) =>
         val pendingScopes = Seq(Scope("my-scope", Pending))
 
         val appWithPendingTestScopes = application1.setTestScopes(pendingScopes).setDevScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
