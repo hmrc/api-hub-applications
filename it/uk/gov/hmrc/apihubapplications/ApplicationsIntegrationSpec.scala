@@ -26,10 +26,11 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Environment, Environments, NewApplication, NewScope, Pending, ScopeStatus}
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -175,6 +176,32 @@ class ApplicationsIntegrationSpec
 
         response.status shouldBe 204
       }
+    }
+
+    "set the status of scopes to approved in all environments except prod, and pending in prod" in {
+      val application = applicationWithIdGenerator.sample.get
+      val emptyScopesApp = application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
+
+      deleteAll().futureValue
+      insert(emptyScopesApp).futureValue
+
+      val newScopes = Seq(NewScope("scope1", Seq(Dev, Test, PreProd, Prod)))
+      wsClient
+        .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+        .addHttpHeaders(("Content", "application/json"))
+        .post(Json.toJson(newScopes))
+        .futureValue
+
+
+      val storedApplications = findAll().futureValue.filter(app => app.id == application.id)
+      storedApplications.size shouldBe 1
+      val storedApplication = storedApplications.head
+
+      storedApplication.environments.dev.scopes.map(_.status).toSet shouldBe Set(Approved)
+      storedApplication.environments.test.scopes.map(_.status).toSet shouldBe Set(Approved)
+      storedApplication.environments.preProd.scopes.map(_.status).toSet shouldBe Set(Approved)
+      storedApplication.environments.prod.scopes.map(_.status).toSet shouldBe Set(Pending)
+
     }
   }
 
