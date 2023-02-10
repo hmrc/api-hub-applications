@@ -224,8 +224,8 @@ class ApplicationsIntegrationSpec
     "respond with a 200 and a list applications that have the status of pending for prod" in {
       val pendingScopes = Seq(Scope("my-scope", Pending))
 
-      val appWithPendingTestScopes = applicationWithIdGenerator.sample.get.setTestScopes(pendingScopes)
-      val appWithPendingProdScopes = applicationWithIdGenerator.sample.get.setProdScopes(pendingScopes)
+      val appWithPendingTestScopes = applicationWithIdGenerator.sample.get.setTestScopes(pendingScopes).setDevScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
+      val appWithPendingProdScopes = applicationWithIdGenerator.sample.get.setProdScopes(pendingScopes).setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty)
 
       deleteAll().futureValue
       insert(appWithPendingTestScopes).futureValue
