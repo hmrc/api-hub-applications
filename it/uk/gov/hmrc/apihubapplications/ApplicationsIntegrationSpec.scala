@@ -194,51 +194,53 @@ class ApplicationsIntegrationSpec
     }
 
     "set the status of scopes to approved in all environments except prod, and pending in prod" in {
-      val application = applicationWithIdGenerator.sample.get
-      val emptyScopesApp = application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
+      forAll(applicationWithIdGenerator) { application: Application =>
+        val emptyScopesApp = application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
 
-      deleteAll().futureValue
-      insert(emptyScopesApp).futureValue
+        deleteAll().futureValue
+        insert(emptyScopesApp).futureValue
 
-      val newScopes = Seq(NewScope("scope1", Seq(Dev, Test, PreProd, Prod)))
-      wsClient
-        .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-        .addHttpHeaders(("Content", "application/json"))
-        .post(Json.toJson(newScopes))
-        .futureValue
+        val newScopes = Seq(NewScope("scope1", Seq(Dev, Test, PreProd, Prod)))
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+          .addHttpHeaders(("Content", "application/json"))
+          .post(Json.toJson(newScopes))
+          .futureValue
 
 
-      val storedApplications = findAll().futureValue.filter(app => app.id == application.id)
-      storedApplications.size shouldBe 1
-      val storedApplication = storedApplications.head
+        val storedApplications = findAll().futureValue.filter(app => app.id == application.id)
+        storedApplications.size shouldBe 1
+        val storedApplication = storedApplications.head
 
-      storedApplication.environments.dev.scopes.map(_.status).toSet shouldBe Set(Approved)
-      storedApplication.environments.test.scopes.map(_.status).toSet shouldBe Set(Approved)
-      storedApplication.environments.preProd.scopes.map(_.status).toSet shouldBe Set(Approved)
-      storedApplication.environments.prod.scopes.map(_.status).toSet shouldBe Set(Pending)
-
+        storedApplication.environments.dev.scopes.map(_.status).toSet shouldBe Set(Approved)
+        storedApplication.environments.test.scopes.map(_.status).toSet shouldBe Set(Approved)
+        storedApplication.environments.preProd.scopes.map(_.status).toSet shouldBe Set(Approved)
+        storedApplication.environments.prod.scopes.map(_.status).toSet shouldBe Set(Pending)
+      }
     }
   }
 
   "GET pending scopes" should {
     "respond with a 200 and a list applications that have the status of pending for prod" in {
-      val pendingScopes = Seq(Scope("my-scope", Pending))
+      forAll { (application1: Application, application2: Application) =>
+        val pendingScopes = Seq(Scope("my-scope", Pending))
 
-      val appWithPendingTestScopes = applicationWithIdGenerator.sample.get.setTestScopes(pendingScopes).setDevScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
-      val appWithPendingProdScopes = applicationWithIdGenerator.sample.get.setProdScopes(pendingScopes).setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty)
+        val appWithPendingTestScopes = application1.setTestScopes(pendingScopes).setDevScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
+        val appWithPendingProdScopes = application2.setProdScopes(pendingScopes).setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty)
 
-      deleteAll().futureValue
-      insert(appWithPendingTestScopes).futureValue
-      insert(appWithPendingProdScopes).futureValue
+        deleteAll().futureValue
+        insert(appWithPendingTestScopes).futureValue
+        insert(appWithPendingProdScopes).futureValue
 
-      val response = wsClient
-        .url(s"$baseUrl/api-hub-applications/applications/pending-scopes")
-        .addHttpHeaders(("Accept", "application/json"))
-        .get()
-        .futureValue
+        val response = wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/pending-scopes")
+          .addHttpHeaders(("Accept", "application/json"))
+          .get()
+          .futureValue
 
-     response.status shouldBe 200
-      response.json shouldBe Json.toJson(Seq(appWithPendingProdScopes))
+        response.status shouldBe 200
+        response.json shouldBe Json.toJson(Seq(appWithPendingProdScopes))
+      }
     }
   }
 
