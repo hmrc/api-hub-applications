@@ -266,10 +266,10 @@ class ApplicationsIntegrationSpec
   }
 
   "GET pending scopes" should {
-    "respond with a 200 and a list applications that have the status of pending for prod" in {
+    "respond with a 200 and a list applications that have at least one status of pending for prod" in {
       forAll { (application1: Application, application2: Application) =>
         val appWithPendingTestScopes = application1.withEmptyScopes.withTestPendingScopes
-        val appWithPendingProdScopes = application2.withEmptyScopes.withProdPendingScopes
+        val appWithPendingProdScopes = application2.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
 
         deleteAll().futureValue
         insert(appWithPendingTestScopes).futureValue

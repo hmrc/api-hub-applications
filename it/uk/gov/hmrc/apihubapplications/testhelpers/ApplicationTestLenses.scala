@@ -16,26 +16,27 @@
 
 package uk.gov.hmrc.apihubapplications.testhelpers
 
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Pending, Scope}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Pending, Scope}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 
 object ApplicationTestLenses {
   implicit class ApplicationTestLensOps(application: Application) {
-
-    private val pendingScopes = Seq(Scope("my-pending-scope", Pending))
 
     def withEmptyScopes: Application = {
       application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
     }
 
     def withTestPendingScopes: Application = {
-      application.setTestScopes(pendingScopes)
+      application.addTestScope(Scope("my-pending-scope", Pending))
     }
 
     def withProdPendingScopes: Application = {
-      application.setProdScopes(pendingScopes)
+      application.addProdScope(Scope("my-pending-scope", Pending))
     }
 
+    def withProdApprovedScopes: Application = {
+      application.addProdScope(Scope("my-approved-scope", Approved))
+    }
   }
 
 }
