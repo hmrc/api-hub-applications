@@ -73,6 +73,26 @@ class ApplicationsIntegrationSpec
       }
     }
 
+    "respond with a 400 BadRequest if the application does not have the required properties" in {
+      val appWithoutANameRequest = Json.parse(
+        s"""
+           |{
+           |    "createdBy": {
+           |        "email": "laura@email.com"
+           |    }
+           |}
+           |""".stripMargin)
+
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications")
+          .addHttpHeaders(("Content", "application/json"))
+          .post(appWithoutANameRequest)
+          .futureValue
+
+      response.status shouldBe 400
+    }
+
     "add a full Application to the database" in {
       forAll { newApplication: NewApplication =>
 
