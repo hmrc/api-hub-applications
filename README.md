@@ -1,4 +1,4 @@
-# API Hub Frontend
+# API Hub Backend
 
 This service provides a backend for the API Hub specific to applications.
 
