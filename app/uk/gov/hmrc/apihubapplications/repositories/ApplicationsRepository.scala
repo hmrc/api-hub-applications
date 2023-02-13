@@ -40,10 +40,9 @@ class ApplicationsRepository @Inject()
     mongoComponent = mongoComponent,
     domainFormat   = mongoApplicationFormat,
     extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat),
-      Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat),
-      Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
-    ),
-    indexes        = Seq.empty
+                      Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
+                     ),
+    indexes = Seq.empty
   ) {
 
   def findAll():Future[Seq[Application]] = collection.find().toFuture()

@@ -195,7 +195,7 @@ class ApplicationsRepositoryIntegrationSpec
   }
 
   "update scope to APPROVED" - {
-    "must return true if in scope status was updated successfully to APPROVED" in {
+    "must return true if the scope status was updated successfully to APPROVED" in {
 
       val prodEnv = Environment(Seq(
         Scope("scope1", Pending),
@@ -204,12 +204,11 @@ class ApplicationsRepositoryIntegrationSpec
       val now = LocalDateTime.now()
       val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments(Environment(), Environment(), Environment(), prodEnv))
       val existingApp = repository.insert(application).futureValue
-      repository.setScope(existingApp.id.get, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
+      val response = repository.setScope(existingApp.id.get, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
       val actualApp = repository.findById(existingApp.id.get).futureValue.value
-      actualApp.environments.prod.scopes mustBe Seq(
-        Scope("scope1", Approved),
-        Scope("scope2", Pending)
-      )
+      actualApp.environments.prod.scopes mustBe Seq(Scope("scope1", Approved), Scope("scope2", Pending))
+      response mustBe Some(true)
+
     }
 
     "must return Some(false) when trying to set scope on the application that does not exist in DB" in {
