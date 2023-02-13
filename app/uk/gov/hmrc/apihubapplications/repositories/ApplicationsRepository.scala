@@ -18,20 +18,18 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
-import org.mongodb.scala.bson.Document
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
 import play.api.Logging
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application.{Pending, _}
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.time.LocalDateTime
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsRepository @Inject()

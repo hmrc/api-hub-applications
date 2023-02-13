@@ -276,8 +276,7 @@ class ApplicationsControllerSpec
 
         verify(fixture.repository).setScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(envName), ArgumentMatchers.eq(scopeName), ArgumentMatchers.eq(updateScope))
       }
-    }}
-
+    }
     "must return 404 Not Found when trying to set scope on the application that does not exist in DB" in {
       val appId = "not-exist"
       val envName = "prod"
@@ -300,26 +299,26 @@ class ApplicationsControllerSpec
         verify(fixture.repository).setScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(envName), ArgumentMatchers.eq(scopeName), ArgumentMatchers.eq(updateScope))
       }
     }
+    "must return 400 badRequest when trying to set scope not to APPROVED" in {
 
-  "must return 400 badRequest when trying to set scope not to APPROVED" in {
-    val appId = "not-exist"
-    val envName = "prod"
-    val scopeName = "test-scope-name"
-    val json = Json.parse(s"""{"status": "PENDING"}""".stripMargin)
+      val fixture = buildFixture()
+      running(fixture.application) {
 
-    val fixture = buildFixture()
-    running(fixture.application) {
+        val request = FakeRequest(PUT, routes.ApplicationsController.setApprovedScope("not-exist", "prod", "test-scope-name").url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.parse(s"""{"status": "PENDING"}""".stripMargin))
 
-      val request = FakeRequest(PUT, routes.ApplicationsController.setApprovedScope(appId, envName, scopeName).url)
-        .withHeaders(
-          CONTENT_TYPE -> "application/json"
-        )
-        .withBody(json)
-
-      val result = route(fixture.application, request).value
-      status(result) mustBe Status.BAD_REQUEST
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
     }
   }
+
+
+
+
 }
 
 
