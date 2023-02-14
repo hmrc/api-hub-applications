@@ -107,4 +107,15 @@ class ApplicationsController @Inject()
     }
   }
 
+  def addCredentials(id: String,environment:String) = Action.async { _ => {
+
+    applicationsRepository
+            .setCredentials(id, environment).map(_ match {
+            case Some(true) => NoContent
+            case _ => NotFound
+          })
+
+    }
+  }
+
 }

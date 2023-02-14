@@ -19,17 +19,19 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
+import org.mongodb.scala.model.Updates.{addEachToSet, addToSet, combine, set}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, newToken, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
+import java.security.SecureRandom
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
+import java.util.UUID
 
 @Singleton
 class ApplicationsRepository @Inject()
@@ -40,7 +42,8 @@ class ApplicationsRepository @Inject()
     mongoComponent = mongoComponent,
     domainFormat   = mongoApplicationFormat,
     extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat),
-                      Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
+                      Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat),
+                      Codecs.playFormatCodec(Credential.credentialFormat)
                      ),
     indexes = Seq.empty
   ) {
@@ -86,10 +89,10 @@ class ApplicationsRepository @Inject()
                 combine(updates: _*) //
               ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
       case None => Future.successful(None)
-    }
-  }
+    }}
 
-  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus)= {
+  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus)=
+    if (EnvironmentName.values.exists(_.toString == env) ){
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
           val updates = Seq(
@@ -101,7 +104,27 @@ class ApplicationsRepository @Inject()
             combine(updates: _*)
           ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
       case None => Future.successful(None)
+    }}
+    else{
+      Future.successful(None)
     }
+
+  def setCredentials(applicationId:String, env:String) = {
+    val credentials = Credential(UUID.randomUUID().toString, newToken)
+    if (EnvironmentName.values.exists(_.toString == env) ){
+      stringToObjectId(applicationId) match {
+        case Some(appIdObject) =>
+          val updates = Seq(
+            addToSet(f"environments.$env.credentials", credentials),
+            set("lastUpdated", LocalDateTime.now().toString)
+          )
+          collection.updateOne(
+            Filters.equal("_id", appIdObject),
+            combine(updates: _*)
+          ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
+        case None => Future.successful(None)
+      }}
+    else Future.successful(None)
   }
 
 }
@@ -134,6 +157,14 @@ object ApplicationsRepository extends Logging {
     When we have None we can use the standard write which simply omits id's
     element.
    */
+
+  private def newToken: String = {
+    val randomBytes: Array[Byte] = new Array[Byte](16) // scalastyle:off magic.number
+    new SecureRandom().nextBytes(randomBytes)
+    randomBytes.map("%02x".format(_)).mkString
+  }
+
+
 
   private val mongoApplicationWithIdWrites: Writes[Application] =
     Application.applicationFormat.transform(
