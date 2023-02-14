@@ -316,9 +316,6 @@ class ApplicationsControllerSpec
     }
   }
 
-
-
-
 }
 
 

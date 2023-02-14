@@ -29,7 +29,7 @@ import play.api.libs.ws.WSClient
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, ApplicationTestLenses}
+import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses._
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -46,7 +46,6 @@ class ApplicationsIntegrationSpec
 
   private val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl  = s"http://localhost:$port"
-  //private val baseUrl  = s"http://localhost:9000"
 
   override def fakeApplication(): GuideApplication =
     GuiceApplicationBuilder()
