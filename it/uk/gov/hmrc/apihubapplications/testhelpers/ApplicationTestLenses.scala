@@ -21,21 +21,22 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 
 object ApplicationTestLenses {
   implicit class ApplicationTestLensOps(application: Application) {
-
+    val pendingScopeName = "my-pending-scope"
+    val approvedScopeName = "my-approved-scope"
     def withEmptyScopes: Application = {
       application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
     }
 
     def withTestPendingScopes: Application = {
-      application.addTestScope(Scope("my-pending-scope", Pending))
+      application.addTestScope(Scope(pendingScopeName, Pending))
     }
 
     def withProdPendingScopes: Application = {
-      application.addProdScope(Scope("my-pending-scope", Pending))
+      application.addProdScope(Scope(pendingScopeName, Pending))
     }
 
     def withProdApprovedScopes: Application = {
-      application.addProdScope(Scope("my-approved-scope", Approved))
+      application.addProdScope(Scope(approvedScopeName, Approved))
     }
   }
 

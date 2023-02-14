@@ -27,6 +27,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses._
@@ -283,6 +284,59 @@ class ApplicationsIntegrationSpec
 
         response.status shouldBe 200
         response.json shouldBe Json.toJson(Seq(appWithPendingProdScopes))
+      }
+    }
+  }
+
+
+  "PUT set scope status" should{
+    "respond with a 204 No Content when the status was set successfully" in {
+      forAll { (application: Application) =>
+        val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
+        deleteAll().futureValue
+        insert(appWithPendingProdScope).futureValue
+        val updateScopeStatus = UpdateScopeStatus(Approved)
+        val statusUpdateJson = Json.toJson(updateScopeStatus)
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/scopes/${application.pendingScopeName}")
+            .addHttpHeaders(("Content-Type", "application/json"))
+            .put(statusUpdateJson)
+            .futureValue
+
+        response.status shouldBe 204
+      }
+    }
+    "must return 404 Not Found when trying to set scope on the application that does not exist in DB" in {
+      forAll { (_: Application) =>
+        deleteAll().futureValue
+        val updateScopeStatus = UpdateScopeStatus(Approved)
+        val statusUpdateJson = Json.toJson(updateScopeStatus)
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id/environments/prod/scopes/test-scope-name")
+            .addHttpHeaders(("Content-Type", "application/json"))
+            .put(statusUpdateJson)
+            .futureValue
+
+        response.status shouldBe 404
+      }
+    }
+    "must return 400 badRequest when trying to set scope not to APPROVED" in {
+      forAll { (application: Application) =>
+        val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
+        deleteAll().futureValue
+        insert(appWithPendingProdScope).futureValue
+        val updateScopeStatus = UpdateScopeStatus(Pending)
+        val statusUpdateJson = Json.toJson(updateScopeStatus)
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/scopes/${application.pendingScopeName}")
+            .addHttpHeaders(("Content-Type", "application/json"))
+            .put(statusUpdateJson)
+            .futureValue
+
+        response.status shouldBe 400
       }
     }
   }

@@ -23,6 +23,7 @@ import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
@@ -38,8 +39,10 @@ class ApplicationsRepository @Inject()
     collectionName = "applications",
     mongoComponent = mongoComponent,
     domainFormat   = mongoApplicationFormat,
-    extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat)),
-    indexes        = Seq.empty
+    extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat),
+                      Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
+                     ),
+    indexes = Seq.empty
   ) {
 
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
@@ -82,6 +85,21 @@ class ApplicationsRepository @Inject()
                 Filters.equal("_id", appIdObject),
                 combine(updates: _*) //
               ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
+      case None => Future.successful(None)
+    }
+  }
+
+  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus)= {
+    stringToObjectId(applicationId) match {
+      case Some(appIdObject) =>
+          val updates = Seq(
+            set(f"environments.$env.scopes.$$.status", updateStatus.status.toString),
+            set("lastUpdated", LocalDateTime.now().toString)
+          )
+          collection.updateOne(
+            Filters.and(Filters.equal("_id", appIdObject ) , Filters.equal(f"environments.$env.scopes.name",scope)),
+            combine(updates: _*)
+          ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
       case None => Future.successful(None)
     }
   }

@@ -22,6 +22,7 @@ import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -193,4 +194,34 @@ class ApplicationsRepositoryIntegrationSpec
     }
   }
 
+  "update scope to APPROVED" - {
+    "must return true if the scope status was updated successfully to APPROVED" in {
+
+      val prodEnv = Environment(Seq(
+        Scope("scope1", Pending),
+        Scope("scope2", Pending)
+      ), Seq.empty)
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments(Environment(), Environment(), Environment(), prodEnv))
+      val existingApp = repository.insert(application).futureValue
+      val response = repository.setScope(existingApp.id.get, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
+      val actualApp = repository.findById(existingApp.id.get).futureValue.value
+      actualApp.environments.prod.scopes mustBe Seq(Scope("scope1", Approved), Scope("scope2", Pending))
+      response mustBe Some(true)
+
+    }
+
+    "must return Some(false) when trying to set scope on the application that does not exist in DB" in {
+      val nonExistingAppId = "9999999999999aaaaaaaaaaa"
+      val actualResult = repository.setScope(nonExistingAppId, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
+      actualResult mustBe Some(false)
+    }
+
+    "must return None when specified application id of invalid format" in {
+      val nonExistingAppId = "invalid mongo object id"
+      val actualResult = repository.setScope(nonExistingAppId, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
+      actualResult mustBe None
+    }
+
+  }
 }
