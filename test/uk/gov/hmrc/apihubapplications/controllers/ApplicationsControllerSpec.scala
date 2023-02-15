@@ -32,7 +32,7 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import sttp.model.StatusCode.NoContent
+import sttp.model.StatusCode.{NoContent, Created}
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
@@ -316,6 +316,60 @@ class ApplicationsControllerSpec
     }
   }
 
+  "add credentials to environment" - {
+    "201 returned when credentials are added" in {
+      val appId = "1"
+      val envName = "prod"
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.addCredentials(appId, envName)).thenReturn(Future.successful(Some(true)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredentials(appId, envName).url)
+                                                                    .withHeaders(CONTENT_TYPE -> "application/json")
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.CREATED
+
+        verify(fixture.repository).addCredentials(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(envName))
+      }
+    }
+    "must return 404 Not Found when trying to add credentials to the application that does not exist in DB" in {
+      val appId = "not-exist"
+      val envName = "prod"
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.addCredentials(appId, envName)).thenReturn(Future.successful(Some(false)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredentials(appId, envName).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+
+        verify(fixture.repository).addCredentials(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(envName))
+      }
+    }
+    "must return 404 Not Found when trying to add credentials to the environment that does not exist in DB" in {
+      val appId = "not-exist"
+      val envName = "prod"
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.repository.addCredentials(appId, envName)).thenReturn(Future.successful(Some(false)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredentials(appId, envName).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+
+        verify(fixture.repository).addCredentials(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(envName))
+      }
+    }
+  }
 }
 
 

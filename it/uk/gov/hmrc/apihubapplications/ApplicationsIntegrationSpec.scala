@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications
 
+import org.bson.types.ObjectId
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.OptionValues
@@ -45,7 +46,7 @@ class ApplicationsIntegrationSpec
      with ApplicationGenerator {
 
   private val wsClient = app.injector.instanceOf[WSClient]
-  private val baseUrl  = s"http://localhost:$port"
+  private val baseUrl = s"http://localhost:$port"
 
   override def fakeApplication(): GuideApplication =
     GuiceApplicationBuilder()
@@ -289,7 +290,7 @@ class ApplicationsIntegrationSpec
   }
 
 
-  "PUT set scope status" should{
+  "PUT set scope status" should {
     "respond with a 204 No Content when the status was set successfully" in {
       forAll { (application: Application) =>
         val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
@@ -340,5 +341,66 @@ class ApplicationsIntegrationSpec
       }
     }
   }
+  "POST add credentials" should {
+    "respond with a 201 No Content when the credentials were added successfully" in {
+      forAll { (application: Application) =>
+        val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
+        deleteAll().futureValue
+        insert(appWithPendingProdScope).futureValue
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/credentials")
+            .addHttpHeaders(("Content-Type", "application/json")).execute("POST")
+            .futureValue
 
+        response.status shouldBe 201
+      }
+    }
+    "must return 404 Not Found when trying to add credentials on the application that does not exist in DB" in {
+      forAll { (_: Application) =>
+        deleteAll().futureValue
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id/environments/prod/scopes/test-scope-name/credentials")
+            .addHttpHeaders(("Content-Type", "application/json")).execute("POST")
+            .futureValue
+
+        response.status shouldBe 404
+      }
+    }
+    "must return 404 Not Found when trying to add credentials to invalid env" in {
+      forAll { (application: Application) =>
+        val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
+        deleteAll().futureValue
+        insert(appWithPendingProdScope).futureValue
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/non-existing-env/credentials")
+            .addHttpHeaders(("Content-Type", "application/json")).execute("POST")
+            .futureValue
+
+        response.status shouldBe 404
+      }
+    }
+    "Created credential must have the secret of 32 characters long, " +
+                                           "containing only characters from a-f, and digits from 0-9" in {
+      forAll { (application: Application) =>
+        val appWithPendingProdScope = application.withEmptyCredentials
+        deleteAll().futureValue
+        insert(appWithPendingProdScope).futureValue
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/credentials")
+            .addHttpHeaders(("Content-Type", "application/json")).execute("POST")
+            .futureValue
+
+        response.status shouldBe 201
+        val storedApplication= findAll().futureValue.filter(app => app.id == application.id).head
+        val credential = storedApplication.environments.prod.credentials.head
+        println(credential)
+        val regex = "^[a-f0-9]{32}$".r
+        regex matches credential.clientSecret shouldBe true
+      }
+    }
+  }
 }

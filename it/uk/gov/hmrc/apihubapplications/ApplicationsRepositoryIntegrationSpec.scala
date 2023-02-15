@@ -224,4 +224,34 @@ class ApplicationsRepositoryIntegrationSpec
     }
 
   }
+
+  "add credentials" - {
+    "must return true if mongoDB was updated successfully with a credentials" in {
+      val prodEnv = Environment(Seq(
+        Scope("scope1", Pending),
+        Scope("scope2", Pending)
+      ), Seq.empty)
+
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments(Environment(), Environment(), Environment(), prodEnv))
+      val existingApp = repository.insert(application).futureValue
+      val response = repository.addCredentials(existingApp.id.get, "prod").futureValue
+      response mustBe Some(true)
+    }
+    "must return Some(false) when trying to add credentials to the application that does not exist in DB" in {
+      val nonExistingAppId = "9999999999999aaaaaaaaaaa"
+      val actualResult = repository.addCredentials(nonExistingAppId, "prod").futureValue
+      actualResult mustBe Some(false)
+    }
+    "must return None when specified application id of invalid format" in {
+      val nonExistingAppId = "invalid mongo object id"
+      val actualResult = repository.addCredentials(nonExistingAppId, "prod").futureValue
+      actualResult mustBe None
+    }
+    "must return None when specified invalid environment id of invalid format" in {
+      val nonExistingAppId = "9999999999999aaaaaaaaaaa"
+      val actualResult = repository.addCredentials(nonExistingAppId, "non-valid-environment").futureValue
+      actualResult mustBe None
+    }
+  }
 }

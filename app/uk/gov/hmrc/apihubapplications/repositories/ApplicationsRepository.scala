@@ -91,7 +91,7 @@ class ApplicationsRepository @Inject()
       case None => Future.successful(None)
     }}
 
-  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus)=
+  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus): Future[Option[Boolean]] =
     if (EnvironmentName.values.exists(_.toString == env) ){
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
@@ -109,7 +109,7 @@ class ApplicationsRepository @Inject()
       Future.successful(None)
     }
 
-  def setCredentials(applicationId:String, env:String) = {
+  def addCredentials(applicationId:String, env:String): Future[Option[Boolean]] = {
     val credentials = Credential(UUID.randomUUID().toString, newToken)
     if (EnvironmentName.values.exists(_.toString == env) ){
       stringToObjectId(applicationId) match {

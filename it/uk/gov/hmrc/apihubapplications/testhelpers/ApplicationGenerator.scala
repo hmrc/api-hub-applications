@@ -60,10 +60,14 @@ trait ApplicationGenerator {
   }
 
   val credentialGenerator: Gen[Credential] = {
+    val token = {
+      val randomBytes: Array[Byte] = new Array[Byte](16) // scalastyle:off magic.number
+      new java.security.SecureRandom().nextBytes(randomBytes)
+      randomBytes.map("%02x".format(_)).mkString
+    }
     for {
       clientId <- Gen.uuid
-      clientSecret <- Gen.uuid
-    } yield Credential(clientId.toString, clientSecret.toString)
+    } yield Credential(clientId.toString, token)
   }
 
   val environmentGenerator: Gen[Environment] = {

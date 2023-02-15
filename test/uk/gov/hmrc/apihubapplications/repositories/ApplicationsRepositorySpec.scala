@@ -21,9 +21,11 @@ import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, newToken}
+import uk.gov.hmrc.auth.core.retrieve.Credentials
 
 import java.time.LocalDateTime
+import java.util.UUID
 
 class ApplicationsRepositorySpec
   extends AnyFreeSpec
@@ -100,6 +102,17 @@ class ApplicationsRepositorySpec
     "must successfully de-serialise UpdateScopeStatus Request" in {
       val json = Json.parse(s"""{"status": "PENDING"}""".stripMargin)
       val result = json.validate(UpdateScopeStatus.updateScopeStatusFormat)
+      result mustBe a[JsSuccess[_]]
+    }
+    "must successfully serialise Credentials object" in {
+      val credential = Credential("test-client-id", "test-client-secret")
+      val result = Json.toJson(credential)
+      (result \ "clientId") mustBe JsDefined(JsString("test-client-id"))
+      (result \ "clientSecret") mustBe JsDefined(JsString("test-client-secret"))
+    }
+    "must successfully de-serialise Credentials object" in {
+      val json = Json.parse(s"""{"clientId": "test-client-id", "clientSecret":"test-client-secret"}""".stripMargin)
+      val result = json.validate(Credential.credentialFormat)
       result mustBe a[JsSuccess[_]]
     }
 

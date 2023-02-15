@@ -107,13 +107,13 @@ class ApplicationsController @Inject()
     }
   }
 
-  def addCredentials(id: String,environment:String) = Action.async { _ => {
+  def addCredentials(id: String,environment:String): Action[AnyContent] = Action.async { _ => {
 
     applicationsRepository
-            .setCredentials(id, environment).map(_ match {
-            case Some(true) => NoContent
-            case _ => NotFound
-          })
+            .addCredentials(id, environment).map(_ match {
+                                                        case Some(true) => Created
+                                                        case _ => NotFound
+                                                      })
 
     }
   }
