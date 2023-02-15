@@ -20,6 +20,7 @@ import uk.gov.hmrc.apihubapplications.models.Lens
 
 object ApplicationLenses {
 
+
   val applicationEnvironments: Lens[Application, Environments] =
     Lens[Application, Environments](
       get = _.environments,
@@ -80,6 +81,25 @@ object ApplicationLenses {
   val applicationDevScopes: Lens[Application, Seq[Scope]] =
     Lens.compose(applicationDev, environmentScopes)
 
+  val environmentCredentials: Lens[Environment, Seq[Credential]] =
+    Lens[Environment, Seq[Credential]](
+      get = _.credentials,
+      set = (environment, credentials) => environment.copy(credentials = credentials)
+    )
+
+  val applicationProdCredentials: Lens[Application, Seq[Credential]] =
+    Lens.compose(applicationProd, environmentCredentials)
+
+  val applicationPreProdCredentials: Lens[Application, Seq[Credential]] =
+      Lens.compose(applicationPreProd, environmentCredentials)
+
+  val applicationTestCredentials: Lens[Application, Seq[Credential]] =
+      Lens.compose(applicationTest, environmentCredentials)
+
+  val applicationDevCredentials: Lens[Application, Seq[Credential]] =
+      Lens.compose(applicationDev, environmentCredentials)
+
+
   implicit class ApplicationLensOps(application: Application) {
 
     def getProdScopes: Seq[Scope] =
@@ -133,6 +153,55 @@ object ApplicationLenses {
         application,
         applicationDevScopes.get(application) :+ scope
       )
+
+    def getProdCredentials: Seq[Credential] =
+      applicationProdCredentials.get(application)
+
+    def setProdCredentials(credentials: Seq[Credential]): Application =
+      applicationProdCredentials.set(application, credentials)
+
+    def addProdCredential(credential: Credential): Application =
+      applicationProdCredentials.set(
+        application,
+        applicationProdCredentials.get(application) :+ credential
+      )
+
+    def getPreProdCredentials: Seq[Credential] =
+      applicationPreProdCredentials.get(application)
+
+    def setPreProdCredentials(credentials: Seq[Credential]): Application =
+      applicationPreProdCredentials.set(application, credentials)
+
+    def addPreProdCredential(credential: Credential): Application =
+      applicationPreProdCredentials.set(
+        application,
+        applicationPreProdCredentials.get(application) :+ credential
+      )
+
+    def getTestCredentials: Seq[Credential] =
+      applicationTestCredentials.get(application)
+
+    def setTestCredentials(credentials: Seq[Credential]): Application =
+      applicationTestCredentials.set(application, credentials)
+
+    def addTestCredential(credential: Credential): Application =
+      applicationTestCredentials.set(
+        application,
+        applicationTestCredentials.get(application) :+ credential
+      )
+
+    def getDevCredentials: Seq[Credential] =
+      applicationDevCredentials.get(application)
+
+    def setDevCredentials(credentials: Seq[Credential]): Application =
+      applicationDevCredentials.set(application, credentials)
+
+    def addDevCredential(credential: Credential): Application =
+      applicationDevCredentials.set(
+        application,
+        applicationDevCredentials.get(application) :+ credential
+      )
+
 
   }
 

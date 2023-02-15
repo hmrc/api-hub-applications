@@ -44,23 +44,7 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
     }
   }
 
-  "environmentScopes" - {
-    "must get the correct Scopes" in {
-      val expected = randomScopes()
-      val environment = randomEnvironment().copy(scopes = expected)
 
-      val actual = environmentScopes.get(environment)
-      actual mustBe expected
-    }
-
-    "must set the scopes correctly" in {
-      val expected = randomScopes()
-      val environment = randomEnvironment().copy(scopes = Seq.empty)
-
-      val actual = environmentScopes.set(environment, expected).scopes
-      actual mustBe expected
-    }
-  }
 
   "environmentProd" - {
     "must" - {
@@ -297,6 +281,87 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "getPreProdCredentials" - {
+      "must" - {
+        behave like applicationCredentialsGetterFunction(
+          applicationPreProdCredentials,
+          application => ApplicationLensOps(application).getPreProdCredentials
+        )
+      }
+    }
+
+    "setPreProdCredentials" - {
+      "must" - {
+        behave like applicationCredentialsSetterFunction(
+          applicationPreProdCredentials,
+          (application, credentials) => ApplicationLensOps(application).setPreProdCredentials(credentials)
+        )
+      }
+    }
+
+    "addPreProdCredential" - {
+      "must" - {
+        behave like applicationAddCredentialFunction(
+          applicationPreProdCredentials,
+          (application, credential) => ApplicationLensOps(application).addPreProdCredential(credential)
+        )
+      }
+    }
+
+    "getTestCredentials" - {
+      "must" - {
+        behave like applicationCredentialsGetterFunction(
+          applicationTestCredentials,
+          application => ApplicationLensOps(application).getTestCredentials
+        )
+      }
+    }
+
+    "setTestCredentials" - {
+      "must" - {
+        behave like applicationCredentialsSetterFunction(
+          applicationTestCredentials,
+          (application, credentials) => ApplicationLensOps(application).setTestCredentials(credentials)
+        )
+      }
+    }
+
+    "addTestCredential" - {
+      "must" - {
+        behave like applicationAddCredentialFunction(
+          applicationTestCredentials,
+          (application, credential) => ApplicationLensOps(application).addTestCredential(credential)
+        )
+      }
+    }
+
+    "getDevCredentials" - {
+      "must" - {
+        behave like applicationCredentialsGetterFunction(
+          applicationDevCredentials,
+          application => ApplicationLensOps(application).getDevCredentials
+        )
+      }
+    }
+
+    "setDevCredentials" - {
+      "must" - {
+        behave like applicationCredentialsSetterFunction(
+          applicationDevCredentials,
+          (application, credentials) => ApplicationLensOps(application).setDevCredentials(credentials)
+        )
+      }
+    }
+
+    "addDevCredential" - {
+      "must" - {
+        behave like applicationAddCredentialFunction(
+          applicationDevCredentials,
+          (application, credential) => ApplicationLensOps(application).addDevCredential(credential)
+        )
+      }
+    }
+
   }
 
 }
@@ -446,6 +511,64 @@ object ApplicationLensesSpec {
         val application = lens.set(testApplication, scopes)
 
         val actual = lens.get(addsScope(application, newScope))
+        actual mustBe expected
+      }
+    }
+
+    def applicationToCredentialsLens(
+                                 lens: Lens[Application, Seq[Credential]],
+                                 getsEnvironment: Environments => Environment
+                               ): Unit = {
+      "it must get the correct Credentials" in {
+        val application = testApplication.copy(environments = randomEnvironments())
+        val expected = getsEnvironment(application.environments).credentials
+
+        val actual = lens.get(application)
+        actual mustBe expected
+      }
+
+      "it must set the Credentials correctly" in {
+        val application = testApplication
+        val expected = randomCredentials()
+
+        val actual = getsEnvironment(lens.set(application, expected).environments).scopes
+        actual mustBe expected
+      }
+    }
+
+    def applicationCredentialsGetterFunction(
+      lens: Lens[Application, Seq[Credential]],
+      getsCredentials: Application => Seq[Credential]
+    ): Unit = {
+      "it must get the correct Credentials" in {
+        val expected = randomCredentials()
+        val actual = getsCredentials(lens.set(testApplication, expected))
+        actual mustBe expected
+      }
+    }
+
+    def applicationCredentialsSetterFunction(
+      lens: Lens[Application, Seq[Credential]],
+      setsCredentials: (Application, Seq[Credential]) => Application
+    ): Unit = {
+      "must set the Credentials correctly" in {
+        val expected = randomCredentials()
+        val actual = lens.get(setsCredentials(testApplication, expected))
+        actual mustBe expected
+      }
+    }
+
+    def applicationAddCredentialFunction(
+      lens: Lens[Application, Seq[Credential]],
+      addsCredential: (Application, Credential) => Application
+    ): Unit = {
+      "must add the Credential correctly" in {
+        val credentials = randomCredentials()
+        val newCredential = randomCredential()
+        val expected = credentials :+ newCredential
+        val application = lens.set(testApplication, credentials)
+
+        val actual = lens.get(addsCredential(application, newCredential))
         actual mustBe expected
       }
     }

@@ -40,12 +40,7 @@ object ApplicationTestLenses {
     }
 
     def withEmptyCredentials: Application = {
-      application.copy(environments = application.environments.copy(
-                                              dev = application.environments.dev.copy(credentials = Seq.empty),
-                                              test = application.environments.test.copy(credentials = Seq.empty),
-                                              preProd = application.environments.preProd.copy(credentials = Seq.empty),
-                                              prod = application.environments.prod.copy(credentials = Seq.empty)
-                                            ))
+      application.setDevCredentials(Seq.empty).setTestCredentials(Seq.empty).setPreProdCredentials(Seq.empty).setProdCredentials(Seq.empty)
     }
   }
 
