@@ -44,7 +44,23 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
     }
   }
 
+  "environmentScopes" - {
+    "must get the correct Scopes" in {
+      val expected = randomScopes()
+      val environment = randomEnvironment().copy(scopes = expected)
 
+      val actual = environmentScopes.get(environment)
+      actual mustBe expected
+    }
+
+    "must set the scopes correctly" in {
+      val expected = randomScopes()
+      val environment = randomEnvironment().copy(scopes = Seq.empty)
+
+      val actual = environmentScopes.set(environment, expected).scopes
+      actual mustBe expected
+    }
+  }
 
   "environmentProd" - {
     "must" - {
