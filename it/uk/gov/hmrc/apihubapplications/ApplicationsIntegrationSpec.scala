@@ -115,7 +115,7 @@ class ApplicationsIntegrationSpec
         storedApplication.name shouldBe newApplication.name
         storedApplication.createdBy shouldBe newApplication.createdBy
         storedApplication.created shouldBe storedApplication.lastUpdated
-        storedApplication.teamMembers shouldBe empty
+        storedApplication.teamMembers shouldBe Seq(TeamMember(newApplication.createdBy.email))
         storedApplication.environments.dev shouldBe Environment(Seq.empty, Seq.empty)
         storedApplication.environments.test shouldBe Environment(Seq.empty, Seq.empty)
         storedApplication.environments.preProd shouldBe Environment(Seq.empty, Seq.empty)

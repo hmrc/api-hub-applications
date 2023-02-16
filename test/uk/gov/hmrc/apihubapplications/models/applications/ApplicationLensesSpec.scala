@@ -19,9 +19,9 @@ package uk.gov.hmrc.apihubapplications.models.applications
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.Lens
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Denied, Environment, Environments, Pending, Scope, ScopeStatus}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Denied, Environment, Environments, Pending, Scope, ScopeStatus, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomEnvironment, randomEnvironments, randomScopes, randomString, testApplication}
+import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomEnvironment, randomEnvironments, randomScopes, randomString, randomTeamMembers, testApplication}
 
 import scala.util.Random
 
@@ -170,6 +170,21 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
     }
   }
 
+  "applicationTeamMembers" - {
+    "must get the correct team members" in {
+      val application = testApplication.copy(teamMembers = randomTeamMembers())
+      val actual = applicationTeamMembers.get(application)
+      actual mustBe application.teamMembers
+    }
+
+    "must set the team members correctly" in {
+      val application = testApplication.copy(teamMembers = randomTeamMembers())
+      val expected = randomTeamMembers()
+      val actual = applicationTeamMembers.set(application, expected).teamMembers
+      actual mustBe expected
+    }
+  }
+
   "ApplicationLensOps" - {
     "getProdScopes" - {
       "must" - {
@@ -297,6 +312,73 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "hasTeamMember" - {
+      "must return true when the given email address belongs to a team member" in {
+        val application = testApplication.copy(
+          teamMembers = Seq(
+            TeamMember("JoBlOgGs@EmAiL.cOm"),
+            TeamMember("notjobloggs@email.com")
+          )
+        )
+
+        application.hasTeamMember("jobloggs@email.com") mustBe true
+      }
+
+      "must return false when the given email does not belong to a team member" in {
+        val application = testApplication.copy(
+          teamMembers = Seq(
+            TeamMember("team-member-1@email.com"),
+            TeamMember("team-member-2@email.com")
+          )
+        )
+
+        application.hasTeamMember("team-member-3@email.com") mustBe false
+      }
+    }
+
+    "addTeamMember" - {
+      "must add a team member with the given email to the application" in {
+        val existing = Seq(
+          TeamMember("team-member-1@email.com"),
+          TeamMember("team-member-2@email.com")
+        )
+
+        val application = testApplication.copy(teamMembers = existing)
+        val added = TeamMember(email = "team-member-3@email.com")
+
+        val actual = application.addTeamMember(added.email).teamMembers
+        actual mustBe existing :+ added
+      }
+    }
+
+    "assertTeamMember" - {
+      "must add a new team member when not already in the team" in {
+        val existing = Seq(
+          TeamMember("team-member-1@email.com"),
+          TeamMember("team-member-2@email.com")
+        )
+
+        val application = testApplication.copy(teamMembers = existing)
+        val added = TeamMember(email = "team-member-3@email.com")
+
+        val actual = application.assertTeamMember(added.email).teamMembers
+        actual mustBe existing :+ added
+      }
+
+      "must not add a new team member when already in the team" in {
+        val existing = Seq(
+          TeamMember("team-member-1@email.com"),
+          TeamMember("team-member-2@email.com")
+        )
+
+        val application = testApplication.copy(teamMembers = existing)
+        val added = TeamMember(email = "team-member-2@email.com")
+
+        val actual = application.assertTeamMember(added.email).teamMembers
+        actual mustBe existing
+      }
+    }
+
   }
 
 }
@@ -344,6 +426,13 @@ object ApplicationLensesSpec {
       case 1 => Denied
       case _ => Approved
     }
+
+  private def randomTeamMember(): TeamMember =
+    TeamMember(email = randomString())
+
+  private def randomTeamMembers(): Seq[TeamMember] =
+    (0 to Random.nextInt(5))
+      .map(_ => randomTeamMember())
 
   private def randomString(): String = Random.alphanumeric.take(Random.nextInt(10) + 1).mkString
 

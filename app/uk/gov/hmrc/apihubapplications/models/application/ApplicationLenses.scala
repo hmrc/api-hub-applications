@@ -80,6 +80,12 @@ object ApplicationLenses {
   val applicationDevScopes: Lens[Application, Seq[Scope]] =
     Lens.compose(applicationDev, environmentScopes)
 
+  val applicationTeamMembers: Lens[Application, Seq[TeamMember]] =
+    Lens[Application, Seq[TeamMember]](
+      get = _.teamMembers,
+      set = (application, teamMembers) => application.copy(teamMembers = teamMembers)
+    )
+
   implicit class ApplicationLensOps(application: Application) {
 
     def getProdScopes: Seq[Scope] =
@@ -133,6 +139,25 @@ object ApplicationLenses {
         application,
         applicationDevScopes.get(application) :+ scope
       )
+
+    def hasTeamMember(email: String): Boolean =
+      applicationTeamMembers.get(application)
+        .exists(teamMember => teamMember.email.equalsIgnoreCase(email))
+
+    def addTeamMember(email: String): Application =
+      applicationTeamMembers.set(
+        application,
+        applicationTeamMembers.get(application) :+ TeamMember(email)
+      )
+
+    def assertTeamMember(email: String): Application = {
+      if (application.hasTeamMember(email)) {
+        application
+      }
+      else {
+        application.addTeamMember(email)
+      }
+    }
 
   }
 
