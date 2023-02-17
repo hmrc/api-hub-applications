@@ -40,10 +40,6 @@ class ApplicationsController @Inject()
     request: Request[JsValue] =>
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>
-//          applicationsRepository
-//            .insert(
-//              Application(newApp).assertTeamMember(newApp.createdBy.email)
-//            )
           applicationsService.registerApplication(newApp)
             .map(saved => Created(Json.toJson(saved)))
         case e: JsError =>

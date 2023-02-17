@@ -40,7 +40,7 @@ import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 
-import java.time.{Clock, LocalDateTime}
+import java.time.LocalDateTime
 import java.util.UUID
 import scala.concurrent.Future
 
@@ -63,7 +63,7 @@ class ApplicationsControllerSpec
           )
           .withBody(json)
 
-        val expected = Application(newApplication, Clock.systemDefaultZone())
+        val expected = Application(newApplication)
           .addTeamMember(newApplication.createdBy.email)
           .copy(id=Some("test-id"))
 
@@ -90,6 +90,7 @@ class ApplicationsControllerSpec
       }}
 
   }
+
   "retrieve all Applications" - {
     "must return 200 and a JSON array representing all applications in db" in {
       val fixture = buildFixture()
@@ -351,7 +352,7 @@ object ApplicationsControllerSpec {
   private val testCreator = Creator("test@email.com")
 
   def testApplication: Application = {
-    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator, Clock.systemDefaultZone())
+    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator)
   }
 
 }
