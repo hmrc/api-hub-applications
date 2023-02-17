@@ -96,6 +96,30 @@ class ApplicationsRepositoryIntegrationSpec
       actual mustBe None
     }
   }
+
+  "update" - {
+    "must update MongoDb and return true when the application exists in the database" in {
+      val application = Application(None, "test-app", Creator("test1@test.com"))
+
+      val saved = repository.insert(application).futureValue
+      val updated = saved.copy(name = "test-app-updated")
+
+      val result = repository.update(updated).futureValue
+      result mustBe true
+
+      val actual = repository.findById(updated.id.value).futureValue
+      actual.value mustBe updated
+    }
+
+    "must return false when the application does not exist in the database" in {
+      val id = List.fill(24)("0").mkString
+      val application = Application(Some(id), "test-app", Creator("test1@test.com"))
+
+      val result = repository.update(application).futureValue
+      result mustBe false
+    }
+  }
+
   "add scopes" - {
     "must return true if mongoDB was updated successfully with multiple scopes" in {
 

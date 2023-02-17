@@ -24,13 +24,14 @@ import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsController @Inject()
-  (cc: ControllerComponents, applicationsRepository: ApplicationsRepository)
+  (cc: ControllerComponents, applicationsRepository: ApplicationsRepository, applicationsService: ApplicationsService)
   (implicit ec: ExecutionContext)
   extends BackendController(cc)
   with Logging {
@@ -39,10 +40,11 @@ class ApplicationsController @Inject()
     request: Request[JsValue] =>
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>
-          applicationsRepository
-            .insert(
-              Application(newApp).assertTeamMember(newApp.createdBy.email)
-            )
+//          applicationsRepository
+//            .insert(
+//              Application(newApp).assertTeamMember(newApp.createdBy.email)
+//            )
+          applicationsService.registerApplication(newApp)
             .map(saved => Created(Json.toJson(saved)))
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")

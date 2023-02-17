@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import play.api.libs.json.{Format, Json}
 
-import java.time.LocalDateTime
+import java.time.{Clock, LocalDateTime}
 
 case class Application (
   id: Option[String],
@@ -33,12 +33,20 @@ case class Application (
 object Application {
 
   def apply(id: Option[String], name: String, createdBy: Creator): Application = {
-    val now = LocalDateTime.now()
+    Application(id, name, createdBy, Clock.systemDefaultZone())
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, clock: Clock): Application = {
+    val now = LocalDateTime.now(clock)
     Application(id, name, now, createdBy, now, Seq.empty, Environments())
   }
 
   def apply(newApplication: NewApplication): Application = {
     apply(None, newApplication.name, newApplication.createdBy)
+  }
+
+  def apply(newApplication: NewApplication, clock: Clock): Application = {
+    apply(None, newApplication.name, newApplication.createdBy, clock)
   }
 
   implicit val applicationFormat: Format[Application] = Json.format[Application]

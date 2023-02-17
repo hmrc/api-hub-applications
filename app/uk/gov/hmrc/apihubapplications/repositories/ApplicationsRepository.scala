@@ -18,8 +18,8 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
-import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
+import org.mongodb.scala.model.{Filters, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -70,6 +70,21 @@ class ApplicationsRepository @Inject()
       )
   }
 
+  def update(application: Application): Future[Boolean] = {
+    stringToObjectId(application.id) match {
+      case Some(id) =>
+        collection
+          .replaceOne(
+            filter = Filters.equal("_id", id),
+            replacement = application,
+            options     = ReplaceOptions().upsert(false)
+          )
+          .toFuture()
+          .map(_.getModifiedCount == 1)
+      case None => Future.successful(false)
+    }
+  }
+
   def addScopes(applicationId:String, newScopes: Seq[NewScope]): Future[Option[Boolean]] = {
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
@@ -89,7 +104,7 @@ class ApplicationsRepository @Inject()
     }
   }
 
-  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus)= {
+  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus): Future[Option[Boolean]] = {
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
           val updates = Seq(
@@ -166,6 +181,10 @@ object ApplicationsRepository extends Logging {
         logger.debug(s"Invalid ObjectId specified: $id")
         None
     }
+  }
+
+  def stringToObjectId(id: Option[String]): Option[ObjectId] = {
+    id.flatMap(stringToObjectId)
   }
 
 }

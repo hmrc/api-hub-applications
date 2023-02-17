@@ -18,13 +18,12 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import org.mockito.ArgumentMatchers.{any, argThat}
-import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar.mock
+import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import play.api.{Application => PlayApplication}
 import play.api.http.Status
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -32,14 +31,16 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
+import play.api.{Application => PlayApplication}
 import sttp.model.StatusCode.NoContent
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
-import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 
-import java.time.LocalDateTime
+import java.time.{Clock, LocalDateTime}
 import java.util.UUID
 import scala.concurrent.Future
 
@@ -62,18 +63,16 @@ class ApplicationsControllerSpec
           )
           .withBody(json)
 
-        val repositoryArg = Application(newApplication)
+        val expected = Application(newApplication, Clock.systemDefaultZone())
           .addTeamMember(newApplication.createdBy.email)
+          .copy(id=Some("test-id"))
 
-        val expected = repositoryArg.copy(id=Some("test-id"))
-
-        when(fixture.repository.insert(any())).thenReturn(Future.successful(expected))
+        when(fixture.applicationsService.registerApplication(ArgumentMatchers.eq(newApplication)))
+          .thenReturn(Future.successful(expected))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
         contentAsJson(result) mustBe Json.toJson(expected)
-
-        verify(fixture.repository).insert(argThat((arg: Application) => arg.copy(created = repositoryArg.created, lastUpdated = repositoryArg.lastUpdated) == repositoryArg))
       }
     }
 
@@ -330,25 +329,29 @@ object ApplicationsControllerSpec {
 
   case class Fixture(
     application: PlayApplication,
-    repository: ApplicationsRepository
+    repository: ApplicationsRepository,
+    applicationsService: ApplicationsService
   )
 
   def buildFixture(): Fixture = {
     val repository = mock[ApplicationsRepository]
+    val applicationsService = mock[ApplicationsService]
+
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
-        bind[ApplicationsRepository].toInstance(repository)
+        bind[ApplicationsRepository].toInstance(repository),
+        bind[ApplicationsService].toInstance(applicationsService)
       )
       .build()
 
-    Fixture(application, repository)
+    Fixture(application, repository, applicationsService)
   }
 
   private val testCreator = Creator("test@email.com")
 
   def testApplication: Application = {
-    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator)
+    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator, Clock.systemDefaultZone())
   }
 
 }
