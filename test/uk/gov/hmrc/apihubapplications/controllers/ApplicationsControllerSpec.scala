@@ -61,8 +61,12 @@ class ApplicationsControllerSpec
             CONTENT_TYPE -> "application/json"
           )
           .withBody(json)
+
         val repositoryArg = Application(newApplication)
+          .addTeamMember(newApplication.createdBy.email)
+
         val expected = repositoryArg.copy(id=Some("test-id"))
+
         when(fixture.repository.insert(any())).thenReturn(Future.successful(expected))
 
         val result = route(fixture.application, request).value

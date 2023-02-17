@@ -40,7 +40,9 @@ class ApplicationsController @Inject()
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>
           applicationsRepository
-            .insert(Application(newApp))
+            .insert(
+              Application(newApp).assertTeamMember(newApp.createdBy.email)
+            )
             .map(saved => Created(Json.toJson(saved)))
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
