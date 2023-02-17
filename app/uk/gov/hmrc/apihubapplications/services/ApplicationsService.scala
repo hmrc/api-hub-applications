@@ -34,4 +34,8 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
     )
   }
 
+  def findAll(): Future[Seq[Application]] = {
+    repository.findAll()
+  }
+
 }

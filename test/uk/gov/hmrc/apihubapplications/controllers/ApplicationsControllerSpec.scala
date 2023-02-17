@@ -104,7 +104,7 @@ class ApplicationsControllerSpec
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications.url)
 
-        when(fixture.repository.findAll()).thenReturn(Future.successful(expected_apps))
+        when(fixture.applicationsService.findAll()).thenReturn(Future.successful(expected_apps))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK

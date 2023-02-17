@@ -55,4 +55,24 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
     }
   }
 
+  "findAll" - {
+    "must return all applications from the repository" in {
+      val applications = Seq(
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1")),
+        Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"))
+      )
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findAll()).thenReturn(Future.successful(applications))
+
+      val service = new ApplicationsService(repository, Clock.systemDefaultZone())
+      service.findAll() map {
+        actual =>
+          actual mustBe applications
+          verify(repository).findAll()
+          succeed
+      }
+    }
+  }
+
 }
