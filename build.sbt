@@ -16,3 +16,7 @@ lazy val microservice = Project("api-hub-applications", file("."))
   .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(CodeCoverageSettings.settings: _*)
+  .settings(
+    Test / unmanagedSourceDirectories += baseDirectory.value / "test-common",
+    IntegrationTest / unmanagedSourceDirectories += baseDirectory.value / "test-common"
+  )
