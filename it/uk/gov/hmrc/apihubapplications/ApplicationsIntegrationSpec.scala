@@ -322,23 +322,6 @@ class ApplicationsIntegrationSpec
         response.status shouldBe 404
       }
     }
-    "must return 400 badRequest when trying to set scope not to APPROVED" in {
-      forAll { (application: Application) =>
-        val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
-        deleteAll().futureValue
-        insert(appWithPendingProdScope).futureValue
-        val updateScopeStatus = UpdateScopeStatus(Pending)
-        val statusUpdateJson = Json.toJson(updateScopeStatus)
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/scopes/${application.pendingScopeName}")
-            .addHttpHeaders(("Content-Type", "application/json"))
-            .put(statusUpdateJson)
-            .futureValue
-
-        response.status shouldBe 400
-      }
-    }
   }
 
 }

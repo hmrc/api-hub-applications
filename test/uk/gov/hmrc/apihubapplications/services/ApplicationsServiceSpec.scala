@@ -19,7 +19,12 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Environments, NewApplication, TeamMember}
+import play.api.libs.json
+import play.api.libs.json.Json
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName._
+import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -71,6 +76,108 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
           actual mustBe applications
           verify(repository).findAll()
           succeed
+      }
+    }
+  }
+
+  "addScopes" - {
+    "must add new scopes to Application" in {
+      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+      val repository = mock[ApplicationsRepository]
+      val service = new ApplicationsService(repository, clock)
+
+      val newScopes = Seq(
+       NewScope("test-name-1", Seq(Prod)),
+       NewScope("test-name-2", Seq(Dev, Test))
+      )
+
+      val testAppId = "test-app-id"
+      val app  = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      )
+
+      val updatedApp = app
+        .addScopes(Prod, Seq("test-name-1"))
+        .addScopes(Dev, Seq("test-name-2"))
+        .addScopes(Test, Seq("test-name-2"))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+
+      service.addScopes(testAppId, newScopes) map {
+        actual =>
+          actual mustBe Some(true)
+      }
+    }
+    "must return None if application not found" in {
+      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+      val repository = mock[ApplicationsRepository]
+      val service = new ApplicationsService(repository, clock)
+
+      val newScopes = Seq(
+        NewScope("test-name-1", Seq(Prod)),
+        NewScope("test-name-2", Seq(Dev, Test))
+      )
+
+      val testAppId = "test-app-id"
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
+
+      service.addScopes(testAppId, newScopes) map {
+        actual =>
+          actual mustBe None
+      }
+    }
+  }
+
+  "set scope status" - {
+    "must set scopes for an application" in {
+      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+      val repository = mock[ApplicationsRepository]
+      val service = new ApplicationsService(repository, clock)
+
+      val envs = Environments(
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq(Scope("test-scope-1", Pending)), Seq.empty)
+      )
+
+      val testAppId = "test-app-id"
+      val app  = Application(
+        id = Some(testAppId),
+        name = testAppId,
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = envs
+      )
+
+      val updatedApp = app.setProdScopes(Seq(Scope("test-scope-1", Approved)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+
+      service.setScope(testAppId, "prod", "test-scope-1", UpdateScopeStatus(Approved)) map {
+        actual =>
+          actual mustBe Some(true)
+      }
+    }
+    "must return None if application not found" in {
+      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+      val repository = mock[ApplicationsRepository]
+      val service = new ApplicationsService(repository, clock)
+
+      val testAppId = "test-app-id"
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
+
+      service.setScope(testAppId, "prod", "test-name-2", UpdateScopeStatus(Approved)) map {
+        actual =>
+          actual mustBe Some(false)
       }
     }
   }

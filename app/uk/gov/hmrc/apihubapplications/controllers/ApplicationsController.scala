@@ -60,17 +60,15 @@ class ApplicationsController @Inject()
       }
   }
 
-  def addScopes(id: String): Action[JsValue] = Action(parse.json).async{
+  def addScopes(id: String): Action[JsValue] = Action(parse.json).async {
     request: Request[JsValue] => {
       val jsReq = request.body
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
-          applicationsRepository
-            .addScopes(id, scopes)
-            .map(_ match {
-              case Some(true) => NoContent
-              case _ => NotFound
-            })
+          applicationsService.addScopes(id, scopes).map(_ match {
+            case Some(true) => NoContent
+            case _ => NotFound
+          })
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
@@ -88,17 +86,16 @@ class ApplicationsController @Inject()
       .map(Ok(_))
   }
 
-  def setApprovedScope(id:String,environment:String, scopename:String): Action[JsValue] = Action(parse.json).async {
+  def setScope(id: String, environment: String, scopename: String): Action[JsValue] = Action(parse.json).async {
     request: Request[JsValue] => {
       val jsReq = request.body
       jsReq.validate[UpdateScopeStatus] match {
-        case JsSuccess(updateStatus@UpdateScopeStatus(Approved), _) =>
-          applicationsRepository
+        case JsSuccess(updateStatus, _) =>
+          applicationsService
             .setScope(id, environment, scopename, updateStatus).map(_ match {
             case Some(true) => NoContent
             case _ => NotFound
           })
-        case JsSuccess(_,_)  => Future.successful(BadRequest)
 
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")

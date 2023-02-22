@@ -17,15 +17,17 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, NewApplication}
+import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName, NewApplication, NewScope}
+import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
-import java.time.Clock
-import scala.concurrent.Future
+import java.time.{Clock, LocalDateTime}
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: Clock) {
+class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: Clock)(implicit ec: ExecutionContext) extends Logging{
 
   def registerApplication(newApplication: NewApplication): Future[Application] = {
     repository.insert(
@@ -38,4 +40,69 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
     repository.findAll()
   }
 
+  def findById(id: String): Future[Option[Application]] = {
+    repository.findById(id)
+  }
+
+  def addScope(applicationId: String, newScope: NewScope): Future[Option[Boolean]] =
+    repository.findById(applicationId).flatMap {
+      case Some(application) =>
+        val updatedApp: Application = newScope.environments.foldLeft(application)((app, envName) => app.addScope(envName, newScope.name))
+        repository.update(updatedApp.copy(lastUpdated = LocalDateTime.now())).map(Some(_))
+      case None => Future.successful(None)
+    }
+
+  def addScopes(applicationId: String, newScopes: Seq[NewScope]): Future[Option[Boolean]] =
+    repository.findById(applicationId).flatMap {
+      case Some(application) =>
+        val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq.empty[(EnvironmentName,String)])((envToScopes, newScope) =>envToScopes++newScope.environments.map(env => (env,newScope.name)))
+        val envToScopesMap: Map[EnvironmentName, Seq[String]] = envScopes.groupBy(_._1).map(kv => (kv._1, kv._2.map(newScope => newScope._2)))
+        val updatedApp: Application = envToScopesMap.foldLeft(application)((app, envToScopes) => app.addScopes(envToScopes._1, envToScopes._2))
+        repository.update(updatedApp).map(app => Some(app))
+      case None => Future.successful(None)
+    }
+
+
+  def setScope(applicationId: String, env: String, scopeName: String, updateStatus: UpdateScopeStatus): Future[Option[Boolean]] = {
+    repository.findById(applicationId).flatMap { _ match {
+        case Some(application) =>
+          val updatedApp: Option[Application] = env match {
+            case "dev" =>
+              if (application.environments.dev.scopes.exists(scope => scope.name == scopeName)) {
+                Some(application.setDevScopes(application.environments.dev.scopes.map(scope => if (scope.name == scopeName) scope.copy(status = updateStatus.status) else scope)))
+              } else {
+                None
+              }
+
+            case "test" =>
+              if (application.environments.test.scopes.exists(scope => scope.name == scopeName)) {
+                Some(application.setTestScopes(application.environments.test.scopes.map(scope => if (scope.name == scopeName) scope.copy(status = updateStatus.status) else scope)))
+              } else {
+                None
+              }
+
+            case "preProd" =>
+              if (application.environments.preProd.scopes.exists(scope => scope.name == scopeName)) {
+                Some(application.setPreProdScopes(application.environments.preProd.scopes.map(scope => if (scope.name == scopeName) scope.copy(status = updateStatus.status) else scope)))
+              } else {
+                None
+              }
+
+            case "prod" =>
+              if (application.environments.prod.scopes.exists(scope => scope.name == scopeName)) {
+                Some(application.setProdScopes(application.environments.prod.scopes.map(scope => if (scope.name == scopeName) scope.copy(status = updateStatus.status) else scope)))
+              } else {
+                None
+              }
+
+            case _ => None
+          }
+          updatedApp match {
+            case Some(app) => repository.update(app).map(Some(_))
+            case None => Future.successful(None)
+          }
+        case None => Future.successful(Some(false))
+      }
+    }
+  }
 }

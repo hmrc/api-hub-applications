@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
 import org.mongodb.scala.model.{Filters, ReplaceOptions}
 import play.api.Logging
@@ -71,12 +72,13 @@ class ApplicationsRepository @Inject()
   }
 
   def update(application: Application): Future[Boolean] = {
-    stringToObjectId(application.id) match {
+    val withLastUpdated = application.copy(lastUpdated = LocalDateTime.now())
+    stringToObjectId(withLastUpdated.id) match {
       case Some(id) =>
         collection
           .replaceOne(
             filter = Filters.equal("_id", id),
-            replacement = application,
+            replacement = withLastUpdated,
             options     = ReplaceOptions().upsert(false)
           )
           .toFuture()
@@ -89,7 +91,7 @@ class ApplicationsRepository @Inject()
     stringToObjectId(applicationId) match {
       case Some(appIdObject) =>
              val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq.empty[(EnvironmentName,String)])((envToScopes, newScope) =>envToScopes++newScope.environments.map(env => (env,newScope.name)))
-             val updates = envScopes.groupBy(_._1).map(kv => {
+             val updates: Seq[Bson] = envScopes.groupBy(_._1).map(kv => {
                 val (env, scopes) = (kv._1, kv._2.map(newScope => kv._1 match{
                   case Prod => Scope(newScope._2, Pending)
                   case _ => Scope(newScope._2, Approved)
