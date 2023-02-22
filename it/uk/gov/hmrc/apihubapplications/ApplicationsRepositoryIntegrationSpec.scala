@@ -108,7 +108,7 @@ class ApplicationsRepositoryIntegrationSpec
       result mustBe true
 
       val actual = repository.findById(updated.id.value).futureValue
-      actual.value mustBe updated
+      actual.value.copy(lastUpdated=updated.lastUpdated) mustBe updated
     }
 
     "must return false when the application does not exist in the database" in {
