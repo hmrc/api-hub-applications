@@ -87,39 +87,6 @@ class ApplicationsRepository @Inject()
     }
   }
 
-  def addScopes(applicationId:String, newScopes: Seq[NewScope]): Future[Option[Boolean]] = {
-    stringToObjectId(applicationId) match {
-      case Some(appIdObject) =>
-             val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq.empty[(EnvironmentName,String)])((envToScopes, newScope) =>envToScopes++newScope.environments.map(env => (env,newScope.name)))
-             val updates: Seq[Bson] = envScopes.groupBy(_._1).map(kv => {
-                val (env, scopes) = (kv._1, kv._2.map(newScope => kv._1 match{
-                  case Prod => Scope(newScope._2, Pending)
-                  case _ => Scope(newScope._2, Approved)
-                }))
-                addEachToSet(f"environments.$env.scopes", scopes: _*)
-             }).toSeq:+set("lastUpdated", LocalDateTime.now().toString)
-              collection.updateOne(
-                Filters.equal("_id", appIdObject),
-                combine(updates: _*) //
-              ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
-      case None => Future.successful(None)
-    }
-  }
-
-  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus): Future[Option[Boolean]] = {
-    stringToObjectId(applicationId) match {
-      case Some(appIdObject) =>
-          val updates = Seq(
-            set(f"environments.$env.scopes.$$.status", updateStatus.status.toString),
-            set("lastUpdated", LocalDateTime.now().toString)
-          )
-          collection.updateOne(
-            Filters.and(Filters.equal("_id", appIdObject ) , Filters.equal(f"environments.$env.scopes.name",scope)),
-            combine(updates: _*)
-          ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
-      case None => Future.successful(None)
-    }
-  }
 
 }
 
