@@ -18,8 +18,6 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
 import org.mongodb.scala.model.{Filters, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json._
