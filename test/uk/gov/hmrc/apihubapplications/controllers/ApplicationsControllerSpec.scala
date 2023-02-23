@@ -245,7 +245,7 @@ class ApplicationsControllerSpec
       val expected = Seq(application1, application6)
 
       val fixture = buildFixture()
-      when(fixture.repository.findAll()).thenReturn(Future.successful(applications))
+      when(fixture.applicationsService.findAll()).thenReturn(Future.successful(applications))
 
       running(fixture.application) {
         val request = FakeRequest(GET, routes.ApplicationsController.pendingScopes.url)
@@ -315,23 +315,20 @@ object ApplicationsControllerSpec {
 
   case class Fixture(
     application: PlayApplication,
-    repository: ApplicationsRepository,
     applicationsService: ApplicationsService
   )
 
   def buildFixture(): Fixture = {
-    val repository = mock[ApplicationsRepository]
     val applicationsService = mock[ApplicationsService]
 
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
-        bind[ApplicationsRepository].toInstance(repository),
         bind[ApplicationsService].toInstance(applicationsService)
       )
       .build()
 
-    Fixture(application, repository, applicationsService)
+    Fixture(application, applicationsService)
   }
 
   private val testCreator = Creator("test@email.com")
