@@ -19,15 +19,13 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import play.api.libs.json
-import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
+import java.util.UUID
 import scala.concurrent.Future
 
 class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar {
@@ -79,6 +77,26 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       }
     }
   }
+
+ "get apps where pros env had pending scopes" -{
+   "get pending scopes" in {
+     val appWithProdPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"))
+                                              .addScopes(Prod, Seq("test-scope-1"))
+     val appWithoutPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"))
+                                              .addScopes(Dev, Seq("test-scope-2"))
+
+     val repository = mock[ApplicationsRepository]
+     when(repository.findAll()).thenReturn(Future.successful(Seq(appWithProdPending,appWithoutPending)))
+
+     val service = new ApplicationsService(repository, Clock.systemDefaultZone())
+     service.getApplicationsWithPendingScope() map {
+       actual =>
+         actual mustBe Seq(appWithProdPending)
+         verify(repository).findAll()
+         succeed
+     }
+   }
+ }
 
   "addScopes" - {
     "must add new scopes to Application" in {

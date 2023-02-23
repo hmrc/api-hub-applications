@@ -34,12 +34,13 @@ package uk.gov.hmrc.apihubapplications
  */
 
 
-import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
-import uk.gov.hmrc.apihubapplications.models.application.{NewScope, _}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -113,6 +114,26 @@ class ApplicationsServiceIntegrationSpec extends AnyFreeSpec
       actual mustBe None
     }
   }
+
+  "get apps where pros env had pending scopes" - {
+    "get pending scopes" in {
+      val now = LocalDateTime.now()
+      val appWithProdPending = Application(None, "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val appWithoutProdPending = Application(None, "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments())
+
+      val app1 = repository.insert(appWithProdPending).futureValue
+      val app2 = repository.insert(appWithoutProdPending).futureValue
+      service.addScopes(app1.id.get, Seq(NewScope("scope4", Seq(Prod)))).futureValue
+      service.addScopes(app2.id.get, Seq(NewScope("scope5", Seq(Dev)))).futureValue
+      repository.insert(appWithoutProdPending).futureValue
+
+
+      val actual = service.getApplicationsWithPendingScope().futureValue
+      val expected = app1.copy(lastUpdated = actual.head.lastUpdated).addScopes(Prod, Seq("scope4"))
+      actual mustBe Seq(expected)
+    }
+  }
+
   "add scopes" - {
     "must return true if mongoDB was updated successfully with multiple scopes" in {
 
@@ -224,7 +245,6 @@ class ApplicationsServiceIntegrationSpec extends AnyFreeSpec
       val actualApp = repository.findById(existingApp.id.get).futureValue.value
       actualApp.environments.prod.scopes mustBe Seq(Scope("scope1", Approved), Scope("scope2", Pending))
       response mustBe Some(true)
-
     }
 
     "must return None when trying to set scope on the application that does not exist in DB" in {

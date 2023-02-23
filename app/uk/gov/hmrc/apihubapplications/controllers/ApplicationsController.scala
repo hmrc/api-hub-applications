@@ -21,9 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -77,13 +75,7 @@ class ApplicationsController @Inject()
   }
 
   def pendingScopes: Action[AnyContent] = Action.async {
-    applicationsService.findAll()
-      .map(
-        applications =>
-          applications.filter(_.hasProdPendingScope)
-      )
-      .map(Json.toJson(_))
-      .map(Ok(_))
+    applicationsService.getApplicationsWithPendingScope().map(Json.toJson(_)).map(Ok(_))
   }
 
   def setScope(id: String, environment: String, scopename: String): Action[JsValue] = Action(parse.json).async {

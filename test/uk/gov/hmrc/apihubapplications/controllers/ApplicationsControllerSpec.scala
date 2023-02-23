@@ -37,7 +37,6 @@ import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 
 import java.time.LocalDateTime
@@ -245,7 +244,7 @@ class ApplicationsControllerSpec
       val expected = Seq(application1, application6)
 
       val fixture = buildFixture()
-      when(fixture.applicationsService.findAll()).thenReturn(Future.successful(applications))
+      when(fixture.applicationsService.getApplicationsWithPendingScope()).thenReturn(Future.successful(Seq(application1, application6)))
 
       running(fixture.application) {
         val request = FakeRequest(GET, routes.ApplicationsController.pendingScopes.url)

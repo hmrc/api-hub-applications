@@ -87,13 +87,6 @@ object ApplicationLenses {
     )
 
   implicit class ApplicationLensOps(application: Application) {
-    def addScope(environment: EnvironmentName, scopeName: String): Application =
-      environment match {
-        case Dev => addDevScope(Scope(scopeName, Approved))
-        case Test => addTestScope(Scope(scopeName, Approved))
-        case PreProd => addPreProdScope(Scope(scopeName, Approved))
-        case Prod => addProdScope(Scope(scopeName, Pending))
-      }
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {

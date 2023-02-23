@@ -23,7 +23,7 @@ import uk.gov.hmrc.apihubapplications.models.application.{Application, Environme
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
-import java.time.{Clock, LocalDateTime}
+import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -43,6 +43,13 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
   def findById(id: String): Future[Option[Application]] = {
     repository.findById(id)
   }
+
+  def getApplicationsWithPendingScope(): Future[Seq[Application]] =
+    findAll()
+      .map(
+        applications =>
+          applications.filter(_.hasProdPendingScope)
+      )
 
   def addScopes(applicationId: String, newScopes: Seq[NewScope]): Future[Option[Boolean]] =
     repository.findById(applicationId).flatMap {
