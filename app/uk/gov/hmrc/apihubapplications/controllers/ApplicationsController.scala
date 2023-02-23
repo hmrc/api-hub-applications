@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsController @Inject()
-  (cc: ControllerComponents, applicationsRepository: ApplicationsRepository, applicationsService: ApplicationsService)
+  (cc: ControllerComponents,applicationsService: ApplicationsService)
   (implicit ec: ExecutionContext)
   extends BackendController(cc)
   with Logging {
@@ -77,7 +77,7 @@ class ApplicationsController @Inject()
   }
 
   def pendingScopes: Action[AnyContent] = Action.async {
-    applicationsRepository.findAll()
+    applicationsService.findAll()
       .map(
         applications =>
           applications.filter(_.hasProdPendingScope)
