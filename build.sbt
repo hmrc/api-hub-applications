@@ -10,6 +10,9 @@ lazy val microservice = Project("api-hub-applications", file("."))
     // https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
     // suppress warnings in generated routes files
     scalacOptions += "-Wconf:src=routes/.*:s",
+    PlayKeys.devSettings ++= Seq(
+      "play.http.router" -> "testOnlyDoNotUseInAppConf.Routes"
+    ),
   )
   .settings(publishingSettings: _*)
   .configs(IntegrationTest)
