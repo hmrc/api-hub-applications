@@ -21,9 +21,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import java.util.UUID
 import scala.concurrent.Future
@@ -78,7 +76,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
     }
   }
 
- "get apps where pros env had pending scopes" -{
+ "get apps where prod env had pending scopes" -{
    "get pending scopes" in {
      val appWithProdPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"))
                                               .addScopes(Prod, Seq("test-scope-1"))
@@ -131,7 +129,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
         actual =>
           actual mustBe Some(true)
       }
-    }
+  }
     "must return None if application not found" in {
       val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
@@ -152,7 +150,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
     }
   }
 
-  "set scope status" - {
+  "set scope status to APPROVED on prod when current scope status is PENDING" - {
     "must set scopes for an application" in {
       val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
@@ -180,12 +178,12 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
 
-      service.setScope(testAppId, "prod", "test-scope-1", UpdateScopeStatus(Approved)) map {
+      service.setPendingProdScopeStatusToApproved(testAppId, "test-scope-1") map {
         actual =>
           actual mustBe Some(true)
       }
     }
-    "must return None if application not found" in {
+    "must return None if application and/or scope name do not exist" in {
       val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
@@ -193,11 +191,42 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
 
-      service.setScope(testAppId, "prod", "test-name-2", UpdateScopeStatus(Approved)) map {
+      service.setPendingProdScopeStatusToApproved(testAppId, "test-name-2") map {
+        actual =>
+          actual mustBe None
+      }
+    }
+    "must return Some(False) when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
+      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+      val repository = mock[ApplicationsRepository]
+      val service = new ApplicationsService(repository, clock)
+      val scopeName = "test-scope-1"
+      val envs = Environments(
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq(Scope(scopeName, Denied)), Seq.empty)
+      )
+      val testAppId = "test-app-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = envs
+      )
+
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+
+      service.setPendingProdScopeStatusToApproved(testAppId, scopeName) map {
         actual =>
           actual mustBe Some(false)
       }
     }
+
   }
 
 }

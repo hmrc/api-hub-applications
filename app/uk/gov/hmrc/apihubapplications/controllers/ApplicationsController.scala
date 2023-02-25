@@ -24,7 +24,6 @@ import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -78,22 +77,25 @@ class ApplicationsController @Inject()
     applicationsService.getApplicationsWithPendingScope().map(Json.toJson(_)).map(Ok(_))
   }
 
-  def setScope(id: String, environment: String, scopename: String): Action[JsValue] = Action(parse.json).async {
-    request: Request[JsValue] => {
-      val jsReq = request.body
-      jsReq.validate[UpdateScopeStatus] match {
-        case JsSuccess(updateStatus, _) =>
-          applicationsService
-            .setScope(id, environment, scopename, updateStatus).map(_ match {
-            case Some(true) => NoContent
-            case _ => NotFound
-          })
+  def approveProdScopeStatus(id:String,environment:String, scopename:String): Action[JsValue] = Action(parse.json).async {
+        request: Request[JsValue] => {
+          val jsReq = request.body
+          if (environment != Prod.toString){
+            Future.successful(BadRequest)
+          }else{
+            jsReq.validate[UpdateScopeStatus] match {
+              case JsSuccess(UpdateScopeStatus(Approved), _) =>
+                applicationsService.setPendingProdScopeStatusToApproved(id, scopename).map(_ match {
+                                    case Some(true) => NoContent
+                                    case _ => NotFound
+                                  })
+              case JsSuccess(updateStatus, _) =>
+                logger.info(s"Setting scope status to: ${updateStatus.status.toString} on environment: $environment is not allowed")
+                Future.successful(BadRequest)
 
-        case e: JsError =>
-          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
-    }
-  }
+              case e: JsError =>
+                logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+                Future.successful(BadRequest)
+            }}}}
 
 }

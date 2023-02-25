@@ -26,8 +26,6 @@ import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
-
-import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -70,13 +68,12 @@ class ApplicationsRepository @Inject()
   }
 
   def update(application: Application): Future[Boolean] = {
-    val withLastUpdated = application.copy(lastUpdated = LocalDateTime.now())
-    stringToObjectId(withLastUpdated.id) match {
+    stringToObjectId(application.id) match {
       case Some(id) =>
         collection
           .replaceOne(
             filter = Filters.equal("_id", id),
-            replacement = withLastUpdated,
+            replacement = application,
             options     = ReplaceOptions().upsert(false)
           )
           .toFuture()

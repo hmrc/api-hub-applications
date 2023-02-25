@@ -41,11 +41,9 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -231,8 +229,9 @@ class ApplicationsServiceIntegrationSpec extends AnyFreeSpec
       None mustBe expected
     }
   }
-  "update scope to APPROVED" - {
-    "must return true if the scope status was updated successfully to APPROVED" in {
+
+  "change scope status from PENDING to APPROVED on prod environment" - {
+    "must return Some(true) if the scope status was updated successfully to APPROVED" in {
 
       val prodEnv = Environment(Seq(
         Scope("scope1", Pending),
@@ -241,21 +240,31 @@ class ApplicationsServiceIntegrationSpec extends AnyFreeSpec
       val now = LocalDateTime.now()
       val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments(Environment(), Environment(), Environment(), prodEnv))
       val existingApp = repository.insert(application).futureValue
-      val response = service.setScope(existingApp.id.get, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
+      val response = service.setPendingProdScopeStatusToApproved(existingApp.id.get, "scope1").futureValue
       val actualApp = repository.findById(existingApp.id.get).futureValue.value
       actualApp.environments.prod.scopes mustBe Seq(Scope("scope1", Approved), Scope("scope2", Pending))
       response mustBe Some(true)
     }
-
     "must return None when trying to set scope on the application that does not exist in DB" in {
       val nonExistingAppId = "9999999999999aaaaaaaaaaa"
-      val actualResult = service.setScope(nonExistingAppId, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
-      actualResult mustBe Some(false)
+      val actualResult = service.setPendingProdScopeStatusToApproved(nonExistingAppId, "scope1").futureValue
+      actualResult mustBe None
     }
-
     "must return None when specified application id of invalid format" in {
       val nonExistingAppId = "invalid mongo object id"
-      val actualResult = service.setScope(nonExistingAppId, "prod", "scope1", UpdateScopeStatus(Approved)).futureValue
+      val actualResult = service.setPendingProdScopeStatusToApproved(nonExistingAppId, "scope1").futureValue
+      actualResult mustBe None
+    }
+    "must return Some(false) when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
+
+      val prodEnv = Environment(Seq(
+        Scope("scope1", Denied),
+        Scope("scope2", Approved)
+      ), Seq.empty)
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments(Environment(), Environment(), Environment(), prodEnv))
+      val existingApp = repository.insert(application).futureValue
+      val actualResult = service.setPendingProdScopeStatusToApproved(existingApp.id.get, "scope1").futureValue
       actualResult mustBe Some(false)
     }
 

@@ -38,7 +38,6 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
-
 import java.time.LocalDateTime
 import java.util.UUID
 import scala.concurrent.Future
@@ -266,9 +265,9 @@ class ApplicationsControllerSpec
       val json = Json.toJson(updateScope)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.setScope(appId, envName, scopeName, updateScope)).thenReturn(Future.successful(Some(true)))
+        when(fixture.applicationsService.setPendingProdScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(Some(true)))
 
-        val request = FakeRequest(PUT, routes.ApplicationsController.setScope(appId, envName, scopeName).url)
+        val request = FakeRequest(PUT, routes.ApplicationsController.approveProdScopeStatus(appId, envName, scopeName).url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -277,10 +276,10 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe NoContent.code
 
-        verify(fixture.applicationsService).setScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(envName), ArgumentMatchers.eq(scopeName), ArgumentMatchers.eq(updateScope))
+        verify(fixture.applicationsService).setPendingProdScopeStatusToApproved(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))
       }
     }
-    "must return 404 Not Found when trying to set scope on the application that does not exist in DB" in {
+    "must return 404 Not Found when trying to set scope status on the application that does not exist in DB" in {
       val appId = "not-exist"
       val envName = "prod"
       val scopeName = "test-scope-name"
@@ -288,9 +287,9 @@ class ApplicationsControllerSpec
       val json = Json.toJson(updateScope)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.setScope(appId, envName, scopeName, updateScope)).thenReturn(Future.successful(Some(false)))
+        when(fixture.applicationsService.setPendingProdScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(Some(false)))
 
-        val request = FakeRequest(PUT, routes.ApplicationsController.setScope(appId, envName, scopeName).url)
+        val request = FakeRequest(PUT, routes.ApplicationsController.approveProdScopeStatus(appId, envName, scopeName).url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -299,13 +298,71 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.NOT_FOUND
 
-        verify(fixture.applicationsService).setScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(envName), ArgumentMatchers.eq(scopeName), ArgumentMatchers.eq(updateScope))
+        verify(fixture.applicationsService).setPendingProdScopeStatusToApproved(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))
       }
     }
+    "must return 404 Not Found when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
+      val appId = "not-exist"
+      val envName = "prod"
+      val scopeName = "test-scope-name"
+      val updateScope: UpdateScopeStatus = UpdateScopeStatus(Approved)
+      val json = Json.toJson(updateScope)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.setPendingProdScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(None))
+
+        val request = FakeRequest(PUT, routes.ApplicationsController.approveProdScopeStatus(appId, envName, scopeName).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+
+        verify(fixture.applicationsService).setPendingProdScopeStatusToApproved(ArgumentMatchers.eq(appId),ArgumentMatchers.eq(scopeName))
+      }
+    }
+
+    "must return 400 Invalid Request when trying to set scope status on environment to other than prod" in {
+      val appId = "not-exist"
+      val envName = "dev"
+      val scopeName = "test-scope-name"
+      val updateScope: UpdateScopeStatus = UpdateScopeStatus(Approved)
+      val json = Json.toJson(updateScope)
+      val fixture = buildFixture()
+      running(fixture.application) {
+
+        val request = FakeRequest(PUT, routes.ApplicationsController.approveProdScopeStatus(appId, envName, scopeName).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+        }
+    }
+    "must return 400 Invalid Request when trying to set scope status on prod environment to other than APPROVED" in{
+        val appId = "not-exist"
+        val envName = "prod"
+        val scopeName = "test-scope-name"
+        val updateScope: UpdateScopeStatus = UpdateScopeStatus(Pending)
+        val json = Json.toJson(updateScope)
+        val fixture = buildFixture()
+        running(fixture.application) {
+          val request = FakeRequest(PUT, routes.ApplicationsController.approveProdScopeStatus(appId, envName, scopeName).url)
+            .withHeaders(
+              CONTENT_TYPE -> "application/json"
+            )
+            .withBody(json)
+            val result = route(fixture.application, request).value
+            status(result) mustBe Status.BAD_REQUEST
+        }
+      }
+
   }
-
 }
-
 
 
 object ApplicationsControllerSpec {
