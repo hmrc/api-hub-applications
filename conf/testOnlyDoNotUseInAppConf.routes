@@ -12,4 +12,6 @@
 # Add all the application routes to the prod.routes file
 ->         /                                                                prod.Routes
 
-GET        /api-hub-applications/test-only/bad-request-demo/success        uk.gov.hmrc.apihubapplications.testonly.BadRequestDemoController.success
+GET        /api-hub-applications/test-only/bad-request-demo/success              uk.gov.hmrc.apihubapplications.testonly.BadRequestDemoController.success
+GET        /api-hub-applications/test-only/bad-request-demo/user-error           uk.gov.hmrc.apihubapplications.testonly.BadRequestDemoController.userError
+GET        /api-hub-applications/test-only/bad-request-demo/service-error        uk.gov.hmrc.apihubapplications.testonly.BadRequestDemoController.serviceError

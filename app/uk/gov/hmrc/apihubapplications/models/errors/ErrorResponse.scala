@@ -21,7 +21,12 @@ import uk.gov.hmrc.apihubapplications.models.Enumerable
 
 sealed trait RequestError
 
-case object InvalidJson extends RequestError
+sealed trait UserRequestError extends RequestError
+case object TeamMemberAlreadyExists extends UserRequestError
+
+sealed trait ServiceRequestError extends RequestError
+
+case object InvalidJson extends ServiceRequestError
 
 case object ApplicationNameNotUnique extends RequestError
 

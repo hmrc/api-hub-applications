@@ -21,24 +21,28 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.errors.{ErrorResponse, InvalidJson, TeamMemberAlreadyExists}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-
-import scala.concurrent.ExecutionContext
 
 @Singleton
 class BadRequestDemoController @Inject()
   (cc: ControllerComponents)
-  (implicit ec: ExecutionContext)
   extends BackendController(cc)
   with Logging {
 
   def success: Action[AnyContent] = Action { _ =>
-    println("here!!!!!")
-      val hardCodedApp = Application(NewApplication("BadRequestDemoApp", Creator("bad-request-demo-creator@hmrc.gov.uk")))
-      val hardCodedAppWithId = hardCodedApp.copy(id = Some("111111111111111111111111"))
-      Ok(Json.toJson(hardCodedAppWithId))
+    val hardCodedApp = Application(NewApplication("BadRequestDemoApp", Creator("bad-request-demo-creator@hmrc.gov.uk")))
+    val hardCodedAppWithId = hardCodedApp.copy(id = Some("111111111111111111111111"))
+    Ok(Json.toJson(hardCodedAppWithId))
   }
 
-  // Future(BadRequest(Json.toJson(ErrorResponse(ApplicationNameNotUnique, "app name not unique"))))
+  def userError: Action[AnyContent] = Action { _ =>
+    BadRequest(Json.toJson(ErrorResponse(TeamMemberAlreadyExists, "The email address of the user already exists in the team members for this application")))
+  }
+
+  def serviceError: Action[AnyContent] = Action { _ =>
+    BadRequest(Json.toJson(ErrorResponse(InvalidJson, "Required fields missing from request to create an application")))
+  }
+
 
 }
