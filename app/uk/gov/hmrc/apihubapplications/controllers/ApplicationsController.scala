@@ -84,7 +84,7 @@ class ApplicationsController @Inject()
             Future.successful(BadRequest)
           }else{
             jsReq.validate[UpdateScopeStatus] match {
-              case JsSuccess(UpdateScopeStatus(Approved), _) =>
+              case JsSuccess(UpdateScopeStatus(Approved), _) if environment==Prod.toString =>
                 applicationsService.setPendingProdScopeStatusToApproved(id, scopename).map(_ match {
                                     case Some(true) => NoContent
                                     case _ => NotFound
