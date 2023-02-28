@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.models.applications
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.Lens
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Denied, Environment, Environments, Pending, Scope, ScopeStatus, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomEnvironment, randomEnvironments, randomScopes, randomString, randomTeamMembers, testApplication}
 
@@ -45,6 +45,20 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
   }
 
   "environmentScopes" - {
+    "must add scopes correctly" in{
+      val app = testApplication
+      val prodScopes = Seq("test-scope-prod-1", "test-scope-prod-2")
+      val devScopes = Seq("test-scope-dev-1", "test-scope-dev-2")
+      val expectedProdScopes = prodScopes.map(scopeName => Scope(scopeName,Pending))
+      val expectedDevScopes = devScopes.map(scopeName => Scope(scopeName,Approved))
+      val updatedApp = app.addScopes(Prod, prodScopes).addScopes(Dev, devScopes)
+      val actualProdScopes = updatedApp.environments.prod.scopes
+      val actualDevScopes = updatedApp.environments.dev.scopes
+
+      actualProdScopes mustBe expectedProdScopes
+      actualDevScopes mustBe expectedDevScopes
+    }
+
     "must get the correct Scopes" in {
       val expected = randomScopes()
       val environment = randomEnvironment().copy(scopes = expected)

@@ -88,6 +88,13 @@ object ApplicationLenses {
 
   implicit class ApplicationLensOps(application: Application) {
 
+    def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
+      environment match {
+        case Dev => setDevScopes((getDevScopes ++ scopes.map(Scope(_, Approved))).distinct)
+        case Test => setTestScopes((getTestScopes ++ scopes.map(Scope(_, Approved))).distinct)
+        case PreProd => setPreProdScopes((getPreProdScopes ++ scopes.map(Scope(_, Approved))).distinct)
+        case Prod => setProdScopes((getProdScopes ++ scopes.map(Scope(_, Pending))).distinct)
+      }
     def getProdScopes: Seq[Scope] =
       applicationProdScopes.get(application)
 

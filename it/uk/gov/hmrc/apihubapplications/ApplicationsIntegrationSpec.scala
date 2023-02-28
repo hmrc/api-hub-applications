@@ -32,7 +32,6 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class ApplicationsIntegrationSpec
@@ -239,7 +238,8 @@ class ApplicationsIntegrationSpec
       }
     }
 
-    "set the status of scopes to approved in all environments except prod, and pending in prod" in {
+    "when registering new Application status of all scopes automatically set to PENDING in prod envirnment " +
+                                                                    "and to APPROVED in all other environments" in {
       forAll { application: Application =>
         val emptyScopesApp = application.withEmptyScopes
 
@@ -289,7 +289,7 @@ class ApplicationsIntegrationSpec
   }
 
 
-  "PUT set scope status" should{
+  "PUT change scope status from PENDING to APPROVED on prod environment" should{
     "respond with a 204 No Content when the status was set successfully" in {
       forAll { (application: Application) =>
         val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
@@ -322,23 +322,54 @@ class ApplicationsIntegrationSpec
         response.status shouldBe 404
       }
     }
-    "must return 400 badRequest when trying to set scope not to APPROVED" in {
+    "must return 404 Not Found when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
       forAll { (application: Application) =>
-        val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
+        val appWithPendingProdScope = application.withEmptyScopes.withProdApprovedScopes
         deleteAll().futureValue
         insert(appWithPendingProdScope).futureValue
-        val updateScopeStatus = UpdateScopeStatus(Pending)
+        val updateScopeStatus = UpdateScopeStatus(Approved)
         val statusUpdateJson = Json.toJson(updateScopeStatus)
         val response =
           wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/scopes/${application.pendingScopeName}")
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/scopes/${application.approvedScopeName}")
             .addHttpHeaders(("Content-Type", "application/json"))
             .put(statusUpdateJson)
             .futureValue
 
-        response.status shouldBe 400
+        response.status shouldBe 404
       }
     }
+    "must return 400 Invalid Request when trying to set scope status on environment to other than prod" in {
+      val appId = "whatever"
+      val envName = "dev"
+      val scopeName = "test-scope-name"
+      val updateScope: UpdateScopeStatus = UpdateScopeStatus(Approved)
+      val statusUpdateJson = Json.toJson(updateScope)
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/$appId/environments/$envName/scopes/$scopeName")
+          .addHttpHeaders(("Content-Type", "application/json"))
+          .put(statusUpdateJson)
+          .futureValue
+
+      response.status shouldBe 400
+    }
+    "must return 400 Invalid Request when trying to set scope status on prod environment to other than APPROVED" in {
+      val appId = "whatever"
+      val envName = "prod"
+      val scopeName = "test-scope-name"
+      val updateScope: UpdateScopeStatus = UpdateScopeStatus(Pending)
+      val statusUpdateJson = Json.toJson(updateScope)
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/$appId/environments/$envName/scopes/$scopeName")
+          .addHttpHeaders(("Content-Type", "application/json"))
+          .put(statusUpdateJson)
+          .futureValue
+
+      response.status shouldBe 400
+    }
+
   }
 
 }

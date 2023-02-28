@@ -21,16 +21,14 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsController @Inject()
-  (cc: ControllerComponents, applicationsRepository: ApplicationsRepository)
+  (cc: ControllerComponents,applicationsService: ApplicationsService)
   (implicit ec: ExecutionContext)
   extends BackendController(cc)
   with Logging {
@@ -39,10 +37,7 @@ class ApplicationsController @Inject()
     request: Request[JsValue] =>
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>
-          applicationsRepository
-            .insert(
-              Application(newApp).assertTeamMember(newApp.createdBy.email)
-            )
+          applicationsService.registerApplication(newApp)
             .map(saved => Created(Json.toJson(saved)))
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
@@ -51,28 +46,26 @@ class ApplicationsController @Inject()
   }
 
   def getApplications: Action[AnyContent] = Action.async {
-    applicationsRepository.findAll().map(apps => Json.toJson(apps)).map(Ok(_))
+    applicationsService.findAll().map(apps => Json.toJson(apps)).map(Ok(_))
   }
 
   def getApplication(id: String): Action[AnyContent] = Action.async {
-    applicationsRepository.findById(id)
+    applicationsService.findById(id)
       .map {
         case Some(application) => Ok(Json.toJson(application))
         case None => NotFound
       }
   }
 
-  def addScopes(id: String): Action[JsValue] = Action(parse.json).async{
+  def addScopes(id: String): Action[JsValue] = Action(parse.json).async {
     request: Request[JsValue] => {
       val jsReq = request.body
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
-          applicationsRepository
-            .addScopes(id, scopes)
-            .map(_ match {
-              case Some(true) => NoContent
-              case _ => NotFound
-            })
+          applicationsService.addScopes(id, scopes).map(_ match {
+            case Some(true) => NoContent
+            case _ => NotFound
+          })
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
@@ -81,32 +74,28 @@ class ApplicationsController @Inject()
   }
 
   def pendingScopes: Action[AnyContent] = Action.async {
-    applicationsRepository.findAll()
-      .map(
-        applications =>
-          applications.filter(_.hasProdPendingScope)
-      )
-      .map(Json.toJson(_))
-      .map(Ok(_))
+    applicationsService.getApplicationsWithPendingScope().map(Json.toJson(_)).map(Ok(_))
   }
 
-  def setApprovedScope(id:String,environment:String, scopename:String): Action[JsValue] = Action(parse.json).async {
-    request: Request[JsValue] => {
-      val jsReq = request.body
-      jsReq.validate[UpdateScopeStatus] match {
-        case JsSuccess(updateStatus@UpdateScopeStatus(Approved), _) =>
-          applicationsRepository
-            .setScope(id, environment, scopename, updateStatus).map(_ match {
-            case Some(true) => NoContent
-            case _ => NotFound
-          })
-        case JsSuccess(_,_)  => Future.successful(BadRequest)
+  def approveProdScopeStatus(id:String,environment:String, scopename:String): Action[JsValue] = Action(parse.json).async {
+        request: Request[JsValue] => {
+          val jsReq = request.body
+          if (environment != Prod.toString){
+            Future.successful(BadRequest)
+          }else{
+            jsReq.validate[UpdateScopeStatus] match {
+              case JsSuccess(UpdateScopeStatus(Approved), _) if environment==Prod.toString =>
+                applicationsService.setPendingProdScopeStatusToApproved(id, scopename).map(_ match {
+                                    case Some(true) => NoContent
+                                    case _ => NotFound
+                                  })
+              case JsSuccess(updateStatus, _) =>
+                logger.info(s"Setting scope status to: ${updateStatus.status.toString} on environment: $environment is not allowed")
+                Future.successful(BadRequest)
 
-        case e: JsError =>
-          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
-    }
-  }
+              case e: JsError =>
+                logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+                Future.successful(BadRequest)
+            }}}}
 
 }

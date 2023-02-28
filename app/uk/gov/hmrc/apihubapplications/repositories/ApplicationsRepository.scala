@@ -18,8 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
-import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Updates.{addEachToSet, combine, set}
+import org.mongodb.scala.model.{Filters, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -27,8 +26,6 @@ import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
-
-import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -70,39 +67,21 @@ class ApplicationsRepository @Inject()
       )
   }
 
-  def addScopes(applicationId:String, newScopes: Seq[NewScope]): Future[Option[Boolean]] = {
-    stringToObjectId(applicationId) match {
-      case Some(appIdObject) =>
-             val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq.empty[(EnvironmentName,String)])((envToScopes, newScope) =>envToScopes++newScope.environments.map(env => (env,newScope.name)))
-             val updates = envScopes.groupBy(_._1).map(kv => {
-                val (env, scopes) = (kv._1, kv._2.map(newScope => kv._1 match{
-                  case Prod => Scope(newScope._2, Pending)
-                  case _ => Scope(newScope._2, Approved)
-                }))
-                addEachToSet(f"environments.$env.scopes", scopes: _*)
-             }).toSeq:+set("lastUpdated", LocalDateTime.now().toString)
-              collection.updateOne(
-                Filters.equal("_id", appIdObject),
-                combine(updates: _*) //
-              ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
-      case None => Future.successful(None)
+  def update(application: Application): Future[Boolean] = {
+    stringToObjectId(application.id) match {
+      case Some(id) =>
+        collection
+          .replaceOne(
+            filter = Filters.equal("_id", id),
+            replacement = application,
+            options     = ReplaceOptions().upsert(false)
+          )
+          .toFuture()
+          .map(_.getModifiedCount == 1)
+      case None => Future.successful(false)
     }
   }
 
-  def setScope(applicationId:String, env:String, scope:String, updateStatus:UpdateScopeStatus)= {
-    stringToObjectId(applicationId) match {
-      case Some(appIdObject) =>
-          val updates = Seq(
-            set(f"environments.$env.scopes.$$.status", updateStatus.status.toString),
-            set("lastUpdated", LocalDateTime.now().toString)
-          )
-          collection.updateOne(
-            Filters.and(Filters.equal("_id", appIdObject ) , Filters.equal(f"environments.$env.scopes.name",scope)),
-            combine(updates: _*)
-          ).toFuture().map(res => Some(res.getMatchedCount==1 && res.getModifiedCount==1))
-      case None => Future.successful(None)
-    }
-  }
 
 }
 
@@ -166,6 +145,10 @@ object ApplicationsRepository extends Logging {
         logger.debug(s"Invalid ObjectId specified: $id")
         None
     }
+  }
+
+  def stringToObjectId(id: Option[String]): Option[ObjectId] = {
+    id.flatMap(stringToObjectId)
   }
 
 }
