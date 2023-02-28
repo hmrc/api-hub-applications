@@ -231,15 +231,6 @@ class ApplicationsControllerSpec
       val application6 = testApplication
         .addProdScope(Scope("app-6-scope-1", Pending))
 
-      val applications = Seq(
-        application1,
-        testApplication.addProdScope(Scope("app-2-scope-1", Approved)),
-        testApplication.addPreProdScope(Scope("app-3-scope-1", Pending)),
-        testApplication.addTestScope(Scope("app-4-scope-1", Pending)),
-        testApplication.addDevScope(Scope("app-5-scope-1", Pending)),
-        application6
-      )
-
       val expected = Seq(application1, application6)
 
       val fixture = buildFixture()
