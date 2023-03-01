@@ -1,0 +1,195 @@
+openapi: "3.0.1"
+info:
+  title: API Hub Applications
+  version: "1.0"
+  description: |
+    This is used by The API Hub frontend (api-hub-frontend) to create and retrieve details of applications made by users
+
+    ```
+    Change Log
+
+    ```
+
+      | Version | Date | Author | Description |
+      |---|-----|------|-----|
+      | 1.0.0 | 01-03-2023 | Laura Howarth-Kirke | Document current endpoints |
+servers:
+  - url: https://api-hub-applications.protected.mdtp/api-hub-applications
+
+paths:
+  /applications:
+    get:
+      summary: Get all applications
+      description: Get all applications ever registered
+      responses:
+        200:
+          description: A list of credentials to scope mappings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applications"
+components:
+  schemas:
+    Applications:
+      type: array
+      items:
+        $ref: "#/components/schemas/Application"
+      example:
+        [
+          {
+            "id": "63e25c5916101c38744f727b",
+            "name": "Address Weighting Service",
+            "created": "2023-02-13T14:44:00.849",
+            "email": "john.smith@hmrc.gov.uk",
+            "lastUpdated": "2023-03-01T11:23:00.583",
+            "teamMembers": [
+              {
+                "email": "john.smith@hmrc.gov.uk"
+              },
+              {
+                "email": "heather.williams@hmrc.gov.uk"
+              },
+              {
+                "email": "bob.fuller@hmrc.gov.uk"
+              }
+            ],
+            "environments": {
+              "dev": {
+                "scopes": [
+                  {
+                    "name": "scope-a",
+                    "status": "APPROVED"
+                  },
+                  {
+                    "name": "scope-b",
+                    "status": "APPROVED"
+                  }
+                ],
+                "credentials": [
+                ]
+              },
+              "test": {
+                "scopes": [ ],
+                "credentials": [
+                ]
+              },
+              "preProd": {
+                "scopes": [ ],
+                "credentials": [
+                ]
+              },
+              "prod": {
+                "scopes": [
+                  {
+                    "name": "scope-c",
+                    "status": "PENDING"
+                  }
+                ],
+                "credentials": [
+                ]
+              }
+            }
+          },
+          {
+            "id": "63e367ee896eeb2e9fccb581",
+            "name": "Keying Service",
+            "created": "2023-02-08T09:14:22.401",
+            "email": "judy.adams@digital.hmrc.gov.uk",
+            "lastUpdated": "2023-02-08T09:14:22.401",
+            "teamMembers": [
+              {
+                "email": "judy.adams@digital.hmrc.gov.uk"
+              }
+            ],
+            "environments": {
+              "dev": {
+                "scopes": [
+                ],
+                "credentials": [
+                ]
+              },
+              "test": {
+                "scopes": [
+                ],
+                "credentials": [
+                ]
+              },
+              "preProd": {
+                "scopes": [
+                ],
+                "credentials": [
+                ]
+              },
+              "prod": {
+                "scopes": [
+                ],
+                "credentials": [
+                ]
+              }
+            }
+          }
+        ]
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        created:
+          type: string
+          format: date-time
+        createdBy:
+          $ref: "#/components/schemas/CreatedBy"
+        lastUpdated:
+          type: string
+          format: date-time
+        teamMembers:
+          $ref: "#/components/schemas/TeamMembers"
+        environments:
+          $ref: "#/components/schemas/Environments"
+    CreatedBy:
+      type: object
+      properties:
+        email:
+          type: string
+    TeamMembers:
+      type: array
+      items:
+        $ref: "#/components/schemas/TeamMember"
+    TeamMember:
+      type: object
+      properties:
+        email:
+          type: string
+    Environments:
+      type: object
+      properties:
+        dev:
+          $ref: "#/components/schemas/Environment"
+        test:
+          $ref: "#/components/schemas/Environment"
+        preProd:
+          $ref: "#/components/schemas/Environment"
+        prod:
+          $ref: "#/components/schemas/Environment"
+    Environment:
+      type: object
+      properties:
+        scopes:
+          $ref: "#/components/schemas/Scopes"
+    Scopes:
+      type: array
+      items:
+        $ref: "#/components/schemas/Scope"
+    Scope:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - "PENDING"
+            - "APPROVED"
+            - "DENIED"
