@@ -20,7 +20,6 @@ paths:
   /applications:
     get:
       summary: Get all applications
-      description: Get all applications ever registered
       responses:
         200:
           description: A list of credentials to scope mappings
@@ -28,124 +27,56 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Applications"
+  /applications/{id}:
+    get:
+      summary: Get application by application ID
+      parameters:
+        - name: id
+          in: path
+          description: The Application ID
+          required: true
+          schema:
+            type: string
+            format: "24 character hexadecimal"
+            example: "63e25c5916101c38744f727b"
+      responses:
+        200:
+          description: A single application with the specified application ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        404:
+          description: An application with specified ID cannot be found
+
 components:
   schemas:
     Applications:
       type: array
       items:
         $ref: "#/components/schemas/Application"
-      example:
-        [
-          {
-            "id": "63e25c5916101c38744f727b",
-            "name": "Address Weighting Service",
-            "created": "2023-02-13T14:44:00.849",
-            "email": "john.smith@hmrc.gov.uk",
-            "lastUpdated": "2023-03-01T11:23:00.583",
-            "teamMembers": [
-              {
-                "email": "john.smith@hmrc.gov.uk"
-              },
-              {
-                "email": "heather.williams@hmrc.gov.uk"
-              },
-              {
-                "email": "bob.fuller@hmrc.gov.uk"
-              }
-            ],
-            "environments": {
-              "dev": {
-                "scopes": [
-                  {
-                    "name": "scope-a",
-                    "status": "APPROVED"
-                  },
-                  {
-                    "name": "scope-b",
-                    "status": "APPROVED"
-                  }
-                ],
-                "credentials": [
-                ]
-              },
-              "test": {
-                "scopes": [ ],
-                "credentials": [
-                ]
-              },
-              "preProd": {
-                "scopes": [ ],
-                "credentials": [
-                ]
-              },
-              "prod": {
-                "scopes": [
-                  {
-                    "name": "scope-c",
-                    "status": "PENDING"
-                  }
-                ],
-                "credentials": [
-                ]
-              }
-            }
-          },
-          {
-            "id": "63e367ee896eeb2e9fccb581",
-            "name": "Keying Service",
-            "created": "2023-02-08T09:14:22.401",
-            "email": "judy.adams@digital.hmrc.gov.uk",
-            "lastUpdated": "2023-02-08T09:14:22.401",
-            "teamMembers": [
-              {
-                "email": "judy.adams@digital.hmrc.gov.uk"
-              }
-            ],
-            "environments": {
-              "dev": {
-                "scopes": [
-                ],
-                "credentials": [
-                ]
-              },
-              "test": {
-                "scopes": [
-                ],
-                "credentials": [
-                ]
-              },
-              "preProd": {
-                "scopes": [
-                ],
-                "credentials": [
-                ]
-              },
-              "prod": {
-                "scopes": [
-                ],
-                "credentials": [
-                ]
-              }
-            }
-          }
-        ]
     Application:
       type: object
       properties:
         id:
           type: string
+          example: "63e25c5916101c38744f727b"
         name:
           type: string
+          example: "Address Weighting Service"
         created:
           type: string
           format: date-time
+          example: "2023-02-13T14:44:00.849"
         createdBy:
           $ref: "#/components/schemas/CreatedBy"
         lastUpdated:
           type: string
           format: date-time
+          example: "2023-03-01T11:23:00.583"
         teamMembers:
           $ref: "#/components/schemas/TeamMembers"
+          example:
         environments:
           $ref: "#/components/schemas/Environments"
     CreatedBy:
@@ -153,6 +84,7 @@ components:
       properties:
         email:
           type: string
+          example: "john.smith@hmrc.gov.uk"
     TeamMembers:
       type: array
       items:
@@ -162,6 +94,7 @@ components:
       properties:
         email:
           type: string
+          example: "john.smith@hmrc.gov.uk"
     Environments:
       type: object
       properties:
@@ -187,9 +120,11 @@ components:
       properties:
         name:
           type: string
+          example: "read:address"
         status:
           type: string
           enum:
             - "PENDING"
             - "APPROVED"
             - "DENIED"
+          example: "APPROVED"
