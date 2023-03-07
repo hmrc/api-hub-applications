@@ -68,7 +68,7 @@ class ApplicationsRepositorySpec
     }
 
     "must successfully serialise an Application without an Id" in {
-      val application = Application(NewApplication("test-app-without-id",Creator("test1@test.com")))
+      val application = Application(NewApplication("test-app-without-id", Creator("test1@test.com"), Seq.empty))
 
       val result = Json.toJson(application)(mongoApplicationFormat)
       (result \ "id") mustBe a [JsUndefined]

@@ -52,7 +52,7 @@ class ApplicationsControllerSpec
     "must return 201 Created for a valid request" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val newApplication = NewApplication("test-app",Creator("test1@test.com"))
+        val newApplication = NewApplication("test-app", Creator("test1@test.com"), Seq.empty)
         val json = Json.toJson(newApplication)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)

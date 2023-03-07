@@ -33,7 +33,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
-      val newApplication = NewApplication("test-name", Creator(email = "test-email"))
+      val newApplication = NewApplication("test-name", Creator(email = "test-email"), Seq.empty)
 
       val application = Application(
         id = None,
