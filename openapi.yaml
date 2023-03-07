@@ -39,7 +39,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NewApplication"
+              $ref: "#/components/schemas/RegisterApplicationRequest"
         required: true
       responses:
         200:
@@ -49,19 +49,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         400:
-          description: If some, or all, of the specified fields are missing
+          $ref: "#/components/responses/badRequest"
   /applications/{id}:
     get:
       summary: Get application by application ID
       parameters:
-        - name: id
-          in: path
-          description: The Application ID
-          required: true
-          schema:
-            type: string
-            format: "24 character hexadecimal"
-            example: "63e25c5916101c38744f727b"
+        - applications:
+          $ref: "#/components/parameters/applicationId"
       responses:
         200:
           description: A single application with the specified application ID
@@ -70,7 +64,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         404:
-          description: An application with specified ID cannot be found
+          $ref: "#/components/responses/appIdNotFound"
+  /applications/{id}/environments/scopes:
+    post:
+      summary: Add a scope to an application
+      parameters:
+        - applications:
+          $ref: "#/components/parameters/applicationId"
+      requestBody:
+        description: The scope to be added
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddScopesRequest"
+            examples:
+              addScopesRequest:
+                $ref: "#/components/examples/addScopesRequest"
+        required: true
+      responses:
+        200:
+          description: All the details of the newly registered application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        400:
+          $ref: "#/components/responses/badRequest"
+        404:
+          $ref: "#/components/responses/appIdNotFound"
   /applications/pending-scopes:
     get:
       summary: Get applications with PENDING prod scopes
@@ -166,7 +187,7 @@ components:
             - "APPROVED"
             - "DENIED"
           example: "APPROVED"
-    NewApplication:
+    RegisterApplicationRequest:
       type: object
       properties:
         name:
@@ -178,6 +199,39 @@ components:
             email:
               type: string
               example: "john.smith@hmrc.gov.uk"
+    AddScopesRequest:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: "read:address"
+          environments:
+            type: array
+            items:
+              type: string
+              enum:
+                - "dev"
+                - "test"
+                - "preProd"
+                - "prod"
+              example: "prod"
+  parameters:
+    applicationId:
+      name: id
+      in: path
+      description: The Application ID
+      required: true
+      schema:
+        type: string
+        format: "24 character hexadecimal"
+        example: "63e25c5916101c38744f727b"
+  responses:
+    badRequest:
+      description: If some, or all, of the specified fields are missing
+    appIdNotFound:
+      description: An application with specified ID cannot be found
   examples:
     applications:
       summary: A list of applications with various scope statuses
@@ -288,4 +342,16 @@ components:
     emptyListOfApplications:
       summary: An empty list of applications
       value: []
+    addScopesRequest:
+      summary: "blah"
+      value:
+        - name: read:address
+          environments:
+            - preProd
+            - prod
+        - name: write:address
+          environments:
+            - preProd
+
+
 
