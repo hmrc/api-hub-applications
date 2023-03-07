@@ -19,14 +19,19 @@ servers:
 paths:
   /applications:
     get:
-      summary: Get all applications
+      summary: Get applications
       responses:
         200:
-          description: A list of credentials to scope mappings
+          description: A list of applications
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Applications"
+              examples:
+                applications:
+                  $ref: "#/components/examples/applications"
+                emptyListOfApplications:
+                  $ref: "#/components/examples/emptyListOfApplications"
   /applications/{id}:
     get:
       summary: Get application by application ID
@@ -48,6 +53,21 @@ paths:
                 $ref: "#/components/schemas/Application"
         404:
           description: An application with specified ID cannot be found
+  /applications/pending-scopes:
+    get:
+      summary: Get applications with PENDING prod scopes
+      responses:
+        200:
+          description: A list of applications where at least one scope in prod is in the PENDING state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applications"
+              examples:
+                applicationsWithPendingProdScopes:
+                  $ref: "#/components/examples/applicationsWithPendingProdScopes"
+                emptyListOfApplications:
+                  $ref: "#/components/examples/emptyListOfApplications"
 
 components:
   schemas:
@@ -128,3 +148,114 @@ components:
             - "APPROVED"
             - "DENIED"
           example: "APPROVED"
+  examples:
+    applications:
+      summary: A list of applications with various scope statuses
+      value:
+        - id: 63e25c5916101c38744f727b
+          name: Address Weighting Service
+          created: '2023-02-13T14:44:00.849'
+          email: john.smith@hmrc.gov.uk
+          lastUpdated: '2023-03-01T11:23:00.583'
+          teamMembers:
+            - email: john.smith@hmrc.gov.uk
+          environments:
+            dev:
+              scopes:
+                - name: read:address
+                  status: APPROVED
+                - name: write:address
+                  status: APPROVED
+              credentials: [ ]
+            test:
+              scopes: [ ]
+              credentials: [ ]
+            preProd:
+              scopes: [ ]
+              credentials: [ ]
+            prod:
+              scopes:
+                - name: read:address
+                  status: APPROVED
+                - name: write:address
+                  status: PENDING
+              credentials: [ ]
+        - id: 63e367ee896eeb2e9fccb581
+          name: Keying Service
+          created: '2023-02-08T09:14:22.401'
+          email: judy.adams@digital.hmrc.gov.uk
+          lastUpdated: '2023-02-08T09:14:22.401'
+          teamMembers:
+            - email: judy.adams@digital.hmrc.gov.uk
+          environments:
+            dev:
+              scopes: [ ]
+              credentials: [ ]
+            test:
+              scopes: [ ]
+              credentials: [ ]
+            preProd:
+              scopes: [ ]
+              credentials: [ ]
+            prod:
+              scopes: [ ]
+              credentials: [ ]
+    applicationsWithPendingProdScopes:
+      summary: A list of applications with PENDING prod scopes
+      value:
+      - id: 63e25c5916101c38744f727b
+        name: Address Weighting Service
+        created: '2023-02-13T14:44:00.849'
+        email: john.smith@hmrc.gov.uk
+        lastUpdated: '2023-03-01T11:23:00.583'
+        teamMembers:
+          - email: john.smith@hmrc.gov.uk
+        environments:
+          dev:
+            scopes:
+              - name: read:address
+                status: APPROVED
+              - name: write:address
+                status: APPROVED
+            credentials: [ ]
+          test:
+            scopes: [ ]
+            credentials: [ ]
+          preProd:
+            scopes: [ ]
+            credentials: [ ]
+          prod:
+            scopes:
+              - name: read:address
+                status: APPROVED
+              - name: write:address
+                status: PENDING
+            credentials: [ ]
+      - id: 63e367ee896eeb2e9fccb581
+        name: Keying Service
+        created: '2023-02-08T09:14:22.401'
+        email: judy.adams@digital.hmrc.gov.uk
+        lastUpdated: '2023-02-08T09:14:22.401'
+        teamMembers:
+          - email: judy.adams@digital.hmrc.gov.uk
+        environments:
+          dev:
+            scopes: [ ]
+            credentials: [ ]
+          test:
+            scopes:
+              - name: read:address
+                status: APPROVED
+            credentials: [ ]
+          preProd:
+            scopes: [ ]
+            credentials: [ ]
+          prod:
+            scopes:
+              - name: write:address
+                status: PENDING
+            credentials: [ ]
+    emptyListOfApplications:
+      summary: An empty list of applications
+      value: []
+
