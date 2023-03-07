@@ -32,6 +32,24 @@ paths:
                   $ref: "#/components/examples/applications"
                 emptyListOfApplications:
                   $ref: "#/components/examples/emptyListOfApplications"
+    post:
+      summary: Register a new application
+      requestBody:
+        description: The minimal data needed to register a new application
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewApplication"
+        required: true
+      responses:
+        200:
+          description: All the details of the newly registered application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        400:
+          description: If some, or all, of the specified fields are missing
   /applications/{id}:
     get:
       summary: Get application by application ID
@@ -83,7 +101,7 @@ components:
           example: "63e25c5916101c38744f727b"
         name:
           type: string
-          example: "Address Weighting Service"
+          example: "address-weighting-service"
         created:
           type: string
           format: date-time
@@ -148,12 +166,24 @@ components:
             - "APPROVED"
             - "DENIED"
           example: "APPROVED"
+    NewApplication:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "address-weighting-service"
+        createdBy:
+          type: object
+          properties:
+            email:
+              type: string
+              example: "john.smith@hmrc.gov.uk"
   examples:
     applications:
       summary: A list of applications with various scope statuses
       value:
         - id: 63e25c5916101c38744f727b
-          name: Address Weighting Service
+          name: address-weighting-service
           created: '2023-02-13T14:44:00.849'
           email: john.smith@hmrc.gov.uk
           lastUpdated: '2023-03-01T11:23:00.583'
@@ -181,7 +211,7 @@ components:
                   status: PENDING
               credentials: [ ]
         - id: 63e367ee896eeb2e9fccb581
-          name: Keying Service
+          name: keying-service
           created: '2023-02-08T09:14:22.401'
           email: judy.adams@digital.hmrc.gov.uk
           lastUpdated: '2023-02-08T09:14:22.401'
@@ -204,7 +234,7 @@ components:
       summary: A list of applications with PENDING prod scopes
       value:
       - id: 63e25c5916101c38744f727b
-        name: Address Weighting Service
+        name: address-weighting-service
         created: '2023-02-13T14:44:00.849'
         email: john.smith@hmrc.gov.uk
         lastUpdated: '2023-03-01T11:23:00.583'
@@ -232,7 +262,7 @@ components:
                 status: PENDING
             credentials: [ ]
       - id: 63e367ee896eeb2e9fccb581
-        name: Keying Service
+        name: keying-service
         created: '2023-02-08T09:14:22.401'
         email: judy.adams@digital.hmrc.gov.uk
         lastUpdated: '2023-02-08T09:14:22.401'
