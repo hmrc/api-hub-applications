@@ -29,11 +29,14 @@ class AuthenticatedIdentifierAction @Inject()(val parser: BodyParsers.Default,
                                              )(implicit val executionContext: ExecutionContext) extends IdentifierAction {
 
   val permission = Predicate.Permission(
-    resource = Resource.from("api-hub-applications", resourceLocation = "Anywhere"),
+    resource = Resource.from("api-hub-applications", resourceLocation = "*"),
     action = IAAction("WRITE") // must be one of READ, WRITE or DELETE
   )
 
   override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = {
-    auth.authorizedAction(permission).invokeBlock(request, block)
+    auth.authorizedAction(
+      permission,
+      onUnauthorizedError = Future.successful(Results.Unauthorized),
+      onForbiddenError = Future.successful(Results.Forbidden)).invokeBlock(request, block)
   }
 }
