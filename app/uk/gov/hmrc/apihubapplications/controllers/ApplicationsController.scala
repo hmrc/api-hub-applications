@@ -24,14 +24,12 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
-import uk.gov.hmrc.internalauth.client.{BackendAuthComponents, IAAction, Predicate, Resource, ResourceLocation, ResourceType}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsController @Inject() (identify: IdentifierAction,
-                                        auth: BackendAuthComponents,
                                         cc: ControllerComponents,
                                         applicationsService: ApplicationsService) (implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
