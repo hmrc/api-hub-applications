@@ -16,22 +16,24 @@
 
 package uk.gov.hmrc.apihubapplications
 
+import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.OptionValues
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import play.api.{Application => GuideApplication}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
+import play.api.{Application => GuideApplication}
+import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class ApplicationsIntegrationSpec
@@ -49,7 +51,8 @@ class ApplicationsIntegrationSpec
   override def fakeApplication(): GuideApplication =
     GuiceApplicationBuilder()
       .overrides(
-        bind[ApplicationsRepository].toInstance(repository)
+        bind[ApplicationsRepository].toInstance(repository),
+        bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .configure("metrics.enabled" -> false)
       .build()
