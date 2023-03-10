@@ -34,10 +34,12 @@ import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
 import sttp.model.StatusCode.NoContent
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
+import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
+
 import java.time.LocalDateTime
 import java.util.UUID
 import scala.concurrent.Future
@@ -371,7 +373,8 @@ object ApplicationsControllerSpec {
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
-        bind[ApplicationsService].toInstance(applicationsService)
+        bind[ApplicationsService].toInstance(applicationsService),
+        bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .build()
 

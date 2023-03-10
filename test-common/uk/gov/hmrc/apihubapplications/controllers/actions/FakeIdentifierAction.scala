@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.config
+package uk.gov.hmrc.apihubapplications.controllers.actions
 
-import com.google.inject.AbstractModule
-import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, IdentifierAction}
+import com.google.inject.Inject
+import play.api.mvc._
 
-import java.time.Clock
+import scala.concurrent.{ExecutionContext, Future}
 
-class Module extends AbstractModule {
+class FakeIdentifierAction @Inject()(bodyParsers: PlayBodyParsers) extends IdentifierAction {
 
-  override def configure(): Unit = {
-    bind(classOf[AppConfig]).asEagerSingleton()
-    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone())
-    bind(classOf[IdentifierAction]).to(classOf[AuthenticatedIdentifierAction]).asEagerSingleton()
-  }
+  override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = block(request)
 
+  override protected def executionContext: ExecutionContext =
+    scala.concurrent.ExecutionContext.Implicits.global
+
+  override def parser: BodyParser[AnyContent] = bodyParsers.default
 }
