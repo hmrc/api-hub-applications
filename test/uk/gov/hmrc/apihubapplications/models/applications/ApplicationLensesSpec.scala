@@ -399,7 +399,7 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
 
 object ApplicationLensesSpec {
 
-  val testApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"))
+  val testApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq(TeamMember("test-email")))
 
   def randomEnvironments(): Environments = Environments(
     dev = randomEnvironment(),

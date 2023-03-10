@@ -113,11 +113,19 @@ class ApplicationsIntegrationSpec
         storedApplications.size shouldBe 1
         val storedApplication = storedApplications.head
 
+        val expectedTeamMembers =
+          if (newApplication.teamMembers.contains(TeamMember(newApplication.createdBy.email))) {
+            newApplication.teamMembers
+          }
+          else {
+            newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
+          }
+
         responseApplication shouldBe storedApplication
         storedApplication.name shouldBe newApplication.name
         storedApplication.createdBy shouldBe newApplication.createdBy
         storedApplication.created shouldBe storedApplication.lastUpdated
-        storedApplication.teamMembers shouldBe Seq(TeamMember(newApplication.createdBy.email))
+        storedApplication.teamMembers shouldBe expectedTeamMembers
         storedApplication.environments.dev shouldBe Environment(Seq.empty, Seq.empty)
         storedApplication.environments.test shouldBe Environment(Seq.empty, Seq.empty)
         storedApplication.environments.preProd shouldBe Environment(Seq.empty, Seq.empty)

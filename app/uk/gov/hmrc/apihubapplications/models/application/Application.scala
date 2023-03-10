@@ -32,21 +32,21 @@ case class Application (
 
 object Application {
 
-  def apply(id: Option[String], name: String, createdBy: Creator): Application = {
-    Application(id, name, createdBy, Clock.systemDefaultZone())
+  def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember]): Application = {
+    Application(id, name, createdBy, teamMembers, Clock.systemDefaultZone())
   }
 
-  def apply(id: Option[String], name: String, createdBy: Creator, clock: Clock): Application = {
+  def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
-    Application(id, name, now, createdBy, now, Seq.empty, Environments())
+    Application(id, name, now, createdBy, now, teamMembers, Environments())
   }
 
   def apply(newApplication: NewApplication): Application = {
-    apply(None, newApplication.name, newApplication.createdBy)
+    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamMembers)
   }
 
   def apply(newApplication: NewApplication, clock: Clock): Application = {
-    apply(None, newApplication.name, newApplication.createdBy, clock)
+    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamMembers, clock)
   }
 
   implicit val applicationFormat: Format[Application] = Json.format[Application]
