@@ -42,6 +42,7 @@ class ApplicationsRepository @Inject()
     indexes = Seq.empty
   ) {
 
+  override lazy val requiresTtlIndex = false // There are no requirements to expire applications
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
 
   def findById(id: String): Future[Option[Application]] = {
