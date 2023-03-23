@@ -5,12 +5,14 @@ import sbt._
 
 object AppDependencies {
 
-  private val bootstrapVersion = "7.12.0"
-  private val hmrcMongoVersion = "0.74.0"
+  private val bootstrapVersion = "7.14.0"
+  private val hmrcMongoVersion = "1.1.0"
+  private val internalAuthVersion = "1.4.0"
 
   val compile = Seq(
-    "uk.gov.hmrc"             %% "bootstrap-backend-play-28"  % bootstrapVersion,
-    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-28"         % hmrcMongoVersion
+    "uk.gov.hmrc"             %% "bootstrap-backend-play-28"    % bootstrapVersion,
+    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-28"           % hmrcMongoVersion,
+    "uk.gov.hmrc"             %% "internal-auth-client-play-28" % internalAuthVersion
   )
 
   val test = Seq(

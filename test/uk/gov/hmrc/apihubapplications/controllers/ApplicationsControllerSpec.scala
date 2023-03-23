@@ -34,10 +34,12 @@ import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
 import sttp.model.StatusCode.NoContent
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
+import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
+
 import java.time.LocalDateTime
 import java.util.UUID
 import scala.concurrent.Future
@@ -52,7 +54,12 @@ class ApplicationsControllerSpec
     "must return 201 Created for a valid request" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val newApplication = NewApplication("test-app",Creator("test1@test.com"))
+        val newApplication = NewApplication(
+          "test-app",
+          Creator("test1@test.com"),
+          Seq(TeamMember("test1@test.com"), TeamMember("test2@test.com"))
+        )
+
         val json = Json.toJson(newApplication)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
@@ -62,7 +69,6 @@ class ApplicationsControllerSpec
           .withBody(json)
 
         val expected = Application(newApplication)
-          .addTeamMember(newApplication.createdBy.email)
           .copy(id=Some("test-id"))
 
         when(fixture.applicationsService.registerApplication(ArgumentMatchers.eq(newApplication)))
@@ -371,7 +377,8 @@ object ApplicationsControllerSpec {
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
-        bind[ApplicationsService].toInstance(applicationsService)
+        bind[ApplicationsService].toInstance(applicationsService),
+        bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .build()
 
@@ -381,7 +388,7 @@ object ApplicationsControllerSpec {
   private val testCreator = Creator("test@email.com")
 
   def testApplication: Application = {
-    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator)
+    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator, Seq(TeamMember(testCreator.email)))
   }
 
 }

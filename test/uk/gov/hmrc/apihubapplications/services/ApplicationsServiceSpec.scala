@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
+import org.mockito.ArgumentMatchers.any
+import org.mockito.captor.ArgCaptor
 import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import java.util.UUID
 import scala.concurrent.Future
@@ -33,7 +36,14 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
-      val newApplication = NewApplication("test-name", Creator(email = "test-email"))
+
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+      val newApplication = NewApplication(
+        "test-name",
+        Creator(email = teamMember1.email),
+        Seq(teamMember1, teamMember2)
+      )
 
       val application = Application(
         id = None,
@@ -41,7 +51,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
         created = LocalDateTime.now(clock),
         createdBy = newApplication.createdBy,
         lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = newApplication.createdBy.email)),
+        teamMembers = Seq(teamMember1, teamMember2),
         environments = Environments()
       )
 
@@ -54,13 +64,45 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
           actual mustBe expected
       }
     }
+
+    "must add the creator as a team member if they are not already one" in {
+      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+      val repository = mock[ApplicationsRepository]
+      val service = new ApplicationsService(repository, clock)
+
+      val creator = Creator("test-email")
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+      val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
+
+      val expected = Application(
+        id = None,
+        name = newApplication.name,
+        created = LocalDateTime.now(clock),
+        createdBy = creator,
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(teamMember1, teamMember2, TeamMember(creator.email)),
+        environments = Environments()
+      )
+
+      when(repository.insert(any()))
+        .thenReturn(Future.successful(expected.copy(id = Some("id"))))
+
+      service.registerApplication(newApplication) map {
+        actual =>
+          val captor = ArgCaptor[Application]
+          verify(repository).insert(captor.capture)
+          captor.value mustBe expected
+          succeed
+      }
+    }
   }
 
   "findAll" - {
     "must return all applications from the repository" in {
       val applications = Seq(
-        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1")),
-        Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"))
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty),
+        Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty)
       )
 
       val repository = mock[ApplicationsRepository]
@@ -78,9 +120,9 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
 
  "get apps where prod env had pending scopes" -{
    "get pending scopes" in {
-     val appWithProdPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"))
+     val appWithProdPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
                                               .addScopes(Prod, Seq("test-scope-1"))
-     val appWithoutPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"))
+     val appWithoutPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
                                               .addScopes(Dev, Seq("test-scope-2"))
 
      val repository = mock[ApplicationsRepository]

@@ -108,10 +108,12 @@ trait ApplicationGenerator {
       for {
         name <- Gen.alphaStr
         createdBy <- creatorGenerator
+        teamMembers <- Gen.listOf(teamMemberGenerator)
       } yield
         NewApplication(
           name,
-          createdBy
+          createdBy,
+          teamMembers
         )
     }
 
