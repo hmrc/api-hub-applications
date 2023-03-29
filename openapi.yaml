@@ -54,7 +54,7 @@ paths:
     get:
       summary: Get application by application ID
       parameters:
-        - applications:
+        - applicationId:
           $ref: "#/components/parameters/applicationId"
       responses:
         200:
@@ -69,7 +69,7 @@ paths:
     post:
       summary: Add a scope to an application
       parameters:
-        - applications:
+        - applicationId:
           $ref: "#/components/parameters/applicationId"
       requestBody:
         description: The scope to be added
@@ -88,6 +88,34 @@ paths:
           description: If attempting to add a scope to an environment that does not exist or if the request body does not match the required structure.
         404:
           $ref: "#/components/responses/appIdNotFound"
+  /applications/{id}/environments/{environment}/scopes/{scopename}:
+    put:
+      summary: Update the status of a scope
+      description: Currently works only to approve scopes in production.
+      parameters:
+        - applicationId:
+          $ref: "#/components/parameters/applicationId"
+        - environment:
+          $ref: "#/components/parameters/environment"
+        - scopeName:
+          $ref: "#/components/parameters/scopeName"
+      requestBody:
+        description: The status to set on the scope. Currently only supports APPROVED
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScopeStatus"
+            examples:
+              updateScopeStatus:
+                $ref: "#/components/examples/updateScopeStatus"
+        required: true
+      responses:
+        204:
+          description: The status of the scope was updated successfully
+        400:
+          description: If the environment is not "prod" or the status is not "APPROVED".
+        404:
+          description: If the scope name cannot be found with the status of "PENDING". If an application with specified ID cannot be found
   /applications/pending-scopes:
     get:
       summary: Get applications with PENDING prod scopes
@@ -221,6 +249,16 @@ components:
                 - "preProd"
                 - "prod"
               example: "prod"
+    UpdateScopeStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - "PENDING"
+            - "APPROVED"
+            - "DENIED"
+          example: "APPROVED"
   parameters:
     applicationId:
       name: id
@@ -231,6 +269,27 @@ components:
         type: string
         format: "24 character hexadecimal"
         example: "63e25c5916101c38744f727b"
+    environment:
+      name: environment
+      in: path
+      description: The environment name
+      required: true
+      schema:
+        type: string
+        enum:
+          - "dev"
+          - "test"
+          - "preProd"
+          - "prod"
+        example: "prod"
+    scopeName:
+      name: scopename
+      in: path
+      description: The name of the scope
+      required: true
+      schema:
+        type: string
+        example: "read:address"
   responses:
     badRequest:
       description: If the request body does not match the required structure
@@ -347,7 +406,7 @@ components:
       summary: An empty list of applications
       value: []
     addScopesRequest:
-      summary: "blah"
+      summary: "The scopes to set against the specified environments"
       value:
         - name: read:address
           environments:
@@ -356,6 +415,10 @@ components:
         - name: write:address
           environments:
             - preProd
+    updateScopeStatus:
+      summary: "The status to set"
+      value:
+        status: APPROVED
 
 
 
