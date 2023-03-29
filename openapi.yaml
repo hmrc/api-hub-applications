@@ -42,7 +42,7 @@ paths:
               $ref: "#/components/schemas/RegisterApplicationRequest"
         required: true
       responses:
-        200:
+        201:
           description: All the details of the newly registered application
           content:
             application/json:
@@ -82,14 +82,10 @@ paths:
                 $ref: "#/components/examples/addScopesRequest"
         required: true
       responses:
-        200:
-          description: All the details of the newly registered application
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Application"
+        204:
+          description: The scopes were added to the environments successfully
         400:
-          $ref: "#/components/responses/badRequest"
+          description: If attempting to add a scope to an environment that does not exist or if the request body does not match the required structure.
         404:
           $ref: "#/components/responses/appIdNotFound"
   /applications/pending-scopes:
@@ -237,7 +233,7 @@ components:
         example: "63e25c5916101c38744f727b"
   responses:
     badRequest:
-      description: If some, or all, of the specified fields are missing
+      description: If the request body does not match the required structure
     appIdNotFound:
       description: An application with specified ID cannot be found
   examples:
