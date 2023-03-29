@@ -4,9 +4,12 @@ This service provides a backend for the API Hub specific to applications.
 
 ## Summary
 
-This service provides the following functionality:
+This service will provide the following functionality:
 
-* tbd
+* Register a new application
+* Manage team members of an application
+* Create and rotate credentials
+* Add and remove scopes to credentials
 
 ## Requirements
 
@@ -33,6 +36,21 @@ sbt test
 ```
 sbt it:test
 ```
+
+## API Documentation
+The API is documented using the [OpenAPI specification](https://swagger.io/specification/).
+
+To see a rendered view of the documentation, install [Redocly CLI](https://redocly.com/docs/cli/installation/).
+```
+npm i -g @redocly/cli@latest
+```
+
+Then run from the root of the project:
+```
+redocly preview-docs openapi.yaml
+```
+
+Visit localhost:8080 in the browser.
 
 ## License
 
