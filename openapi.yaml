@@ -199,6 +199,14 @@ components:
             email:
               type: string
               example: "john.smith@hmrc.gov.uk"
+        teamMembers:
+          type: array
+          items:
+            type: object
+            properties:
+              email:
+                type: string
+                example: john.smith@hmrc.gov.uk
     AddScopesRequest:
       type: array
       items:
