@@ -5,14 +5,6 @@ info:
   description: |
     This is used by The API Hub frontend (api-hub-frontend) to create and retrieve details of applications made by users
 
-    ```
-    Change Log
-
-    ```
-
-      | Version | Date | Author | Description |
-      |---|-----|------|-----|
-      | 1.0.0 | 01-03-2023 | Laura Howarth-Kirke | Document current endpoints |
 servers:
   - url: https://api-hub-applications.protected.mdtp/api-hub-applications
 
