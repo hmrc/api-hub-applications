@@ -1,0 +1,203 @@
+openapi: 3.0.3
+info:
+  version: "1.0.0"
+  title: Identity Management Service
+  description: >-
+    Identity Management Service for API Hub to manage clients and associated scopes.
+paths:
+  /identity/clients:
+    post:
+      summary: Create a new client
+      requestBody:
+        description: Client object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Client'
+      security:
+        - oAuth2:
+            - write:client-credentials
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+  /identity/clients/{id}:
+    delete:
+      summary: Delete a client
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Client ID
+      security:
+        - oAuth2:
+            - delete:client-credentials
+      responses:
+        '200':
+          description: OK
+  /identity/clients/{id}/client-secret:
+    get:
+      summary: Get the current secret for the client
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Client ID
+      security:
+        - oAuth2:
+            - read:client-credentials
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSecretResponse'
+    post:
+      summary: Generate a new secret for the client
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Client ID
+      security:
+        - oAuth2:
+            - write:client-credentials
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSecretResponse'
+  /identity/clients/{id}/client-secret/rotated:
+    delete:
+      summary: Invalidate rotated secret for a client
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Client ID
+      security:
+        - oAuth2:
+            - delete:client-credentials
+      responses:
+        '200':
+          description: OK
+  /identity/clients/{id}/client-scopes:
+    get:
+      summary: Get scopes for a client
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Client ID
+      security:
+        - oAuth2:
+            - read:client-credentials
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientScope'
+  /identity/clients/{id}/client-scopes/{clientScopeId}:
+    put:
+      summary: Add client scope to client
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Client ID
+        - in: path
+          name: clientScopeId
+          schema:
+            type: string
+          required: true
+          description: Client Scope ID
+      security:
+        - oAuth2:
+            - write:client-credentials
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete a client scope from a client
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Client ID
+        - in: path
+          name: clientScopeId
+          schema:
+            type: string
+          required: true
+          description: Client Scope ID
+      security:
+        - oAuth2:
+            - delete:client-credentials
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    Client:
+      type: object
+      properties:
+        applicationName:
+          type: string
+        description:
+          type: string
+    ClientResponse:
+      type: object
+      properties:
+        clientId:
+          type: string
+        secret:
+          type: string
+    ClientScope:
+      type: object
+      properties:
+        clientScopeId:
+          type: string
+    ClientSecretResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+  securitySchemes:
+    oAuth2:
+      type: oauth2
+      description: Keycloak OAuth2 Client Credentials Flow
+      flows:
+        clientCredentials:
+          tokenUrl: /tokenUrl/not-required
+          scopes:
+            read:client-credentials: Read client and scope information.
+            write:client-credentials: Create clients and add scopes to clients.
+            delete:client-credentials: Delete clients and remove scopes from clients.
+
+servers:
+  - url: http://localhost:8080/internal
+
