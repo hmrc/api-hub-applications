@@ -11,5 +11,3 @@
 
 # Add all the application routes to the prod.routes file
 ->         /                          prod.Routes
-
-GET        /api-hub-applications/test-only/decrypt/:email                   testonly.TestOnlyDecryptController.decrypt(email: String)
