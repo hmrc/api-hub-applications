@@ -6,5 +6,5 @@ POST       /applications/:id/environments/scopes                                
 PUT        /applications/:id/environments/:environment/scopes/:scopename            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.approveProdScopeStatus(id:String,environment:String, scopename:String)
 
 GET        /applications/pending-scopes                                             uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.pendingScopes
-GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications
+GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None)
 GET        /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String)

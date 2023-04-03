@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -64,6 +64,22 @@ class ApplicationsRepositoryIntegrationSpec
       val actual: Set[Application] = repository.findAll().futureValue.toSet
 
       val expected = Set(result1, result2)
+
+      actual mustEqual expected
+
+    }
+
+    "must retrieve all applications from MongoDb belonging to named team member" in {
+      val now = LocalDateTime.now()
+      val application1 = Application(None, "test-app-1", now, Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
+      val application2 = Application(None, "test-app-2", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+
+      val result1 = repository.insert(application1).futureValue
+      repository.insert(application2).futureValue
+
+      val actual: Set[Application] = repository.findAll("test1@test.com").futureValue.toSet
+
+      val expected = Set(result1)
 
       actual mustEqual expected
 

@@ -18,7 +18,8 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
-import org.mongodb.scala.model.{Filters, ReplaceOptions}
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -26,6 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -39,11 +41,16 @@ class ApplicationsRepository @Inject()
     extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat),
                       Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
                      ),
-    indexes = Seq.empty
+    indexes = Seq(IndexModel(Indexes.ascending("teamMembers", "email")))
   ) {
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
+
+  def findAll(filterTeamMember: String):Future[Seq[Application]] = {
+    val document = BsonDocument("teamMembers" -> BsonDocument("email" -> filterTeamMember))
+    collection.find(document).toFuture()
+  }
 
   def findById(id: String): Future[Option[Application]] = {
     stringToObjectId(id) match {

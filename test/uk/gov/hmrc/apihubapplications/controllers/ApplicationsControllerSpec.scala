@@ -39,6 +39,7 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
+import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 
 import java.time.LocalDateTime
 import java.util.UUID
@@ -106,7 +107,7 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2)
         val expected_json = Json.toJson(expected_apps)
 
-        val request = FakeRequest(GET, routes.ApplicationsController.getApplications.url)
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(None).url)
 
         when(fixture.applicationsService.findAll()).thenReturn(Future.successful(expected_apps))
 
@@ -114,6 +115,25 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
       }}
+
+    "must return 200 and a JSON array representing all applications in db for the specified team member" in {
+      val fixture = buildFixture()
+      val now = LocalDateTime.now()
+      running(fixture.application) {
+
+        val expected_apps = Seq(Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments()))
+        val expected_json = Json.toJson(expected_apps)
+
+        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(Some(crypto.QueryParameterCrypto.encrypt(PlainText("test1@test.com")).value)).url)
+
+        when(fixture.applicationsService.findAll("test1@test.com")).thenReturn(Future.successful(expected_apps))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe expected_json
+      }
+    }
 
   }
 
@@ -380,6 +400,7 @@ object ApplicationsControllerSpec {
         bind[ApplicationsService].toInstance(applicationsService),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
+      .configure("queryParameter.encryption.key" -> "gvBoGdgzqG1AarzF1LY0zQ==")
       .build()
 
     Fixture(application, applicationsService)

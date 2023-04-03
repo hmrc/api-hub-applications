@@ -116,6 +116,24 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
           succeed
       }
     }
+
+    "must return all applications from the repository for named team member" in {
+      val applications = Seq(
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq(TeamMember("test-email-1"))),
+      )
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findAll("test-email-1")).thenReturn(Future.successful(applications))
+
+      val service = new ApplicationsService(repository, Clock.systemDefaultZone())
+      service.findAll("test-email-1") map {
+        actual =>
+          actual mustBe applications
+          verify(repository).findAll("test-email-1")
+          succeed
+      }
+    }
+
   }
 
  "get apps where prod env had pending scopes" -{
