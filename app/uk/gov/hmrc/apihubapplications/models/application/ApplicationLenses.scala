@@ -80,6 +80,33 @@ object ApplicationLenses {
   val applicationDevScopes: Lens[Application, Seq[Scope]] =
     Lens.compose(applicationDev, environmentScopes)
 
+  val environmentPrimary: Lens[Environments, Environment] =
+    Lens[Environments, Environment](
+      get = _.primary,
+      set = (environments, primary) => environments.copy(primary = primary)
+    )
+
+  val applicationPrimary: Lens[Application, Environment] =
+    Lens.compose(applicationEnvironments, environmentPrimary)
+
+  val applicationPrimaryScopes: Lens[Application, Seq[Scope]] =
+    Lens.compose(applicationPrimary, environmentScopes)
+
+  val environmentSecondary: Lens[Environments, Environment] =
+    Lens[Environments, Environment](
+      get = _.secondary,
+      set = (environments, secondary) => environments.copy(secondary = secondary)
+    )
+
+  val applicationSecondary: Lens[Application, Environment] =
+    Lens.compose(applicationEnvironments, environmentSecondary)
+
+  val applicationSecondaryScopes: Lens[Application, Seq[Scope]] =
+    Lens.compose(applicationSecondary, environmentScopes)
+
+
+
+
   val applicationTeamMembers: Lens[Application, Seq[TeamMember]] =
     Lens[Application, Seq[TeamMember]](
       get = _.teamMembers,
@@ -90,11 +117,42 @@ object ApplicationLenses {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
+        case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_, Approved))).distinct)
+        case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_, Approved))).distinct)
         case Dev => setDevScopes((getDevScopes ++ scopes.map(Scope(_, Approved))).distinct)
         case Test => setTestScopes((getTestScopes ++ scopes.map(Scope(_, Approved))).distinct)
         case PreProd => setPreProdScopes((getPreProdScopes ++ scopes.map(Scope(_, Approved))).distinct)
         case Prod => setProdScopes((getProdScopes ++ scopes.map(Scope(_, Pending))).distinct)
       }
+
+    def getPrimaryScopes: Seq[Scope] =
+    applicationPrimaryScopes.get(application)
+
+    def setPrimaryScopes(scopes: Seq[Scope]): Application =
+      applicationPrimaryScopes.set(application, scopes)
+
+    def addPrimaryScope(scope: Scope): Application =
+      applicationPrimaryScopes.set(
+        application,
+        applicationPrimaryScopes.get(application) :+ scope
+      )
+
+    def hasPrimaryPendingScope: Boolean =
+      applicationPrimaryScopes.get(application)
+        .exists(scope => scope.status == Pending)
+
+    def getSecondaryScopes: Seq[Scope] =
+      applicationSecondaryScopes.get(application)
+
+    def setSecondaryScopes(scopes: Seq[Scope]): Application =
+      applicationSecondaryScopes.set(application, scopes)
+
+    def addSecondaryScope(scope: Scope): Application =
+      applicationSecondaryScopes.set(
+        application,
+        applicationSecondaryScopes.get(application) :+ scope
+      )
+
     def getProdScopes: Seq[Scope] =
       applicationProdScopes.get(application)
 
