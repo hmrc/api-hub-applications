@@ -24,14 +24,18 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
+import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.net.URLDecoder
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsController @Inject() (identify: IdentifierAction,
                                         cc: ControllerComponents,
-                                        applicationsService: ApplicationsService) (implicit ec: ExecutionContext)
+                                        applicationsService: ApplicationsService,
+                                        crypto: ApplicationCrypto
+                                       ) (implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
   def registerApplication(): Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -46,9 +50,15 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
       }
   }
 
-  def getApplications: Action[AnyContent] = identify.compose(Action).async {
-    applicationsService.findAll().map(apps => Json.toJson(apps)).map(Ok(_))
+  def getApplications(teamMember: Option[String]): Action[AnyContent] = identify.compose(Action).async {
+    val result = teamMember match {
+      case None => applicationsService.findAll()
+      case Some(encryptedEmail) => applicationsService.filter(decrypt(decode(encryptedEmail)))
+    }
+
+    result.map(apps => Json.toJson(apps)).map(Ok(_))
   }
+
 
   def getApplication(id: String): Action[AnyContent] = identify.compose(Action).async {
     applicationsService.findById(id)
@@ -102,4 +112,12 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
         }
       }
     }
+
+  private def decrypt(encrypted: String): String = {
+    crypto.QueryParameterCrypto.decrypt(Crypted(encrypted)).value
+  }
+
+  private def decode(encoded: String): String = {
+    URLDecoder.decode(encoded, "UTF-8")
+  }
 }

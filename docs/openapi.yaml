@@ -12,6 +12,14 @@ paths:
   /applications:
     get:
       summary: Get applications
+      parameters:
+        - in: query
+          name: teamMember
+          schema:
+            type: string
+          description: The URL encoded, encrypted form of a user's email address. Must be encrypted using same secret as used in api-hub-applications.
+          required: false
+          example: d0iSCjD8TrOdF5pjc15GRMG77jjK3dD3cHpkyQJTGdQ%3D
       responses:
         200:
           description: A list of applications

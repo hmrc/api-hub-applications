@@ -40,6 +40,10 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
     repository.findAll()
   }
 
+  def filter(teamMemberEmail: String): Future[Seq[Application]] = {
+    repository.filter(teamMemberEmail)
+  }
+
   def findById(id: String): Future[Option[Application]] = {
     repository.findById(id)
   }

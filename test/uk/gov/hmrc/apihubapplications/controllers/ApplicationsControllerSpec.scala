@@ -39,6 +39,8 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
+import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
+import uk.gov.hmrc.crypto.ApplicationCrypto
 
 import java.time.LocalDateTime
 import java.util.UUID
@@ -48,7 +50,8 @@ class ApplicationsControllerSpec
   extends AnyFreeSpec
   with Matchers
   with MockitoSugar
-  with OptionValues {
+  with OptionValues
+  with CryptoUtils {
 
   "registerApplication" - {
     "must return 201 Created for a valid request" in {
@@ -106,7 +109,7 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2)
         val expected_json = Json.toJson(expected_apps)
 
-        val request = FakeRequest(GET, routes.ApplicationsController.getApplications.url)
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(None).url)
 
         when(fixture.applicationsService.findAll()).thenReturn(Future.successful(expected_apps))
 
@@ -114,6 +117,27 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
       }}
+
+    "must return 200 and a JSON array representing all applications in db for the specified team member" in {
+      val fixture = buildFixture()
+      val now = LocalDateTime.now()
+      running(fixture.application) {
+
+        val teamMemberEmail = "test1@test.com"
+        val expected_apps = Seq(Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments()))
+        val expected_json = Json.toJson(expected_apps)
+
+        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
+          Some(encryptAndEncode(crypto,teamMemberEmail))).url)
+
+        when(fixture.applicationsService.filter(teamMemberEmail)).thenReturn(Future.successful(expected_apps))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe expected_json
+      }
+    }
 
   }
 
