@@ -27,6 +27,7 @@ import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.net.URLDecoder
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -52,7 +53,7 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
   def getApplications(teamMember: Option[String]): Action[AnyContent] = identify.compose(Action).async {
     val result = teamMember match {
       case None => applicationsService.findAll()
-      case Some(encryptedEmail) => applicationsService.filter(decrypt(encryptedEmail))
+      case Some(encryptedEmail) => applicationsService.filter(decrypt(decode(encryptedEmail)))
     }
 
     result.map(apps => Json.toJson(apps)).map(Ok(_))
@@ -114,5 +115,9 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
 
   private def decrypt(encrypted: String): String = {
     crypto.QueryParameterCrypto.decrypt(Crypted(encrypted)).value
+  }
+
+  private def decode(encoded: String): String = {
+    URLDecoder.decode(encoded, "UTF-8")
   }
 }

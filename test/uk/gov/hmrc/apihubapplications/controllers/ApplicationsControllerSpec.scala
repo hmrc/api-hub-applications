@@ -39,7 +39,8 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
-import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
+import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
+import uk.gov.hmrc.crypto.ApplicationCrypto
 
 import java.time.LocalDateTime
 import java.util.UUID
@@ -49,7 +50,8 @@ class ApplicationsControllerSpec
   extends AnyFreeSpec
   with Matchers
   with MockitoSugar
-  with OptionValues {
+  with OptionValues
+  with CryptoUtils {
 
   "registerApplication" - {
     "must return 201 Created for a valid request" in {
@@ -127,7 +129,7 @@ class ApplicationsControllerSpec
 
         val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
-          Some(crypto.QueryParameterCrypto.encrypt(PlainText(teamMemberEmail)).value)).url)
+          Some(encryptAndEncode(crypto,teamMemberEmail))).url)
 
         when(fixture.applicationsService.filter(teamMemberEmail)).thenReturn(Future.successful(expected_apps))
 

@@ -17,7 +17,7 @@ paths:
           name: teamMember
           schema:
             type: string
-          description: The encrypted form of a user's email address. Must be encrypted using same secret as used in api-hub-applications.
+          description: The URL encoded, encrypted form of a user's email address. Must be encrypted using same secret as used in api-hub-applications.
           required: false
           example: d0iSCjD8TrOdF5pjc15GRMG77jjK3dD3cHpkyQJTGdQ=
       responses:
