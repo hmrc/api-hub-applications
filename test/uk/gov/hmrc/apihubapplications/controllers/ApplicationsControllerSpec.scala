@@ -400,7 +400,6 @@ object ApplicationsControllerSpec {
         bind[ApplicationsService].toInstance(applicationsService),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
-      .configure("queryParameter.encryption.key" -> "gvBoGdgzqG1AarzF1LY0zQ==")
       .build()
 
     Fixture(application, applicationsService)

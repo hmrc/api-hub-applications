@@ -57,7 +57,6 @@ class ApplicationsIntegrationSpec
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .configure("metrics.enabled" -> false)
-      .configure("queryParameter.encryption.key" -> "gvBoGdgzqG1AarzF1LY0zQ==")
       .build()
 
   override protected lazy val repository: ApplicationsRepository = {
