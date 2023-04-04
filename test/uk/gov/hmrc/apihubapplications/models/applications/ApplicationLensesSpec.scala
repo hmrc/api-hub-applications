@@ -200,6 +200,79 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
   }
 
   "ApplicationLensOps" - {
+    "getPrimaryScopes" - {
+      "must" - {
+        behave like applicationScopesGetterFunction(
+          applicationPrimaryScopes,
+          application => ApplicationLensOps(application).getPrimaryScopes
+        )
+      }
+    }
+
+    "setPrimaryScopes" - {
+      "must" - {
+        behave like applicationScopesSetterFunction(
+          applicationPrimaryScopes,
+          (application, scopes) => ApplicationLensOps(application).setPrimaryScopes(scopes)
+        )
+      }
+    }
+
+    "addPrimaryScope" - {
+      "must" - {
+        behave like applicationAddScopeFunction(
+          applicationPrimaryScopes,
+          (application, scope) => ApplicationLensOps(application).addPrimaryScope(scope)
+        )
+      }
+    }
+
+    "hasPrimaryPendingScope" - {
+      "must return true when the application has a primary pending scope" in {
+        val application = testApplication.addPrimaryScope(Scope("test-scope", Pending))
+        application.hasPrimaryPendingScope mustBe true
+      }
+
+      "must return false when the application does not have a primary pending scope" in {
+        val application = testApplication
+          .addPrimaryScope(Scope(randomString(), Approved))
+          .addPrimaryScope(Scope(randomString(), Denied))
+          .addPreProdScope(Scope(randomString(), Pending))
+          .addTestScope(Scope(randomString(), Pending))
+          .addDevScope(Scope(randomString(), Pending))
+
+        application.hasPrimaryPendingScope mustBe false
+      }
+    }
+
+    "getSecondaryScopes" - {
+      "must" - {
+        behave like applicationScopesGetterFunction(
+          applicationSecondaryScopes,
+          application => ApplicationLensOps(application).getSecondaryScopes
+        )
+      }
+    }
+
+    "setSecondaryScopes" - {
+      "must" - {
+        behave like applicationScopesSetterFunction(
+          applicationSecondaryScopes,
+          (application, scopes) => ApplicationLensOps(application).setSecondaryScopes(scopes)
+        )
+      }
+    }
+
+    "addSecondaryScope" - {
+      "must" - {
+        behave like applicationAddScopeFunction(
+          applicationSecondaryScopes,
+          (application, scope) => ApplicationLensOps(application).addSecondaryScope(scope)
+        )
+      }
+    }
+
+
     "getProdScopes" - {
       "must" - {
         behave like applicationScopesGetterFunction(
@@ -402,6 +475,8 @@ object ApplicationLensesSpec {
   val testApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq(TeamMember("test-email")))
 
   def randomEnvironments(): Environments = Environments(
+    primary = Environment(),
+    secondary = Environment(),
     dev = randomEnvironment(),
     test = randomEnvironment(),
     preProd = randomEnvironment(),

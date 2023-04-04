@@ -1,0 +1,416 @@
+openapi: "3.0.1"
+info:
+  title: API Hub Applications
+  version: "1.0"
+  description: |
+    This is used by The API Hub frontend (api-hub-frontend) to create and retrieve details of applications made by users
+
+servers:
+  - url: https://api-hub-applications.protected.mdtp/api-hub-applications
+
+paths:
+  /applications:
+    get:
+      summary: Get applications
+      responses:
+        200:
+          description: A list of applications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applications"
+              examples:
+                applications:
+                  $ref: "#/components/examples/applications"
+                emptyListOfApplications:
+                  $ref: "#/components/examples/emptyListOfApplications"
+    post:
+      summary: Register a new application
+      requestBody:
+        description: The minimal data needed to register a new application
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterApplicationRequest"
+        required: true
+      responses:
+        201:
+          description: All the details of the newly registered application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        400:
+          $ref: "#/components/responses/badRequest"
+  /applications/{id}:
+    get:
+      summary: Get application by application ID
+      parameters:
+        - applicationId:
+          $ref: "#/components/parameters/applicationId"
+      responses:
+        200:
+          description: A single application with the specified application ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        404:
+          $ref: "#/components/responses/appIdNotFound"
+  /applications/{id}/environments/scopes:
+    post:
+      summary: Add a scope to an application
+      parameters:
+        - applicationId:
+          $ref: "#/components/parameters/applicationId"
+      requestBody:
+        description: The scope to be added
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddScopesRequest"
+            examples:
+              addScopesRequest:
+                $ref: "#/components/examples/addScopesRequest"
+        required: true
+      responses:
+        204:
+          description: The scopes were added to the environments successfully
+        400:
+          description: If attempting to add a scope to an environment that does not exist or if the request body does not match the required structure.
+        404:
+          $ref: "#/components/responses/appIdNotFound"
+  /applications/{id}/environments/{environment}/scopes/{scopename}:
+    put:
+      summary: Update the status of a scope
+      description: Currently works only to approve scopes in production.
+      parameters:
+        - applicationId:
+          $ref: "#/components/parameters/applicationId"
+        - environment:
+          $ref: "#/components/parameters/environment"
+        - scopeName:
+          $ref: "#/components/parameters/scopeName"
+      requestBody:
+        description: The status to set on the scope. Currently only supports APPROVED
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScopeStatus"
+            examples:
+              updateScopeStatus:
+                $ref: "#/components/examples/updateScopeStatus"
+        required: true
+      responses:
+        204:
+          description: The status of the scope was updated successfully
+        400:
+          description: If the environment is not "prod" or the status is not "APPROVED".
+        404:
+          description: If the scope name cannot be found with the status of "PENDING". If an application with specified ID cannot be found
+  /applications/pending-scopes:
+    get:
+      summary: Get applications with PENDING prod scopes
+      responses:
+        200:
+          description: A list of applications where at least one scope in prod is in the PENDING state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applications"
+              examples:
+                applicationsWithPendingProdScopes:
+                  $ref: "#/components/examples/applicationsWithPendingProdScopes"
+                emptyListOfApplications:
+                  $ref: "#/components/examples/emptyListOfApplications"
+
+components:
+  schemas:
+    Applications:
+      type: array
+      items:
+        $ref: "#/components/schemas/Application"
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "63e25c5916101c38744f727b"
+        name:
+          type: string
+          example: "address-weighting-service"
+        created:
+          type: string
+          format: date-time
+          example: "2023-02-13T14:44:00.849"
+        createdBy:
+          $ref: "#/components/schemas/CreatedBy"
+        lastUpdated:
+          type: string
+          format: date-time
+          example: "2023-03-01T11:23:00.583"
+        teamMembers:
+          $ref: "#/components/schemas/TeamMembers"
+          example:
+        environments:
+          $ref: "#/components/schemas/Environments"
+    CreatedBy:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "john.smith@hmrc.gov.uk"
+    TeamMembers:
+      type: array
+      items:
+        $ref: "#/components/schemas/TeamMember"
+    TeamMember:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "john.smith@hmrc.gov.uk"
+    Environments:
+      type: object
+      properties:
+        dev:
+          $ref: "#/components/schemas/Environment"
+        test:
+          $ref: "#/components/schemas/Environment"
+        preProd:
+          $ref: "#/components/schemas/Environment"
+        prod:
+          $ref: "#/components/schemas/Environment"
+    Environment:
+      type: object
+      properties:
+        scopes:
+          $ref: "#/components/schemas/Scopes"
+    Scopes:
+      type: array
+      items:
+        $ref: "#/components/schemas/Scope"
+    Scope:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "read:address"
+        status:
+          type: string
+          enum:
+            - "PENDING"
+            - "APPROVED"
+            - "DENIED"
+          example: "APPROVED"
+    RegisterApplicationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "address-weighting-service"
+        createdBy:
+          type: object
+          properties:
+            email:
+              type: string
+              example: "john.smith@hmrc.gov.uk"
+        teamMembers:
+          type: array
+          items:
+            type: object
+            properties:
+              email:
+                type: string
+                example: john.smith@hmrc.gov.uk
+    AddScopesRequest:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: "read:address"
+          environments:
+            type: array
+            items:
+              type: string
+              enum:
+                - "dev"
+                - "test"
+                - "preProd"
+                - "prod"
+              example: "prod"
+    UpdateScopeStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - "PENDING"
+            - "APPROVED"
+            - "DENIED"
+          example: "APPROVED"
+  parameters:
+    applicationId:
+      name: id
+      in: path
+      description: The Application ID
+      required: true
+      schema:
+        type: string
+        format: "24 character hexadecimal"
+        example: "63e25c5916101c38744f727b"
+    environment:
+      name: environment
+      in: path
+      description: The environment name
+      required: true
+      schema:
+        type: string
+        enum:
+          - "dev"
+          - "test"
+          - "preProd"
+          - "prod"
+        example: "prod"
+    scopeName:
+      name: scopename
+      in: path
+      description: The name of the scope
+      required: true
+      schema:
+        type: string
+        example: "read:address"
+  responses:
+    badRequest:
+      description: If the request body does not match the required structure
+    appIdNotFound:
+      description: An application with specified ID cannot be found
+  examples:
+    applications:
+      summary: A list of applications with various scope statuses
+      value:
+        - id: 63e25c5916101c38744f727b
+          name: address-weighting-service
+          created: '2023-02-13T14:44:00.849'
+          email: john.smith@hmrc.gov.uk
+          lastUpdated: '2023-03-01T11:23:00.583'
+          teamMembers:
+            - email: john.smith@hmrc.gov.uk
+          environments:
+            dev:
+              scopes:
+                - name: read:address
+                  status: APPROVED
+                - name: write:address
+                  status: APPROVED
+              credentials: [ ]
+            test:
+              scopes: [ ]
+              credentials: [ ]
+            preProd:
+              scopes: [ ]
+              credentials: [ ]
+            prod:
+              scopes:
+                - name: read:address
+                  status: APPROVED
+                - name: write:address
+                  status: PENDING
+              credentials: [ ]
+        - id: 63e367ee896eeb2e9fccb581
+          name: keying-service
+          created: '2023-02-08T09:14:22.401'
+          email: judy.adams@digital.hmrc.gov.uk
+          lastUpdated: '2023-02-08T09:14:22.401'
+          teamMembers:
+            - email: judy.adams@digital.hmrc.gov.uk
+          environments:
+            dev:
+              scopes: [ ]
+              credentials: [ ]
+            test:
+              scopes: [ ]
+              credentials: [ ]
+            preProd:
+              scopes: [ ]
+              credentials: [ ]
+            prod:
+              scopes: [ ]
+              credentials: [ ]
+    applicationsWithPendingProdScopes:
+      summary: A list of applications with PENDING prod scopes
+      value:
+      - id: 63e25c5916101c38744f727b
+        name: address-weighting-service
+        created: '2023-02-13T14:44:00.849'
+        email: john.smith@hmrc.gov.uk
+        lastUpdated: '2023-03-01T11:23:00.583'
+        teamMembers:
+          - email: john.smith@hmrc.gov.uk
+        environments:
+          dev:
+            scopes:
+              - name: read:address
+                status: APPROVED
+              - name: write:address
+                status: APPROVED
+            credentials: [ ]
+          test:
+            scopes: [ ]
+            credentials: [ ]
+          preProd:
+            scopes: [ ]
+            credentials: [ ]
+          prod:
+            scopes:
+              - name: read:address
+                status: APPROVED
+              - name: write:address
+                status: PENDING
+            credentials: [ ]
+      - id: 63e367ee896eeb2e9fccb581
+        name: keying-service
+        created: '2023-02-08T09:14:22.401'
+        email: judy.adams@digital.hmrc.gov.uk
+        lastUpdated: '2023-02-08T09:14:22.401'
+        teamMembers:
+          - email: judy.adams@digital.hmrc.gov.uk
+        environments:
+          dev:
+            scopes: [ ]
+            credentials: [ ]
+          test:
+            scopes:
+              - name: read:address
+                status: APPROVED
+            credentials: [ ]
+          preProd:
+            scopes: [ ]
+            credentials: [ ]
+          prod:
+            scopes:
+              - name: write:address
+                status: PENDING
+            credentials: [ ]
+    emptyListOfApplications:
+      summary: An empty list of applications
+      value: []
+    addScopesRequest:
+      summary: "The scopes to set against the specified environments"
+      value:
+        - name: read:address
+          environments:
+            - preProd
+            - prod
+        - name: write:address
+          environments:
+            - preProd
+    updateScopeStatus:
+      summary: "The status to set"
+      value:
+        status: APPROVED
+
+
+

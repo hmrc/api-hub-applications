@@ -202,6 +202,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
         Environment(Seq(Scope("test-scope-1", Pending)), Seq.empty)
       )
 
@@ -244,6 +246,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val service = new ApplicationsService(repository, clock)
       val scopeName = "test-scope-1"
       val envs = Environments(
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),

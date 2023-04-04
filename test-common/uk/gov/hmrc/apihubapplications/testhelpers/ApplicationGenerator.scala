@@ -75,11 +75,13 @@ trait ApplicationGenerator {
 
   val environmentsGenerator: Gen[Environments] = {
     for {
+      primary <- environmentGenerator
+      secondary <- environmentGenerator
       dev <- environmentGenerator
       test <- environmentGenerator
       preProd <- environmentGenerator
       prod <- environmentGenerator
-    } yield Environments(dev, test, preProd, prod)
+    } yield Environments(primary,secondary, dev, test, preProd, prod)
   }
 
   implicit val applicationGenerator: Arbitrary[Application] = Arbitrary {

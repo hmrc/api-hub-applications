@@ -38,6 +38,8 @@ class ApplicationsRepositorySpec
            |"lastUpdated":"${now.toString}",
            |"createdBy":{"email":"test1@test.com"},
            |"environments":{
+           |  "primary":{"scopes":[],"credentials":[]},
+           |  "secondary":{"scopes":[],"credentials":[]},
            |  "dev":{"scopes":[],"credentials":[]},
            |  "test":{"scopes":[],"credentials":[]},
            |  "preProd":{"scopes":[],"credentials":[]},
