@@ -36,7 +36,7 @@ class TestConnectivityController @Inject()(identify: IdentifierAction,
   def connectToHip: Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
       val response: Future[HttpResponse] = httpClient
-        .get(url"https://api.hip.ws.ibt.HMRC.gov.uk")
+        .get(url"https://hip.ws.ibt.hmrc.gov.uk/_health")
         .execute
 
       response
