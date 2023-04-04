@@ -24,16 +24,18 @@ import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import java.util.UUID
 import scala.concurrent.Future
 
-class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar {
+class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ApplicationGenerator {
+
+  private val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
 
   "registerApplication" - {
     "must build the correct application and submit it to the repository" in {
-      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
 
@@ -66,7 +68,6 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
     }
 
     "must add the creator as a team member if they are not already one" in {
-      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
 
@@ -108,7 +109,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val repository = mock[ApplicationsRepository]
       when(repository.findAll()).thenReturn(Future.successful(applications))
 
-      val service = new ApplicationsService(repository, Clock.systemDefaultZone())
+      val service = new ApplicationsService(repository, clock)
       service.findAll() map {
         actual =>
           actual mustBe applications
@@ -125,7 +126,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val repository = mock[ApplicationsRepository]
       when(repository.filter("test-email-1")).thenReturn(Future.successful(applications))
 
-      val service = new ApplicationsService(repository, Clock.systemDefaultZone())
+      val service = new ApplicationsService(repository, clock)
       service.filter("test-email-1") map {
         actual =>
           actual mustBe applications
@@ -146,7 +147,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
      val repository = mock[ApplicationsRepository]
      when(repository.findAll()).thenReturn(Future.successful(Seq(appWithProdPending,appWithoutPending)))
 
-     val service = new ApplicationsService(repository, Clock.systemDefaultZone())
+     val service = new ApplicationsService(repository, clock)
      service.getApplicationsWithPendingScope() map {
        actual =>
          actual mustBe Seq(appWithProdPending)
@@ -158,7 +159,7 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
 
   "addScopes" - {
     "must add new scopes to Application" in {
-      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
 
@@ -191,7 +192,6 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       }
   }
     "must return None if application not found" in {
-      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
 
@@ -212,7 +212,6 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
 
   "set scope status to APPROVED on prod when current scope status is PENDING" - {
     "must set scopes for an application" in {
-      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
 
@@ -246,7 +245,6 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       }
     }
     "must return None if application and/or scope name do not exist" in {
-      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
 
@@ -259,7 +257,6 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       }
     }
     "must return Some(False) when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
-      val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
       val scopeName = "test-scope-1"
