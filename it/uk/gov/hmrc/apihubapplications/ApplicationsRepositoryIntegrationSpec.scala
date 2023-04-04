@@ -77,7 +77,7 @@ class ApplicationsRepositoryIntegrationSpec
       val result1 = repository.insert(application1).futureValue
       repository.insert(application2).futureValue
 
-      val actual: Set[Application] = repository.findAll("test1@test.com").futureValue.toSet
+      val actual: Set[Application] = repository.filter("test1@test.com").futureValue.toSet
 
       val expected = Set(result1)
 

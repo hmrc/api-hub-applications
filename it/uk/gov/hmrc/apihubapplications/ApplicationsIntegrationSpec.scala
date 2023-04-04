@@ -159,26 +159,25 @@ class ApplicationsIntegrationSpec
     }
 
     "respond with 200 status and a list of filtered applications" in {
+      val myEmail = "member1@digital.hmrc.gov.uk"
+      val myTeamMembers = Seq(TeamMember(myEmail), TeamMember("member2@digital.hmrc.gov.uk"))
 
-      val myTeamMembers = Seq(TeamMember("member1@digital.hmrc.gov.uk"), TeamMember("member2@digital.hmrc.gov.uk"))
       val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = myTeamMembers, environments = Environments())
-
       val otherTeamMembers = Seq(TeamMember("member3@digital.hmrc.gov.uk"), TeamMember("member4@digital.hmrc.gov.uk"))
-      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments())
 
+      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments())
       deleteAll().futureValue
       val crypto = fakeApplication.injector.instanceOf[ApplicationCrypto]
       insert(application1).futureValue
       insert(application2).futureValue
 
-      val myEmail = "member1@digital.hmrc.gov.uk"
       val storedApplications: Seq[Application] = findAll().futureValue
       val myApplications = storedApplications.filter(application => application.teamMembers.contains(TeamMember(myEmail)))
 
       val response =
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications")
-          .withQueryStringParameters(("teamMember", crypto.QueryParameterCrypto.encrypt(PlainText("member1@digital.hmrc.gov.uk")).value))
+          .withQueryStringParameters(("teamMember", crypto.QueryParameterCrypto.encrypt(PlainText(myEmail)).value))
           .addHttpHeaders(("Accept", "application/json"))
           .get()
           .futureValue

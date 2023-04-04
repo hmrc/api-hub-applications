@@ -123,13 +123,13 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       )
 
       val repository = mock[ApplicationsRepository]
-      when(repository.findAll("test-email-1")).thenReturn(Future.successful(applications))
+      when(repository.filter("test-email-1")).thenReturn(Future.successful(applications))
 
       val service = new ApplicationsService(repository, Clock.systemDefaultZone())
-      service.findAll("test-email-1") map {
+      service.filter("test-email-1") map {
         actual =>
           actual mustBe applications
-          verify(repository).findAll("test-email-1")
+          verify(repository).filter("test-email-1")
           succeed
       }
     }

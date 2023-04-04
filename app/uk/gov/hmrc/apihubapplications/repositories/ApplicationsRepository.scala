@@ -47,8 +47,8 @@ class ApplicationsRepository @Inject()
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
   def findAll():Future[Seq[Application]] = collection.find().toFuture()
 
-  def findAll(filterTeamMember: String):Future[Seq[Application]] = {
-    val document = BsonDocument("teamMembers" -> BsonDocument("email" -> filterTeamMember))
+  def filter(teamMemberEmail: String):Future[Seq[Application]] = {
+    val document = BsonDocument("teamMembers" -> BsonDocument("email" -> teamMemberEmail))
     collection.find(document).toFuture()
   }
 

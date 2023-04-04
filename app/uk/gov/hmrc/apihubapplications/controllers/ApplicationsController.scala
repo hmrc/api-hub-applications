@@ -52,7 +52,7 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
   def getApplications(teamMember: Option[String]): Action[AnyContent] = identify.compose(Action).async {
     val result = teamMember match {
       case None => applicationsService.findAll()
-      case Some(x) => applicationsService.findAll(decrypt(x))
+      case Some(encryptedEmail) => applicationsService.filter(decrypt(encryptedEmail))
     }
 
     result.map(apps => Json.toJson(apps)).map(Ok(_))
@@ -112,7 +112,7 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
       }
     }
 
-  def decrypt(encrypted: String): String = {
+  private def decrypt(encrypted: String): String = {
     crypto.QueryParameterCrypto.decrypt(Crypted(encrypted)).value
   }
 }
