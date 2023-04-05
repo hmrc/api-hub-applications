@@ -53,15 +53,13 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
   def addScopes(applicationId: String, newScopes: Seq[NewScope]): Future[Option[Boolean]] =
     repository.findById(applicationId).flatMap {
       case Some(application) =>
-        val envScopes: Seq[(EnvironmentName, String)] = newScopes.foldLeft(Seq.empty[(EnvironmentName,String)])(
-                          (envToScopes, newScope) =>envToScopes++newScope.environments.map(env => (env,newScope.name))
-                        )
-        val envToScopesMap: Map[EnvironmentName, Seq[String]] = envScopes.groupBy(_._1).map(kv =>
-                                                                          (kv._1, kv._2.map(newScope => newScope._2))
-                                                                        )
-        val updatedApp: Application = envToScopesMap.foldLeft(application)((app, envToScopes) =>
-                          app.addScopes(envToScopes._1, envToScopes._2)).copy(lastUpdated = LocalDateTime.now(clock))
-        repository.update(updatedApp).map(app => Some(app))
+        val appWithNewScopes = newScopes.foldLeft[Application](application)((outerApp, newScope) => {
+          newScope.environments.foldLeft[Application](outerApp)((innerApp, envName) =>
+            innerApp.addScopes(envName, Seq(newScope.name))
+          )
+        }).copy(lastUpdated = LocalDateTime.now(clock))
+
+        repository.update(appWithNewScopes).map(app => Some(app))
       case None => Future.successful(None)
     }
 
