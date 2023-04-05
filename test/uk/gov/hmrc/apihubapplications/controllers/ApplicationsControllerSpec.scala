@@ -48,10 +48,10 @@ import scala.concurrent.Future
 
 class ApplicationsControllerSpec
   extends AnyFreeSpec
-  with Matchers
-  with MockitoSugar
-  with OptionValues
-  with CryptoUtils {
+    with Matchers
+    with MockitoSugar
+    with OptionValues
+    with CryptoUtils {
 
   "registerApplication" - {
     "must return 201 Created for a valid request" in {
@@ -72,7 +72,7 @@ class ApplicationsControllerSpec
           .withBody(json)
 
         val expected = Application(newApplication)
-          .copy(id=Some("test-id"))
+          .copy(id = Some("test-id"))
 
         when(fixture.applicationsService.registerApplication(ArgumentMatchers.eq(newApplication)))
           .thenReturn(Future.successful(expected))
@@ -94,7 +94,8 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
-      }}
+      }
+    }
 
   }
 
@@ -116,7 +117,8 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
-      }}
+      }
+    }
 
     "must return 200 and a JSON array representing all applications in db for the specified team member" in {
       val fixture = buildFixture()
@@ -129,7 +131,7 @@ class ApplicationsControllerSpec
 
         val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
-          Some(encryptAndEncode(crypto,teamMemberEmail))).url)
+          Some(encryptAndEncode(crypto, teamMemberEmail))).url)
 
         when(fixture.applicationsService.filter(teamMemberEmail)).thenReturn(Future.successful(expected_apps))
 
@@ -177,21 +179,21 @@ class ApplicationsControllerSpec
 
   "add scopes" - {
     "must return 204 NoContent" in {
-      val id = "1"
-      val scopes:Seq[NewScope] = Seq(
-        NewScope("scope1",Seq(Dev,Test)),
-        NewScope("scope2", Seq(Dev))
+      val id = "app-id-1"
+      val scopes: Seq[NewScope] = Seq(
+        NewScope("scope1", Seq(Secondary, Primary)),
+        NewScope("scope2", Seq(Secondary))
 
       )
       val json = Json.toJson(scopes)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScopes(id,scopes)).thenReturn(Future.successful(Some(true) ))
+        when(fixture.applicationsService.addScopes(id, scopes)).thenReturn(Future.successful(true))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
-        .withHeaders(
-          CONTENT_TYPE -> "application/json"
-        )
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
           .withBody(json)
 
         val result = route(fixture.application, request).value
@@ -203,20 +205,17 @@ class ApplicationsControllerSpec
 
     "must return 404 Not Found when adding new scopes but the application does not exist in the repository" in {
       val id = "id"
-      val scopes: Seq[NewScope] = Seq(
-        NewScope("scope1", Seq(Dev, Test)),
-        NewScope("scope2", Seq(Dev))
-      )
-      val json = Json.toJson(scopes)
+
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScopes(any(),any())).thenReturn(Future.successful(None))
+        when(fixture.applicationsService.addScopes(any(), any())).thenReturn(Future.successful(false))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
-          .withBody(json)
+          .withBody(Json.toJson(Seq.empty[NewScope]))
+
         val result = route(fixture.application, request).value
         status(result) mustBe Status.NOT_FOUND
       }
@@ -228,7 +227,7 @@ class ApplicationsControllerSpec
            |[
            |  {
            |    "name": "my-scope-name-1",
-           |    "environments": ["dev", "test"]
+           |    "environments": ["secondary", "primary"]
            |  },
            |  {
            |    "name": "my-scope-name-2",
@@ -341,7 +340,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.NOT_FOUND
 
-        verify(fixture.applicationsService).setPendingProdScopeStatusToApproved(ArgumentMatchers.eq(appId),ArgumentMatchers.eq(scopeName))
+        verify(fixture.applicationsService).setPendingProdScopeStatusToApproved(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))
       }
     }
 
@@ -362,25 +361,25 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
-        }
-    }
-    "must return 400 Invalid Request when trying to set scope status on prod environment to other than APPROVED" in{
-        val appId = "not-exist"
-        val envName = "prod"
-        val scopeName = "test-scope-name"
-        val updateScope: UpdateScopeStatus = UpdateScopeStatus(Pending)
-        val json = Json.toJson(updateScope)
-        val fixture = buildFixture()
-        running(fixture.application) {
-          val request = FakeRequest(PUT, routes.ApplicationsController.approveProdScopeStatus(appId, envName, scopeName).url)
-            .withHeaders(
-              CONTENT_TYPE -> "application/json"
-            )
-            .withBody(json)
-            val result = route(fixture.application, request).value
-            status(result) mustBe Status.BAD_REQUEST
-        }
       }
+    }
+    "must return 400 Invalid Request when trying to set scope status on prod environment to other than APPROVED" in {
+      val appId = "not-exist"
+      val envName = "prod"
+      val scopeName = "test-scope-name"
+      val updateScope: UpdateScopeStatus = UpdateScopeStatus(Pending)
+      val json = Json.toJson(updateScope)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val request = FakeRequest(PUT, routes.ApplicationsController.approveProdScopeStatus(appId, envName, scopeName).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
+    }
 
   }
 }
@@ -391,9 +390,9 @@ object ApplicationsControllerSpec {
   implicit val materializer: Materializer = Materializer(ActorSystem())
 
   case class Fixture(
-    application: PlayApplication,
-    applicationsService: ApplicationsService
-  )
+                      application: PlayApplication,
+                      applicationsService: ApplicationsService
+                    )
 
   def buildFixture(): Fixture = {
     val applicationsService = mock[ApplicationsService]

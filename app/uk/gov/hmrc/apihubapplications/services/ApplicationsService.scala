@@ -50,7 +50,7 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
 
   def getApplicationsWithPendingScope(): Future[Seq[Application]] = findAll().map(_.filter(_.hasProdPendingScope))
 
-  def addScopes(applicationId: String, newScopes: Seq[NewScope]): Future[Option[Boolean]] =
+  def addScopes(applicationId: String, newScopes: Seq[NewScope]): Future[Boolean] =
     repository.findById(applicationId).flatMap {
       case Some(application) =>
         val appWithNewScopes = newScopes.foldLeft[Application](application)((outerApp, newScope) => {
@@ -59,8 +59,8 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
           )
         }).copy(lastUpdated = LocalDateTime.now(clock))
 
-        repository.update(appWithNewScopes).map(app => Some(app))
-      case None => Future.successful(None)
+        repository.update(appWithNewScopes)
+      case None => Future.successful(false)
     }
 
   def setPendingProdScopeStatusToApproved(applicationId: String, scopeName:String): Future[Option[Boolean]] = {
