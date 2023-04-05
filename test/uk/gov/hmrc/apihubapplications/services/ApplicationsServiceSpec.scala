@@ -19,6 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.ArgumentMatchers.any
 import org.mockito.captor.ArgCaptor
 import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
@@ -30,7 +31,7 @@ import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import java.util.UUID
 import scala.concurrent.Future
 
-class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ApplicationGenerator {
+class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ApplicationGenerator with ScalaFutures {
 
   private val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
 
@@ -164,25 +165,23 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val service = new ApplicationsService(repository, clock)
 
       val newScopes = Seq(
-       NewScope("test-name-1", Seq(Prod)),
-       NewScope("test-name-2", Seq(Dev, Test))
+       NewScope("test-name-1", Seq(Primary)),
+       NewScope("test-name-2", Seq(Secondary, Primary))
       )
 
       val testAppId = "test-app-id"
-      val app  = Application(
+      val generatedApp = applicationGenerator.arbitrary.sample.get
+      val app = generatedApp.copy(
         id = Some(testAppId),
-        name = "test-app-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       )
 
       val updatedApp = app
-        .addScopes(Prod, Seq("test-name-1"))
-        .addScopes(Dev, Seq("test-name-2"))
-        .addScopes(Test, Seq("test-name-2"))
+        .addScopes(Primary, Seq("test-name-1"))
+        .addScopes(Secondary, Seq("test-name-2"))
+        .addScopes(Primary, Seq("test-name-2"))
+
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
 
@@ -195,15 +194,10 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val repository = mock[ApplicationsRepository]
       val service = new ApplicationsService(repository, clock)
 
-      val newScopes = Seq(
-        NewScope("test-name-1", Seq(Prod)),
-        NewScope("test-name-2", Seq(Dev, Test))
-      )
-
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
 
-      service.addScopes(testAppId, newScopes) map {
+      service.addScopes(testAppId, Seq.empty) map {
         actual =>
           actual mustBe None
       }
