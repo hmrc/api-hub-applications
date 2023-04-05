@@ -280,15 +280,14 @@ class ApplicationsIntegrationSpec
     }
   }
 
-  "when registering new Application status of all scopes automatically set to PENDING in prod envirnment " +
-    "and to APPROVED in all other environments" in {
+  "set status of scopes to PENDING in primary environment and to APPROVED in secondary environments" in {
     forAll { application: Application =>
       val emptyScopesApp = application.withEmptyScopes
 
       deleteAll().futureValue
       insert(emptyScopesApp).futureValue
 
-      val newScopes = Seq(NewScope("scope1", Seq(Dev, Test, PreProd, Prod)))
+      val newScopes = Seq(NewScope("scope1", Seq(Secondary, Primary)))
       wsClient
         .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
         .addHttpHeaders(("Content", "application/json"))
@@ -300,10 +299,8 @@ class ApplicationsIntegrationSpec
       storedApplications.size shouldBe 1
       val storedApplication = storedApplications.head
 
-      storedApplication.environments.dev.scopes.map(_.status).toSet shouldBe Set(Approved)
-      storedApplication.environments.test.scopes.map(_.status).toSet shouldBe Set(Approved)
-      storedApplication.environments.preProd.scopes.map(_.status).toSet shouldBe Set(Approved)
-      storedApplication.environments.prod.scopes.map(_.status).toSet shouldBe Set(Pending)
+      storedApplication.environments.secondary.scopes.map(_.status).toSet shouldBe Set(Approved)
+      storedApplication.environments.primary.scopes.map(_.status).toSet shouldBe Set(Pending)
     }
   }
 }

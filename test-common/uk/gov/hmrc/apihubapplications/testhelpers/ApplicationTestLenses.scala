@@ -24,7 +24,10 @@ object ApplicationTestLenses {
     val pendingScopeName = "my-pending-scope"
     val approvedScopeName = "my-approved-scope"
     def withEmptyScopes: Application = {
-      application.setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
+      application
+        .setPrimaryScopes(Seq.empty)
+        .setSecondaryScopes(Seq.empty)
+        .setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
     }
 
     def withTestPendingScopes: Application = {
