@@ -244,11 +244,9 @@ components:
             items:
               type: string
               enum:
-                - "dev"
-                - "test"
-                - "preProd"
-                - "prod"
-              example: "prod"
+                - "secondary"
+                - "primary"
+              example: "primary"
     UpdateScopeStatus:
       type: object
       properties:
@@ -410,11 +408,11 @@ components:
       value:
         - name: read:address
           environments:
-            - preProd
-            - prod
+            - secondary
+            - primary
         - name: write:address
           environments:
-            - preProd
+            - secondary
     updateScopeStatus:
       summary: "The status to set"
       value:

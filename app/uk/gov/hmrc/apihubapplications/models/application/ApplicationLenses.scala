@@ -117,7 +117,7 @@ object ApplicationLenses {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
-        case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_, Approved))).distinct)
+        case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_, Pending))).distinct)
         case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_, Approved))).distinct)
         case Dev => setDevScopes((getDevScopes ++ scopes.map(Scope(_, Approved))).distinct)
         case Test => setTestScopes((getTestScopes ++ scopes.map(Scope(_, Approved))).distinct)

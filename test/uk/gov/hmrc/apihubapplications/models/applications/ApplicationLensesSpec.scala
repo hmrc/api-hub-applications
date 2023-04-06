@@ -45,18 +45,21 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
   }
 
   "environmentScopes" - {
-    "must add scopes correctly" in{
+    "must add scopes correctly with secondary as APPROVED and primary as PENDING" in{
       val app = testApplication
-      val prodScopes = Seq("test-scope-prod-1", "test-scope-prod-2")
-      val devScopes = Seq("test-scope-dev-1", "test-scope-dev-2")
-      val expectedProdScopes = prodScopes.map(scopeName => Scope(scopeName,Pending))
-      val expectedDevScopes = devScopes.map(scopeName => Scope(scopeName,Approved))
-      val updatedApp = app.addScopes(Prod, prodScopes).addScopes(Dev, devScopes)
-      val actualProdScopes = updatedApp.environments.prod.scopes
-      val actualDevScopes = updatedApp.environments.dev.scopes
+      val primaryScopes = Seq("test-scope-primary-1", "test-scope-primary-2")
+      val secondaryScopes = Seq("test-scope-secondary-1", "test-scope-secondary-2")
 
-      actualProdScopes mustBe expectedProdScopes
-      actualDevScopes mustBe expectedDevScopes
+      val expectedPrimaryScopes = primaryScopes.map(scopeName => Scope(scopeName,Pending))
+      val expectedSecondaryScopes = secondaryScopes.map(scopeName => Scope(scopeName,Approved))
+
+      val updatedApp = app.addScopes(Primary, primaryScopes).addScopes(Secondary, secondaryScopes)
+
+      val actualPrimaryScopes = updatedApp.environments.primary.scopes
+      val actualSecondaryScopes = updatedApp.environments.secondary.scopes
+
+      actualPrimaryScopes mustBe expectedPrimaryScopes
+      actualSecondaryScopes mustBe expectedSecondaryScopes
     }
 
     "must get the correct Scopes" in {

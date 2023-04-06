@@ -73,10 +73,10 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
       val jsReq = request.body
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
-          applicationsService.addScopes(id, scopes).map(_ match {
-            case Some(true) => NoContent
-            case _ => NotFound
-          })
+          applicationsService.addScopes(id, scopes).map {
+            case true => NoContent
+            case false => NotFound
+          }
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
