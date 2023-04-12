@@ -125,13 +125,13 @@ class ApplicationsControllerSpec
       val now = LocalDateTime.now()
       running(fixture.application) {
 
-        val teamMemberEmail = "test1@test.com"
+        val teamMemberEmail = "jo.bloggs@hmrc.gov.uk"
         val expected_apps = Seq(Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments()))
         val expected_json = Json.toJson(expected_apps)
 
         val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
-          Some(encryptAndEncode(crypto, teamMemberEmail))).url)
+          Some(encrypt(crypto, teamMemberEmail))).url)
 
         when(fixture.applicationsService.filter(teamMemberEmail)).thenReturn(Future.successful(expected_apps))
 
