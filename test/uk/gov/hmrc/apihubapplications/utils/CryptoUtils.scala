@@ -18,11 +18,8 @@ package uk.gov.hmrc.apihubapplications.utils
 
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 
-import java.net.URLEncoder
-
 trait CryptoUtils {
-
-  def encryptAndEncode(applicationCrypto: ApplicationCrypto, plaintext: String): String = {
-    URLEncoder.encode(applicationCrypto.QueryParameterCrypto.encrypt(PlainText(plaintext)).value, "UTF-8")
+  def encrypt(applicationCrypto: ApplicationCrypto, plaintext: String) = {
+    applicationCrypto.QueryParameterCrypto.encrypt(PlainText(plaintext)).value
   }
 }
