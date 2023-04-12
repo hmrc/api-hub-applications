@@ -496,11 +496,14 @@ object ApplicationLensesSpec {
     (0 to Random.nextInt(5))
       .map(_ => randomCredential())
 
-  private def randomCredential(): Credential =
+  private def randomCredential(): Credential = {
+    val clientSecret = s"test-client-secret${randomString()}"
     Credential(
       clientId = s"test-client-id${randomString()}",
-      clientSecret = s"test-client-secret${randomString()}"
+      clientSecret = Some(clientSecret),
+      secretFragment = Some(clientSecret.takeRight(4))
     )
+  }
 
   private def randomScopes(): Seq[Scope] =
     (0 to Random.nextInt(5))
