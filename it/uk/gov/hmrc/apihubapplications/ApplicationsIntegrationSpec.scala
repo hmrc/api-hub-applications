@@ -167,7 +167,7 @@ class ApplicationsIntegrationSpec
 
       val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments())
       deleteAll().futureValue
-      val crypto = fakeApplication.injector.instanceOf[ApplicationCrypto]
+      val crypto = fakeApplication().injector.instanceOf[ApplicationCrypto]
       insert(application1).futureValue
       insert(application2).futureValue
 
