@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, equalToJson, post, stubFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
@@ -59,7 +60,6 @@ class IdmsConnectorSpec
             clientResponse mustBe Right(testClientResponse)
         }
       }
-
     }
 
     "must return IdmsException for any non-2xx response" in {
@@ -80,6 +80,25 @@ class IdmsConnectorSpec
           result =>
             result mustBe Left(IdmsException())
         }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      stubFor(
+        post(urlEqualTo(s"/primary/identity/clients"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(testClient).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
+        result =>
+          result mustBe Left(IdmsException())
       }
     }
   }

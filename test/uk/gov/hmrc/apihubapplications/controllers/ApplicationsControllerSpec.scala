@@ -37,6 +37,7 @@ import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
@@ -97,6 +98,30 @@ class ApplicationsControllerSpec
       }
     }
 
+    "must return 502 Bad Gateway if IDMS does not respond successfully" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val newApplication = NewApplication(
+          "test-app",
+          Creator("test1@test.com"),
+          Seq(TeamMember("test1@test.com"), TeamMember("test2@test.com"))
+        )
+
+        val json = Json.toJson(newApplication)
+
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        when(fixture.applicationsService.registerApplication(any())(any()))
+          .thenReturn(Future.successful(Left(IdmsException())))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_GATEWAY
+      }
+    }
   }
 
   "retrieve all Applications" - {

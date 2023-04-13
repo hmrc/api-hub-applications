@@ -16,18 +16,19 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class IdmsConnectorImpl @Inject()(
   servicesConfig: ServicesConfig,
   httpClient: HttpClientV2
@@ -37,11 +38,11 @@ class IdmsConnectorImpl @Inject()(
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients"
     httpClient.post(url)
       .withBody(Json.toJson(client))
-      .execute[Either[UpstreamErrorResponse, ClientResponse]]
-      .map {
-        case Right(clientResponse) => Right(clientResponse)
-        case Left(e) =>
-          logger.error("Error calling IDMS", e)
+      .execute[ClientResponse]
+      .map(Right(_))
+      .recover {
+        case throwable =>
+          logger.error("Error calling IDMS", throwable)
           Left(IdmsException())
       }
   }
