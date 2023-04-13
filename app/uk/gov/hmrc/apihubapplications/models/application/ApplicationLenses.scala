@@ -32,6 +32,12 @@ object ApplicationLenses {
       set = (environment, scopes) => environment.copy(scopes = scopes)
     )
 
+  val environmentCredentials: Lens[Environment, Seq[Credential]] =
+    Lens[Environment, Seq[Credential]](
+      get = _.credentials,
+      set = (environment, credentials) => environment.copy(credentials = credentials)
+    )
+
   val environmentProd: Lens[Environments, Environment] =
     Lens[Environments, Environment](
       get = _.prod,
@@ -92,6 +98,9 @@ object ApplicationLenses {
   val applicationPrimaryScopes: Lens[Application, Seq[Scope]] =
     Lens.compose(applicationPrimary, environmentScopes)
 
+  val applicationPrimaryCredentials: Lens[Application, Seq[Credential]] =
+    Lens.compose(applicationPrimary, environmentCredentials)
+
   val environmentSecondary: Lens[Environments, Environment] =
     Lens[Environments, Environment](
       get = _.secondary,
@@ -104,8 +113,8 @@ object ApplicationLenses {
   val applicationSecondaryScopes: Lens[Application, Seq[Scope]] =
     Lens.compose(applicationSecondary, environmentScopes)
 
-
-
+  val applicationSecondaryCredentials: Lens[Application, Seq[Credential]] =
+    Lens.compose(applicationSecondary, environmentCredentials)
 
   val applicationTeamMembers: Lens[Application, Seq[TeamMember]] =
     Lens[Application, Seq[TeamMember]](
@@ -141,6 +150,18 @@ object ApplicationLenses {
       applicationPrimaryScopes.get(application)
         .exists(scope => scope.status == Pending)
 
+    def getPrimaryCredentials: Seq[Credential] =
+      applicationPrimaryCredentials.get(application)
+
+    def setPrimaryCredentials(credentials: Seq[Credential]): Application =
+      applicationPrimaryCredentials.set(application, credentials)
+
+    def addPrimaryCredential(credential: Credential): Application =
+      applicationPrimaryCredentials.set(
+        application,
+        applicationPrimaryCredentials.get(application) :+ credential
+      )
+
     def getSecondaryScopes: Seq[Scope] =
       applicationSecondaryScopes.get(application)
 
@@ -151,6 +172,18 @@ object ApplicationLenses {
       applicationSecondaryScopes.set(
         application,
         applicationSecondaryScopes.get(application) :+ scope
+      )
+
+    def getSecondaryCredentials: Seq[Credential] =
+      applicationSecondaryCredentials.get(application)
+
+    def setSecondaryCredentials(credentials: Seq[Credential]): Application =
+      applicationSecondaryCredentials.set(application, credentials)
+
+    def addSecondaryCredential(credential: Credential): Application =
+      applicationSecondaryCredentials.set(
+        application,
+        applicationSecondaryCredentials.get(application) :+ credential
       )
 
     def getProdScopes: Seq[Scope] =

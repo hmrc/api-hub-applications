@@ -74,8 +74,8 @@ class ApplicationsControllerSpec
         val expected = Application(newApplication)
           .copy(id = Some("test-id"))
 
-        when(fixture.applicationsService.registerApplication(ArgumentMatchers.eq(newApplication)))
-          .thenReturn(Future.successful(expected))
+        when(fixture.applicationsService.registerApplication(ArgumentMatchers.eq(newApplication))(any()))
+          .thenReturn(Future.successful(Right(expected)))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
