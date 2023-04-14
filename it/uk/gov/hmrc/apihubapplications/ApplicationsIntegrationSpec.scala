@@ -26,11 +26,12 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.{Application => GuideApplication}
+import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeIdmsConnector}
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -54,7 +55,8 @@ class ApplicationsIntegrationSpec
     GuiceApplicationBuilder()
       .overrides(
         bind[ApplicationsRepository].toInstance(repository),
-        bind[IdentifierAction].to(classOf[FakeIdentifierAction])
+        bind[IdentifierAction].to(classOf[FakeIdentifierAction]),
+        bind[IdmsConnector].to(classOf[FakeIdmsConnector])
       )
       .configure("metrics.enabled" -> false)
       .build()

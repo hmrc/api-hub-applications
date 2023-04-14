@@ -22,10 +22,13 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, _}
+import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import java.util.UUID
@@ -38,7 +41,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
   "registerApplication" - {
     "must build the correct application and submit it to the repository" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val teamMember1 = TeamMember("test-email-1")
       val teamMember2 = TeamMember("test-email-2")
@@ -58,24 +62,33 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
         environments = Environments()
       )
 
-      val expected = application.copy(id = Some("test-id"))
-      when(repository.insert(ArgumentMatchers.eq(application)))
+      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
+        .thenReturn(Future.successful(Right(clientResponse)))
+
+      val applicationWithCreds = application.setSecondaryCredentials(Seq(clientResponse.asCredential()))
+      val expected = applicationWithCreds.copy(id = Some("test-id"))
+
+      when(repository.insert(ArgumentMatchers.eq(applicationWithCreds)))
         .thenReturn(Future.successful(expected))
 
-      service.registerApplication(newApplication) map {
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
-          actual mustBe expected
+          actual mustBe Right(expected)
       }
     }
 
     "must add the creator as a team member if they are not already one" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val creator = Creator("test-email")
       val teamMember1 = TeamMember("test-email-1")
       val teamMember2 = TeamMember("test-email-2")
       val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
+
+      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
 
       val expected = Application(
         id = None,
@@ -85,13 +98,16 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2, TeamMember(creator.email)),
         environments = Environments()
-      )
+      ).setSecondaryCredentials(Seq(clientResponse.asCredential()))
+
+      when(idmsConnector.createClient(any(), any())(any()))
+        .thenReturn(Future.successful(Right(clientResponse)))
 
       when(repository.insert(any()))
         .thenReturn(Future.successful(expected.copy(id = Some("id"))))
 
-      service.registerApplication(newApplication) map {
-        actual =>
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
+        _ =>
           val captor = ArgCaptor[Application]
           verify(repository).insert(captor.capture)
           captor.value mustBe expected
@@ -110,7 +126,9 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val repository = mock[ApplicationsRepository]
       when(repository.findAll()).thenReturn(Future.successful(applications))
 
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findAll() map {
         actual =>
           actual mustBe applications
@@ -127,7 +145,9 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       val repository = mock[ApplicationsRepository]
       when(repository.filter("test-email-1")).thenReturn(Future.successful(applications))
 
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.filter("test-email-1") map {
         actual =>
           actual mustBe applications
@@ -148,7 +168,9 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
      val repository = mock[ApplicationsRepository]
      when(repository.findAll()).thenReturn(Future.successful(Seq(appWithProdPending,appWithoutPending)))
 
-     val service = new ApplicationsService(repository, clock)
+     val idmsConnector = mock[IdmsConnector]
+
+     val service = new ApplicationsService(repository, clock, idmsConnector)
      service.getApplicationsWithPendingScope() map {
        actual =>
          actual mustBe Seq(appWithProdPending)
@@ -162,7 +184,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
 
     "must add new scopes to Application and return true" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val newScopes = Seq(
        NewScope("test-name-1", Seq(Primary)),
@@ -196,7 +219,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
 
     "must return false if application not found whilst updating it with new scopes" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val newScopes = Seq(
         NewScope("test-name-1", Seq(Primary)),
@@ -230,7 +254,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
 
     "must return false if application not initially found" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
@@ -245,7 +270,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
   "set scope status to APPROVED on prod when current scope status is PENDING" - {
     "must set scopes for an application" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val envs = Environments(
         Environment(Seq.empty, Seq.empty),
@@ -278,7 +304,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
     }
     "must return None if application and/or scope name do not exist" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
@@ -290,7 +317,8 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
     }
     "must return Some(False) when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
       val repository = mock[ApplicationsRepository]
-      val service = new ApplicationsService(repository, clock)
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
       val scopeName = "test-scope-1"
       val envs = Environments(
         Environment(Seq.empty, Seq.empty),

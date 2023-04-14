@@ -21,7 +21,7 @@ import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.Lens
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomEnvironment, randomEnvironments, randomScopes, randomString, randomTeamMembers, testApplication}
+import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomCredentials, randomEnvironment, randomEnvironments, randomScopes, randomString, randomTeamMembers, testApplication}
 
 import scala.util.Random
 
@@ -76,6 +76,96 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
 
       val actual = environmentScopes.set(environment, expected).scopes
       actual mustBe expected
+    }
+  }
+
+  "environmentCredentials" - {
+    "must get the correct credentials" in {
+      val expected = randomCredentials()
+      val environment = randomEnvironment().copy(credentials = expected)
+
+      val actual = environmentCredentials.get(environment)
+      actual mustBe expected
+    }
+
+    "must set the credentials correctly" in {
+      val expected = randomCredentials()
+      val environment = randomEnvironment().copy(credentials = Seq.empty)
+
+      val actual = environmentCredentials.set(environment, expected).credentials
+      actual mustBe expected
+    }
+  }
+
+  "environmentPrimary" - {
+    "must" - {
+      behave like environmentsToEnvironmentLens(
+        environmentPrimary,
+        _.primary
+      )
+    }
+  }
+
+  "applicationPrimary" - {
+    "must" - {
+      behave like applicationToEnvironmentLens(
+        applicationPrimary,
+        _.primary
+      )
+    }
+  }
+
+  "applicationPrimaryScopes" - {
+    "must" - {
+      behave like applicationToScopesLens(
+        applicationPrimaryScopes,
+        _.primary
+      )
+    }
+  }
+
+  "applicationPrimaryCredentials" - {
+    "must" - {
+      behave like applicationToCredentialsLens(
+        applicationPrimaryCredentials,
+        _.primary
+      )
+    }
+  }
+
+  "environmentSecondary" - {
+    "must" - {
+      behave like environmentsToEnvironmentLens(
+        environmentSecondary,
+        _.secondary
+      )
+    }
+  }
+
+  "applicationSecondary" - {
+    "must" - {
+      behave like applicationToEnvironmentLens(
+        applicationSecondary,
+        _.secondary
+      )
+    }
+  }
+
+  "applicationSecondaryScopes" - {
+    "must" - {
+      behave like applicationToScopesLens(
+        applicationSecondaryScopes,
+        _.secondary
+      )
+    }
+  }
+
+  "applicationSecondaryCredentials" - {
+    "must" - {
+      behave like applicationToCredentialsLens(
+        applicationSecondaryCredentials,
+        _.secondary
+      )
     }
   }
 
@@ -248,6 +338,33 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "getPrimaryCredentials" - {
+      "must" - {
+        behave like applicationCredentialsGetterFunction(
+          applicationPrimaryCredentials,
+          application => ApplicationLensOps(application).getPrimaryCredentials
+        )
+      }
+    }
+
+    "setPrimaryCredentials" - {
+      "must" - {
+        behave like applicationCredentialsSetterFunction(
+          applicationPrimaryCredentials,
+          (application, credentials) => ApplicationLensOps(application).setPrimaryCredentials(credentials)
+        )
+      }
+    }
+
+    "addPrimaryCredential" - {
+      "must" - {
+        behave like applicationAddCredentialFunction(
+          applicationPrimaryCredentials,
+          (application, credential) => ApplicationLensOps(application).addPrimaryCredential(credential)
+        )
+      }
+    }
+
     "getSecondaryScopes" - {
       "must" - {
         behave like applicationScopesGetterFunction(
@@ -275,6 +392,32 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "getSecondaryCredentials" - {
+      "must" - {
+        behave like applicationCredentialsGetterFunction(
+          applicationSecondaryCredentials,
+          application => ApplicationLensOps(application).getSecondaryCredentials
+        )
+      }
+    }
+
+    "setSecondaryCredentials" - {
+      "must" - {
+        behave like applicationCredentialsSetterFunction(
+          applicationSecondaryCredentials,
+          (application, credentials) => ApplicationLensOps(application).setSecondaryCredentials(credentials)
+        )
+      }
+    }
+
+    "addSecondaryCredential" - {
+      "must" - {
+        behave like applicationAddCredentialFunction(
+          applicationSecondaryCredentials,
+          (application, credential) => ApplicationLensOps(application).addSecondaryCredential(credential)
+        )
+      }
+    }
 
     "getProdScopes" - {
       "must" - {
@@ -597,6 +740,27 @@ object ApplicationLensesSpec {
       }
     }
 
+    def applicationToCredentialsLens(
+      lens: Lens[Application, Seq[Credential]],
+      getsEnvironment: Environments => Environment
+    ): Unit = {
+      "it must get the correct credentials" in {
+        val application = testApplication.copy(environments = randomEnvironments())
+        val expected = getsEnvironment(application.environments).credentials
+
+        val actual = lens.get(application)
+        actual mustBe expected
+      }
+
+      "it must set the credentials correctly" in {
+        val application = testApplication
+        val expected = randomCredentials()
+
+        val actual = getsEnvironment(lens.set(application, expected).environments).credentials
+        actual mustBe expected
+      }
+    }
+
     def applicationScopesGetterFunction(
       lens: Lens[Application, Seq[Scope]],
       getsScopes: Application => Seq[Scope]
@@ -634,6 +798,42 @@ object ApplicationLensesSpec {
       }
     }
 
+    def applicationCredentialsGetterFunction(
+      lens: Lens[Application, Seq[Credential]],
+      getsCredentials: Application => Seq[Credential]
+    ): Unit = {
+      "it must get the correct credentials" in {
+        val expected = randomCredentials()
+        val actual = getsCredentials(lens.set(testApplication, expected))
+        actual mustBe expected
+      }
+    }
+
+    def applicationCredentialsSetterFunction(
+      lens: Lens[Application, Seq[Credential]],
+      setsCredentials: (Application, Seq[Credential]) => Application
+    ): Unit = {
+      "must set the credentials correctly" in {
+        val expected = randomCredentials()
+        val actual = lens.get(setsCredentials(testApplication, expected))
+        actual mustBe expected
+      }
+    }
+
+    def applicationAddCredentialFunction(
+      lens: Lens[Application, Seq[Credential]],
+      addsCredential: (Application, Credential) => Application
+    ): Unit = {
+      "must add the credential correctly" in {
+        val credentials = randomCredentials()
+        val newCredential = randomCredential()
+        val expected = credentials :+ newCredential
+        val application = lens.set(testApplication, credentials)
+
+        val actual = lens.get(addsCredential(application, newCredential))
+        actual mustBe expected
+      }
+    }
   }
 
 }

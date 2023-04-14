@@ -38,11 +38,13 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
   extends BackendController(cc) with Logging {
 
   def registerApplication(): Action[JsValue] = identify.compose(Action(parse.json)).async {
-    request: Request[JsValue] =>
+    implicit request: Request[JsValue] =>
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>
-          applicationsService.registerApplication(newApp)
-            .map(saved => Created(Json.toJson(saved)))
+          applicationsService.registerApplication(newApp).map {
+            case Right(application) => Created(Json.toJson(application))
+            case Left(_) => BadGateway
+          }
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
@@ -58,7 +60,6 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
 
     result.map(apps => Json.toJson(apps)).map(Ok(_))
   }
-
 
   def getApplication(id: String): Action[AnyContent] = identify.compose(Action).async {
     applicationsService.findById(id)
@@ -97,10 +98,10 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
         } else {
           jsReq.validate[UpdateScopeStatus] match {
             case JsSuccess(UpdateScopeStatus(Approved), _) if environment == Prod.toString =>
-              applicationsService.setPendingProdScopeStatusToApproved(id, scopename).map(_ match {
+              applicationsService.setPendingProdScopeStatusToApproved(id, scopename).map {
                 case Some(true) => NoContent
                 case _ => NotFound
-              })
+              }
             case JsSuccess(updateStatus, _) =>
               logger.info(s"Setting scope status to: ${updateStatus.status.toString} on environment: $environment is not allowed")
               Future.successful(BadRequest)

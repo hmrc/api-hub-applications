@@ -181,6 +181,10 @@ components:
     Environments:
       type: object
       properties:
+        primary:
+          $ref: "#/components/schemas/Environment"
+        secondary:
+          $ref: "#/components/schemas/Environment"
         dev:
           $ref: "#/components/schemas/Environment"
         test:
@@ -194,6 +198,8 @@ components:
       properties:
         scopes:
           $ref: "#/components/schemas/Scopes"
+        credentials:
+          $ref: "#/components/schemas/Credentials"
     Scopes:
       type: array
       items:
@@ -211,6 +217,22 @@ components:
             - "APPROVED"
             - "DENIED"
           example: "APPROVED"
+    Credentials:
+      type: array
+      items:
+        $ref: "#/components/schemas/Credential"
+    Credential:
+      type: object
+      properties:
+        clientId:
+          type: string
+          example: "abc123-def456"
+        clientSecret:
+          type: string
+          example: "client-secret-098xzy-765stw"
+        secretFragment:
+          type: string
+          example: "5stw"
     RegisterApplicationRequest:
       type: object
       properties:

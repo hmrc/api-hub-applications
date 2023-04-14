@@ -18,22 +18,33 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, IdmsException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: Clock)
-                                                         (implicit ec: ExecutionContext) extends Logging{
+class ApplicationsService @Inject()(
+  repository: ApplicationsRepository,
+  clock: Clock,
+  idmsConnector: IdmsConnector
+)(implicit ec: ExecutionContext) extends Logging{
 
-  def registerApplication(newApplication: NewApplication): Future[Application] = {
-    repository.insert(
-      Application(newApplication, clock)
-        .assertTeamMember(newApplication.createdBy.email)
-    )
+  def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
+    idmsConnector.createClient(Secondary, Client(newApplication)).flatMap {
+      case Right(clientResponse) =>
+        repository.insert(
+          Application(newApplication, clock)
+            .setSecondaryCredentials(Seq(clientResponse.asCredential()))
+            .assertTeamMember(newApplication.createdBy.email)
+        ).map(Right(_))
+      case Left(idmsException) => Future.successful(Left(idmsException))
+    }
   }
 
   def findAll(): Future[Seq[Application]] = {
@@ -64,20 +75,20 @@ class ApplicationsService @Inject()(repository: ApplicationsRepository, clock: C
     }
 
   def setPendingProdScopeStatusToApproved(applicationId: String, scopeName:String): Future[Option[Boolean]] = {
-    repository.findById(applicationId).flatMap { _ match {
-        case Some(application)  =>
-          if (application.getProdScopes.exists(scope => scope.name == scopeName && scope.status == Pending)){
-            val updatedApp: Application = application.setProdScopes(
-              application.environments.prod.scopes.map(scope =>
-                if (scope.name == scopeName) scope.copy(status = Approved) else scope
-              )).copy(lastUpdated = LocalDateTime.now(clock))
-            repository.update(updatedApp).map(Some(_))
-          }else{
-            Future.successful(Some(false))
-          }
+    repository.findById(applicationId).flatMap {
+      case Some(application)  =>
+        if (application.getProdScopes.exists(scope => scope.name == scopeName && scope.status == Pending)){
+          val updatedApp: Application = application.setProdScopes(
+            application.environments.prod.scopes.map(scope =>
+              if (scope.name == scopeName) scope.copy(status = Approved) else scope
+            )).copy(lastUpdated = LocalDateTime.now(clock))
+          repository.update(updatedApp).map(Some(_))
+        }else{
+          Future.successful(Some(false))
+        }
 
-        case None => Future.successful(None)
-      }
+      case None => Future.successful(None)
     }
   }
+
 }
