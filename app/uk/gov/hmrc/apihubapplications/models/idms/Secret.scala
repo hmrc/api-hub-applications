@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.connectors
+package uk.gov.hmrc.apihubapplications.models.idms
 
-import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.libs.json.{Format, Json}
 
-import scala.concurrent.Future
+case class Secret(secret: String)
 
-trait IdmsConnector {
+object Secret {
 
-  def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]]
-
-  def clientSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Option[Secret]]]
+  implicit val formatSecret: Format[Secret] = Json.format[Secret]
 
 }

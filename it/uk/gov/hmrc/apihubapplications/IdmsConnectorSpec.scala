@@ -16,18 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, equalToJson, post, stubFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{buildConnector, environmentNames, nonSuccessResponses, testClient, testClientResponse}
+import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{buildConnector, environmentNames, nonSuccessResponses, testClient, testClientId, testClientResponse, testSecret}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -45,6 +45,7 @@ class IdmsConnectorSpec
       forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           post(urlEqualTo(s"/$environmentName/identity/clients"))
+            .withHeader("Accept", equalTo("application/json"))
             .withHeader("Content-Type", equalTo("application/json"))
             .withRequestBody(
               equalToJson(Json.toJson(testClient).toString())
@@ -103,6 +104,73 @@ class IdmsConnectorSpec
     }
   }
 
+  "IdmsConnector.clientSecret" - {
+    "must place the correct request per environment to IDMS and return the Secret" in {
+      forAll(environmentNames) { environmentName: EnvironmentName =>
+        stubFor(
+          get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
+            .withHeader("Accept", equalTo("application/json"))
+            .willReturn(
+              aResponse()
+                .withBody(Json.toJson(testSecret).toString())
+            )
+        )
+
+        buildConnector(this).clientSecret(environmentName, testClientId)(HeaderCarrier()) map {
+          secret =>
+            secret mustBe Right(Some(testSecret))
+        }
+      }
+    }
+
+    "must return None when IDMS returns 404 Not Found for a given Client Id" in {
+      stubFor(
+        get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector(this).clientSecret(Primary, testClientId)(HeaderCarrier()) map {
+        secret =>
+          secret mustBe Right(None)
+      }
+    }
+
+    "must return IdmsException for any non-2xx or 404 response" in {
+      forAll(nonSuccessResponses) { status: Int =>
+        stubFor(
+          get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+            .willReturn(
+              aResponse()
+                .withStatus(status)
+            )
+        )
+
+        buildConnector(this).clientSecret(Primary, testClientId)(HeaderCarrier()) map {
+          secret =>
+            secret mustBe Left(IdmsException())
+        }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      stubFor(
+        get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      buildConnector(this).clientSecret(Primary, testClientId)(HeaderCarrier()) map {
+        secret =>
+          secret mustBe Left(IdmsException())
+      }
+    }
+  }
+
 }
 
 object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
@@ -122,8 +190,10 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
     new IdmsConnectorImpl(servicesConfig, httpClientV2)
   }
 
+  val testClientId: String = "test-client-id"
+  val testSecret: Secret = Secret("test-secret")
   val testClient: Client = Client("test-name", "test-description")
-  val testClientResponse: ClientResponse = ClientResponse("test-client-id", "test-secret")
+  val testClientResponse: ClientResponse = ClientResponse(testClientId, testSecret.secret)
 
   val environmentNames: TableFor1[WithName with EnvironmentName] = Table(
     "environment",
