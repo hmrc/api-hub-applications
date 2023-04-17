@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
+import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
@@ -38,7 +39,8 @@ class IdmsConnectorSpec
   extends AsyncFreeSpec
   with Matchers
   with WireMockSupport
-  with TableDrivenPropertyChecks {
+  with TableDrivenPropertyChecks
+  with EitherValues {
 
   "IdmsConnector.createClient" - {
     "must place the correct request per environment to IDMS and return the ClientResponse" in {
@@ -79,7 +81,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
           result =>
-            result mustBe Left(IdmsException())
+            result.left.value mustBe a [IdmsException]
         }
       }
     }
@@ -99,13 +101,13 @@ class IdmsConnectorSpec
 
       buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
         result =>
-          result mustBe Left(IdmsException())
+          result.left.value mustBe a [IdmsException]
       }
     }
   }
 
-  "IdmsConnector.clientSecret" - {
-    "must place the correct request per environment to IDMS and return the Secret" in {
+  "IdmsConnector.fetchClient" - {
+    "must place the correct request per environment to IDMS and return the secret" in {
       forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
@@ -116,14 +118,14 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).clientSecret(environmentName, testClientId)(HeaderCarrier()) map {
-          secret =>
-            secret mustBe Right(Some(testSecret))
+        buildConnector(this).fetchClient(environmentName, testClientId)(HeaderCarrier()) map {
+          clientResponse =>
+            clientResponse mustBe Right(testClientResponse)
         }
       }
     }
 
-    "must return None when IDMS returns 404 Not Found for a given Client Id" in {
+    "must return IdmsException when IDMS returns 404 Not Found for a given Client Id" in {
       stubFor(
         get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
           .willReturn(
@@ -132,9 +134,9 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).clientSecret(Primary, testClientId)(HeaderCarrier()) map {
-        secret =>
-          secret mustBe Right(None)
+      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+        clientResponse =>
+          clientResponse.left.value mustBe a [IdmsException]
       }
     }
 
@@ -148,9 +150,9 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).clientSecret(Primary, testClientId)(HeaderCarrier()) map {
-          secret =>
-            secret mustBe Left(IdmsException())
+        buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+          clientResponse =>
+            clientResponse.left.value mustBe a [IdmsException]
         }
       }
     }
@@ -164,9 +166,9 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).clientSecret(Primary, testClientId)(HeaderCarrier()) map {
-        secret =>
-          secret mustBe Left(IdmsException())
+      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+        clientResponse =>
+          clientResponse.left.value mustBe a [IdmsException]
       }
     }
   }

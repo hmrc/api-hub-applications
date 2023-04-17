@@ -17,8 +17,19 @@
 package uk.gov.hmrc.apihubapplications.models.idms
 
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.models.application.Credential
 
-case class Secret(secret: String)
+case class Secret(secret: String) {
+
+  def toCredential(clientId: String): Credential = {
+    Credential(
+      clientId = clientId,
+      clientSecret = Some(secret),
+      secretFragment = Some(secret.takeRight(4))
+    )
+  }
+
+}
 
 object Secret {
 

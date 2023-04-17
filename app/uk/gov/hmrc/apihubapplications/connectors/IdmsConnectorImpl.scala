@@ -44,28 +44,34 @@ class IdmsConnectorImpl @Inject()(
       .map(Right(_))
       .recover {
         case throwable =>
-          logger.error("Error calling IDMS", throwable)
-          Left(IdmsException())
+          val message = "Error calling IDMS"
+          logger.error(message, throwable)
+          Left(IdmsException(message, throwable))
       }
   }
 
-  override def clientSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Option[Secret]]] = {
+  override def fetchClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-secret"
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
-        case Right(secret) => Right(Some(secret))
-        case Left(e) if e.statusCode == 404 => Right(None)
+        case Right(secret) => Right(ClientResponse(clientId, secret.secret))
+        case Left(e) if e.statusCode == 404 =>
+          val message = s"Client not found: clientId=$clientId"
+          logger.error(message)
+          Left(IdmsException(message))
         case Left(e) =>
-          logger.error(s"Unexpected response ${e.statusCode} returned from IDMS")
-          Left(IdmsException())
+          val message = s"Unexpected response ${e.statusCode} returned from IDMS"
+          logger.error(message)
+          Left(IdmsException(message))
       }
       .recover {
         case throwable =>
-          logger.error("Error calling IDMS", throwable)
-          Left(IdmsException())
+          val message = "Error calling IDMS"
+          logger.error(message, throwable)
+          Left(IdmsException(message, throwable))
       }
   }
 

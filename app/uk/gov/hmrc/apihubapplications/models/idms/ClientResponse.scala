@@ -29,6 +29,14 @@ case class ClientResponse(clientId: String, secret: String) {
     )
   }
 
+  def asCredentialWithSecret(): Credential = {
+    Credential(
+      clientId = clientId,
+      clientSecret = Some(secret),
+      secretFragment = Some(secret.takeRight(4))
+    )
+  }
+
 }
 
 object ClientResponse {

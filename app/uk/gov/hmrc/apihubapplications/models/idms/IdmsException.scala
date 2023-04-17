@@ -16,4 +16,16 @@
 
 package uk.gov.hmrc.apihubapplications.models.idms
 
-case class IdmsException() extends RuntimeException
+class IdmsException(message: String, cause: Throwable) extends RuntimeException(message, cause)
+
+object IdmsException {
+
+  def apply(message: String): IdmsException = {
+    new IdmsException(message, null)
+  }
+
+  def apply(message: String, cause: Throwable): IdmsException = {
+    new IdmsException(message, cause)
+  }
+
+}

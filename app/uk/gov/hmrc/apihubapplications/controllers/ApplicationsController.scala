@@ -62,11 +62,13 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
   }
 
   def getApplication(id: String): Action[AnyContent] = identify.compose(Action).async {
-    applicationsService.findById(id)
-      .map {
-        case Some(application) => Ok(Json.toJson(application))
-        case None => NotFound
-      }
+    implicit request =>
+      applicationsService.findById(id)
+        .map {
+          case Some(Right(application)) => Ok(Json.toJson(application))
+          case Some(Left(_)) => BadGateway
+          case None => NotFound
+        }
   }
 
   def addScopes(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
