@@ -140,7 +140,7 @@ class IdmsConnectorSpec
       }
     }
 
-    "must return IdmsException for any non-2xx or 404 response" in {
+    "must return IdmsException for any non-2xx response" in {
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))

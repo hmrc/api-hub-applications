@@ -60,11 +60,11 @@ class IdmsConnectorImpl @Inject()(
         case Right(secret) => Right(ClientResponse(clientId, secret.secret))
         case Left(e) if e.statusCode == 404 =>
           val message = s"Client not found: clientId=$clientId"
-          logger.error(message)
+          logger.error(message, e)
           Left(IdmsException(message))
         case Left(e) =>
           val message = s"Unexpected response ${e.statusCode} returned from IDMS"
-          logger.error(message)
+          logger.error(message, e)
           Left(IdmsException(message))
       }
       .recover {
