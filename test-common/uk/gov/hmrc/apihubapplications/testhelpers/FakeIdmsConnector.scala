@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException}
-import uk.gov.hmrc.apihubapplications.testhelpers.FakeIdmsConnector.FakeClientResponse
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeIdmsConnector.{FakeClientResponse, fakeSecret}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -31,13 +31,15 @@ class FakeIdmsConnector extends IdmsConnector {
   }
 
   override def fetchClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
-    Future.successful(Right(FakeClientResponse))
+    Future.successful(Right(ClientResponse(clientId, fakeSecret)))
   }
 
 }
 
 object FakeIdmsConnector {
 
-  val FakeClientResponse: ClientResponse = ClientResponse("fake-client-id", "fake-secret-1234")
+  val fakeClientId: String = "fake-client-id"
+  val fakeSecret: String = "fake-secret-1234"
+  val FakeClientResponse: ClientResponse = ClientResponse(fakeClientId, fakeSecret)
 
 }

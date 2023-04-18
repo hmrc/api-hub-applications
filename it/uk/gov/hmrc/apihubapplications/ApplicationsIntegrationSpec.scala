@@ -30,6 +30,7 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.idms.ClientResponse
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeIdmsConnector}
@@ -196,17 +197,13 @@ class ApplicationsIntegrationSpec
     forAll { (application: Application) =>
       deleteAll().futureValue
 
-      val credentials = application.getSecondaryCredentials.map(
-        _ =>
-          FakeIdmsConnector.FakeClientResponse.asCredential()
-      )
-
-      insert(application.setSecondaryCredentials(credentials)).futureValue
-
+      insert(application).futureValue
       val storedApplication = findAll().futureValue.head
+
       val expected = storedApplication.setSecondaryCredentials(
         storedApplication.getSecondaryCredentials.map(
-          _ => FakeIdmsConnector.FakeClientResponse.asCredentialWithSecret()
+          credential =>
+            ClientResponse(credential.clientId, FakeIdmsConnector.fakeSecret).asCredentialWithSecret()
         )
       )
 

@@ -422,4 +422,46 @@ class ApplicationsServiceSpec
 
   }
 
+  "FetchCredentialsMapper" - {
+    "must process an empty collection" in {
+      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(Seq.empty)
+
+      actual mustBe Right(Seq.empty)
+    }
+
+    "must map successful results correctly" in {
+      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
+      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
+
+      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
+        Seq(
+          Right(clientResponse1),
+          Right(clientResponse2)
+        )
+      )
+
+      val expected = Seq(
+        clientResponse1.asCredentialWithSecret(),
+        clientResponse2.asCredentialWithSecret()
+      )
+
+      actual mustBe Right(expected)
+    }
+
+    "must return IdmsException if any individual result has failed" in {
+      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
+      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
+
+      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
+        Seq(
+          Right(clientResponse1),
+          Right(clientResponse2),
+          Left(IdmsException("test-message"))
+        )
+      )
+
+      actual.left.value mustBe a [IdmsException]
+    }
+  }
+
 }
