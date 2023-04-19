@@ -8,5 +8,3 @@ PUT        /applications/:id/environments/:environment/scopes/:scopename        
 GET        /applications/pending-scopes                                             uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.pendingScopes
 GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None)
 GET        /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String)
-
-GET        /connectivity-test                                                       uk.gov.hmrc.apihubapplications.controllers.ConnectivityTestController.testing123
