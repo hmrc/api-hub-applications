@@ -19,13 +19,14 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.ArgumentMatchers.any
 import org.mockito.captor.ArgCaptor
 import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
@@ -34,7 +35,14 @@ import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import java.util.UUID
 import scala.concurrent.Future
 
-class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ApplicationGenerator with ScalaFutures {
+class ApplicationsServiceSpec
+  extends AsyncFreeSpec
+    with Matchers
+    with MockitoSugar
+    with ApplicationGenerator
+    with ScalaFutures
+    with OptionValues
+    with EitherValues {
 
   private val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
 
@@ -156,6 +164,70 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       }
     }
 
+  }
+
+  "findById" - {
+    "must return the application when it exists" in {
+      val id = "test-id"
+      val clientId = "test-client-id"
+      val clientSecret = "test-secret-1234"
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+        .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id)))
+        .thenReturn(Future.successful(Some(application)))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(ClientResponse(clientId, clientSecret))))
+
+      val expected = application.setSecondaryCredentials(Seq(Credential(clientId, Some(clientSecret), Some("1234"))))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+      service.findById(id)(HeaderCarrier()).map {
+        result =>
+          result mustBe Some(Right(expected))
+      }
+    }
+
+    "must return None when the application does not exist" in {
+      val id = "test-id"
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id)))
+        .thenReturn(Future.successful(None))
+
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+      service.findById(id)(HeaderCarrier()).map(
+        result =>
+          result mustBe None
+      )
+    }
+
+    "must return IdmsException when that is returned from the IDMS connector" in {
+      val id = "test-id"
+      val clientId = "test-client-id"
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+        .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id)))
+        .thenReturn(Future.successful(Some(application)))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+      service.findById(id)(HeaderCarrier()).map {
+        result =>
+          result.value.left.value mustBe a [IdmsException]
+      }
+    }
   }
 
  "get apps where prod env had pending scopes" -{
@@ -348,6 +420,48 @@ class ApplicationsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSu
       }
     }
 
+  }
+
+  "FetchCredentialsMapper" - {
+    "must process an empty collection" in {
+      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(Seq.empty)
+
+      actual mustBe Right(Seq.empty)
+    }
+
+    "must map successful results correctly" in {
+      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
+      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
+
+      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
+        Seq(
+          Right(clientResponse1),
+          Right(clientResponse2)
+        )
+      )
+
+      val expected = Seq(
+        clientResponse1.asCredentialWithSecret(),
+        clientResponse2.asCredentialWithSecret()
+      )
+
+      actual mustBe Right(expected)
+    }
+
+    "must return IdmsException if any individual result has failed" in {
+      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
+      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
+
+      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
+        Seq(
+          Right(clientResponse1),
+          Right(clientResponse2),
+          Left(IdmsException("test-message"))
+        )
+      )
+
+      actual.left.value mustBe a [IdmsException]
+    }
   }
 
 }

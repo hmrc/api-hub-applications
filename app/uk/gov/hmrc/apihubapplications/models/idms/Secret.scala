@@ -16,16 +16,23 @@
 
 package uk.gov.hmrc.apihubapplications.models.idms
 
-class IdmsException(message: String, cause: Throwable) extends RuntimeException(message, cause)
+import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.models.application.Credential
 
-object IdmsException {
+case class Secret(secret: String) {
 
-  def apply(message: String): IdmsException = {
-    new IdmsException(message, null)
+  def toCredential(clientId: String): Credential = {
+    Credential(
+      clientId = clientId,
+      clientSecret = Some(secret),
+      secretFragment = Some(secret.takeRight(4))
+    )
   }
 
-  def apply(message: String, cause: Throwable): IdmsException = {
-    new IdmsException(message, cause)
-  }
+}
+
+object Secret {
+
+  implicit val formatSecret: Format[Secret] = Json.format[Secret]
 
 }

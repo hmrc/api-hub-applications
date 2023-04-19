@@ -21,8 +21,9 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.services.ApplicationsService.FetchCredentialsMapper
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
@@ -55,8 +56,15 @@ class ApplicationsService @Inject()(
     repository.filter(teamMemberEmail)
   }
 
-  def findById(id: String): Future[Option[Application]] = {
-    repository.findById(id)
+  def findById(id: String)(implicit hc: HeaderCarrier): Future[Option[Either[IdmsException, Application]]] = {
+    for {
+      application <- repository.findById(id)
+      credentials <- fetchSecondaryCredentials(application)
+    } yield (application, credentials) match {
+      case (Some(app), Right(creds)) => Some(Right(app.setSecondaryCredentials(creds)))
+      case (_, Left(e)) => Some(Left(e))
+      case _ => None
+    }
   }
 
   def getApplicationsWithPendingScope(): Future[Seq[Application]] = findAll().map(_.filter(_.hasProdPendingScope))
@@ -89,6 +97,45 @@ class ApplicationsService @Inject()(
 
       case None => Future.successful(None)
     }
+  }
+
+  private def fetchSecondaryCredentials(application: Option[Application])(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[Credential]]] = {
+    application
+      .map {
+        app =>
+          Future.sequence(
+            app.getSecondaryCredentials.map {
+              credential =>
+                idmsConnector.fetchClient(Secondary, credential.clientId)
+            }
+          ).map(FetchCredentialsMapper.mapToCredential)
+      }
+      .getOrElse(Future.successful(Right(Seq.empty)))
+  }
+
+}
+
+object ApplicationsService {
+
+  object FetchCredentialsMapper {
+
+    def zero: Either[IdmsException, Seq[Credential]] = Right(Seq.empty)
+
+    def op(a: Either[IdmsException, Seq[Credential]], b: Either[IdmsException, Credential]): Either[IdmsException, Seq[Credential]] = {
+      (a, b) match {
+        case (Left(e), _) => Left(e)
+        case (_, Left(e)) => Left(e)
+        case (Right(credentials), Right(credential)) => Right(credentials :+ credential)
+      }
+    }
+
+    def mapToCredential(results: Seq[Either[IdmsException, ClientResponse]]): Either[IdmsException, Seq[Credential]] = {
+      results.map {
+        case Right(clientResponse) => Right(clientResponse.asCredentialWithSecret())
+        case Left(e) => Left(e)
+      }.foldLeft(zero)(op)
+    }
+
   }
 
 }

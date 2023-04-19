@@ -29,6 +29,8 @@ import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.idms.ClientResponse
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeIdmsConnector}
@@ -196,8 +198,14 @@ class ApplicationsIntegrationSpec
       deleteAll().futureValue
 
       insert(application).futureValue
-
       val storedApplication = findAll().futureValue.head
+
+      val expected = storedApplication.setSecondaryCredentials(
+        storedApplication.getSecondaryCredentials.map(
+          credential =>
+            ClientResponse(credential.clientId, FakeIdmsConnector.fakeSecret).asCredentialWithSecret()
+        )
+      )
 
       val response =
         wsClient
@@ -207,7 +215,7 @@ class ApplicationsIntegrationSpec
           .futureValue
 
       response.status shouldBe 200
-      response.json shouldBe Json.toJson(storedApplication)
+      response.json shouldBe Json.toJson(expected)
     }
   }
 
