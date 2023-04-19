@@ -3,6 +3,3 @@
 ->         /                          health.Routes
 
 GET        /admin/metrics             com.kenshoo.play.metrics.MetricsController.metrics
-
-
-GET        /api-hub/connectivity-test         uk.gov.hmrc.apihubapplications.controllers.ConnectivityTestController.testing123
