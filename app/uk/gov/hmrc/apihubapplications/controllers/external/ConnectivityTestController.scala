@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.controllers
+package uk.gov.hmrc.apihubapplications.controllers.external
 
 import com.google.inject.Inject
-import play.api.Logging
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-class ConnectivityTestController @Inject()(cc: ControllerComponents) extends BackendController(cc) with Logging {
+class ConnectivityTestController @Inject()(cc: ControllerComponents) extends BackendController(cc) {
 
   def testing123: Action[AnyContent] = Action {
     Ok("Ok")
