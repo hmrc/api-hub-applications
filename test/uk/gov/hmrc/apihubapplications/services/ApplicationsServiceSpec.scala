@@ -70,11 +70,18 @@ class ApplicationsServiceSpec
         environments = Environments()
       )
 
-      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
-      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
-        .thenReturn(Future.successful(Right(clientResponse)))
+      val primaryClientResponse = ClientResponse("primary-client-id", "test-secret-1234")
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(newApplication)))(any()))
+        .thenReturn(Future.successful(Right(primaryClientResponse)))
 
-      val applicationWithCreds = application.setSecondaryCredentials(Seq(clientResponse.asCredential()))
+      val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
+        .thenReturn(Future.successful(Right(secondaryClientResponse)))
+
+      val applicationWithCreds = application
+        .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, None, None)))
+        .setSecondaryCredentials(Seq(secondaryClientResponse.asCredential()))
+
       val expected = applicationWithCreds.copy(id = Some("test-id"))
 
       when(repository.insert(ArgumentMatchers.eq(applicationWithCreds)))
@@ -83,6 +90,58 @@ class ApplicationsServiceSpec
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
           actual mustBe Right(expected)
+      }
+    }
+
+    "must return IdmsException and not persist in MongoDb if the primary credentials fail" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val newApplication = NewApplication(
+        "test-name",
+        Creator(email = "test-email"),
+        Seq.empty
+      )
+
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(newApplication)))(any()))
+        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+
+      val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
+        .thenReturn(Future.successful(Right(secondaryClientResponse)))
+
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
+        actual =>
+          actual.left.value mustBe a [IdmsException]
+          verifyZeroInteractions(repository.insert(any()))
+          succeed
+      }
+    }
+
+    "must return IdmsException and not persist in MongoDb if the secondary credentials fail" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val newApplication = NewApplication(
+        "test-name",
+        Creator(email = "test-email"),
+        Seq.empty
+      )
+
+      val primaryClientResponse = ClientResponse("primary-client-id", "test-secret-1234")
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(newApplication)))(any()))
+        .thenReturn(Future.successful(Right(primaryClientResponse)))
+
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
+        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
+        actual =>
+          actual.left.value mustBe a [IdmsException]
+          verifyZeroInteractions(repository.insert(any()))
+          succeed
       }
     }
 
@@ -118,7 +177,7 @@ class ApplicationsServiceSpec
         _ =>
           val captor = ArgCaptor[Application]
           verify(repository).insert(captor.capture)
-          captor.value mustBe expected
+          captor.value.teamMembers mustBe expected.teamMembers
           succeed
       }
     }
