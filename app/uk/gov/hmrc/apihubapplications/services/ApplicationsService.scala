@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.{ApplicationLensOps, applicationPrimaryCredentials}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
@@ -115,32 +115,37 @@ class ApplicationsService @Inject()(
   }
 
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
-    repository.findById(applicationId).
-      flatMap {
-        case Some(application) =>
-          val primaryCredentials = application.environments.primary.credentials
-          if (primaryCredentials.isEmpty) {
-            Future(Left(ApplicationBadException(s"Application $applicationId has no primary credentials.")))
-          }
+    repository.findById(applicationId).flatMap {
+      case Some(application) =>
+        application
+          .getPrimaryCredentials
+          .find(_.secretFragment.isEmpty)
+          .map(
+            credential => idmsConnector.newSecret(Primary, credential.clientId).flatMap {
+              case Right(secret) =>
+                val updatedApplication = application
+                  .setPrimaryCredentials(
+                    application.getPrimaryCredentials.map(
+                      existing =>
+                        if (existing.clientId == credential.clientId) {
+                          secret.toCredential(credential.clientId)
+                        }
+                        else {
+                          existing
+                        }
+                    )
+                  )
+                  .copy(lastUpdated = LocalDateTime.now(clock))
 
-          val clientId = primaryCredentials.head.clientId
-          if (clientId == null) {
-            Future(Left(ApplicationBadException(s"Application $applicationId has no primary credential clientId.")))
-          }
-
-          idmsConnector.newSecret(Primary, clientId).flatMap {
-            case Right(secret) => {
-              val applicationWithNewSecret = applicationPrimaryCredentials.set(application, primaryCredentials.updated(0, primaryCredentials.head.copy(secretFragment = Some(secret.secret.takeRight(4)))))
-              repository.update(applicationWithNewSecret).flatMap {
-                case true => Future.successful(Right(secret))
-                case false => Future.successful(Left(ApplicationUpdateException(s"Failed to update application $applicationId with new secret fragment.")))
-              }
+                repository.update(updatedApplication).map(
+                  _ => Right(secret)
+                )
+              case Left(e) => Future.successful(Left(e))
             }
-            case Left(idmsException) => Future.successful(Left(idmsException))
-          }
-        case None =>
-          Future(Left(ApplicationNotFoundException(s"Can't find application with id $applicationId")))
-      }
+          )
+          .getOrElse(Future.successful(Left(ApplicationBadException(s"Application $applicationId has no primary credentials."))))
+      case None => Future(Left(ApplicationNotFoundException(s"Can't find application with id $applicationId")))
+    }
   }
 
 }

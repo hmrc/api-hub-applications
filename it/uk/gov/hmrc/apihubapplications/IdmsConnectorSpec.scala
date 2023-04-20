@@ -24,7 +24,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec._
+import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{buildConnector, environmentNames, nonSuccessResponses, testClient, testClientId, testClientResponse, testSecret}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
