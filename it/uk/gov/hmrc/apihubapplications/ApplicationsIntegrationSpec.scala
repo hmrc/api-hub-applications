@@ -28,13 +28,13 @@ import play.api.libs.ws.WSClient
 import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.ClientResponse
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeIdmsConnector}
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -421,4 +421,40 @@ class ApplicationsIntegrationSpec
 
 }
 
+//  "POST to request a new secret" should {
+//    "respond with a 200 ok and body containing the secret" in {
+//      forAll { newApplication: NewApplication =>
+//        val response =
+//          wsClient
+//            .url(s"$baseUrl/api-hub-applications/applications/:id/environments/primary/credentials/secret")
+//            .addHttpHeaders(("Content", "application/json"))
+//            .post()
+//            .futureValue
+//
+//        response.status shouldBe 201
+//        noException should be thrownBy response.json.as[Application]
+//      }
+//    }
+//
+//    "respond with a 400 BadRequest if the application does not have the required properties" in {
+//      val appWithoutANameRequest = Json.parse(
+//        s"""
+//           |{
+//           |    "createdBy": {
+//           |        "email": "laura@email.com"
+//           |    }
+//           |}
+//           |""".stripMargin)
+//
+//      val response =
+//        wsClient
+//          .url(s"$baseUrl/api-hub-applications/applications")
+//          .addHttpHeaders(("Content", "application/json"))
+//          .post(appWithoutANameRequest)
+//          .futureValue
+//
+//      response.status shouldBe 400
+//    }
+//
+//  }
 }

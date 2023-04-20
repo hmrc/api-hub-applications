@@ -37,7 +37,7 @@ import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
+import uk.gov.hmrc.apihubapplications.models.idms.{IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
@@ -406,6 +406,71 @@ class ApplicationsControllerSpec
       }
     }
 
+  }
+
+  "createPrimarySecret" - {
+    "must return 200 Ok for a valid request" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val applicationId = "app_id_12345"
+        val request = FakeRequest(POST, routes.ApplicationsController.createPrimarySecret(applicationId).url).withHeaders(
+          CONTENT_TYPE -> "application/json"
+        )
+
+        val expected = Secret("a new secret")
+        when(fixture.applicationsService.createPrimarySecret(ArgumentMatchers.eq(applicationId))(any()))
+          .thenReturn(Future.successful(Right(expected)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(expected)
+      }
+    }
+
+    "must return 404 not found when essential application data is missing" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val applicationId = "app_id_12345"
+        val request = FakeRequest(POST, routes.ApplicationsController.createPrimarySecret(applicationId).url).withHeaders(
+          CONTENT_TYPE -> "application/json"
+        )
+        when(fixture.applicationsService.createPrimarySecret(ArgumentMatchers.eq(applicationId))(any()))
+          .thenReturn(Future.successful(Left(ApplicationBadException("bad thing"))))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+      }
+    }
+
+    "must return 404 not found when application is missing" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val applicationId = "app_id_12345"
+        val request = FakeRequest(POST, routes.ApplicationsController.createPrimarySecret(applicationId).url).withHeaders(
+          CONTENT_TYPE -> "application/json"
+        )
+        when(fixture.applicationsService.createPrimarySecret(ArgumentMatchers.eq(applicationId))(any()))
+          .thenReturn(Future.successful(Left(ApplicationNotFoundException("bad thing"))))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+      }
+    }
+
+    "must return 502 bad gateway when IDMS service fail" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val applicationId = "app_id_12345"
+        val request = FakeRequest(POST, routes.ApplicationsController.createPrimarySecret(applicationId).url).withHeaders(
+          CONTENT_TYPE -> "application/json"
+        )
+        when(fixture.applicationsService.createPrimarySecret(ArgumentMatchers.eq(applicationId))(any()))
+          .thenReturn(Future.successful(Left(IdmsException("bad thing"))))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_GATEWAY
+      }
+    }
   }
 }
 
