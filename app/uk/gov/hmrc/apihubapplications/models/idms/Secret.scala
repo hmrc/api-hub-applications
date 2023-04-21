@@ -29,6 +29,14 @@ case class Secret(secret: String) {
     )
   }
 
+  def toCredentialWithFragment(clientId: String): Credential = {
+    Credential(
+      clientId = clientId,
+      clientSecret = None,
+      secretFragment = Some(secret.takeRight(4))
+    )
+  }
+
 }
 
 object Secret {

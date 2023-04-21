@@ -19,14 +19,14 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.ArgumentMatchers.any
 import org.mockito.captor.ArgCaptor
 import org.mockito.{ArgumentMatchers, MockitoSugar}
-import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.{EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
@@ -462,6 +462,160 @@ class ApplicationsServiceSpec
 
       actual.left.value mustBe a [IdmsException]
     }
+  }
+
+  "create primary secret" - {
+    "must map success result" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+      val newApplication = NewApplication(
+        "test-name",
+        Creator(email = teamMember1.email),
+        Seq(teamMember1, teamMember2)
+      )
+
+      val applicationId = "app-1234"
+      val clientId = "client-6789"
+      val secret = "test-secret-1234"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = newApplication.name,
+        created = LocalDateTime.now(clock),
+        createdBy = newApplication.createdBy,
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(teamMember1, teamMember2),
+        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, clientSecret = None, secretFragment = None))),
+          secondary = Environment(),
+          dev = Environment(),
+          test = Environment(),
+          preProd = Environment(),
+          prod = Environment())
+      )
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+      when(repository.update(any())).thenReturn(Future.successful(true))
+
+      val secretResponse = Secret(secret)
+      when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(secretResponse)))
+
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Right(secretResponse)
+      }
+    }
+
+    "must map handle idms fail" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+      val newApplication = NewApplication(
+        "test-name",
+        Creator(email = teamMember1.email),
+        Seq(teamMember1, teamMember2)
+      )
+
+      val applicationId = "app-1234"
+      val clientId = "client-6789"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = newApplication.name,
+        created = LocalDateTime.now(clock),
+        createdBy = newApplication.createdBy,
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(teamMember1, teamMember2),
+        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, clientSecret = None, secretFragment = None))),
+          secondary = Environment(),
+          dev = Environment(),
+          test = Environment(),
+          preProd = Environment(),
+          prod = Environment())
+      )
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+
+      val expected = Left(IdmsException("bad thing"))
+      when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(expected))
+
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe expected
+      }
+    }
+
+    "must handle application not found" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val applicationId = "app-1234"
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(None))
+
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          val expected = Left(ApplicationNotFoundException(s"Can't find application with id $applicationId"))
+          actual mustBe expected
+      }
+    }
+
+    "must map handle application has no primary credentials" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val applicationId = "app-1234"
+      val application = Application(
+        id = Some(applicationId),
+        name = "an app",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("created by"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(),
+        environments = Environments()
+      )
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))
+      }
+    }
+
+    "must handle application has no client id in credentials" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val applicationId = "app-1234"
+      val application = Application(
+        id = Some(applicationId),
+        name = "an app",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("created by"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(),
+        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = null, clientSecret = None, secretFragment = None))),
+          secondary = Environment(),
+          dev = Environment(),
+          test = Environment(),
+          preProd = Environment(),
+          prod = Environment())
+      )
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))
+      }
+    }
+
   }
 
 }

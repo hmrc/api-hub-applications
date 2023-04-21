@@ -21,7 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService.FetchCredentialsMapper
 import uk.gov.hmrc.http.HeaderCarrier
@@ -111,6 +112,39 @@ class ApplicationsService @Inject()(
           ).map(FetchCredentialsMapper.mapToCredential)
       }
       .getOrElse(Future.successful(Right(Seq.empty)))
+  }
+
+  def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
+    repository.findById(applicationId).flatMap {
+      case Some(application) =>
+        qaTechDeliveryValidPrimaryCredential(application) match {
+          case Some(credential) =>
+            idmsConnector.newSecret(Primary, credential.clientId).flatMap {
+              case Right(secret) =>
+                val updatedApplication = application
+                  .setPrimaryCredentials(Seq(secret.toCredentialWithFragment(credential.clientId)))
+                  .copy(lastUpdated = LocalDateTime.now(clock))
+
+                repository.update(updatedApplication).map(
+                  _ => Right(secret)
+                )
+              case Left(e) => Future.successful(Left(e))
+            }
+          case _ =>
+            Future.successful(Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials.")))
+        }
+      case None => Future(Left(ApplicationNotFoundException(s"Can't find application with id $applicationId")))
+    }
+  }
+
+  private def qaTechDeliveryValidPrimaryCredential(application: Application): Option[Credential] = {
+    if (application.getPrimaryCredentials.length != 1) {
+      None
+    }
+    else {
+      application.getPrimaryCredentials
+        .headOption.filter(_.secretFragment.isEmpty).filter(_.clientId != null)
+    }
   }
 
 }

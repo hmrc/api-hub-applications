@@ -87,4 +87,29 @@ class IdmsConnectorImpl @Inject()(
     }
   }
 
+  override def newSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
+    val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-secret"
+
+    httpClient.post(url)
+      .setHeader(("Accept", "application/json"))
+      .execute[Either[UpstreamErrorResponse, Secret]]
+      .map {
+        case Right(secret) => Right(secret)
+        case Left(e) if e.statusCode == 404 =>
+          val message = s"Client not found: clientId=$clientId"
+          logger.error(message, e)
+          Left(IdmsException(message))
+        case Left(e) =>
+          val message = s"Unexpected response ${e.statusCode} returned from IDMS"
+          logger.error(message, e)
+          Left(IdmsException(message))
+      }
+      .recover {
+        case throwable =>
+          val message = "Error calling IDMS"
+          logger.error(message, throwable)
+          Left(IdmsException(message, throwable))
+      }
+
+  }
 }

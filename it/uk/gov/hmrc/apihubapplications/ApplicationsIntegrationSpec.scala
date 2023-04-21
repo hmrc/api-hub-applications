@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications
 
 import org.scalatest.OptionValues
+import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -24,17 +25,17 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{EmptyBody, WSClient}
 import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.idms.ClientResponse
+import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, Secret}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeIdmsConnector}
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -421,4 +422,25 @@ class ApplicationsIntegrationSpec
 
 }
 
+  "POST to request a new secret" should {
+    "respond with a 200 ok and body containing the secret and update the application with secret fragment" in {
+      forAll { app: Application =>
+        val appWithPrimaryClientId = app.withPrimaryCredentialClientIdOnly
+        deleteAll().futureValue
+        insert(appWithPrimaryClientId).futureValue
+        val applicationId = app.id.get
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/$applicationId/environments/primary/credentials/secret")
+            .post(EmptyBody)
+            .futureValue
+
+        response.status shouldBe 200
+        noException should be thrownBy response.json.as[Secret]
+
+        val updatedApp = findAll().futureValue.head
+        updatedApp.getPrimaryCredentials.head.secretFragment mustBe Some("1234")
+      }
+    }
+  }
 }
