@@ -119,7 +119,6 @@ class ApplicationsService @Inject()(
       case Some(application) =>
         qaTechDeliveryValidPrimaryCredential(application) match {
           case Some(credential) =>
-            Console.println(s"CRED: $credential")
             idmsConnector.newSecret(Primary, credential.clientId).flatMap {
               case Right(secret) =>
                 val updatedApplication = application

@@ -124,8 +124,6 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
 
   def createPrimarySecret(id: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
-      Console.println("OYYYAF")
-
       val eventualExceptionOrSecret = applicationsService.createPrimarySecret(id)
       eventualExceptionOrSecret.map {
           case Right(secret) => Ok(Json.toJson(secret))
