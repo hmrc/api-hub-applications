@@ -22,6 +22,7 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -128,8 +129,7 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
           case Right(secret) => Ok(Json.toJson(secret))
           case Left(_:IdmsException) => BadGateway
           case Left(_:ApplicationNotFoundException) => NotFound
-          case Left(_:ApplicationBadException) => NotFound
-
+          case Left(_:ApplicationsException) => BadRequest
       }
   }
 
