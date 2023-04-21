@@ -117,34 +117,33 @@ class ApplicationsService @Inject()(
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
     repository.findById(applicationId).flatMap {
       case Some(application) =>
-        application
-          .getPrimaryCredentials
-          .find(_.secretFragment.isEmpty)
+        qaTechDeliveryValidPrimaryCredential(application)
           .map(
-            credential => idmsConnector.newSecret(Primary, credential.clientId).flatMap {
-              case Right(secret) =>
-                val updatedApplication = application
-                  .setPrimaryCredentials(
-                    application.getPrimaryCredentials.map(
-                      existing =>
-                        if (existing.clientId == credential.clientId) {
-                          secret.toCredential(credential.clientId)
-                        }
-                        else {
-                          existing
-                        }
-                    )
-                  )
-                  .copy(lastUpdated = LocalDateTime.now(clock))
+            credential =>
+              idmsConnector.newSecret(Primary, credential.clientId).flatMap {
+                case Right(secret) =>
+                  val updatedApplication = application
+                    .setPrimaryCredentials(Seq(secret.toCredentialWithFragment(credential.clientId)))
+                    .copy(lastUpdated = LocalDateTime.now(clock))
 
-                repository.update(updatedApplication).map(
-                  _ => Right(secret)
-                )
-              case Left(e) => Future.successful(Left(e))
-            }
+                  repository.update(updatedApplication).map(
+                    _ => Right(secret)
+                  )
+                case Left(e) => Future.successful(Left(e))
+              }
           )
-          .getOrElse(Future.successful(Left(ApplicationBadException(s"Application $applicationId has no primary credentials."))))
+          .getOrElse(Future.successful(Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))))
       case None => Future(Left(ApplicationNotFoundException(s"Can't find application with id $applicationId")))
+    }
+  }
+
+  private def qaTechDeliveryValidPrimaryCredential(application: Application): Option[Credential] = {
+    if (application.getPrimaryCredentials.length != 1) {
+      None
+    }
+    else {
+      application.getPrimaryCredentials
+        .headOption.filter(_.secretFragment.isEmpty)
     }
   }
 
