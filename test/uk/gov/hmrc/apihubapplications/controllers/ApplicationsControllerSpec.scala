@@ -427,7 +427,7 @@ class ApplicationsControllerSpec
       }
     }
 
-    "must return 404 not found when essential application data is missing" in {
+    "must return 400 bad request when essential application data is missing" in {
       val fixture = buildFixture()
       running(fixture.application) {
         val applicationId = "app_id_12345"
@@ -438,7 +438,7 @@ class ApplicationsControllerSpec
           .thenReturn(Future.successful(Left(ApplicationBadException("bad thing"))))
 
         val result = route(fixture.application, request).value
-        status(result) mustBe Status.NOT_FOUND
+        status(result) mustBe Status.BAD_REQUEST
       }
     }
 

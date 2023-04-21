@@ -551,70 +551,70 @@ class ApplicationsServiceSpec
       }
     }
 
-//    "must handle application not found" in {
-//      val repository = mock[ApplicationsRepository]
-//      val idmsConnector = mock[IdmsConnector]
-//      val service = new ApplicationsService(repository, clock, idmsConnector)
-//
-//      val applicationId = "app-1234"
-//
-//      when(repository.findById(applicationId)).thenReturn(Future.successful(None))
-//
-//      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
-//        actual =>
-//          val expected = Left(ApplicationNotFoundException(s"Can't find application with id $applicationId"))
-//          actual mustBe expected
-//      }
-//    }
-//
-//    "must map handle application has no primary credentials" in {
-//      val repository = mock[ApplicationsRepository]
-//      val idmsConnector = mock[IdmsConnector]
-//      val service = new ApplicationsService(repository, clock, idmsConnector)
-//
-//      val applicationId = "app-1234"
-//      val application = Application(
-//        id = Some(applicationId),
-//        name = "an app",
-//        created = LocalDateTime.now(clock),
-//        createdBy = Creator("created by"),
-//        lastUpdated = LocalDateTime.now(clock),
-//        teamMembers = Seq(),
-//        environments = Environments()
-//      )
-//      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
-//      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
-//        actual =>
-//          actual mustBe Left(ApplicationBadException(s"Application $applicationId has no primary credentials."))
-//      }
-//    }
-//
-//    "must map handle application has no client id credentials" in {
-//      val repository = mock[ApplicationsRepository]
-//      val idmsConnector = mock[IdmsConnector]
-//      val service = new ApplicationsService(repository, clock, idmsConnector)
-//
-//      val applicationId = "app-1234"
-//      val application = Application(
-//        id = Some(applicationId),
-//        name = "an app",
-//        created = LocalDateTime.now(clock),
-//        createdBy = Creator("created by"),
-//        lastUpdated = LocalDateTime.now(clock),
-//        teamMembers = Seq(),
-//        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = null, clientSecret = None, secretFragment = None))),
-//          secondary = Environment(),
-//          dev = Environment(),
-//          test = Environment(),
-//          preProd = Environment(),
-//          prod = Environment())
-//      )
-//      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
-//      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
-//        actual =>
-//          actual mustBe Left(ApplicationBadException(s"Application $applicationId has no primary credential clientId."))
-//      }
-//    }
+    "must handle application not found" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val applicationId = "app-1234"
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(None))
+
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          val expected = Left(ApplicationNotFoundException(s"Can't find application with id $applicationId"))
+          actual mustBe expected
+      }
+    }
+
+    "must map handle application has no primary credentials" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val applicationId = "app-1234"
+      val application = Application(
+        id = Some(applicationId),
+        name = "an app",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("created by"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(),
+        environments = Environments()
+      )
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))
+      }
+    }
+
+    "must handle application has no client id in credentials" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val applicationId = "app-1234"
+      val application = Application(
+        id = Some(applicationId),
+        name = "an app",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("created by"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(),
+        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = null, clientSecret = None, secretFragment = None))),
+          secondary = Environment(),
+          dev = Environment(),
+          test = Environment(),
+          preProd = Environment(),
+          prod = Environment())
+      )
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))
+      }
+    }
 
   }
 

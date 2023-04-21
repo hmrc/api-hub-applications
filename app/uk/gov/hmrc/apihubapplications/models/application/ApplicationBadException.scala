@@ -18,12 +18,4 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 
-class ApplicationBadException(message: String) extends ApplicationsException(message, null)
-
-object ApplicationBadException {
-
-  def apply(message: String): ApplicationNotFoundException = {
-    new ApplicationNotFoundException(message)
-  }
-
-}
+case class ApplicationBadException(message: String) extends ApplicationsException(message, null)
