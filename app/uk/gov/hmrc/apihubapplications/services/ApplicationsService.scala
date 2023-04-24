@@ -38,14 +38,20 @@ class ApplicationsService @Inject()(
 )(implicit ec: ExecutionContext) extends Logging{
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
-    idmsConnector.createClient(Secondary, Client(newApplication)).flatMap {
-      case Right(clientResponse) =>
+    Future.sequence(
+      Seq(
+        idmsConnector.createClient(Primary, Client(newApplication)),
+        idmsConnector.createClient(Secondary, Client(newApplication))
+      )
+    ).flatMap {
+      case Seq(Right(primaryClientResponse), Right(secondaryClientResponse)) =>
         repository.insert(
           Application(newApplication, clock)
-            .setSecondaryCredentials(Seq(clientResponse.asCredential()))
+            .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, None, None)))
+            .setSecondaryCredentials(Seq(secondaryClientResponse.asCredential()))
             .assertTeamMember(newApplication.createdBy.email)
         ).map(Right(_))
-      case Left(idmsException) => Future.successful(Left(idmsException))
+      case _ => Future.successful(Left(IdmsException("Unable to create credentials")))
     }
   }
 
