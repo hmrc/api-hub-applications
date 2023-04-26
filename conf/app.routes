@@ -4,7 +4,7 @@ POST       /applications                                                        
 POST       /applications/:id/environments/scopes                                    uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addScopes(id: String)
 POST       /applications/:id/environments/primary/credentials/secret                uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.createPrimarySecret(id: String)
 
-PUT        /applications/:id/environments/:environment/scopes/:scopename            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.approveProdScopeStatus(id:String,environment:String, scopename:String)
+PUT        /applications/:id/environments/primary/scopes/:scopeName                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.updatePrimaryScopeStatus(id:String, scopeName:String)
 
 GET        /applications/pending-scopes                                             uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.pendingScopes
 GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None)

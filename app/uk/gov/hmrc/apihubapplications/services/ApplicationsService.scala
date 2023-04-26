@@ -89,19 +89,19 @@ class ApplicationsService @Inject()(
       case None => Future.successful(false)
     }
 
-  def setPendingProdScopeStatusToApproved(applicationId: String, scopeName:String): Future[Option[Boolean]] = {
+  def setPendingPrimaryScopeStatusToApproved(applicationId: String, scopeName:String): Future[Option[Boolean]] = {
     repository.findById(applicationId).flatMap {
       case Some(application)  =>
-        if (application.getProdScopes.exists(scope => scope.name == scopeName && scope.status == Pending)){
-          val updatedApp: Application = application.setProdScopes(
-            application.environments.prod.scopes.map(scope =>
-              if (scope.name == scopeName) scope.copy(status = Approved) else scope
-            )).copy(lastUpdated = LocalDateTime.now(clock))
+        if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
+          val updatedScopes = application.getPrimaryScopes.map {
+            case scope if scope.name == scopeName => scope.copy(status = Approved)
+            case scope => scope
+          }
+          val updatedApp: Application = application.setPrimaryScopes(updatedScopes).copy(lastUpdated = LocalDateTime.now(clock))
           repository.update(updatedApp).map(Some(_))
-        }else{
+        } else {
           Future.successful(Some(false))
         }
-
       case None => Future.successful(None)
     }
   }

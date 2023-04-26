@@ -93,29 +93,26 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
     applicationsService.getApplicationsWithPendingScope().map(Json.toJson(_)).map(Ok(_))
   }
 
-  def approveProdScopeStatus(id: String, environment: String, scopename: String): Action[JsValue] =
+  def updatePrimaryScopeStatus(id: String, scopeName: String): Action[JsValue] =
     identify.compose(Action(parse.json)).async {
       request: Request[JsValue] => {
         val jsReq = request.body
-        if (environment != Prod.toString) {
-          Future.successful(BadRequest)
-        } else {
-          jsReq.validate[UpdateScopeStatus] match {
-            case JsSuccess(UpdateScopeStatus(Approved), _) if environment == Prod.toString =>
-              applicationsService.setPendingProdScopeStatusToApproved(id, scopename).map {
-                case Some(true) => NoContent
-                case _ => NotFound
-              }
-            case JsSuccess(updateStatus, _) =>
-              logger.info(s"Setting scope status to: ${updateStatus.status.toString} on environment: $environment is not allowed")
-              Future.successful(BadRequest)
+        jsReq.validate[UpdateScopeStatus] match {
+          case JsSuccess(UpdateScopeStatus(Approved), _) =>
+            applicationsService.setPendingPrimaryScopeStatusToApproved(id, scopeName).map {
+              case Some(true) => NoContent
+              case _ => NotFound
+            }
+          case JsSuccess(updateStatus, _) =>
+            logger.info(s"Setting scope status to: ${updateStatus.status.toString}")
+            Future.successful(BadRequest)
 
-            case e: JsError =>
-              logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
-              Future.successful(BadRequest)
-          }
+          case e: JsError =>
+            logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+            Future.successful(BadRequest)
         }
       }
+
     }
 
   private def decrypt(encrypted: String): String = {

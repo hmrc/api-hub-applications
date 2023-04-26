@@ -43,6 +43,14 @@ object ApplicationTestLenses {
       application.addProdScope(Scope(approvedScopeName, Approved))
     }
 
+    def withPrimaryPendingScopes: Application = {
+      application.addPrimaryScope(Scope(pendingScopeName, Pending))
+    }
+
+    def withPrimaryApprovedScopes: Application = {
+      application.addPrimaryScope(Scope(approvedScopeName, Approved))
+    }
+
     def withPrimaryCredentialClientIdOnly: Application = {
       application.setPrimaryCredentials(Seq(Credential(clientId,None,None)))
     }
