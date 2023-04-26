@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
@@ -112,4 +112,33 @@ class IdmsConnectorImpl @Inject()(
       }
 
   }
+
+  override def fetchClientScopes(
+    environmentName: EnvironmentName,
+    clientId: String
+  )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]] = {
+    val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes"
+
+    httpClient.get(url)
+      .setHeader(("Accept", "application/json"))
+      .execute[Either[UpstreamErrorResponse, Seq[ClientScope]]]
+      .map {
+        case Right(scopes) => Right(scopes)
+        case Left(e) if e.statusCode == 404 =>
+          val message = s"Client not found: clientId=$clientId"
+          logger.error(message, e)
+          Left(IdmsException(message))
+        case Left(e) =>
+          val message = s"Unexpected response ${e.statusCode} returned from IDMS"
+          logger.error(message, e)
+          Left(IdmsException(message))
+      }
+      .recover {
+        case throwable =>
+          val message = "Error calling IDMS"
+          logger.error(message, throwable)
+          Left(IdmsException(message, throwable))
+      }
+  }
+
 }

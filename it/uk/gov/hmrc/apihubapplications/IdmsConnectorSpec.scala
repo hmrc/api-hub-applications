@@ -28,7 +28,7 @@ import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{buildConnector, environ
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -236,6 +236,78 @@ class IdmsConnectorSpec
       buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
         clientResponse =>
           clientResponse.left.value mustBe a[IdmsException]
+      }
+    }
+  }
+
+  "IdmsConnector.fetchClientScopes" - {
+    "must place the correct request per environment to IDMS and return the client scopes" in {
+      val scopes = Seq(ClientScope("test-scope-1"), ClientScope("test-scope-2"))
+
+      forAll(environmentNames) { environmentName: EnvironmentName =>
+        stubFor(
+          get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes"))
+            .withHeader("Accept", equalTo("application/json"))
+            .willReturn(
+              aResponse()
+                .withBody(Json.toJson(scopes).toString())
+            )
+        )
+
+        buildConnector(this).fetchClientScopes(environmentName, testClientId)(HeaderCarrier()) map {
+          actual =>
+            actual mustBe Right(scopes)
+        }
+      }
+    }
+
+    "must return IdmsException when IDMS returns 404 Not Found for a given Client Id" in {
+      stubFor(
+        get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
+          .withHeader("Accept", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
+        actual =>
+          actual.left.value mustBe a[IdmsException]
+      }
+    }
+
+    "must return IdmsException for any non-2xx response" in {
+      forAll(nonSuccessResponses) { status: Int =>
+        stubFor(
+          get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
+            .withHeader("Accept", equalTo("application/json"))
+            .willReturn(
+              aResponse()
+                .withStatus(status)
+            )
+        )
+
+        buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
+          actual =>
+            actual.left.value mustBe a[IdmsException]
+        }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      stubFor(
+        get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
+          .withHeader("Accept", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
+        actual =>
+          actual.left.value mustBe a[IdmsException]
       }
     }
   }

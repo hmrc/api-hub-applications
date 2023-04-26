@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeIdmsConnector.{FakeClientResponse, fakeSecret}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -37,6 +37,14 @@ class FakeIdmsConnector extends IdmsConnector {
   override def newSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
     Future.successful(Right(Secret(fakeSecret)))
   }
+
+  override def fetchClientScopes(
+    environmentName: EnvironmentName,
+    clientId: String
+  )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]] = {
+    Future.successful(Right(Seq.empty))
+  }
+
 }
 
 object FakeIdmsConnector {
