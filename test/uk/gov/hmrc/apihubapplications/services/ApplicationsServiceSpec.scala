@@ -113,7 +113,7 @@ class ApplicationsServiceSpec
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
-          actual.left.value mustBe a [IdmsException]
+          actual.left.value mustBe a[IdmsException]
           verifyZeroInteractions(repository.insert(any()))
           succeed
       }
@@ -139,7 +139,7 @@ class ApplicationsServiceSpec
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
-          actual.left.value mustBe a [IdmsException]
+          actual.left.value mustBe a[IdmsException]
           verifyZeroInteractions(repository.insert(any()))
           succeed
       }
@@ -284,32 +284,30 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result.value.left.value mustBe a [IdmsException]
+          result.value.left.value mustBe a[IdmsException]
       }
     }
   }
 
- "get apps where prod env had pending scopes" -{
-   "get pending scopes" in {
-     val appWithProdPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
-                                              .addScopes(Prod, Seq("test-scope-1"))
-     val appWithoutPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
-                                              .addScopes(Dev, Seq("test-scope-2"))
+  "get apps where primary env has pending scopes" - {
+    val appWithPrimaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
+      .addPrimaryScope(Scope("test-scope-1", Pending))
+    val appWithSecondaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
+      .addSecondaryScope(Scope("test-scope-2", Pending))
 
-     val repository = mock[ApplicationsRepository]
-     when(repository.findAll()).thenReturn(Future.successful(Seq(appWithProdPending,appWithoutPending)))
+    val repository = mock[ApplicationsRepository]
+    when(repository.findAll()).thenReturn(Future.successful(Seq(appWithPrimaryPending, appWithSecondaryPending)))
 
-     val idmsConnector = mock[IdmsConnector]
+    val idmsConnector = mock[IdmsConnector]
 
-     val service = new ApplicationsService(repository, clock, idmsConnector)
-     service.getApplicationsWithPendingScope() map {
-       actual =>
-         actual mustBe Seq(appWithProdPending)
-         verify(repository).findAll()
-         succeed
-     }
-   }
- }
+    val service = new ApplicationsService(repository, clock, idmsConnector)
+    service.getApplicationsWithPendingPrimaryScope map {
+      actual =>
+        actual mustBe Seq(appWithPrimaryPending)
+        verify(repository).findAll()
+        succeed
+    }
+  }
 
   "addScopes" - {
 
@@ -319,8 +317,8 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val newScopes = Seq(
-       NewScope("test-name-1", Seq(Primary)),
-       NewScope("test-name-2", Seq(Secondary, Primary))
+        NewScope("test-name-1", Seq(Primary)),
+        NewScope("test-name-2", Seq(Secondary, Primary))
       )
 
       val testAppId = "test-app-id"
@@ -414,7 +412,7 @@ class ApplicationsServiceSpec
       )
 
       val testAppId = "test-app-id"
-      val app  = Application(
+      val app = Application(
         id = Some(testAppId),
         name = testAppId,
         created = LocalDateTime.now(clock),
@@ -526,8 +524,8 @@ class ApplicationsServiceSpec
     }
 
     "must map successful results correctly" in {
-      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
-      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
+      val clientResponse1 = ClientResponse("test-client-id-1", "test-secret-1")
+      val clientResponse2 = ClientResponse("test-client-id-2", "test-secret-2")
 
       val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
         Seq(
@@ -545,8 +543,8 @@ class ApplicationsServiceSpec
     }
 
     "must return IdmsException if any individual result has failed" in {
-      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
-      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
+      val clientResponse1 = ClientResponse("test-client-id-1", "test-secret-1")
+      val clientResponse2 = ClientResponse("test-client-id-2", "test-secret-2")
 
       val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
         Seq(
@@ -556,7 +554,7 @@ class ApplicationsServiceSpec
         )
       )
 
-      actual.left.value mustBe a [IdmsException]
+      actual.left.value mustBe a[IdmsException]
     }
   }
 

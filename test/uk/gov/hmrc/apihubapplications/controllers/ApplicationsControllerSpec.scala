@@ -277,21 +277,17 @@ class ApplicationsControllerSpec
   }
 
   "pendingScopes" - {
-    "must return 200 and only applications with pending production scopes" in {
-      val application1 = testApplication
-        .addProdScope(Scope("app-1-scope-1", Pending))
-        .addProdScope(Scope("app-1-scope-2", Approved))
-
-      val application6 = testApplication
-        .addProdScope(Scope("app-6-scope-1", Pending))
-
-      val expected = Seq(application1, application6)
-
+    "must return 200 and applications determined to have primary pending scopes" in {
       val fixture = buildFixture()
-      when(fixture.applicationsService.getApplicationsWithPendingScope()).thenReturn(Future.successful(Seq(application1, application6)))
 
+      val app1 = testApplication.addPrimaryScope(Scope("app-1-scope-1", Pending)).addPrimaryScope(Scope("app-1-scope-2", Approved))
+      val app2 = testApplication.addPrimaryScope(Scope("app-2-scope-1", Pending))
+
+      when(fixture.applicationsService.getApplicationsWithPendingPrimaryScope).thenReturn(Future.successful(Seq(app1, app2)))
+
+      val expected = Seq(app1, app2)
       running(fixture.application) {
-        val request = FakeRequest(GET, routes.ApplicationsController.pendingScopes.url)
+        val request = FakeRequest(GET, routes.ApplicationsController.pendingPrimaryScopes.url)
 
         val result = route(fixture.application, request).value
 

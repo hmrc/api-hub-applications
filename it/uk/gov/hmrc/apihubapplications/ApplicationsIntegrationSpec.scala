@@ -316,23 +316,23 @@ class ApplicationsIntegrationSpec
   }
 
   "GET pending scopes" should {
-    "respond with a 200 and a list applications that have at least one status of pending for prod" in {
+    "respond with a 200 and a list applications that have at least one primary scope with status of pending" in {
       forAll { (application1: Application, application2: Application) =>
-        val appWithPendingTestScopes = application1.withEmptyScopes.withTestPendingScopes
-        val appWithPendingProdScopes = application2.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
+        val appWithPendingSecondaryScopes = application1.withEmptyScopes.withSecondaryPendingScopes
+        val appWithPendingPrimaryScopes = application2.withEmptyScopes.withPrimaryPendingScopes.withPrimaryApprovedScopes
 
         deleteAll().futureValue
-        insert(appWithPendingTestScopes).futureValue
-        insert(appWithPendingProdScopes).futureValue
+        insert(appWithPendingSecondaryScopes).futureValue
+        insert(appWithPendingPrimaryScopes).futureValue
 
         val response = wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/pending-scopes")
+          .url(s"$baseUrl/api-hub-applications/applications/pending-primary-scopes")
           .addHttpHeaders(("Accept", "application/json"))
           .get()
           .futureValue
 
         response.status shouldBe 200
-        response.json shouldBe Json.toJson(Seq(appWithPendingProdScopes))
+        response.json shouldBe Json.toJson(Seq(appWithPendingPrimaryScopes))
       }
     }
   }

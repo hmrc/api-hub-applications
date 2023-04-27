@@ -89,8 +89,8 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
     }
   }
 
-  def pendingScopes: Action[AnyContent] = identify.compose(Action).async {
-    applicationsService.getApplicationsWithPendingScope().map(Json.toJson(_)).map(Ok(_))
+  def pendingPrimaryScopes: Action[AnyContent] = identify.compose(Action).async {
+    applicationsService.getApplicationsWithPendingPrimaryScope.map(Json.toJson(_)).map(Ok(_))
   }
 
   def updatePrimaryScopeStatus(id: String, scopeName: String): Action[JsValue] =

@@ -74,7 +74,7 @@ class ApplicationsService @Inject()(
     }
   }
 
-  def getApplicationsWithPendingScope(): Future[Seq[Application]] = findAll().map(_.filter(_.hasProdPendingScope))
+  def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
 
   def addScopes(applicationId: String, newScopes: Seq[NewScope]): Future[Boolean] =
     repository.findById(applicationId).flatMap {

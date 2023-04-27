@@ -43,6 +43,10 @@ object ApplicationTestLenses {
       application.addProdScope(Scope(approvedScopeName, Approved))
     }
 
+    def withSecondaryPendingScopes: Application = {
+      application.addSecondaryScope(Scope(pendingScopeName, Pending))
+    }
+
     def withPrimaryPendingScopes: Application = {
       application.addPrimaryScope(Scope(pendingScopeName, Pending))
     }

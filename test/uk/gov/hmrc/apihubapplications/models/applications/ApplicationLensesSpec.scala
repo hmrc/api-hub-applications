@@ -330,9 +330,7 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
         val application = testApplication
           .addPrimaryScope(Scope(randomString(), Approved))
           .addPrimaryScope(Scope(randomString(), Denied))
-          .addPreProdScope(Scope(randomString(), Pending))
-          .addTestScope(Scope(randomString(), Pending))
-          .addDevScope(Scope(randomString(), Pending))
+          .addSecondaryScope(Scope(randomString(), Pending))
 
         application.hasPrimaryPendingScope mustBe false
       }
