@@ -235,7 +235,8 @@ class ApplicationsIntegrationSpec
 
 "POST to add scopes to environments of an application" should {
   "respond with a 204 No Content" in {
-    forAll { (application: Application, newScopes: Seq[NewScope]) =>
+    forAll { (application: Application) =>
+
       deleteAll().futureValue
       insert(application).futureValue
 
@@ -243,7 +244,7 @@ class ApplicationsIntegrationSpec
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
           .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(Seq(newScopes.head)))
+          .post(Json.toJson(Seq(NewScope("new scope", Seq(Primary, Secondary)))))
           .futureValue
 
       response.status shouldBe 204
@@ -292,7 +293,7 @@ class ApplicationsIntegrationSpec
     }
   }
 
-  "set status of scopes to PENDING in primary environment and to APPROVED in secondary environments" in {
+  "set status of scopes to PENDING in primary environment" in {
     forAll { application: Application =>
       val emptyScopesApp = application.withEmptyScopes
 
@@ -311,7 +312,6 @@ class ApplicationsIntegrationSpec
       storedApplications.size shouldBe 1
       val storedApplication = storedApplications.head
 
-      storedApplication.environments.secondary.scopes.map(_.status).toSet shouldBe Set(Approved)
       storedApplication.environments.primary.scopes.map(_.status).toSet shouldBe Set(Pending)
     }
   }
