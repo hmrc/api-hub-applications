@@ -26,7 +26,7 @@ import org.scalatest.{EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
@@ -230,6 +230,8 @@ class ApplicationsServiceSpec
       val id = "test-id"
       val clientId = "test-client-id"
       val clientSecret = "test-secret-1234"
+      val scope1 = "test-scope-1"
+      val scope2 = "test-scope-2"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
         .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
@@ -241,8 +243,12 @@ class ApplicationsServiceSpec
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(ClientResponse(clientId, clientSecret))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(Seq(ClientScope(scope1), ClientScope(scope2)))))
 
-      val expected = application.setSecondaryCredentials(Seq(Credential(clientId, Some(clientSecret), Some("1234"))))
+      val expected = application
+        .setSecondaryCredentials(Seq(Credential(clientId, Some(clientSecret), Some("1234"))))
+        .setSecondaryScopes(Seq(Scope(scope1, Approved), Scope(scope2, Approved)))
 
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
@@ -280,6 +286,8 @@ class ApplicationsServiceSpec
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(Seq.empty)))
 
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
@@ -479,48 +487,6 @@ class ApplicationsServiceSpec
       }
     }
 
-  }
-
-  "FetchCredentialsMapper" - {
-    "must process an empty collection" in {
-      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(Seq.empty)
-
-      actual mustBe Right(Seq.empty)
-    }
-
-    "must map successful results correctly" in {
-      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
-      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
-
-      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
-        Seq(
-          Right(clientResponse1),
-          Right(clientResponse2)
-        )
-      )
-
-      val expected = Seq(
-        clientResponse1.asCredentialWithSecret(),
-        clientResponse2.asCredentialWithSecret()
-      )
-
-      actual mustBe Right(expected)
-    }
-
-    "must return IdmsException if any individual result has failed" in {
-      val clientResponse1 =  ClientResponse("test-client-id-1", "test-secret-1")
-      val clientResponse2 =  ClientResponse("test-client-id-2", "test-secret-2")
-
-      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
-        Seq(
-          Right(clientResponse1),
-          Right(clientResponse2),
-          Left(IdmsException("test-message"))
-        )
-      )
-
-      actual.left.value mustBe a [IdmsException]
-    }
   }
 
   "create primary secret" - {
