@@ -84,6 +84,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             case _ => applicationsService.addScope(id, scopes.head).map {
               case Right(true) => NoContent
               case Right(false) => NotFound
+              case _ => BadGateway
             }
           }
         case e: JsError =>

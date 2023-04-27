@@ -86,7 +86,7 @@ class ApplicationsService @Inject()(
     }
   }
 
-  def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] = {
+  def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     // If newScope.exists(secondary) then call IDMS connector else return true
     if (newScope.environments.exists(e => e.equals(Secondary))) {
       qaTechDeliveryValidSecondaryCredential(application) match {
@@ -95,7 +95,7 @@ class ApplicationsService @Inject()(
           Future.successful(Left(ApplicationBadException(s"Application ${application.id} has invalid primary credentials.")))
       }
     } else {
-      Future.successful(Right(true))
+      Future.successful(Right({}))
     }
   }
   def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] =
@@ -108,7 +108,7 @@ class ApplicationsService @Inject()(
           repositoryUpdated <- repositoryUpdate
           idmsUpdated <- idmsUpdate
         } yield (repositoryUpdated, idmsUpdated) match {
-          case (true, Right(true)) => Right(true)
+          case (true, Right(_)) => Right(true)
           case (_, Left(e)) => Left(e)
           case _ => Right(false)
         }

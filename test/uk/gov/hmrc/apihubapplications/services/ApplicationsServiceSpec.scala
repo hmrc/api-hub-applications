@@ -319,9 +319,6 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val newScope = NewScope("test-name-1", Seq(Primary))
-      val newScopes = Seq(
-       newScope,
-      )
 
       val testAppId = "test-app-id"
       val app = Application(
@@ -370,12 +367,81 @@ class ApplicationsServiceSpec
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(true)))
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
           verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
           actual mustBe Right(true)
+      }
+
+    }
+
+    "must handle idms fail and return error for secondary scope" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val testScopeId = "test-name-1"
+      val newScope = NewScope(testScopeId, Seq(Secondary))
+
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+      )
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      val exception = IdmsException("Bad thing")
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
+      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+        actual =>
+          verifyZeroInteractions(repository.update(any()))
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
+          actual mustBe Left(exception)
+      }
+
+    }
+
+    "must handle idms fail and return error for secondary scope but also process primary and update" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val testScopeId = "test-name-1"
+      val newScope = NewScope(testScopeId, Seq(Primary, Secondary))
+
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+      )
+
+      val updatedApp = app
+        .addScopes(Primary, Seq(testScopeId))
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+
+      val exception = IdmsException("Bad thing")
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
+      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+        actual =>
+          verify(repository).update(updatedApp)
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
+          actual mustBe Left(exception)
       }
 
     }

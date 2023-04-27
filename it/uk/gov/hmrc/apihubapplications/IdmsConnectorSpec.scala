@@ -24,7 +24,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{buildConnector, environmentNames, nonSuccessResponses, testClient, testClientId, testScopeId, testClientResponse, testSecret}
+import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec._
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
@@ -244,6 +244,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return true" in {
       forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
+          //http://localhost:6001           /primary/identity/clients/test-client-id/client-scopes/test-scope-id'
           put(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .willReturn(
               aResponse()
@@ -252,7 +253,7 @@ class IdmsConnectorSpec
         )
 
         buildConnector(this).addClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier()) map {
-          response => response mustBe Right(true)
+          response => response mustBe Right({})
         }
       }
     }

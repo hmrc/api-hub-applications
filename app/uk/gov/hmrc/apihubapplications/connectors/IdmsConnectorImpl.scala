@@ -115,14 +115,13 @@ class IdmsConnectorImpl @Inject()(
     Left(IdmsException(message))
   }
 
-  override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Boolean]] = {
+  override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
 
     httpClient.put(url)
-      .setHeader(("Accept", "application/json"))
-      .execute[Either[UpstreamErrorResponse, Boolean]]
+      .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
-        case Right(_) => Right(true)
+        case Right(_) => Right({})
         case Left(e) if e.statusCode == 404 =>
           val message = s"Client not found: clientId=$clientId"
           logger.error(message, e)
