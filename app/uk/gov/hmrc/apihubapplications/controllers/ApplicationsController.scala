@@ -32,11 +32,11 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ApplicationsController @Inject() (identify: IdentifierAction,
-                                        cc: ControllerComponents,
-                                        applicationsService: ApplicationsService,
-                                        crypto: ApplicationCrypto
-                                       ) (implicit ec: ExecutionContext)
+class ApplicationsController @Inject()(identify: IdentifierAction,
+                                       cc: ControllerComponents,
+                                       applicationsService: ApplicationsService,
+                                       crypto: ApplicationCrypto
+                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
   def registerApplication(): Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -74,13 +74,17 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
   }
 
   def addScopes(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
-    request: Request[JsValue] => {
+    implicit request: Request[JsValue] => {
       val jsReq = request.body
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
-          applicationsService.addScopes(id, scopes).map {
-            case true => NoContent
-            case false => NotFound
+          scopes match {
+            case s if s.size > 1 => Future.successful(NotImplemented)
+            case s if s.isEmpty => Future.successful(NotFound)
+            case _ => applicationsService.addScope(id, scopes.head).map {
+              case Right(true) => NoContent
+              case Right(false) => NotFound
+            }
           }
         case e: JsError =>
           logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
@@ -88,6 +92,7 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
       }
     }
   }
+
 
   def pendingScopes: Action[AnyContent] = identify.compose(Action).async {
     applicationsService.getApplicationsWithPendingScope().map(Json.toJson(_)).map(Ok(_))
@@ -126,11 +131,10 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
     implicit request =>
       val eventualExceptionOrSecret = applicationsService.createPrimarySecret(id)
       eventualExceptionOrSecret.map {
-          case Right(secret) => Ok(Json.toJson(secret))
-          case Left(_:IdmsException) => BadGateway
-          case Left(_:ApplicationNotFoundException) => NotFound
-          case Left(_:ApplicationsException) => BadRequest
+        case Right(secret) => Ok(Json.toJson(secret))
+        case Left(_: IdmsException) => BadGateway
+        case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: ApplicationsException) => BadRequest
       }
   }
-
 }

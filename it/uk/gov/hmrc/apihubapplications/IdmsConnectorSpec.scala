@@ -24,7 +24,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{buildConnector, environmentNames, nonSuccessResponses, testClient, testClientId, testClientResponse, testSecret}
+import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{buildConnector, environmentNames, nonSuccessResponses, testClient, testClientId, testScopeId, testClientResponse, testSecret}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
@@ -240,6 +240,69 @@ class IdmsConnectorSpec
     }
   }
 
+  "IdmsConnector.addClientScope" - {
+    "must place the correct request per environment to IDMS and return true" in {
+      forAll(environmentNames) { environmentName: EnvironmentName =>
+        stubFor(
+          put(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
+            .willReturn(
+              aResponse()
+                .withStatus(200)
+            )
+        )
+
+        buildConnector(this).addClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier()) map {
+          response => response mustBe Right(true)
+        }
+      }
+    }
+
+    "must return IdmsException when IDMS returns 404 Not Found for a given Client Id" in {
+      stubFor(
+        put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+        response => response.left.value mustBe a[IdmsException]
+      }
+    }
+
+    "must return IdmsException for any non-2xx response" in {
+      forAll(nonSuccessResponses) { status: Int =>
+        stubFor(
+          put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+            .willReturn(
+              aResponse()
+                .withStatus(status)
+            )
+        )
+
+        buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+          response =>
+            response.left.value mustBe a[IdmsException]
+        }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      stubFor(
+        put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+        response =>
+          response.left.value mustBe a[IdmsException]
+      }
+    }
+  }
 }
 
 object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
@@ -260,6 +323,7 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
   }
 
   val testClientId: String = "test-client-id"
+  val testScopeId: String = "test-scope-id"
   val testSecret: Secret = Secret("test-secret")
   val testClient: Client = Client("test-name", "test-description")
   val testClientResponse: ClientResponse = ClientResponse(testClientId, testSecret.secret)

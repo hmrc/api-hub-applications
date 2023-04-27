@@ -205,15 +205,12 @@ class ApplicationsControllerSpec
   "add scopes" - {
     "must return 204 NoContent" in {
       val id = "app-id-1"
-      val scopes: Seq[NewScope] = Seq(
-        NewScope("scope1", Seq(Secondary, Primary)),
-        NewScope("scope2", Seq(Secondary))
-
-      )
+      val newScope = NewScope("scope1", Seq(Secondary, Primary))
+      val scopes: Seq[NewScope] = Seq(newScope)
       val json = Json.toJson(scopes)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScopes(id, scopes)).thenReturn(Future.successful(true))
+        when(fixture.applicationsService.addScope(ArgumentMatchers.eq(id), ArgumentMatchers.eq(newScope))(any())).thenReturn(Future.successful(Right(true)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
@@ -224,7 +221,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe NoContent.code
 
-        verify(fixture.applicationsService).addScopes(ArgumentMatchers.eq(id), ArgumentMatchers.eq(scopes))
+        verify(fixture.applicationsService).addScope(ArgumentMatchers.eq(id), ArgumentMatchers.eq(newScope))(any())
       }
     }
 
@@ -233,7 +230,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScopes(any(), any())).thenReturn(Future.successful(false))
+        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(false)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
@@ -271,6 +268,27 @@ class ApplicationsControllerSpec
           .withBody(json)
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
+      }
+    }
+
+    "must return 501 not implemented when processing more than one scope" in {
+      val id = "app-id-1"
+      val newScope1 = NewScope("scope1", Seq(Secondary, Primary))
+      val newScope2 = NewScope("scope1", Seq(Secondary, Primary))
+      val scopes: Seq[NewScope] = Seq(newScope1, newScope2)
+      val json = Json.toJson(scopes)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_IMPLEMENTED
+
+        verifyNoMoreInteractions(fixture.applicationsService.addScope(ArgumentMatchers.eq(id), any())(any()))
       }
     }
 

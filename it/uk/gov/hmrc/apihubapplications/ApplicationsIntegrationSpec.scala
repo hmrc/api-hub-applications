@@ -243,7 +243,7 @@ class ApplicationsIntegrationSpec
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
           .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(newScopes))
+          .post(Json.toJson(Seq(newScopes.head)))
           .futureValue
 
       response.status shouldBe 204
@@ -251,9 +251,10 @@ class ApplicationsIntegrationSpec
   }
 
   "respond with a 404 NotFound if the application does not exist" in {
-    forAll { (application: Application, newScopes: Seq[NewScope]) =>
+    forAll { (application: Application) =>
       deleteAll().futureValue
 
+      val newScopes = Seq(NewScope("test-scope", Seq(Primary)))
       val response =
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
