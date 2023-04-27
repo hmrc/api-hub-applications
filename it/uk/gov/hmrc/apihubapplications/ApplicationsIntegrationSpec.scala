@@ -29,7 +29,7 @@ import play.api.libs.ws.{EmptyBody, WSClient}
 import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.{ApplicationLensOps, applicationEnvironments}
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, Secret}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
@@ -237,14 +237,15 @@ class ApplicationsIntegrationSpec
   "respond with a 204 No Content" in {
     forAll { (application: Application) =>
 
+      val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", None, None)))
       deleteAll().futureValue
-      insert(application).futureValue
+      insert(applicationWithSecondaryCredentials).futureValue
 
       val response =
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
           .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(Seq(NewScope("new scope", Seq(Primary, Secondary)))))
+          .post(Json.toJson(Seq(NewScope("new scope", Seq(Primary)))))
           .futureValue
 
       response.status shouldBe 204
