@@ -75,7 +75,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
   }
 
   def addScopes(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
-    request: Request[JsValue] => {
+    implicit request: Request[JsValue] => {
       val jsReq = request.body
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
