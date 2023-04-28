@@ -43,12 +43,13 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
     implicit request: Request[JsValue] =>
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>
+          logger.info(s"Registering new application: ${newApp.name}")
           applicationsService.registerApplication(newApp).map {
             case Right(application) => Created(Json.toJson(application))
             case Left(_) => BadGateway
           }
         case e: JsError =>
-          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
   }
@@ -78,6 +79,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       val jsReq = request.body
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
+          logger.info(s"Adding scopes ($scopes) to application ID: $id")
           scopes match {
             case s if s.size > 1 => Future.successful(NotImplemented)
             case s if s.isEmpty => Future.successful(BadRequest)
@@ -88,40 +90,36 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             }
           }
         case e: JsError =>
-          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
     }
   }
 
-
-  def pendingScopes: Action[AnyContent] = identify.compose(Action).async {
-    applicationsService.getApplicationsWithPendingScope().map(Json.toJson(_)).map(Ok(_))
+  def pendingPrimaryScopes: Action[AnyContent] = identify.compose(Action).async {
+    applicationsService.getApplicationsWithPendingPrimaryScope.map(Json.toJson(_)).map(Ok(_))
   }
 
-  def approveProdScopeStatus(id: String, environment: String, scopename: String): Action[JsValue] =
+  def updatePrimaryScopeStatus(id: String, scopeName: String): Action[JsValue] =
     identify.compose(Action(parse.json)).async {
       request: Request[JsValue] => {
         val jsReq = request.body
-        if (environment != Prod.toString) {
-          Future.successful(BadRequest)
-        } else {
-          jsReq.validate[UpdateScopeStatus] match {
-            case JsSuccess(UpdateScopeStatus(Approved), _) if environment == Prod.toString =>
-              applicationsService.setPendingProdScopeStatusToApproved(id, scopename).map {
-                case Some(true) => NoContent
-                case _ => NotFound
-              }
-            case JsSuccess(updateStatus, _) =>
-              logger.info(s"Setting scope status to: ${updateStatus.status.toString} on environment: $environment is not allowed")
-              Future.successful(BadRequest)
-
-            case e: JsError =>
-              logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
-              Future.successful(BadRequest)
-          }
+        jsReq.validate[UpdateScopeStatus] match {
+          case JsSuccess(UpdateScopeStatus(Approved), _) =>
+            logger.info(s"Setting scope $scopeName to ${Approved.toString} on application ID: $id")
+            applicationsService.setPendingPrimaryScopeStatusToApproved(id, scopeName).map {
+              case Some(true) => NoContent
+              case _ => NotFound
+            }
+          case JsSuccess(updateStatus, _) =>
+            logger.warn(s"Unsupported status: ${updateStatus.status.toString}")
+            Future.successful(BadRequest)
+          case e: JsError =>
+            logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+            Future.successful(BadRequest)
         }
       }
+
     }
 
   private def decrypt(encrypted: String): String = {
@@ -130,6 +128,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def createPrimarySecret(id: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
+      logger.info(s"Creating primary secret for application ID: $id")
       val eventualExceptionOrSecret = applicationsService.createPrimarySecret(id)
       eventualExceptionOrSecret.map {
         case Right(secret) => Ok(Json.toJson(secret))

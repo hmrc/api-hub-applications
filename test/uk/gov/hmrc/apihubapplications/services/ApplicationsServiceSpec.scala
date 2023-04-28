@@ -113,7 +113,7 @@ class ApplicationsServiceSpec
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
-          actual.left.value mustBe a [IdmsException]
+          actual.left.value mustBe a[IdmsException]
           verifyZeroInteractions(repository.insert(any()))
           succeed
       }
@@ -139,7 +139,7 @@ class ApplicationsServiceSpec
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
-          actual.left.value mustBe a [IdmsException]
+          actual.left.value mustBe a[IdmsException]
           verifyZeroInteractions(repository.insert(any()))
           succeed
       }
@@ -292,32 +292,30 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result.value.left.value mustBe a [IdmsException]
+          result.value.left.value mustBe a[IdmsException]
       }
     }
   }
 
- "get apps where prod env had pending scopes" -{
-   "get pending scopes" in {
-     val appWithProdPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
-                                              .addScopes(Prod, Seq("test-scope-1"))
-     val appWithoutPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
-                                              .addScopes(Dev, Seq("test-scope-2"))
+  "get apps where primary env has pending scopes" - {
+    val appWithPrimaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
+      .addPrimaryScope(Scope("test-scope-1", Pending))
+    val appWithSecondaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
+      .addSecondaryScope(Scope("test-scope-2", Pending))
 
-     val repository = mock[ApplicationsRepository]
-     when(repository.findAll()).thenReturn(Future.successful(Seq(appWithProdPending,appWithoutPending)))
+    val repository = mock[ApplicationsRepository]
+    when(repository.findAll()).thenReturn(Future.successful(Seq(appWithPrimaryPending, appWithSecondaryPending)))
 
-     val idmsConnector = mock[IdmsConnector]
+    val idmsConnector = mock[IdmsConnector]
 
-     val service = new ApplicationsService(repository, clock, idmsConnector)
-     service.getApplicationsWithPendingScope() map {
-       actual =>
-         actual mustBe Seq(appWithProdPending)
-         verify(repository).findAll()
-         succeed
-     }
-   }
- }
+    val service = new ApplicationsService(repository, clock, idmsConnector)
+    service.getApplicationsWithPendingPrimaryScope map {
+      actual =>
+        actual mustBe Seq(appWithPrimaryPending)
+        verify(repository).findAll()
+        succeed
+    }
+  }
 
   "addScopes" - {
 
@@ -499,23 +497,23 @@ class ApplicationsServiceSpec
     }
   }
 
-  "set scope status to APPROVED on prod when current scope status is PENDING" - {
+  "set scope status to APPROVED on primary when current scope status is PENDING" - {
     "must set scopes for an application" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val envs = Environments(
+        Environment(Seq(Scope("test-scope-1", Pending)), Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq(Scope("test-scope-1", Pending)), Seq.empty)
+        Environment(Seq.empty, Seq.empty)
       )
 
       val testAppId = "test-app-id"
-      val app  = Application(
+      val app = Application(
         id = Some(testAppId),
         name = testAppId,
         created = LocalDateTime.now(clock),
@@ -525,16 +523,17 @@ class ApplicationsServiceSpec
         environments = envs
       )
 
-      val updatedApp = app.setProdScopes(Seq(Scope("test-scope-1", Approved)))
+      val updatedApp = app.setPrimaryScopes(Seq(Scope("test-scope-1", Approved)))
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
 
-      service.setPendingProdScopeStatusToApproved(testAppId, "test-scope-1") map {
+      service.setPendingPrimaryScopeStatusToApproved(testAppId, "test-scope-1") map {
         actual =>
           actual mustBe Some(true)
       }
     }
-    "must return None if application and/or scope name do not exist" in {
+
+    "must return None if application does not exist" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -542,24 +541,27 @@ class ApplicationsServiceSpec
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
 
-      service.setPendingProdScopeStatusToApproved(testAppId, "test-name-2") map {
+      service.setPendingPrimaryScopeStatusToApproved(testAppId, "test-name-2") map {
         actual =>
           actual mustBe None
       }
     }
-    "must return Some(False) when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
+
+    "must return Some(False) when trying to set scope status to APPROVED when scope exists but is not PENDING" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
       val scopeName = "test-scope-1"
+
       val envs = Environments(
+        Environment(Seq(Scope("test-scope-1", Denied)), Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq(Scope(scopeName, Denied)), Seq.empty)
+        Environment(Seq.empty, Seq.empty)
       )
+
       val testAppId = "test-app-id"
       val app = Application(
         id = Some(testAppId),
@@ -574,7 +576,32 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
 
-      service.setPendingProdScopeStatusToApproved(testAppId, scopeName) map {
+      service.setPendingPrimaryScopeStatusToApproved(testAppId, scopeName) map {
+        actual =>
+          actual mustBe Some(false)
+      }
+    }
+
+    "must return Some(False) when scope does not exist" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val scopeName = "test-scope-1"
+
+      val testAppId = "test-app-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      )
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+
+      service.setPendingPrimaryScopeStatusToApproved(testAppId, scopeName) map {
         actual =>
           actual mustBe Some(false)
       }

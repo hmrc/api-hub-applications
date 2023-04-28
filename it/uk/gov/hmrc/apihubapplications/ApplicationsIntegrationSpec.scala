@@ -192,11 +192,10 @@ class ApplicationsIntegrationSpec
     }
   }
 
-
-"GET application by ID" should {
-  "respond with 200 status and the found application" in {
-    forAll { (application: Application) =>
-      deleteAll().futureValue
+  "GET application by ID" should {
+    "respond with 200 status and the found application" in {
+      forAll { (application: Application) =>
+        deleteAll().futureValue
 
       insert(
         application
@@ -222,30 +221,30 @@ class ApplicationsIntegrationSpec
           )
         )
 
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .addHttpHeaders(("Accept", "application/json"))
+            .get()
+            .futureValue
+
+        response.status shouldBe 200
+        response.json shouldBe Json.toJson(expected)
+      }
+    }
+
+    "respond with 404 status if the application cannot be found" in {
       val response =
         wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+          .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id")
           .addHttpHeaders(("Accept", "application/json"))
           .get()
           .futureValue
 
-      response.status shouldBe 200
-      response.json shouldBe Json.toJson(expected)
+      response.status shouldBe 404
+
     }
   }
-
-  "respond with 404 status if the application cannot be found" in {
-    val response =
-      wsClient
-        .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id")
-        .addHttpHeaders(("Accept", "application/json"))
-        .get()
-        .futureValue
-
-    response.status shouldBe 404
-
-  }
-}
 
 "POST to add scopes to environments of an application" should {
   "respond with a 204 No Content" in {
@@ -262,9 +261,9 @@ class ApplicationsIntegrationSpec
           .post(Json.toJson(Seq(NewScope("new scope", Seq(Primary)))))
           .futureValue
 
-      response.status shouldBe 204
+        response.status shouldBe 204
+      }
     }
-  }
 
   "respond with a 404 NotFound if the application does not exist" in {
     forAll { (application: Application) =>
@@ -278,165 +277,157 @@ class ApplicationsIntegrationSpec
           .post(Json.toJson(newScopes))
           .futureValue
 
-      response.status shouldBe 404
+        response.status shouldBe 404
+      }
     }
-  }
 
-  "respond with a 400 BadRequest if the application exist but we try to add scopes to an environment that does not exist" in {
-    forAll { application: Application =>
-      deleteAll().futureValue
-      insert(application).futureValue
+    "respond with a 400 BadRequest if the application exist but we try to add scopes to an environment that does not exist" in {
+      forAll { application: Application =>
+        deleteAll().futureValue
+        insert(application).futureValue
 
-      val invalidEnvironmentRequest = Json.parse(
-        s"""
-           |[
-           |  {
-           |    "name": "scope1",
-           |    "environments": ["env-does-not-exist"]
-           |  }
-           |]
-           |""".stripMargin)
+        val invalidEnvironmentRequest = Json.parse(
+          s"""
+             |[
+             |  {
+             |    "name": "scope1",
+             |    "environments": ["env-does-not-exist"]
+             |  }
+             |]
+             |""".stripMargin)
 
-      val response =
-        wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-          .addHttpHeaders(("Content", "application/json"))
-          .post(invalidEnvironmentRequest)
-          .futureValue
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+            .addHttpHeaders(("Content", "application/json"))
+            .post(invalidEnvironmentRequest)
+            .futureValue
 
-      response.status shouldBe 400
+        response.status shouldBe 400
+      }
     }
-  }
 
   "set status of scopes to PENDING in primary environment" in {
     forAll { application: Application =>
       val emptyScopesApp = application.withEmptyScopes
 
-      deleteAll().futureValue
-      insert(emptyScopesApp).futureValue
+        deleteAll().futureValue
+        insert(emptyScopesApp).futureValue
 
-      val newScopes = Seq(NewScope("scope1", Seq(Secondary, Primary)))
-      wsClient
-        .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-        .addHttpHeaders(("Content", "application/json"))
-        .post(Json.toJson(newScopes))
-        .futureValue
+        val newScopes = Seq(NewScope("scope1", Seq(Secondary, Primary)))
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+          .addHttpHeaders(("Content", "application/json"))
+          .post(Json.toJson(newScopes))
+          .futureValue
 
 
-      val storedApplications = findAll().futureValue.filter(app => app.id == application.id)
-      storedApplications.size shouldBe 1
-      val storedApplication = storedApplications.head
+        val storedApplications = findAll().futureValue.filter(app => app.id == application.id)
+        storedApplications.size shouldBe 1
+        val storedApplication = storedApplications.head
 
       storedApplication.environments.primary.scopes.map(_.status).toSet shouldBe Set(Pending)
     }
   }
 }
 
-"GET pending scopes" should {
-  "respond with a 200 and a list applications that have at least one status of pending for prod" in {
-    forAll { (application1: Application, application2: Application) =>
-      val appWithPendingTestScopes = application1.withEmptyScopes.withTestPendingScopes
-      val appWithPendingProdScopes = application2.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
+  "GET pending scopes" should {
+    "respond with a 200 and a list applications that have at least one primary scope with status of pending" in {
+      forAll { (application1: Application, application2: Application) =>
+        val appWithPendingSecondaryScopes = application1.withEmptyScopes.withSecondaryPendingScopes
+        val appWithPendingPrimaryScopes = application2.withEmptyScopes.withPrimaryPendingScopes.withPrimaryApprovedScopes
 
-      deleteAll().futureValue
-      insert(appWithPendingTestScopes).futureValue
-      insert(appWithPendingProdScopes).futureValue
+        deleteAll().futureValue
+        insert(appWithPendingSecondaryScopes).futureValue
+        insert(appWithPendingPrimaryScopes).futureValue
 
-      val response = wsClient
-        .url(s"$baseUrl/api-hub-applications/applications/pending-scopes")
-        .addHttpHeaders(("Accept", "application/json"))
-        .get()
-        .futureValue
-
-      response.status shouldBe 200
-      response.json shouldBe Json.toJson(Seq(appWithPendingProdScopes))
-    }
-  }
-}
-
-
-"PUT change scope status from PENDING to APPROVED on prod environment" should {
-  "respond with a 204 No Content when the status was set successfully" in {
-    forAll { (application: Application) =>
-      val appWithPendingProdScope = application.withEmptyScopes.withProdPendingScopes.withProdApprovedScopes
-      deleteAll().futureValue
-      insert(appWithPendingProdScope).futureValue
-      val updateScopeStatus = UpdateScopeStatus(Approved)
-      val statusUpdateJson = Json.toJson(updateScopeStatus)
-      val response =
-        wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/scopes/${application.pendingScopeName}")
-          .addHttpHeaders(("Content-Type", "application/json"))
-          .put(statusUpdateJson)
+        val response = wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/pending-primary-scopes")
+          .addHttpHeaders(("Accept", "application/json"))
+          .get()
           .futureValue
 
-      response.status shouldBe 204
+        response.status shouldBe 200
+        response.json shouldBe Json.toJson(Seq(appWithPendingPrimaryScopes))
+      }
     }
   }
-  "must return 404 Not Found when trying to set scope on the application that does not exist in DB" in {
-    forAll { (_: Application) =>
-      deleteAll().futureValue
-      val updateScopeStatus = UpdateScopeStatus(Approved)
-      val statusUpdateJson = Json.toJson(updateScopeStatus)
+
+  "PUT change scope status from PENDING to APPROVED on primary environment" should {
+    "respond with a 204 No Content when the status was set successfully" in {
+      forAll { (application: Application) =>
+        deleteAll().futureValue
+
+        val appWithPendingPrimaryScope = application.withEmptyScopes.withPrimaryPendingScopes.withPrimaryApprovedScopes
+        insert(appWithPendingPrimaryScope).futureValue
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/primary/scopes/${application.pendingScopeName}")
+            .addHttpHeaders(("Content-Type", "application/json"))
+            .put(Json.toJson(UpdateScopeStatus(Approved)))
+            .futureValue
+
+        response.status shouldBe 204
+      }
+    }
+
+    "must return 404 Not Found when trying to set scope on the application that does not exist" in {
+      forAll { (_: Application) =>
+        deleteAll().futureValue
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id/environments/primary/scopes/test-scope-name")
+            .addHttpHeaders(("Content-Type", "application/json"))
+            .put(Json.toJson(UpdateScopeStatus(Approved)))
+            .futureValue
+
+        response.status shouldBe 404
+      }
+    }
+
+    "must return 404 Not Found when trying to set scope status to APPROVED on an existing scope that is not PENDING" in {
+      forAll { (application: Application) =>
+        deleteAll().futureValue
+
+        val appWithPendingPrimaryScope = application.withEmptyScopes.withPrimaryApprovedScopes
+        insert(appWithPendingPrimaryScope).futureValue
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/primary/scopes/${application.approvedScopeName}")
+            .addHttpHeaders(("Content-Type", "application/json"))
+            .put(Json.toJson(UpdateScopeStatus(Approved)))
+            .futureValue
+
+        response.status shouldBe 404
+      }
+    }
+
+    "must return 404 Not Found when trying to set scope status on an environment other than primary" in {
       val response =
         wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id/environments/prod/scopes/test-scope-name")
+          .url(s"$baseUrl/api-hub-applications/applications/my-app-id/environments/secondary/scopes/test-scope-name")
           .addHttpHeaders(("Content-Type", "application/json"))
-          .put(statusUpdateJson)
+          .put(Json.toJson(UpdateScopeStatus(Approved)))
           .futureValue
 
       response.status shouldBe 404
     }
-  }
-  "must return 404 Not Found when trying to set scope status to APPROVED on prod env when existing status is not PENDING" in {
-    forAll { (application: Application) =>
-      val appWithPendingProdScope = application.withEmptyScopes.withProdApprovedScopes
-      deleteAll().futureValue
-      insert(appWithPendingProdScope).futureValue
-      val updateScopeStatus = UpdateScopeStatus(Approved)
-      val statusUpdateJson = Json.toJson(updateScopeStatus)
+
+    "must return 400 Bad Request when trying to set scope status to anything other than APPROVED" in {
       val response =
         wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/prod/scopes/${application.approvedScopeName}")
+          .url(s"$baseUrl/api-hub-applications/applications/my-app-id/environments/primary/scopes/test-scope-name")
           .addHttpHeaders(("Content-Type", "application/json"))
-          .put(statusUpdateJson)
+          .put(Json.toJson(UpdateScopeStatus(Pending)))
           .futureValue
 
-      response.status shouldBe 404
+      response.status shouldBe 400
     }
-  }
-  "must return 400 Invalid Request when trying to set scope status on environment to other than prod" in {
-    val appId = "whatever"
-    val envName = "dev"
-    val scopeName = "test-scope-name"
-    val updateScope: UpdateScopeStatus = UpdateScopeStatus(Approved)
-    val statusUpdateJson = Json.toJson(updateScope)
-    val response =
-      wsClient
-        .url(s"$baseUrl/api-hub-applications/applications/$appId/environments/$envName/scopes/$scopeName")
-        .addHttpHeaders(("Content-Type", "application/json"))
-        .put(statusUpdateJson)
-        .futureValue
 
-    response.status shouldBe 400
   }
-  "must return 400 Invalid Request when trying to set scope status on prod environment to other than APPROVED" in {
-    val appId = "whatever"
-    val envName = "prod"
-    val scopeName = "test-scope-name"
-    val updateScope: UpdateScopeStatus = UpdateScopeStatus(Pending)
-    val statusUpdateJson = Json.toJson(updateScope)
-    val response =
-      wsClient
-        .url(s"$baseUrl/api-hub-applications/applications/$appId/environments/$envName/scopes/$scopeName")
-        .addHttpHeaders(("Content-Type", "application/json"))
-        .put(statusUpdateJson)
-        .futureValue
-
-    response.status shouldBe 400
-  }
-
-}
 
   "POST to request a new secret" should {
     "respond with a 200 ok and body containing the secret and update the application with secret fragment" in {
