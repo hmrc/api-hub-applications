@@ -22,9 +22,10 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.ApplicationsService.FetchCredentialsMapper
+import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
@@ -64,13 +65,21 @@ class ApplicationsService @Inject()(
   }
 
   def findById(id: String)(implicit hc: HeaderCarrier): Future[Option[Either[IdmsException, Application]]] = {
-    for {
-      application <- repository.findById(id)
-      credentials <- fetchSecondaryCredentials(application)
-    } yield (application, credentials) match {
-      case (Some(app), Right(creds)) => Some(Right(app.setSecondaryCredentials(creds)))
-      case (_, Left(e)) => Some(Left(e))
-      case _ => None
+    repository.findById(id).flatMap {
+      case Some(application) =>
+        Future.sequence(
+          Seq(
+            ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
+            ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector)
+          )
+        )
+          .map(useFirstException)
+          .map {
+            case Right(enrichers) =>
+              Some(Right(enrichers.foldLeft(application)((newApplication, enricher) => enricher.enrich(newApplication))))
+            case Left(e) => Some(Left(e))
+          }
+      case _ => Future.successful(None)
     }
   }
 
@@ -130,20 +139,6 @@ class ApplicationsService @Inject()(
     }
   }
 
-  private def fetchSecondaryCredentials(application: Option[Application])(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[Credential]]] = {
-    application
-      .map {
-        app =>
-          Future.sequence(
-            app.getSecondaryCredentials.map {
-              credential =>
-                idmsConnector.fetchClient(Secondary, credential.clientId)
-            }
-          ).map(FetchCredentialsMapper.mapToCredential)
-      }
-      .getOrElse(Future.successful(Right(Seq.empty)))
-  }
-
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
     repository.findById(applicationId).flatMap {
       case Some(application) =>
@@ -189,29 +184,4 @@ class ApplicationsService @Inject()(
       application.getSecondaryCredentials.headOption.filter(_.clientId != null)
     }
   }
-}
-
-object ApplicationsService {
-
-  object FetchCredentialsMapper {
-
-    def zero: Either[IdmsException, Seq[Credential]] = Right(Seq.empty)
-
-    def op(a: Either[IdmsException, Seq[Credential]], b: Either[IdmsException, Credential]): Either[IdmsException, Seq[Credential]] = {
-      (a, b) match {
-        case (Left(e), _) => Left(e)
-        case (_, Left(e)) => Left(e)
-        case (Right(credentials), Right(credential)) => Right(credentials :+ credential)
-      }
-    }
-
-    def mapToCredential(results: Seq[Either[IdmsException, ClientResponse]]): Either[IdmsException, Seq[Credential]] = {
-      results.map {
-        case Right(clientResponse) => Right(clientResponse.asCredentialWithSecret())
-        case Left(e) => Left(e)
-      }.foldLeft(zero)(op)
-    }
-
-  }
-
 }

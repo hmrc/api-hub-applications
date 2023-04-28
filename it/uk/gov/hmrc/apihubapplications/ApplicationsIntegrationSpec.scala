@@ -31,7 +31,7 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
@@ -198,15 +198,29 @@ class ApplicationsIntegrationSpec
     forAll { (application: Application) =>
       deleteAll().futureValue
 
-      insert(application).futureValue
+      insert(
+        application
+          .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, None, None)))
+      ).futureValue
+
       val storedApplication = findAll().futureValue.head
 
-      val expected = storedApplication.setSecondaryCredentials(
-        storedApplication.getSecondaryCredentials.map(
-          credential =>
-            ClientResponse(credential.clientId, FakeIdmsConnector.fakeSecret).asCredentialWithSecret()
+      val expected = storedApplication
+        .setSecondaryCredentials(
+          storedApplication
+            .getSecondaryCredentials.map(
+              credential => credential.copy(
+                clientSecret = Some(FakeIdmsConnector.fakeSecret),
+                secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
+              )
+            )
         )
-      )
+        .setSecondaryScopes(
+          Seq(
+            Scope(FakeIdmsConnector.fakeClientScopeId1, Approved),
+            Scope(FakeIdmsConnector.fakeClientScopeId2, Approved)
+          )
+        )
 
       val response =
         wsClient
