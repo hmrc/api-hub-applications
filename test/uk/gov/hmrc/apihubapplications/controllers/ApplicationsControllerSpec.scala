@@ -309,8 +309,7 @@ class ApplicationsControllerSpec
     "must return 204 NoContent when the scope exists and is currently PENDING" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val pendingPrimaryScopeUpdated = Some(true)
-        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(pendingPrimaryScopeUpdated))
+        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(Some(true)))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
@@ -322,8 +321,7 @@ class ApplicationsControllerSpec
     "must return 404 Not Found when trying to set scope status on an application that does not exist" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val appIdDoesNotExist = None
-        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(appIdDoesNotExist))
+        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(None))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
@@ -335,8 +333,7 @@ class ApplicationsControllerSpec
     "must return 404 Not Found when the scope does not exist" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val scopeDoesNotExist = Some(false)
-        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(scopeDoesNotExist))
+        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(Some(false)))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
@@ -348,8 +345,7 @@ class ApplicationsControllerSpec
     "must return 404 Not Found when trying to set scope status to APPROVED on an existing scope where the status is not PENDING" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val scopeExistsButIsNotPending = Some(false)
-        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(scopeExistsButIsNotPending))
+        when(fixture.applicationsService.setPendingPrimaryScopeStatusToApproved(appId, scopeName)).thenReturn(Future.successful(Some(false)))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
