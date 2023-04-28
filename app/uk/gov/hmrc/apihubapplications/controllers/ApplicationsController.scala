@@ -43,12 +43,13 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
     implicit request: Request[JsValue] =>
       request.body.validate[NewApplication] match {
         case JsSuccess(newApp, _) =>
+          logger.info(s"Registering new application: ${newApp.name}")
           applicationsService.registerApplication(newApp).map {
             case Right(application) => Created(Json.toJson(application))
             case Left(_) => BadGateway
           }
         case e: JsError =>
-          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
   }
@@ -78,12 +79,13 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
       val jsReq = request.body
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
+          logger.info(s"Adding scopes ($scopes) to application ID: $id")
           applicationsService.addScopes(id, scopes).map {
             case true => NoContent
             case false => NotFound
           }
         case e: JsError =>
-          logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
     }
@@ -99,16 +101,16 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
         val jsReq = request.body
         jsReq.validate[UpdateScopeStatus] match {
           case JsSuccess(UpdateScopeStatus(Approved), _) =>
+            logger.info(s"Setting scope $scopeName to ${Approved.toString} on application ID: $id")
             applicationsService.setPendingPrimaryScopeStatusToApproved(id, scopeName).map {
               case Some(true) => NoContent
               case _ => NotFound
             }
           case JsSuccess(updateStatus, _) =>
-            logger.info(s"Setting scope status to: ${updateStatus.status.toString}")
+            logger.warn(s"Unsupported status: ${updateStatus.status.toString}")
             Future.successful(BadRequest)
-
           case e: JsError =>
-            logger.info(s"Error parsing request body: ${JsError.toJson(e)}")
+            logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
             Future.successful(BadRequest)
         }
       }
@@ -121,6 +123,7 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
 
   def createPrimarySecret(id: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
+      logger.info(s"Creating primary secret for application ID: $id")
       val eventualExceptionOrSecret = applicationsService.createPrimarySecret(id)
       eventualExceptionOrSecret.map {
           case Right(secret) => Ok(Json.toJson(secret))
