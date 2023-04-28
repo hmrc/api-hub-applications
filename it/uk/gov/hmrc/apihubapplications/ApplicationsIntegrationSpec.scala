@@ -199,6 +199,8 @@ class ApplicationsIntegrationSpec
 
       insert(
         application
+          .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, None, None)))
+          .setPrimaryScopes(Seq.empty)
           .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, None, None)))
       ).futureValue
 
@@ -213,6 +215,12 @@ class ApplicationsIntegrationSpec
                 secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
               )
             )
+        )
+        .setPrimaryScopes(
+          Seq(
+            Scope(FakeIdmsConnector.fakeClientScopeId1, Approved),
+            Scope(FakeIdmsConnector.fakeClientScopeId2, Approved)
+          )
         )
         .setSecondaryScopes(
           Seq(

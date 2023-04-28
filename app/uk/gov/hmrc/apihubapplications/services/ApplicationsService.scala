@@ -25,7 +25,6 @@ import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
@@ -67,18 +66,14 @@ class ApplicationsService @Inject()(
   def findById(id: String)(implicit hc: HeaderCarrier): Future[Option[Either[IdmsException, Application]]] = {
     repository.findById(id).flatMap {
       case Some(application) =>
-        Future.sequence(
+        ApplicationEnrichers.process(
+          application,
           Seq(
             ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
-            ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector)
+            ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
+            ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
           )
-        )
-          .map(useFirstException)
-          .map {
-            case Right(enrichers) =>
-              Some(Right(enrichers.foldLeft(application)((newApplication, enricher) => enricher.enrich(newApplication))))
-            case Left(e) => Some(Left(e))
-          }
+        ).map(Some(_))
       case _ => Future.successful(None)
     }
   }

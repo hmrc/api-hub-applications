@@ -228,27 +228,34 @@ class ApplicationsServiceSpec
   "findById" - {
     "must return the application when it exists" in {
       val id = "test-id"
-      val clientId = "test-client-id"
-      val clientSecret = "test-secret-1234"
+      val primaryClientId = "test-primary-client-id"
+      val secondaryClientId = "test-secondary-client-id"
+      val secondaryClientSecret = "test-secondary-secret-1234"
       val scope1 = "test-scope-1"
       val scope2 = "test-scope-2"
+      val scope3 = "test-scope-3"
+      val scope4 = "test-scope-4"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+        .setPrimaryCredentials(Seq(Credential(primaryClientId, None, None)))
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, None, None)))
 
       val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Some(application)))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
-        .thenReturn(Future.successful(Right(ClientResponse(clientId, clientSecret))))
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(secondaryClientId))(any()))
+        .thenReturn(Future.successful(Right(ClientResponse(secondaryClientId, secondaryClientSecret))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(secondaryClientId))(any()))
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope1), ClientScope(scope2)))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(primaryClientId))(any()))
+        .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application
-        .setSecondaryCredentials(Seq(Credential(clientId, Some(clientSecret), Some("1234"))))
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, Some(secondaryClientSecret), Some("1234"))))
         .setSecondaryScopes(Seq(Scope(scope1, Approved), Scope(scope2, Approved)))
+        .setPrimaryScopes(Seq(Scope(scope3, Approved), Scope(scope4, Approved)))
 
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
