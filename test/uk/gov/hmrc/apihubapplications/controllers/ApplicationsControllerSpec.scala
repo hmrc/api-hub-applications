@@ -225,7 +225,7 @@ class ApplicationsControllerSpec
       }
     }
 
-    "must return 404 Not Found when adding new scopes but the application does not exist in the repository" in {
+    "must return 40-0 bad request when adding no scopes" in {
       val id = "id"
 
       val fixture = buildFixture()
@@ -239,9 +239,28 @@ class ApplicationsControllerSpec
           .withBody(Json.toJson(Seq.empty[NewScope]))
 
         val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
+    }
+
+    "must return 404 Not Found when adding new scopes but the application does not exist in the repository" in {
+      val id = "id"
+
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(false)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(Seq(NewScope("scope_name", Seq(Primary)))))
+
+        val result = route(fixture.application, request).value
         status(result) mustBe Status.NOT_FOUND
       }
     }
+
     "must return 400 badRequest when adding new scopes with invalid environment value" in {
       val id = "id"
       val json = Json.parse(
