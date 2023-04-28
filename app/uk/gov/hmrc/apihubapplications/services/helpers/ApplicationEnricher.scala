@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Scope, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Pending, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
@@ -32,6 +32,19 @@ trait ApplicationEnricher {
 }
 
 object ApplicationEnrichers {
+
+  def process(
+    application: Application,
+    enrichers: Seq[Future[Either[IdmsException, ApplicationEnricher]]]
+  )(implicit ec: ExecutionContext): Future[Either[IdmsException, Application]] = {
+    Future.sequence(enrichers)
+      .map(useFirstException)
+      .map {
+        case Right(enrichers) =>
+          Right(enrichers.foldLeft(application)((newApplication, enricher) => enricher.enrich(newApplication)))
+        case Left(e) => Left(e)
+      }
+  }
 
   private val noOpApplicationEnricher = new ApplicationEnricher {
     override def enrich(application: Application): Application = {
@@ -81,6 +94,36 @@ object ApplicationEnrichers {
                     override def enrich(application: Application): Application = {
                       application.setSecondaryScopes(
                         clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
+                      )
+                    }
+                  }
+                )
+              case Left(e) => Left(e)
+            }
+      }
+      .getOrElse(Future.successful(Right(noOpApplicationEnricher)))
+  }
+
+  def primaryScopeApplicationEnricher(
+    original: Application,
+    idmsConnector: IdmsConnector
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+    // Note that this enricher processes the first primary credential only
+    // There is no definition of how to combine scopes from multiple credentials
+    // into a single collection of scopes.
+    original.getPrimaryCredentials.headOption
+      .map {
+        credential =>
+          idmsConnector.fetchClientScopes(Primary, credential.clientId)
+            .map {
+              case Right(clientScopes) =>
+                Right(
+                  new ApplicationEnricher {
+                    override def enrich(application: Application): Application = {
+                      val approved = clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
+                      val pending = application.getPrimaryScopes.filter(scope => scope.status == Pending)
+                      application.setPrimaryScopes(
+                        approved ++ pending
                       )
                     }
                   }

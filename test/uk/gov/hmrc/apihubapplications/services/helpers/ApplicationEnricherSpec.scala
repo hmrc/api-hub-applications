@@ -21,7 +21,7 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Scope, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Pending, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, ClientScope, IdmsException}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -35,6 +35,47 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
   import ApplicationEnricherSpec._
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
+
+  "process" - {
+    "must correctly combine successful enrichers" in {
+      val scope1 = Scope("test-scope-1", Approved)
+      val scope2 = Scope("test-scope-2", Approved)
+
+      ApplicationEnrichers.process(
+        testApplication,
+        Seq(
+          successfulEnricher(_.addPrimaryScope(scope1)),
+          successfulEnricher(_.addPrimaryScope(scope2))
+        )
+      ).map {
+        actual =>
+          actual mustBe Right(testApplication.setPrimaryScopes(Seq(scope1, scope2)))
+      }
+    }
+
+    "must return an exception if any enricher returns an exception" in {
+      ApplicationEnrichers.process(
+        testApplication,
+        Seq(
+          successfulEnricher(identity),
+          unsuccessfulEnricher()
+        )
+      ).map {
+        actual =>
+          actual mustBe Left(testException)
+      }
+    }
+
+    "must handle an empty sequence" in {
+      ApplicationEnrichers.process(
+        testApplication,
+        Seq.empty
+      ).map {
+        actual =>
+          actual mustBe Right(testApplication)
+      }
+    }
+  }
 
   "secondaryCredentialApplicationEnricher" - {
     "must enrich an application with secondary credentials" in {
@@ -146,6 +187,60 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     }
   }
 
+  "primaryScopeApplicationEnricher" - {
+    "must enrich an application with secondary scopes and still include pending scopes" in {
+      val pendingScope1 = Scope("test-pending-scope-1", Pending)
+      val pendingScope2 = Scope("test-pending-scope-2", Pending)
+      val approvedScope = Scope("test-approved-scope", Approved)
+
+      val application = testApplication
+        .setPrimaryCredentials(Seq(testClientResponse1.asCredential()))
+        .setPrimaryScopes(Seq(pendingScope1, pendingScope2, approvedScope))
+
+      val expected = application
+        .setPrimaryScopes(
+          Seq(
+            Scope(testClientScope1.clientScopeId, Approved),
+            Scope(testClientScope2.clientScopeId, Approved),
+            pendingScope1,
+            pendingScope2
+          )
+        )
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
+        .thenReturn(Future.successful(Right(Seq(testClientScope1, testClientScope2))))
+
+      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
+        case Right(enricher) => enricher.enrich(application) mustBe expected
+        case _ => fail("Unexpected Left response")
+      }
+    }
+
+    "must not modify an application if there are zero primary credentials" in {
+      ApplicationEnrichers.primaryScopeApplicationEnricher(testApplication, mock[IdmsConnector]).map {
+        case Right(enricher) => enricher.enrich(testApplication) mustBe testApplication
+        case _ => fail("Unexpected Left response")
+      }
+    }
+
+    "must return IdmsException if any call to IDMS fails" in {
+      val application = testApplication
+        .setPrimaryCredentials(Seq(testClientResponse1.asCredential()))
+
+      val expected = IdmsException("test-message")
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
+        .thenReturn(Future.successful(Left(expected)))
+
+      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
+        actual =>
+          actual mustBe Left(expected)
+      }
+    }
+  }
+
 }
 
 object ApplicationEnricherSpec {
@@ -155,5 +250,18 @@ object ApplicationEnricherSpec {
   val testClientResponse2: ClientResponse = ClientResponse("test-client-id-2", "test-secret-2")
   val testClientScope1: ClientScope = ClientScope("test-client-scope-1")
   val testClientScope2: ClientScope = ClientScope("test-client-scope-2")
+  val testException: IdmsException = IdmsException("test-exception")
+
+  def successfulEnricher(mutator: (Application) => Application): Future[Either[IdmsException, ApplicationEnricher]] = {
+    Future.successful(
+      Right(
+        (application: Application) => mutator.apply(application)
+      )
+    )
+  }
+
+  def unsuccessfulEnricher(): Future[Either[IdmsException, ApplicationEnricher]] = {
+    Future.successful(Left(testException))
+  }
 
 }
