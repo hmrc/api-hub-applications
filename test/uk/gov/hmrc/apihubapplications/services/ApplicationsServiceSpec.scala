@@ -26,7 +26,7 @@ import org.scalatest.{EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
@@ -230,6 +230,8 @@ class ApplicationsServiceSpec
       val id = "test-id"
       val clientId = "test-client-id"
       val clientSecret = "test-secret-1234"
+      val scope1 = "test-scope-1"
+      val scope2 = "test-scope-2"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
         .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
@@ -241,8 +243,12 @@ class ApplicationsServiceSpec
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(ClientResponse(clientId, clientSecret))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(Seq(ClientScope(scope1), ClientScope(scope2)))))
 
-      val expected = application.setSecondaryCredentials(Seq(Credential(clientId, Some(clientSecret), Some("1234"))))
+      val expected = application
+        .setSecondaryCredentials(Seq(Credential(clientId, Some(clientSecret), Some("1234"))))
+        .setSecondaryScopes(Seq(Scope(scope1, Approved), Scope(scope2, Approved)))
 
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
@@ -280,6 +286,8 @@ class ApplicationsServiceSpec
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(Seq.empty)))
 
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
@@ -311,15 +319,12 @@ class ApplicationsServiceSpec
 
   "addScopes" - {
 
-    "must add new scopes to Application and return true" in {
+    "must add new primary scope to Application and not update idms and return true" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
-      val newScopes = Seq(
-        NewScope("test-name-1", Seq(Primary)),
-        NewScope("test-name-2", Seq(Secondary, Primary))
-      )
+      val newScope = NewScope("test-name-1", Seq(Primary))
 
       val testAppId = "test-app-id"
       val app = Application(
@@ -334,27 +339,125 @@ class ApplicationsServiceSpec
 
       val updatedApp = app
         .addScopes(Primary, Seq("test-name-1"))
-        .addScopes(Secondary, Seq("test-name-2"))
-        .addScopes(Primary, Seq("test-name-2"))
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
 
-      service.addScopes(testAppId, newScopes) map {
+      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
-          actual mustBe true
+          verify(repository).update(updatedApp)
+          verifyZeroInteractions(idmsConnector.addClientScope(any(), any(), any())(any()))
+          actual mustBe Right(true)
       }
+
     }
 
-    "must return false if application not found whilst updating it with new scopes" in {
+    "must update idms with new secondary scope and not update application and return true" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
-      val newScopes = Seq(
-        NewScope("test-name-1", Seq(Primary)),
-        NewScope("test-name-2", Seq(Secondary, Primary))
+      val testScopeId = "test-name-1"
+      val newScope = NewScope(testScopeId, Seq(Secondary))
+
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
       )
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
+      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+        actual =>
+          verifyZeroInteractions(repository.update(any()))
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
+          actual mustBe Right(true)
+      }
+
+    }
+
+    "must handle idms fail and return error for secondary scope" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val testScopeId = "test-name-1"
+      val newScope = NewScope(testScopeId, Seq(Secondary))
+
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+      )
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      val exception = IdmsException("Bad thing")
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
+      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+        actual =>
+          verifyZeroInteractions(repository.update(any()))
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
+          actual mustBe Left(exception)
+      }
+
+    }
+
+    "must handle idms fail and return error for secondary scope but also process primary and update" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val testScopeId = "test-name-1"
+      val newScope = NewScope(testScopeId, Seq(Primary, Secondary))
+
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+      )
+
+      val updatedApp = app
+        .addScopes(Primary, Seq(testScopeId))
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+
+      val exception = IdmsException("Bad thing")
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
+      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+        actual =>
+          verify(repository).update(updatedApp)
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
+          actual mustBe Left(exception)
+      }
+
+    }
+
+    "must return false if application not found whilst updating it with new scope" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val newScopes = NewScope("test-name-1", Seq(Primary))
 
       val testAppId = "test-app-id"
       val app = Application(
@@ -369,15 +472,13 @@ class ApplicationsServiceSpec
 
       val updatedApp = app
         .addScopes(Primary, Seq("test-name-1"))
-        .addScopes(Secondary, Seq("test-name-2"))
-        .addScopes(Primary, Seq("test-name-2"))
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(false))
 
-      service.addScopes(testAppId, newScopes) map {
+      service.addScope(testAppId, newScopes)(HeaderCarrier()) map {
         actual =>
-          actual mustBe false
+          actual mustBe Right(false)
       }
     }
 
@@ -389,9 +490,9 @@ class ApplicationsServiceSpec
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
 
-      service.addScopes(testAppId, Seq.empty) map {
+      service.addScope(testAppId, NewScope("test-name-1", Seq(Primary)))(HeaderCarrier()) map {
         actual =>
-          actual mustBe false
+          actual mustBe Right(false)
       }
     }
   }
@@ -472,6 +573,7 @@ class ApplicationsServiceSpec
         environments = envs
       )
 
+
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
 
       service.setPendingPrimaryScopeStatusToApproved(testAppId, scopeName) map {
@@ -505,48 +607,6 @@ class ApplicationsServiceSpec
       }
     }
 
-  }
-
-  "FetchCredentialsMapper" - {
-    "must process an empty collection" in {
-      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(Seq.empty)
-
-      actual mustBe Right(Seq.empty)
-    }
-
-    "must map successful results correctly" in {
-      val clientResponse1 = ClientResponse("test-client-id-1", "test-secret-1")
-      val clientResponse2 = ClientResponse("test-client-id-2", "test-secret-2")
-
-      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
-        Seq(
-          Right(clientResponse1),
-          Right(clientResponse2)
-        )
-      )
-
-      val expected = Seq(
-        clientResponse1.asCredentialWithSecret(),
-        clientResponse2.asCredentialWithSecret()
-      )
-
-      actual mustBe Right(expected)
-    }
-
-    "must return IdmsException if any individual result has failed" in {
-      val clientResponse1 = ClientResponse("test-client-id-1", "test-secret-1")
-      val clientResponse2 = ClientResponse("test-client-id-2", "test-secret-2")
-
-      val actual = ApplicationsService.FetchCredentialsMapper.mapToCredential(
-        Seq(
-          Right(clientResponse1),
-          Right(clientResponse2),
-          Left(IdmsException("test-message"))
-        )
-      )
-
-      actual.left.value mustBe a[IdmsException]
-    }
   }
 
   "create primary secret" - {

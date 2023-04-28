@@ -31,7 +31,7 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
@@ -197,13 +197,27 @@ class ApplicationsIntegrationSpec
       forAll { (application: Application) =>
         deleteAll().futureValue
 
-        insert(application).futureValue
-        val storedApplication = findAll().futureValue.head
+      insert(
+        application
+          .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, None, None)))
+      ).futureValue
 
-        val expected = storedApplication.setSecondaryCredentials(
-          storedApplication.getSecondaryCredentials.map(
-            credential =>
-              ClientResponse(credential.clientId, FakeIdmsConnector.fakeSecret).asCredentialWithSecret()
+      val storedApplication = findAll().futureValue.head
+
+      val expected = storedApplication
+        .setSecondaryCredentials(
+          storedApplication
+            .getSecondaryCredentials.map(
+              credential => credential.copy(
+                clientSecret = Some(FakeIdmsConnector.fakeSecret),
+                secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
+              )
+            )
+        )
+        .setSecondaryScopes(
+          Seq(
+            Scope(FakeIdmsConnector.fakeClientScopeId1, Approved),
+            Scope(FakeIdmsConnector.fakeClientScopeId2, Approved)
           )
         )
 
@@ -232,33 +246,36 @@ class ApplicationsIntegrationSpec
     }
   }
 
-  "POST to add scopes to environments of an application" should {
-    "respond with a 204 No Content" in {
-      forAll { (application: Application, newScopes: Seq[NewScope]) =>
-        deleteAll().futureValue
-        insert(application).futureValue
+"POST to add scopes to environments of an application" should {
+  "respond with a 204 No Content" in {
+    forAll { (application: Application) =>
 
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-            .addHttpHeaders(("Content", "application/json"))
-            .post(Json.toJson(newScopes))
-            .futureValue
+      val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", None, None)))
+      deleteAll().futureValue
+      insert(applicationWithSecondaryCredentials).futureValue
+
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+          .addHttpHeaders(("Content", "application/json"))
+          .post(Json.toJson(Seq(NewScope("new scope", Seq(Primary)))))
+          .futureValue
 
         response.status shouldBe 204
       }
     }
 
-    "respond with a 404 NotFound if the application does not exist" in {
-      forAll { (application: Application, newScopes: Seq[NewScope]) =>
-        deleteAll().futureValue
+  "respond with a 404 NotFound if the application does not exist" in {
+    forAll { (application: Application) =>
+      deleteAll().futureValue
 
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-            .addHttpHeaders(("Content", "application/json"))
-            .post(Json.toJson(newScopes))
-            .futureValue
+      val newScopes = Seq(NewScope("test-scope", Seq(Primary)))
+      val response =
+        wsClient
+          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
+          .addHttpHeaders(("Content", "application/json"))
+          .post(Json.toJson(newScopes))
+          .futureValue
 
         response.status shouldBe 404
       }
@@ -290,9 +307,9 @@ class ApplicationsIntegrationSpec
       }
     }
 
-    "set status of scopes to PENDING in primary environment and to APPROVED in secondary environments" in {
-      forAll { application: Application =>
-        val emptyScopesApp = application.withEmptyScopes
+  "set status of scopes to PENDING in primary environment" in {
+    forAll { application: Application =>
+      val emptyScopesApp = application.withEmptyScopes
 
         deleteAll().futureValue
         insert(emptyScopesApp).futureValue
@@ -309,11 +326,10 @@ class ApplicationsIntegrationSpec
         storedApplications.size shouldBe 1
         val storedApplication = storedApplications.head
 
-        storedApplication.environments.secondary.scopes.map(_.status).toSet shouldBe Set(Approved)
-        storedApplication.environments.primary.scopes.map(_.status).toSet shouldBe Set(Pending)
-      }
+      storedApplication.environments.primary.scopes.map(_.status).toSet shouldBe Set(Pending)
     }
   }
+}
 
   "GET pending scopes" should {
     "respond with a 200 and a list applications that have at least one primary scope with status of pending" in {

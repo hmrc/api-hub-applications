@@ -32,11 +32,11 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ApplicationsController @Inject() (identify: IdentifierAction,
-                                        cc: ControllerComponents,
-                                        applicationsService: ApplicationsService,
-                                        crypto: ApplicationCrypto
-                                       ) (implicit ec: ExecutionContext)
+class ApplicationsController @Inject()(identify: IdentifierAction,
+                                       cc: ControllerComponents,
+                                       applicationsService: ApplicationsService,
+                                       crypto: ApplicationCrypto
+                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
   def registerApplication(): Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -80,9 +80,14 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
       jsReq.validate[Seq[NewScope]] match {
         case JsSuccess(scopes, _) =>
           logger.info(s"Adding scopes ($scopes) to application ID: $id")
-          applicationsService.addScopes(id, scopes).map {
-            case true => NoContent
-            case false => NotFound
+          scopes match {
+            case s if s.size > 1 => Future.successful(NotImplemented)
+            case s if s.isEmpty => Future.successful(BadRequest)
+            case _ => applicationsService.addScope(id, scopes.head).map {
+              case Right(true) => NoContent
+              case Right(false) => NotFound
+              case _ => BadGateway
+            }
           }
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
@@ -126,11 +131,10 @@ class ApplicationsController @Inject() (identify: IdentifierAction,
       logger.info(s"Creating primary secret for application ID: $id")
       val eventualExceptionOrSecret = applicationsService.createPrimarySecret(id)
       eventualExceptionOrSecret.map {
-          case Right(secret) => Ok(Json.toJson(secret))
-          case Left(_:IdmsException) => BadGateway
-          case Left(_:ApplicationNotFoundException) => NotFound
-          case Left(_:ApplicationsException) => BadRequest
+        case Right(secret) => Ok(Json.toJson(secret))
+        case Left(_: IdmsException) => BadGateway
+        case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: ApplicationsException) => BadRequest
       }
   }
-
 }
