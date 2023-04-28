@@ -486,15 +486,6 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       val scopeName = "test-scope-1"
 
-      val envs = Environments(
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty)
-      )
-
       val testAppId = "test-app-id"
       val app = Application(
         id = Some(testAppId),
@@ -503,7 +494,7 @@ class ApplicationsServiceSpec
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = envs
+        environments = Environments()
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
