@@ -121,7 +121,7 @@ class IdmsConnectorImpl @Inject()(
     httpClient.put(url)
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
-        case Right(_) => Right({})
+        case Right(_) => Right(())
         case Left(e) if e.statusCode == 404 =>
           val message = s"Client not found: clientId=$clientId"
           logger.error(message, e)

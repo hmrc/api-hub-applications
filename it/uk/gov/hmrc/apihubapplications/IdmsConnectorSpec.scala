@@ -244,7 +244,6 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return true" in {
       forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
-          //http://localhost:6001           /primary/identity/clients/test-client-id/client-scopes/test-scope-id'
           put(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .willReturn(
               aResponse()

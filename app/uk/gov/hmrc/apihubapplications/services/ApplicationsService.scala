@@ -76,8 +76,7 @@ class ApplicationsService @Inject()(
 
   def getApplicationsWithPendingScope(): Future[Seq[Application]] = findAll().map(_.filter(_.hasProdPendingScope))
 
-  def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Boolean] = {
-    // If newScope.exists(primary) then call repository update method else just return true
+  private def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Boolean] = {
     if (newScope.environments.exists(e => e.equals(Primary))) {
       val applicationWithNewPrimaryScope = application.addScopes(Primary, Seq(newScope.name)).copy(lastUpdated = LocalDateTime.now(clock))
       repository.update(applicationWithNewPrimaryScope)
@@ -86,8 +85,7 @@ class ApplicationsService @Inject()(
     }
   }
 
-  def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    // If newScope.exists(secondary) then call IDMS connector else return true
+  private def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     if (newScope.environments.exists(e => e.equals(Secondary))) {
       qaTechDeliveryValidSecondaryCredential(application) match {
         case Some(credential) => idmsConnector.addClientScope(Secondary, credential.clientId, newScope.name)
@@ -95,7 +93,7 @@ class ApplicationsService @Inject()(
           Future.successful(Left(ApplicationBadException(s"Application ${application.id} has invalid primary credentials.")))
       }
     } else {
-      Future.successful(Right({}))
+      Future.successful(Right(()))
     }
   }
   def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] =

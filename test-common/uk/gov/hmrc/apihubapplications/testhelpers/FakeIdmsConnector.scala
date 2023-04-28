@@ -39,7 +39,7 @@ class FakeIdmsConnector extends IdmsConnector {
   }
 
   override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
-    Future.successful(Right({}))
+    Future.successful(Right(()))
   }
 }
 

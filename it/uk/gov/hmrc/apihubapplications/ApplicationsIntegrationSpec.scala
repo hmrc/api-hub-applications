@@ -29,7 +29,7 @@ import play.api.libs.ws.{EmptyBody, WSClient}
 import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.{ApplicationLensOps, applicationEnvironments}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, Secret}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus

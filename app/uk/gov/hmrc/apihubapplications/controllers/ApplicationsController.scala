@@ -80,7 +80,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case JsSuccess(scopes, _) =>
           scopes match {
             case s if s.size > 1 => Future.successful(NotImplemented)
-            case s if s.isEmpty => Future.successful(NotFound)
+            case s if s.isEmpty => Future.successful(BadRequest)
             case _ => applicationsService.addScope(id, scopes.head).map {
               case Right(true) => NoContent
               case Right(false) => NotFound
