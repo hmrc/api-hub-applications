@@ -391,8 +391,8 @@ class ApplicationsIntegrationSpec
       forAll { (application: Application) =>
         deleteAll().futureValue
 
-        val appWithPendingProdScope = application.withEmptyScopes.withPrimaryApprovedScopes
-        insert(appWithPendingProdScope).futureValue
+        val appWithPendingPrimaryScope = application.withEmptyScopes.withPrimaryApprovedScopes
+        insert(appWithPendingPrimaryScope).futureValue
 
         val response =
           wsClient
