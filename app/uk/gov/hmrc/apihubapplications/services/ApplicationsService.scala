@@ -33,10 +33,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsService @Inject()(
-  repository: ApplicationsRepository,
-  clock: Clock,
-  idmsConnector: IdmsConnector
-)(implicit ec: ExecutionContext) extends Logging{
+                                     repository: ApplicationsRepository,
+                                     clock: Clock,
+                                     idmsConnector: IdmsConnector
+                                   )(implicit ec: ExecutionContext) extends Logging {
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
     Future.sequence(
@@ -85,29 +85,53 @@ class ApplicationsService @Inject()(
 
   def getApplicationsWithPendingScope(): Future[Seq[Application]] = findAll().map(_.filter(_.hasProdPendingScope))
 
-  def addScopes(applicationId: String, newScopes: Seq[NewScope]): Future[Boolean] =
+  private def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Boolean] = {
+    if (newScope.environments.exists(e => e.equals(Primary))) {
+      val applicationWithNewPrimaryScope = application.addScopes(Primary, Seq(newScope.name)).copy(lastUpdated = LocalDateTime.now(clock))
+      repository.update(applicationWithNewPrimaryScope)
+    } else {
+      Future.successful(true)
+    }
+  }
+
+  private def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    if (newScope.environments.exists(e => e.equals(Secondary))) {
+      qaTechDeliveryValidSecondaryCredential(application) match {
+        case Some(credential) => idmsConnector.addClientScope(Secondary, credential.clientId, newScope.name)
+        case _ =>
+          Future.successful(Left(ApplicationBadException(s"Application ${application.id} has invalid primary credentials.")))
+      }
+    } else {
+      Future.successful(Right(()))
+    }
+  }
+  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] =
     repository.findById(applicationId).flatMap {
       case Some(application) =>
-        val appWithNewScopes = newScopes.foldLeft[Application](application)((outerApp, newScope) => {
-          newScope.environments.foldLeft[Application](outerApp)((innerApp, envName) =>
-            innerApp.addScopes(envName, Seq(newScope.name))
-          )
-        }).copy(lastUpdated = LocalDateTime.now(clock))
+        val repositoryUpdate = doRepositoryUpdate(application, newScope)
+        val idmsUpdate = doIdmsUpdate(application, newScope)
 
-        repository.update(appWithNewScopes)
-      case None => Future.successful(false)
+        for {
+          repositoryUpdated <- repositoryUpdate
+          idmsUpdated <- idmsUpdate
+        } yield (repositoryUpdated, idmsUpdated) match {
+          case (true, Right(_)) => Right(true)
+          case (_, Left(e)) => Left(e)
+          case _ => Right(false)
+        }
+      case None => Future.successful(Right(false))
     }
 
-  def setPendingProdScopeStatusToApproved(applicationId: String, scopeName:String): Future[Option[Boolean]] = {
+  def setPendingProdScopeStatusToApproved(applicationId: String, scopeName: String): Future[Option[Boolean]] = {
     repository.findById(applicationId).flatMap {
-      case Some(application)  =>
-        if (application.getProdScopes.exists(scope => scope.name == scopeName && scope.status == Pending)){
+      case Some(application) =>
+        if (application.getProdScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
           val updatedApp: Application = application.setProdScopes(
             application.environments.prod.scopes.map(scope =>
               if (scope.name == scopeName) scope.copy(status = Approved) else scope
             )).copy(lastUpdated = LocalDateTime.now(clock))
           repository.update(updatedApp).map(Some(_))
-        }else{
+        } else {
           Future.successful(Some(false))
         }
 
@@ -134,8 +158,12 @@ class ApplicationsService @Inject()(
           case _ =>
             Future.successful(Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials.")))
         }
-      case None => Future(Left(ApplicationNotFoundException(s"Can't find application with id $applicationId")))
+      case None => Future(Left(applicationNotFound(applicationId)))
     }
+  }
+
+  private def applicationNotFound(applicationId: String) = {
+    ApplicationNotFoundException(s"Can't find application with id $applicationId")
   }
 
   private def qaTechDeliveryValidPrimaryCredential(application: Application): Option[Credential] = {
@@ -148,4 +176,12 @@ class ApplicationsService @Inject()(
     }
   }
 
+  private def qaTechDeliveryValidSecondaryCredential(application: Application): Option[Credential] = {
+    if (application.getSecondaryCredentials.length != 1) {
+      None
+    }
+    else {
+      application.getSecondaryCredentials.headOption.filter(_.clientId != null)
+    }
+  }
 }

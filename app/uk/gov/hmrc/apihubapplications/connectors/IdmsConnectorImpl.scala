@@ -44,9 +44,7 @@ class IdmsConnectorImpl @Inject()(
       .map(Right(_))
       .recover {
         case throwable =>
-          val message = "Error calling IDMS"
-          logger.error(message, throwable)
-          Left(IdmsException(message, throwable))
+          idmsError(throwable)
       }
   }
 
@@ -63,15 +61,11 @@ class IdmsConnectorImpl @Inject()(
           logger.error(message, e)
           Left(IdmsException(message))
         case Left(e) =>
-          val message = s"Unexpected response ${e.statusCode} returned from IDMS"
-          logger.error(message, e)
-          Left(IdmsException(message))
+          badIdmsStatus(e)
       }
       .recover {
         case throwable =>
-          val message = "Error calling IDMS"
-          logger.error(message, throwable)
-          Left(IdmsException(message, throwable))
+          idmsError(throwable)
       }
   }
 
@@ -100,15 +94,44 @@ class IdmsConnectorImpl @Inject()(
           logger.error(message, e)
           Left(IdmsException(message))
         case Left(e) =>
-          val message = s"Unexpected response ${e.statusCode} returned from IDMS"
-          logger.error(message, e)
-          Left(IdmsException(message))
+          badIdmsStatus(e)
       }
       .recover {
         case throwable =>
-          val message = "Error calling IDMS"
-          logger.error(message, throwable)
-          Left(IdmsException(message, throwable))
+          idmsError(throwable)
+      }
+
+  }
+
+  private def idmsError(throwable: Throwable) = {
+    val message = "Error calling IDMS"
+    logger.error(message, throwable)
+    Left(IdmsException(message, throwable))
+  }
+
+  private def badIdmsStatus(e: UpstreamErrorResponse) = {
+    val message = s"Unexpected response ${e.statusCode} returned from IDMS"
+    logger.error(message, e)
+    Left(IdmsException(message))
+  }
+
+  override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+    val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
+
+    httpClient.put(url)
+      .execute[Either[UpstreamErrorResponse, Unit]]
+      .map {
+        case Right(_) => Right(())
+        case Left(e) if e.statusCode == 404 =>
+          val message = s"Client not found: clientId=$clientId"
+          logger.error(message, e)
+          Left(IdmsException(message))
+        case Left(e) =>
+          badIdmsStatus(e)
+      }
+      .recover {
+        case throwable =>
+          idmsError(throwable)
       }
 
   }

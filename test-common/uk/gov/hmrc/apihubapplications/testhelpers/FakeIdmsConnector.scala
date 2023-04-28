@@ -38,6 +38,10 @@ class FakeIdmsConnector extends IdmsConnector {
     Future.successful(Right(Secret(fakeSecret)))
   }
 
+  override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+    Future.successful(Right(()))
+  }
+
   override def fetchClientScopes(
     environmentName: EnvironmentName,
     clientId: String

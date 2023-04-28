@@ -249,15 +249,17 @@ class ApplicationsIntegrationSpec
 
 "POST to add scopes to environments of an application" should {
   "respond with a 204 No Content" in {
-    forAll { (application: Application, newScopes: Seq[NewScope]) =>
+    forAll { (application: Application) =>
+
+      val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", None, None)))
       deleteAll().futureValue
-      insert(application).futureValue
+      insert(applicationWithSecondaryCredentials).futureValue
 
       val response =
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
           .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(newScopes))
+          .post(Json.toJson(Seq(NewScope("new scope", Seq(Primary)))))
           .futureValue
 
       response.status shouldBe 204
@@ -265,9 +267,10 @@ class ApplicationsIntegrationSpec
   }
 
   "respond with a 404 NotFound if the application does not exist" in {
-    forAll { (application: Application, newScopes: Seq[NewScope]) =>
+    forAll { (application: Application) =>
       deleteAll().futureValue
 
+      val newScopes = Seq(NewScope("test-scope", Seq(Primary)))
       val response =
         wsClient
           .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
@@ -305,7 +308,7 @@ class ApplicationsIntegrationSpec
     }
   }
 
-  "set status of scopes to PENDING in primary environment and to APPROVED in secondary environments" in {
+  "set status of scopes to PENDING in primary environment" in {
     forAll { application: Application =>
       val emptyScopesApp = application.withEmptyScopes
 
@@ -324,7 +327,6 @@ class ApplicationsIntegrationSpec
       storedApplications.size shouldBe 1
       val storedApplication = storedApplications.head
 
-      storedApplication.environments.secondary.scopes.map(_.status).toSet shouldBe Set(Approved)
       storedApplication.environments.primary.scopes.map(_.status).toSet shouldBe Set(Pending)
     }
   }
