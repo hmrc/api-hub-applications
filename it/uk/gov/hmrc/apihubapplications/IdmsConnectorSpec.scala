@@ -385,15 +385,20 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
         "microservice.services.idms-primary.host" -> wireMockSupport.wireMockHost,
         "microservice.services.idms-primary.port" -> wireMockSupport.wireMockPort,
         "microservice.services.idms-primary.path" -> "primary",
+        "microservice.services.idms-primary.clientId" -> primaryClientId,
+        "microservice.services.idms-primary.secret" -> "primary-secret",
         "microservice.services.idms-secondary.host" -> wireMockSupport.wireMockHost,
         "microservice.services.idms-secondary.port" -> wireMockSupport.wireMockPort,
-        "microservice.services.idms-secondary.path" -> "secondary"
+        "microservice.services.idms-secondary.path" -> "secondary",
+        "microservice.services.idms-secondary.clientId" -> "secondary-client-id",
+        "microservice.services.idms-secondary.secret" -> "secondary-secret"
       ))
     )
 
     new IdmsConnectorImpl(servicesConfig, httpClientV2)
   }
 
+  val primaryClientId: String = "primary-client-id"
   val testClientId: String = "test-client-id"
   val testScopeId: String = "test-scope-id"
   val testSecret: Secret = Secret("test-secret")
