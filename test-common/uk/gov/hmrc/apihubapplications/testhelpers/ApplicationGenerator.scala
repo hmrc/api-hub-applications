@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 
 import org.scalacheck.{Arbitrary, Gen}
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 
 import java.time.{Instant, LocalDateTime, ZoneId}
 
@@ -80,7 +81,7 @@ trait ApplicationGenerator {
     } yield Environments(primary,secondary)
   }
 
-  implicit val applicationGenerator: Arbitrary[Application] = Arbitrary {
+  implicit val applicationArbitrary: Arbitrary[Application] = Arbitrary {
     for {
       appId <- appIdGenerator
       name <- Gen.alphaStr
@@ -100,6 +101,8 @@ trait ApplicationGenerator {
       environments
     )
   }
+
+  val applicationGenerator: Gen[Application] = applicationArbitrary.arbitrary
 
   implicit val newApplicationGenerator: Arbitrary[NewApplication] =
     Arbitrary {
@@ -127,5 +130,25 @@ trait ApplicationGenerator {
       Gen.listOf(newScopeGenerator)
     }
 
+}
+
+object ApplicationGenerator extends ApplicationGenerator {
+
+  implicit class ApplicationGenOps(gen: Gen[Application]) {
+
+    def withoutPrimaryCredentials(): Gen[Application] = {
+      gen.map(_.setPrimaryCredentials(Seq.empty))
+    }
+
+    def withPrimaryCredentialWithoutSecret(): Gen[Application] = {
+      gen.flatMap {
+        application =>
+          for {
+            existing <- Gen.const(application)
+            credential <- credentialGenerator
+          } yield existing.setPrimaryCredentials(Seq(credential.copy(clientSecret = None, secretFragment = None)))
+      }
+    }
+  }
 
 }
