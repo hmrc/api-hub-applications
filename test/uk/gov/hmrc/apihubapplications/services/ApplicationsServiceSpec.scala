@@ -26,7 +26,7 @@ import org.scalatest.{EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
@@ -504,14 +504,16 @@ class ApplicationsServiceSpec
     }
   }
 
-  "set scope status to APPROVED on primary when current scope status is PENDING" - {
-    "must set scopes for an application" in {
+  "Approving primary scope" - {
+    "must update idms and delete primary scope" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
+      val testScope = "test-scope-1"
+      val testClientId = "test-client-id"
       val envs = Environments(
-        Environment(Seq(Scope("test-scope-1", Pending)), Seq.empty),
+        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, None))),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty),
@@ -530,17 +532,59 @@ class ApplicationsServiceSpec
         environments = envs
       )
 
-      val updatedApp = app.setPrimaryScopes(Seq(Scope("test-scope-1", Approved)))
+      val updatedApp = app.setPrimaryScopes(Seq())
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope) )(any())).thenReturn(Future(Right(())))
 
-      service.setPendingPrimaryScopeStatusToApproved(testAppId, "test-scope-1") map {
-        actual =>
-          actual mustBe Some(true)
+      service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier())  map {
+        actual => {
+          verify(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope) )(any()))
+          actual mustBe Right(())
+        }
       }
     }
 
-    "must return None if application does not exist" in {
+    "must not delete primary scope if idms update fails" in {
+      val repository = mock[ApplicationsRepository]
+      val idmsConnector = mock[IdmsConnector]
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      val testScope = "test-scope-1"
+      val testClientId = "test-client-id"
+      val envs = Environments(
+        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, None))),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty),
+        Environment(Seq.empty, Seq.empty)
+      )
+
+      val testAppId = "test-app-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = testAppId,
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = envs
+      )
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(IdmsException(":("))))
+
+      service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier()) map {
+        actual => {
+          verifyZeroInteractions(repository.update(any()))
+          verify(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any()))
+          actual mustBe Left(IdmsException(":("))
+        }
+      }
+    }
+
+    "must return not found exception if application does not exist" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -548,13 +592,13 @@ class ApplicationsServiceSpec
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
 
-      service.setPendingPrimaryScopeStatusToApproved(testAppId, "test-name-2") map {
+      service.approvePrimaryScope(testAppId, "test-name-2")(HeaderCarrier())  map {
         actual =>
-          actual mustBe None
+          actual mustBe Left(ApplicationNotFoundException(s"Can't find application with id $testAppId"))
       }
     }
 
-    "must return Some(False) when trying to set scope status to APPROVED when scope exists but is not PENDING" in {
+    "must return bad application exception when trying to APPROVE scope when scope exists but is not PENDING" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -583,13 +627,13 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
 
-      service.setPendingPrimaryScopeStatusToApproved(testAppId, scopeName) map {
+      service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Some(false)
+          actual mustBe Left(ApplicationBadException(s"Application $testAppId has invalid primary scope."))
       }
     }
 
-    "must return Some(False) when scope does not exist" in {
+    "must return bad application exception when scope does not exist" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -608,9 +652,9 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
 
-      service.setPendingPrimaryScopeStatusToApproved(testAppId, scopeName) map {
+      service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier())  map {
         actual =>
-          actual mustBe Some(false)
+          actual mustBe Left(ApplicationBadException(s"Application $testAppId has invalid primary scope."))
       }
     }
 
