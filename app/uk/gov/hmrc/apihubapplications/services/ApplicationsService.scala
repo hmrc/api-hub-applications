@@ -142,7 +142,7 @@ class ApplicationsService @Inject()(
     repository.findById(applicationId).flatMap {
       case Some(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
         case Right(_) => removePrimaryScope(application, scopeName).flatMap {
-          case true => Future.successful(Right())
+          case true => Future.successful(Right(()))
           case false => Future.successful(Left(ApplicationBadException(s"Could not update application id $applicationId")))
         }
         case Left(e) => Future.successful(Left(e))

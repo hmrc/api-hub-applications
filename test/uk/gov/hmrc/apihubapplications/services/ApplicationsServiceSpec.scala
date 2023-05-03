@@ -539,7 +539,7 @@ class ApplicationsServiceSpec
 
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier())  map {
         actual => {
-          verify(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope) )(any()))
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope) )(any())
           actual mustBe Right(())
         }
       }
@@ -578,7 +578,7 @@ class ApplicationsServiceSpec
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier()) map {
         actual => {
           verifyZeroInteractions(repository.update(any()))
-          verify(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any()))
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())
           actual mustBe Left(IdmsException(":("))
         }
       }
