@@ -121,13 +121,14 @@ class ApplicationsService @Inject()(
     }
   }
 
-  def removePrimaryScope(application: Application, scopeId: String): Future[Boolean] = {
-    val prunedScopes = application.getPrimaryScopes.filterNot(scope => scope.name == scopeId)
-    val prunedApplication = application.setPrimaryScopes(prunedScopes)
-    repository.update(prunedApplication)
-  }
 
   def approvePrimaryScope(applicationId: String, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+
+    def removePrimaryScope(application: Application, scopeId: String): Future[Boolean] = {
+      val prunedScopes = application.getPrimaryScopes.filterNot(scope => scope.name == scopeId)
+      val prunedApplication = application.setPrimaryScopes(prunedScopes)
+      repository.update(prunedApplication)
+    }
 
     def idmsApprovePrimaryScope(application: Application, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
