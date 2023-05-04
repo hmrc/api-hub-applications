@@ -514,10 +514,6 @@ class ApplicationsServiceSpec
       val testClientId = "test-client-id"
       val envs = Environments(
         Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, None))),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty)
       )
 
@@ -554,10 +550,6 @@ class ApplicationsServiceSpec
       val testClientId = "test-client-id"
       val envs = Environments(
         Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, None))),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty)
       )
 
@@ -606,10 +598,6 @@ class ApplicationsServiceSpec
 
       val envs = Environments(
         Environment(Seq(Scope("test-scope-1", Denied)), Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
-        Environment(Seq.empty, Seq.empty),
         Environment(Seq.empty, Seq.empty)
       )
 
@@ -686,12 +674,10 @@ class ApplicationsServiceSpec
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2),
         environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, clientSecret = None, secretFragment = None))),
-          secondary = Environment(),
-          dev = Environment(),
-          test = Environment(),
-          preProd = Environment(),
-          prod = Environment())
+          secondary = Environment()
+        )
       )
+
       when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
       when(repository.update(any())).thenReturn(Future.successful(true))
 
@@ -729,11 +715,8 @@ class ApplicationsServiceSpec
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2),
         environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, clientSecret = None, secretFragment = None))),
-          secondary = Environment(),
-          dev = Environment(),
-          test = Environment(),
-          preProd = Environment(),
-          prod = Environment())
+          secondary = Environment()
+        )
       )
       when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
 
@@ -799,11 +782,8 @@ class ApplicationsServiceSpec
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(),
         environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = null, clientSecret = None, secretFragment = None))),
-          secondary = Environment(),
-          dev = Environment(),
-          test = Environment(),
-          preProd = Environment(),
-          prod = Environment())
+          secondary = Environment()
+        )
       )
       when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
