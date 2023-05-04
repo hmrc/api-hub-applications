@@ -39,11 +39,8 @@ class ApplicationsRepositorySpec
            |"createdBy":{"email":"test1@test.com"},
            |"environments":{
            |  "primary":{"scopes":[],"credentials":[]},
-           |  "secondary":{"scopes":[],"credentials":[]},
-           |  "dev":{"scopes":[],"credentials":[]},
-           |  "test":{"scopes":[],"credentials":[]},
-           |  "preProd":{"scopes":[],"credentials":[]},
-           |  "prod":{"scopes":[],"credentials":[]}},
+           |  "secondary":{"scopes":[],"credentials":[]}
+           |},
            |"created":"${now.toString}",
            |"name":"test-app-1",
            |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},
@@ -79,17 +76,17 @@ class ApplicationsRepositorySpec
     }
 
     "must successfully serialise a collection of new scopes" in {
-      val newScopes = Seq(NewScope("scope1", Seq(Dev,Test)), NewScope("scope2", Seq(Prod)))
+      val newScopes = Seq(NewScope("scope1", Seq(Primary, Secondary)), NewScope("scope2", Seq(Primary)))
       val result = Json.toJson(newScopes)
       (result \ 0 \"name") mustBe JsDefined(JsString("scope1"))
-      (result \ 0 \"environments" \ 0) mustBe JsDefined(JsString("dev"))
-      (result \ 0 \"environments" \ 1) mustBe JsDefined(JsString("test"))
+      (result \ 0 \"environments" \ 0) mustBe JsDefined(JsString("primary"))
+      (result \ 0 \"environments" \ 1) mustBe JsDefined(JsString("secondary"))
       (result \ 1 \"name") mustBe JsDefined(JsString("scope2"))
-      (result \ 1 \"environments" \ 0) mustBe JsDefined(JsString("prod"))
+      (result \ 1 \"environments" \ 0) mustBe JsDefined(JsString("primary"))
     }
 
     "must successfully de-serialise a collection of new scopes" in {
-      val newScopeJson: JsValue = Json.parse(s"""[{"name":"scope1","environments":["dev","test"]},{"name":"scope2","environments":["prod"]}]""".stripMargin)
+      val newScopeJson: JsValue = Json.parse(s"""[{"name":"scope1","environments":["primary","secondary"]},{"name":"scope2","environments":["primary"]}]""".stripMargin)
       val result = newScopeJson.validate[Seq[NewScope]]
       result mustBe a[JsSuccess[_]]
     }

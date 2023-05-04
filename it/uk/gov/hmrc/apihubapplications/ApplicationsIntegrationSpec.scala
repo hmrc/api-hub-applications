@@ -133,10 +133,6 @@ class ApplicationsIntegrationSpec
         storedApplication.createdBy shouldBe newApplication.createdBy
         storedApplication.created shouldBe storedApplication.lastUpdated
         storedApplication.teamMembers shouldBe expectedTeamMembers
-        storedApplication.environments.dev shouldBe Environment(Seq.empty, Seq.empty)
-        storedApplication.environments.test shouldBe Environment(Seq.empty, Seq.empty)
-        storedApplication.environments.preProd shouldBe Environment(Seq.empty, Seq.empty)
-        storedApplication.environments.prod shouldBe Environment(Seq.empty, Seq.empty)
       }
     }
   }

@@ -28,19 +28,6 @@ object ApplicationTestLenses {
       application
         .setPrimaryScopes(Seq.empty)
         .setSecondaryScopes(Seq.empty)
-        .setDevScopes(Seq.empty).setTestScopes(Seq.empty).setPreProdScopes(Seq.empty).setProdScopes(Seq.empty)
-    }
-
-    def withTestPendingScopes: Application = {
-      application.addTestScope(Scope(pendingScopeName, Pending))
-    }
-
-    def withProdPendingScopes: Application = {
-      application.addProdScope(Scope(pendingScopeName, Pending))
-    }
-
-    def withProdApprovedScopes: Application = {
-      application.addProdScope(Scope(approvedScopeName, Approved))
     }
 
     def withSecondaryPendingScopes: Application = {

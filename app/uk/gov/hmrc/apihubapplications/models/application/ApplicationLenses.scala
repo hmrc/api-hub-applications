@@ -38,54 +38,6 @@ object ApplicationLenses {
       set = (environment, credentials) => environment.copy(credentials = credentials)
     )
 
-  val environmentProd: Lens[Environments, Environment] =
-    Lens[Environments, Environment](
-      get = _.prod,
-      set = (environments, prod) => environments.copy(prod = prod)
-    )
-
-  val applicationProd: Lens[Application, Environment] =
-    Lens.compose(applicationEnvironments, environmentProd)
-
-  val applicationProdScopes: Lens[Application, Seq[Scope]] =
-    Lens.compose(applicationProd, environmentScopes)
-
-  val environmentPreProd: Lens[Environments, Environment] =
-    Lens[Environments, Environment](
-      get = _.preProd,
-      set = (environments, preProd) => environments.copy(preProd = preProd)
-    )
-
-  val applicationPreProd: Lens[Application, Environment] =
-    Lens.compose(applicationEnvironments, environmentPreProd)
-
-  val applicationPreProdScopes: Lens[Application, Seq[Scope]] =
-    Lens.compose(applicationPreProd, environmentScopes)
-
-  val environmentTest: Lens[Environments, Environment] =
-    Lens[Environments, Environment](
-      get = _.test,
-      set = (environments, test) => environments.copy(test = test)
-    )
-
-  val applicationTest: Lens[Application, Environment] =
-    Lens.compose(applicationEnvironments, environmentTest)
-
-  val applicationTestScopes: Lens[Application, Seq[Scope]] =
-    Lens.compose(applicationTest, environmentScopes)
-
-  val environmentDev: Lens[Environments, Environment] =
-    Lens[Environments, Environment](
-      get = _.dev,
-      set = (environments, dev) => environments.copy(dev = dev)
-    )
-
-  val applicationDev: Lens[Application, Environment] =
-    Lens.compose(applicationEnvironments, environmentDev)
-
-  val applicationDevScopes: Lens[Application, Seq[Scope]] =
-    Lens.compose(applicationDev, environmentScopes)
-
   val environmentPrimary: Lens[Environments, Environment] =
     Lens[Environments, Environment](
       get = _.primary,
@@ -128,10 +80,6 @@ object ApplicationLenses {
       environment match {
         case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_, Pending))).distinct)
         case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case Dev => setDevScopes((getDevScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case Test => setTestScopes((getTestScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case PreProd => setPreProdScopes((getPreProdScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case Prod => setProdScopes((getProdScopes ++ scopes.map(Scope(_, Pending))).distinct)
       }
 
     def getPrimaryScopes: Seq[Scope] =
@@ -184,58 +132,6 @@ object ApplicationLenses {
       applicationSecondaryCredentials.set(
         application,
         applicationSecondaryCredentials.get(application) :+ credential
-      )
-
-    def getProdScopes: Seq[Scope] =
-      applicationProdScopes.get(application)
-
-    def setProdScopes(scopes: Seq[Scope]): Application =
-      applicationProdScopes.set(application, scopes)
-
-    def addProdScope(scope: Scope): Application =
-      applicationProdScopes.set(
-        application,
-        applicationProdScopes.get(application) :+ scope
-      )
-
-    def hasProdPendingScope: Boolean =
-      applicationProdScopes.get(application)
-        .exists(scope => scope.status == Pending)
-
-    def getPreProdScopes: Seq[Scope] =
-      applicationPreProdScopes.get(application)
-
-    def setPreProdScopes(scopes: Seq[Scope]): Application =
-      applicationPreProdScopes.set(application, scopes)
-
-    def addPreProdScope(scope: Scope): Application =
-      applicationPreProdScopes.set(
-        application,
-        applicationPreProdScopes.get(application) :+ scope
-      )
-
-    def getTestScopes: Seq[Scope] =
-      applicationTestScopes.get(application)
-
-    def setTestScopes(scopes: Seq[Scope]): Application =
-      applicationTestScopes.set(application, scopes)
-
-    def addTestScope(scope: Scope): Application =
-      applicationTestScopes.set(
-        application,
-        applicationTestScopes.get(application) :+ scope
-      )
-
-    def getDevScopes: Seq[Scope] =
-      applicationDevScopes.get(application)
-
-    def setDevScopes(scopes: Seq[Scope]): Application =
-      applicationDevScopes.set(application, scopes)
-
-    def addDevScope(scope: Scope): Application =
-      applicationDevScopes.set(
-        application,
-        applicationDevScopes.get(application) :+ scope
       )
 
     def hasTeamMember(email: String): Boolean =
