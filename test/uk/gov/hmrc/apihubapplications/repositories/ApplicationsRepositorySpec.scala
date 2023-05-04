@@ -39,11 +39,8 @@ class ApplicationsRepositorySpec
            |"createdBy":{"email":"test1@test.com"},
            |"environments":{
            |  "primary":{"scopes":[],"credentials":[]},
-           |  "secondary":{"scopes":[],"credentials":[]},
-           |  "dev":{"scopes":[],"credentials":[]},
-           |  "test":{"scopes":[],"credentials":[]},
-           |  "preProd":{"scopes":[],"credentials":[]},
-           |  "prod":{"scopes":[],"credentials":[]}},
+           |  "secondary":{"scopes":[],"credentials":[]}
+           |},
            |"created":"${now.toString}",
            |"name":"test-app-1",
            |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},

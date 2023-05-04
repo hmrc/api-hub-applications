@@ -185,14 +185,6 @@ components:
           $ref: "#/components/schemas/Environment"
         secondary:
           $ref: "#/components/schemas/Environment"
-        dev:
-          $ref: "#/components/schemas/Environment"
-        test:
-          $ref: "#/components/schemas/Environment"
-        preProd:
-          $ref: "#/components/schemas/Environment"
-        prod:
-          $ref: "#/components/schemas/Environment"
     Environment:
       type: object
       properties:
@@ -297,11 +289,9 @@ components:
       schema:
         type: string
         enum:
-          - "dev"
-          - "test"
-          - "preProd"
-          - "prod"
-        example: "prod"
+          - "primary"
+          - "secondary"
+        example: "primary"
     scopeName:
       name: scopename
       in: path
@@ -327,25 +317,19 @@ components:
           teamMembers:
             - email: john.smith@hmrc.gov.uk
           environments:
-            dev:
-              scopes:
-                - name: read:address
-                  status: APPROVED
-                - name: write:address
-                  status: APPROVED
-              credentials: [ ]
-            test:
-              scopes: [ ]
-              credentials: [ ]
-            preProd:
-              scopes: [ ]
-              credentials: [ ]
-            prod:
+            primary:
               scopes:
                 - name: read:address
                   status: APPROVED
                 - name: write:address
                   status: PENDING
+              credentials: [ ]
+            secondary:
+              scopes:
+                - name: read:address
+                  status: APPROVED
+                - name: write:address
+                  status: APPROVED
               credentials: [ ]
         - id: 63e367ee896eeb2e9fccb581
           name: keying-service
@@ -355,16 +339,10 @@ components:
           teamMembers:
             - email: judy.adams@digital.hmrc.gov.uk
           environments:
-            dev:
+            primary:
               scopes: [ ]
               credentials: [ ]
-            test:
-              scopes: [ ]
-              credentials: [ ]
-            preProd:
-              scopes: [ ]
-              credentials: [ ]
-            prod:
+            secondary:
               scopes: [ ]
               credentials: [ ]
     applicationsWithPendingProdScopes:
@@ -378,25 +356,19 @@ components:
         teamMembers:
           - email: john.smith@hmrc.gov.uk
         environments:
-          dev:
-            scopes:
-              - name: read:address
-                status: APPROVED
-              - name: write:address
-                status: APPROVED
-            credentials: [ ]
-          test:
-            scopes: [ ]
-            credentials: [ ]
-          preProd:
-            scopes: [ ]
-            credentials: [ ]
-          prod:
+          primary:
             scopes:
               - name: read:address
                 status: APPROVED
               - name: write:address
                 status: PENDING
+            credentials: [ ]
+          secondary:
+            scopes:
+              - name: read:address
+                status: APPROVED
+              - name: write:address
+                status: APPROVED
             credentials: [ ]
       - id: 63e367ee896eeb2e9fccb581
         name: keying-service
@@ -406,21 +378,15 @@ components:
         teamMembers:
           - email: judy.adams@digital.hmrc.gov.uk
         environments:
-          dev:
-            scopes: [ ]
-            credentials: [ ]
-          test:
-            scopes:
-              - name: read:address
-                status: APPROVED
-            credentials: [ ]
-          preProd:
-            scopes: [ ]
-            credentials: [ ]
-          prod:
+          primary:
             scopes:
               - name: write:address
                 status: PENDING
+            credentials: [ ]
+          secondary:
+            scopes:
+              - name: read:address
+                status: APPROVED
             credentials: [ ]
     emptyListOfApplications:
       summary: An empty list of applications
