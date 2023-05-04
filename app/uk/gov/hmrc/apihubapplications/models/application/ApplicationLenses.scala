@@ -128,10 +128,6 @@ object ApplicationLenses {
       environment match {
         case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_, Pending))).distinct)
         case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case Dev => setDevScopes((getDevScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case Test => setTestScopes((getTestScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case PreProd => setPreProdScopes((getPreProdScopes ++ scopes.map(Scope(_, Approved))).distinct)
-        case Prod => setProdScopes((getProdScopes ++ scopes.map(Scope(_, Pending))).distinct)
       }
 
     def getPrimaryScopes: Seq[Scope] =
