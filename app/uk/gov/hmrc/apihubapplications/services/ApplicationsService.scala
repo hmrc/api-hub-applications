@@ -80,27 +80,30 @@ class ApplicationsService @Inject()(
 
   def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
 
-  private def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Boolean] = {
-    if (newScope.environments.exists(e => e.equals(Primary))) {
-      val applicationWithNewPrimaryScope = application.addScopes(Primary, Seq(newScope.name)).copy(lastUpdated = LocalDateTime.now(clock))
-      repository.update(applicationWithNewPrimaryScope)
-    } else {
-      Future.successful(true)
-    }
-  }
 
-  private def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    if (newScope.environments.exists(e => e.equals(Secondary))) {
-      qaTechDeliveryValidSecondaryCredential(application) match {
-        case Some(credential) => idmsConnector.addClientScope(Secondary, credential.clientId, newScope.name)
-        case _ =>
-          Future.successful(Left(ApplicationBadException(s"Application ${application.id} has invalid primary credentials.")))
+  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] = {
+
+    def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Boolean] = {
+      if (newScope.environments.exists(e => e.equals(Primary))) {
+        val applicationWithNewPrimaryScope = application.addScopes(Primary, Seq(newScope.name)).copy(lastUpdated = LocalDateTime.now(clock))
+        repository.update(applicationWithNewPrimaryScope)
+      } else {
+        Future.successful(true)
       }
-    } else {
-      Future.successful(Right(()))
     }
-  }
-  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] =
+
+    def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+      if (newScope.environments.exists(e => e.equals(Secondary))) {
+        qaTechDeliveryValidSecondaryCredential(application) match {
+          case Some(credential) => idmsConnector.addClientScope(Secondary, credential.clientId, newScope.name)
+          case _ =>
+            Future.successful(Left(ApplicationBadException(s"Application ${application.id} has invalid secondary credentials.")))
+        }
+      } else {
+        Future.successful(Right(()))
+      }
+    }
+
     repository.findById(applicationId).flatMap {
       case Some(application) =>
         val repositoryUpdate = doRepositoryUpdate(application, newScope)
@@ -116,21 +119,36 @@ class ApplicationsService @Inject()(
         }
       case None => Future.successful(Right(false))
     }
+  }
 
-  def setPendingPrimaryScopeStatusToApproved(applicationId: String, scopeName:String): Future[Option[Boolean]] = {
+
+  def approvePrimaryScope(applicationId: String, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+
+    def removePrimaryScope(application: Application, scopeId: String): Future[Boolean] = {
+      val prunedScopes = application.getPrimaryScopes.filterNot(scope => scope.name == scopeId)
+      val prunedApplication = application.setPrimaryScopes(prunedScopes)
+      repository.update(prunedApplication)
+    }
+
+    def idmsApprovePrimaryScope(application: Application, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+
+      if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
+        val maybeIdmsResult = qaTechDeliveryValidPrimaryCredential(application).map(credential => idmsConnector.addClientScope(Primary, credential.clientId, scopeName))
+        maybeIdmsResult.getOrElse(Future.successful(Left(ApplicationBadException(s"Application ${application.id.orNull} has invalid primary credentials."))))
+      } else {
+        Future.successful(Left(ApplicationBadException(s"Application ${application.id.orNull} has invalid primary scope.")))
+      }
+    }
+
     repository.findById(applicationId).flatMap {
-      case Some(application)  =>
-        if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
-          val updatedScopes = application.getPrimaryScopes.map {
-            case scope if scope.name == scopeName => scope.copy(status = Approved)
-            case scope => scope
-          }
-          val updatedApp: Application = application.setPrimaryScopes(updatedScopes).copy(lastUpdated = LocalDateTime.now(clock))
-          repository.update(updatedApp).map(Some(_))
-        }else{
-          Future.successful(Some(false))
+      case Some(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
+        case Right(_) => removePrimaryScope(application, scopeName).flatMap {
+          case true => Future.successful(Right(()))
+          case false => Future.successful(Left(ApplicationBadException(s"Could not update application id $applicationId")))
         }
-      case None => Future.successful(None)
+        case Left(e) => Future.successful(Left(e))
+      }
+      case None => Future.successful(Left(applicationNotFound(applicationId)))
     }
   }
 

@@ -366,7 +366,7 @@ class ApplicationsIntegrationSpec
       forAll { (application: Application) =>
         deleteAll().futureValue
 
-        val appWithPendingPrimaryScope = application.withEmptyScopes.withPrimaryPendingScopes.withPrimaryApprovedScopes
+        val appWithPendingPrimaryScope = application.withEmptyScopes.withPrimaryPendingScopes.withPrimaryApprovedScopes.withPrimaryCredentialClientIdOnly
         insert(appWithPendingPrimaryScope).futureValue
 
         val response =

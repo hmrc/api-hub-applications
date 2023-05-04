@@ -102,14 +102,16 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def updatePrimaryScopeStatus(id: String, scopeName: String): Action[JsValue] =
     identify.compose(Action(parse.json)).async {
-      request: Request[JsValue] => {
+      implicit request: Request[JsValue] => {
         val jsReq = request.body
         jsReq.validate[UpdateScopeStatus] match {
           case JsSuccess(UpdateScopeStatus(Approved), _) =>
             logger.info(s"Setting scope $scopeName to ${Approved.toString} on application ID: $id")
-            applicationsService.setPendingPrimaryScopeStatusToApproved(id, scopeName).map {
-              case Some(true) => NoContent
-              case _ => NotFound
+            applicationsService.approvePrimaryScope(id, scopeName).flatMap {
+              case Left(_: ApplicationNotFoundException) => Future.successful(NotFound)
+              case Left(_: ApplicationBadException) => Future.successful(NotFound)
+              case Left(_: IdmsException) => Future.successful(BadGateway)
+              case _ => Future.successful(NoContent)
             }
           case JsSuccess(updateStatus, _) =>
             logger.warn(s"Unsupported status: ${updateStatus.status.toString}")

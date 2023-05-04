@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.idms
 
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 
-class IdmsException(message: String, cause: Throwable) extends ApplicationsException(message, cause)
+case class IdmsException(message: String, cause: Throwable) extends ApplicationsException(message, cause)
 
 object IdmsException {
 
