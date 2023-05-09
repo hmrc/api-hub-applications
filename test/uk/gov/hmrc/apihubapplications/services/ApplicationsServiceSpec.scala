@@ -22,7 +22,7 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.{EitherValues, OptionValues}
+import org.scalatest.{Assertion, EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -505,7 +505,7 @@ class ApplicationsServiceSpec
   }
 
   "Approving primary scope" - {
-    "must update idms and delete primary scope" in {
+    def runTest(secret: Option[String]): Future[Assertion] = {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -513,7 +513,7 @@ class ApplicationsServiceSpec
       val testScope = "test-scope-1"
       val testClientId = "test-client-id"
       val envs = Environments(
-        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, None))),
+        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, secret))),
         Environment(Seq.empty, Seq.empty)
       )
 
@@ -539,6 +539,14 @@ class ApplicationsServiceSpec
           actual mustBe Right(())
         }
       }
+    }
+
+    "must update idms and delete primary scope for a newly created application" in {
+      runTest(None)
+    }
+
+    "must update idms and delete primary scope for a mature application with primary secret" in {
+      runTest(Some("1234"))
     }
 
     "must not delete primary scope if idms update fails" in {
