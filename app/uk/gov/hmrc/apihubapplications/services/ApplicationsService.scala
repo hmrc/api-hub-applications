@@ -155,7 +155,7 @@ class ApplicationsService @Inject()(
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
     repository.findById(applicationId).flatMap {
       case Some(application) =>
-        qaTechDeliveryValidPrimaryCredential(application) match {
+        qaTechDeliveryValidPrimaryCredentialNoSecret(application) match {
           case Some(credential) =>
             idmsConnector.newSecret(Primary, credential.clientId).flatMap {
               case Right(secret) =>
@@ -184,9 +184,13 @@ class ApplicationsService @Inject()(
       None
     }
     else {
-      application.getPrimaryCredentials
-        .headOption.filter(_.secretFragment.isEmpty).filter(_.clientId != null)
+      application.getPrimaryCredentials.headOption.filter(_.clientId != null)
     }
+  }
+
+  private def qaTechDeliveryValidPrimaryCredentialNoSecret(application: Application): Option[Credential] = {
+    qaTechDeliveryValidPrimaryCredential(application)
+      .filter(_.secretFragment.isEmpty)
   }
 
   private def qaTechDeliveryValidSecondaryCredential(application: Application): Option[Credential] = {
