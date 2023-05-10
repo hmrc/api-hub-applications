@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.connectors
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
+import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -40,7 +40,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(("Authorization", authorizationForEnvironment(environmentName)))
+      .setHeader(headersForEnvironment(environmentName): _*)
       .withBody(Json.toJson(client))
       .execute[ClientResponse]
       .map(Right(_))
@@ -55,7 +55,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(("Authorization", authorizationForEnvironment(environmentName)))
+      .setHeader(headersForEnvironment(environmentName): _*)
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
         case Right(secret) => Right(ClientResponse(clientId, secret.secret))
@@ -84,6 +84,14 @@ class IdmsConnectorImpl @Inject()(
     }
   }
 
+  private def headersForEnvironment(environmentName: EnvironmentName): Seq[(String, String)] = {
+    Seq(("Authorization", authorizationForEnvironment(environmentName))) :++
+      (environmentName match {
+        case Primary => Seq.empty
+        case Secondary => Seq(("x-api-key", servicesConfig.getConfString(s"idms-$environmentName.apiKey", "")))
+      })
+  }
+
   private def authorizationForEnvironment(environmentName: EnvironmentName): String = {
     val clientId = servicesConfig.getConfString(s"idms-$environmentName.clientId", "")
     val secret = servicesConfig.getConfString(s"idms-$environmentName.secret", "")
@@ -97,7 +105,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(("Authorization", authorizationForEnvironment(environmentName)))
+      .setHeader(headersForEnvironment(environmentName): _*)
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
         case Right(secret) => Right(secret)
@@ -131,7 +139,7 @@ class IdmsConnectorImpl @Inject()(
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
 
     httpClient.put(url)
-      .setHeader(("Authorization", authorizationForEnvironment(environmentName)))
+      .setHeader(headersForEnvironment(environmentName): _*)
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
         case Right(_) => Right(())
@@ -157,7 +165,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(("Authorization", authorizationForEnvironment(environmentName)))
+      .setHeader(headersForEnvironment(environmentName): _*)
       .execute[Either[UpstreamErrorResponse, Seq[ClientScope]]]
       .map {
         case Right(scopes) => Right(scopes)
