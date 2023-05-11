@@ -26,6 +26,7 @@ import org.scalatest.{Assertion, EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationBadException, ApplicationNotFoundException, IdmsException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
@@ -242,7 +243,7 @@ class ApplicationsServiceSpec
 
       val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
-        .thenReturn(Future.successful(Some(application)))
+        .thenReturn(Future.successful(Right(application)))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(secondaryClientId))(any()))
@@ -260,22 +261,22 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result mustBe Some(Right(expected))
+          result mustBe Right(expected)
       }
     }
 
-    "must return None when the application does not exist" in {
+    "must return ApplicationNotFoundException when the application does not exist" in {
       val id = "test-id"
 
       val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
-        .thenReturn(Future.successful(None))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map(
         result =>
-          result mustBe None
+          result mustBe Left(ApplicationNotFoundException.forId(id))
       )
     }
 
@@ -288,7 +289,7 @@ class ApplicationsServiceSpec
 
       val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
-        .thenReturn(Future.successful(Some(application)))
+        .thenReturn(Future.successful(Right(application)))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
@@ -299,7 +300,7 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result.value.left.value mustBe a[IdmsException]
+          result.left.value mustBe a[IdmsException]
       }
     }
   }
@@ -347,8 +348,8 @@ class ApplicationsServiceSpec
       val updatedApp = app
         .addScopes(Primary, Seq("test-name-1"))
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
 
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -379,7 +380,7 @@ class ApplicationsServiceSpec
         environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -410,7 +411,7 @@ class ApplicationsServiceSpec
         environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       val exception = IdmsException("Bad thing")
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
@@ -445,8 +446,8 @@ class ApplicationsServiceSpec
       val updatedApp = app
         .addScopes(Primary, Seq(testScopeId))
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
 
       val exception = IdmsException("Bad thing")
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
@@ -480,8 +481,10 @@ class ApplicationsServiceSpec
       val updatedApp = app
         .addScopes(Primary, Seq("test-name-1"))
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(false))
+      when(repository.findById(ArgumentMatchers.eq(testAppId)))
+        .thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp)))
+        .thenReturn(Future.successful(Left(NotUpdatedException.forApplication(app))))
 
       service.addScope(testAppId, newScopes)(HeaderCarrier()) map {
         actual =>
@@ -489,17 +492,17 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must return false if application not initially found" in {
+    "must return ApplicationNotFoundException if application not initially found" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val testAppId = "test-app-id"
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
       service.addScope(testAppId, NewScope("test-name-1", Seq(Primary)))(HeaderCarrier()) map {
         actual =>
-          actual mustBe Right(false)
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
   }
@@ -529,8 +532,8 @@ class ApplicationsServiceSpec
       )
 
       val updatedApp = app.setPrimaryScopes(Seq())
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
       when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope) )(any())).thenReturn(Future(Right(())))
 
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier())  map {
@@ -572,29 +575,31 @@ class ApplicationsServiceSpec
         environments = envs
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(IdmsException(":("))))
+      val expected = IdmsException(":(")
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(expected)))
 
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier()) map {
         actual => {
           verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())
-          actual mustBe Left(IdmsException(":("))
+          actual mustBe Left(expected)
         }
       }
     }
 
-    "must return not found exception if application does not exist" in {
+    "must return ApplicationNotFoundException if application does not exist" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val testAppId = "test-app-id"
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
       service.approvePrimaryScope(testAppId, "test-name-2")(HeaderCarrier())  map {
         actual =>
-          actual mustBe Left(ApplicationNotFoundException(s"Can't find application with id $testAppId"))
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
 
@@ -620,8 +625,7 @@ class ApplicationsServiceSpec
         environments = envs
       )
 
-
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier()) map {
         actual =>
@@ -646,7 +650,7 @@ class ApplicationsServiceSpec
         environments = Environments()
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier())  map {
         actual =>
@@ -686,8 +690,8 @@ class ApplicationsServiceSpec
         )
       )
 
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
-      when(repository.update(any())).thenReturn(Future.successful(true))
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
 
       val secretResponse = Secret(secret)
       when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
@@ -726,7 +730,8 @@ class ApplicationsServiceSpec
           secondary = Environment()
         )
       )
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
 
       val expected = Left(IdmsException("bad thing"))
       when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
@@ -745,11 +750,11 @@ class ApplicationsServiceSpec
 
       val applicationId = "app-1234"
 
-      when(repository.findById(applicationId)).thenReturn(Future.successful(None))
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
-          val expected = Left(ApplicationNotFoundException(s"Can't find application with id $applicationId"))
+          val expected = Left(ApplicationNotFoundException.forId(applicationId))
           actual mustBe expected
       }
     }
@@ -769,7 +774,9 @@ class ApplicationsServiceSpec
         teamMembers = Seq(),
         environments = Environments()
       )
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
+
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))
@@ -793,7 +800,9 @@ class ApplicationsServiceSpec
           secondary = Environment()
         )
       )
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
+
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))

@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.services.helpers
+package uk.gov.hmrc.apihubapplications.models.exception
 
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+case class IdmsException(message: String, cause: Throwable) extends ApplicationsException(message, cause)
 
-object Helpers {
+object IdmsException {
 
-  def useFirstException[T](sequence: Seq[Either[IdmsException, T]]): Either[IdmsException, Seq[T]] = {
-    sequence.foldLeft[Either[IdmsException, Seq[T]]](Right(Seq.empty))(
-      (b, a) => (b, a) match {
-        case (Left(e), _) => Left(e)
-        case (_, Left(e)) => Left(e)
-        case (Right(ts), Right(t)) => Right(ts :+ t)
-      }
-    )
+  def apply(message: String): IdmsException = {
+    IdmsException(message, null)
   }
 
 }

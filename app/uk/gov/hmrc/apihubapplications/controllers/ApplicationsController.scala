@@ -22,8 +22,7 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
-import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationBadException, ApplicationNotFoundException, ApplicationsException, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
@@ -68,9 +67,10 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
     implicit request =>
       applicationsService.findById(id)
         .map {
-          case Some(Right(application)) => Ok(Json.toJson(application))
-          case Some(Left(_)) => BadGateway
-          case None => NotFound
+          case Right(application) => Ok(Json.toJson(application))
+          case Left(_: IdmsException) => BadGateway
+          case Left(_: ApplicationNotFoundException) => NotFound
+          case Left(_) => InternalServerError
         }
   }
 
@@ -85,10 +85,12 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             case s if s.isEmpty => Future.successful(BadRequest)
             case _ => applicationsService.addScope(id, scopes.head).map {
               case Right(true) => NoContent
-              case Right(false) => NotFound
-              case _ => BadGateway
+              case Left(_: ApplicationNotFoundException) => NotFound
+              case Left(_: IdmsException) => BadGateway
+              case _ => InternalServerError
             }
           }
+
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)

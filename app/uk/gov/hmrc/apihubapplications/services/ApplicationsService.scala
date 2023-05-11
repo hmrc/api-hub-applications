@@ -21,8 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationBadException, ApplicationsException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.http.HeaderCarrier
@@ -32,10 +32,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsService @Inject()(
-                                     repository: ApplicationsRepository,
-                                     clock: Clock,
-                                     idmsConnector: IdmsConnector
-                                   )(implicit ec: ExecutionContext) extends Logging {
+  repository: ApplicationsRepository,
+  clock: Clock,
+  idmsConnector: IdmsConnector
+)(implicit ec: ExecutionContext) extends Logging {
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
     Future.sequence(
@@ -63,9 +63,9 @@ class ApplicationsService @Inject()(
     repository.filter(teamMemberEmail)
   }
 
-  def findById(id: String)(implicit hc: HeaderCarrier): Future[Option[Either[IdmsException, Application]]] = {
+  def findById(id: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     repository.findById(id).flatMap {
-      case Some(application) =>
+      case Right(application) =>
         ApplicationEnrichers.process(
           application,
           Seq(
@@ -73,22 +73,21 @@ class ApplicationsService @Inject()(
             ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
             ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
           )
-        ).map(Some(_))
-      case _ => Future.successful(None)
+        )
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
   def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
 
-
   def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] = {
 
-    def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Boolean] = {
+    def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Either[ApplicationsException, Unit]] = {
       if (newScope.environments.exists(e => e.equals(Primary))) {
         val applicationWithNewPrimaryScope = application.addScopes(Primary, Seq(newScope.name)).copy(lastUpdated = LocalDateTime.now(clock))
         repository.update(applicationWithNewPrimaryScope)
       } else {
-        Future.successful(true)
+        Future.successful(Right(()))
       }
     }
 
@@ -105,7 +104,7 @@ class ApplicationsService @Inject()(
     }
 
     repository.findById(applicationId).flatMap {
-      case Some(application) =>
+      case Right(application) =>
         val repositoryUpdate = doRepositoryUpdate(application, newScope)
         val idmsUpdate = doIdmsUpdate(application, newScope)
 
@@ -113,18 +112,17 @@ class ApplicationsService @Inject()(
           repositoryUpdated <- repositoryUpdate
           idmsUpdated <- idmsUpdate
         } yield (repositoryUpdated, idmsUpdated) match {
-          case (true, Right(_)) => Right(true)
+          case (Right(_), Right(_)) => Right(true)
           case (_, Left(e)) => Left(e)
           case _ => Right(false)
         }
-      case None => Future.successful(Right(false))
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
-
   def approvePrimaryScope(applicationId: String, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
-    def removePrimaryScope(application: Application, scopeId: String): Future[Boolean] = {
+    def removePrimaryScope(application: Application, scopeId: String): Future[Either[ApplicationsException, Unit]] = {
       val prunedScopes = application.getPrimaryScopes.filterNot(scope => scope.name == scopeId)
       val prunedApplication = application.setPrimaryScopes(prunedScopes)
       repository.update(prunedApplication)
@@ -141,20 +139,17 @@ class ApplicationsService @Inject()(
     }
 
     repository.findById(applicationId).flatMap {
-      case Some(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
-        case Right(_) => removePrimaryScope(application, scopeName).flatMap {
-          case true => Future.successful(Right(()))
-          case false => Future.successful(Left(ApplicationBadException(s"Could not update application id $applicationId")))
-        }
+      case Right(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
+        case Right(_) => removePrimaryScope(application, scopeName)
         case Left(e) => Future.successful(Left(e))
       }
-      case None => Future.successful(Left(applicationNotFound(applicationId)))
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
     repository.findById(applicationId).flatMap {
-      case Some(application) =>
+      case Right(application) =>
         qaTechDeliveryValidPrimaryCredentialNoSecret(application) match {
           case Some(credential) =>
             idmsConnector.newSecret(Primary, credential.clientId).flatMap {
@@ -171,12 +166,8 @@ class ApplicationsService @Inject()(
           case _ =>
             Future.successful(Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials.")))
         }
-      case None => Future(Left(applicationNotFound(applicationId)))
+      case Left(e) => Future(Left(e))
     }
-  }
-
-  private def applicationNotFound(applicationId: String) = {
-    ApplicationNotFoundException(s"Can't find application with id $applicationId")
   }
 
   private def qaTechDeliveryValidPrimaryCredential(application: Application): Option[Credential] = {

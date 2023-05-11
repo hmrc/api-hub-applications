@@ -14,8 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.application
+package uk.gov.hmrc.apihubapplications.models.exception
 
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
+import uk.gov.hmrc.apihubapplications.models.application.Application
 
-case class ApplicationBadException(message: String) extends ApplicationsException(message, null)
+case class ApplicationNotFoundException(message: String) extends ApplicationsException(message, null)
+
+object ApplicationNotFoundException {
+
+  def forId(id: String): ApplicationNotFoundException = {
+    ApplicationNotFoundException(s"Cannot find application with id $id")
+  }
+
+  def forApplication(application: Application): ApplicationNotFoundException = {
+    forId(application.id.getOrElse("<none>"))
+  }
+
+}
