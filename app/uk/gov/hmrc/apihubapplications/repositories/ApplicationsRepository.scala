@@ -23,7 +23,7 @@ import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, NotUpdatedException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -43,7 +43,9 @@ class ApplicationsRepository @Inject()
                       Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
                      ),
     indexes = Seq(IndexModel(Indexes.ascending("teamMembers", "email")))
-  ) {
+  )
+  with Logging
+  with ExceptionRaising {
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
@@ -62,9 +64,9 @@ class ApplicationsRepository @Inject()
           .headOption()
           .map {
             case Some(application) => Right(application)
-            case _ => Left(ApplicationNotFoundException.forId(id))
+            case _ => Left(applicationNotFoundException.forId(id))
           }
-      case None => Future.successful(Left(ApplicationNotFoundException.forId(id)))
+      case None => Future.successful(Left(applicationNotFoundException.forId(id)))
     }
   }
 
@@ -95,10 +97,10 @@ class ApplicationsRepository @Inject()
             updateResult =>
               updateResult.getModifiedCount match {
                 case i if i > 0 => Right(())
-                case _ => Left(NotUpdatedException.forApplication(application))
+                case _ => Left(notUpdatedException.forApplication(application))
               }
           }
-      case None => Future.successful(Left(ApplicationNotFoundException.forApplication(application)))
+      case None => Future.successful(Left(applicationNotFoundException.forApplication(application)))
     }
   }
 
