@@ -64,9 +64,9 @@ class ApplicationsRepository @Inject()
           .headOption()
           .map {
             case Some(application) => Right(application)
-            case _ => Left(applicationNotFoundException.forId(id))
+            case _ => Left(raiseApplicationNotFoundException.forId(id))
           }
-      case None => Future.successful(Left(applicationNotFoundException.forId(id)))
+      case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
     }
   }
 
@@ -97,10 +97,10 @@ class ApplicationsRepository @Inject()
             updateResult =>
               updateResult.getModifiedCount match {
                 case i if i > 0 => Right(())
-                case _ => Left(notUpdatedException.forApplication(application))
+                case _ => Left(raiseNotUpdatedException.forApplication(application))
               }
           }
-      case None => Future.successful(Left(applicationNotFoundException.forApplication(application)))
+      case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
     }
   }
 

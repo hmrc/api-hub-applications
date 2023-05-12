@@ -16,4 +16,4 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
-case class ApplicationBadException(message: String) extends ApplicationsException(message, null)
+case class ApplicationDataIssueException(message: String) extends ApplicationsException(message, null)

@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -34,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class IdmsConnectorImpl @Inject()(
   servicesConfig: ServicesConfig,
   httpClient: HttpClientV2
-)(implicit ec: ExecutionContext) extends IdmsConnector with Logging {
+)(implicit ec: ExecutionContext) extends IdmsConnector with Logging with ExceptionRaising {
 
   override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients"
@@ -47,7 +47,7 @@ class IdmsConnectorImpl @Inject()(
       .map(Right(_))
       .recover {
         case throwable =>
-          idmsError(throwable)
+          Left(raiseIdmsException.error(throwable))
       }
   }
 
@@ -61,15 +61,13 @@ class IdmsConnectorImpl @Inject()(
       .map {
         case Right(secret) => Right(ClientResponse(clientId, secret.secret))
         case Left(e) if e.statusCode == 404 =>
-          val message = s"Client not found: clientId=$clientId"
-          logger.error(message, e)
-          Left(IdmsException(message))
+          Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          badIdmsStatus(e)
+          Left(raiseIdmsException.unexpectedResponse(e))
       }
       .recover {
         case throwable =>
-          idmsError(throwable)
+          Left(raiseIdmsException.error(throwable))
       }
   }
 
@@ -103,29 +101,15 @@ class IdmsConnectorImpl @Inject()(
       .map {
         case Right(secret) => Right(secret)
         case Left(e) if e.statusCode == 404 =>
-          val message = s"Client not found: clientId=$clientId"
-          logger.error(message, e)
-          Left(IdmsException(message))
+          Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          badIdmsStatus(e)
+          Left(raiseIdmsException.unexpectedResponse(e))
       }
       .recover {
         case throwable =>
-          idmsError(throwable)
+          Left(raiseIdmsException.error(throwable))
       }
 
-  }
-
-  private def idmsError(throwable: Throwable) = {
-    val message = "Error calling IDMS"
-    logger.error(message, throwable)
-    Left(IdmsException(message, throwable))
-  }
-
-  private def badIdmsStatus(e: UpstreamErrorResponse) = {
-    val message = s"Unexpected response ${e.statusCode} returned from IDMS"
-    logger.error(message, e)
-    Left(IdmsException(message))
   }
 
   override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
@@ -137,15 +121,13 @@ class IdmsConnectorImpl @Inject()(
       .map {
         case Right(_) => Right(())
         case Left(e) if e.statusCode == 404 =>
-          val message = s"Client not found: clientId=$clientId"
-          logger.error(message, e)
-          Left(IdmsException(message))
+          Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          badIdmsStatus(e)
+          Left(raiseIdmsException.unexpectedResponse(e))
       }
       .recover {
         case throwable =>
-          idmsError(throwable)
+          Left(raiseIdmsException.error(throwable))
       }
 
   }
@@ -163,19 +145,13 @@ class IdmsConnectorImpl @Inject()(
       .map {
         case Right(scopes) => Right(scopes)
         case Left(e) if e.statusCode == 404 =>
-          val message = s"Client not found: clientId=$clientId"
-          logger.error(message, e)
-          Left(IdmsException(message))
+          Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          val message = s"Unexpected response ${e.statusCode} returned from IDMS"
-          logger.error(message, e)
-          Left(IdmsException(message))
+          Left(raiseIdmsException.unexpectedResponse(e))
       }
       .recover {
         case throwable =>
-          val message = "Error calling IDMS"
-          logger.error(message, throwable)
-          Left(IdmsException(message, throwable))
+          Left(raiseIdmsException("Error calling IDMS", throwable))
       }
   }
 

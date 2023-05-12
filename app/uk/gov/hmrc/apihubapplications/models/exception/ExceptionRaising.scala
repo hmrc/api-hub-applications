@@ -18,55 +18,73 @@ package uk.gov.hmrc.apihubapplications.models.exception
 
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 trait ExceptionRaising {
   self: Logging =>
 
-  object applicationBadException {
-    def apply(message: String): ApplicationBadException = {
-      log(ApplicationBadException(message))
+  object raiseApplicationDataIssueException {
+    def apply(message: String): ApplicationDataIssueException = {
+      logError(ApplicationDataIssueException(message))
     }
   }
 
-  object applicationNotFoundException {
+  object raiseApplicationNotFoundException {
     def apply(message: String): ApplicationNotFoundException = {
-      log(ApplicationNotFoundException(message))
+      logWarn(ApplicationNotFoundException(message))
     }
 
     def forId(id: String): ApplicationNotFoundException = {
-      log(ApplicationNotFoundException.forId(id))
+      logWarn(ApplicationNotFoundException.forId(id))
     }
 
     def forApplication(application: Application): ApplicationNotFoundException = {
-      log(ApplicationNotFoundException.forApplication(application))
+      logWarn(ApplicationNotFoundException.forApplication(application))
     }
   }
 
-  object idmsException {
+  object raiseIdmsException {
     def apply(message: String, cause: Throwable): IdmsException = {
-      log(IdmsException(message, cause))
+      logError(IdmsException(message, cause))
     }
 
     def apply(message: String): IdmsException = {
-      log(IdmsException(message))
+      logError(IdmsException(message))
+    }
+
+    def clientNotFound(clientId: String): IdmsException = {
+      logError(IdmsException.clientNotFound(clientId))
+    }
+
+    def unexpectedResponse(response: UpstreamErrorResponse): IdmsException = {
+      logError(IdmsException.unexpectedResponse(response))
+    }
+
+    def error(throwable: Throwable): IdmsException = {
+      logError(IdmsException.error(throwable))
     }
   }
 
-  object notUpdatedException {
+  object raiseNotUpdatedException {
     def apply(message: String): NotUpdatedException = {
-      log(NotUpdatedException(message))
+      logError(NotUpdatedException(message))
     }
 
     def forId(id: String): NotUpdatedException = {
-      log(NotUpdatedException.forId(id))
+      logError(NotUpdatedException.forId(id))
     }
 
     def forApplication(application: Application): NotUpdatedException = {
-      log(NotUpdatedException.forApplication(application))
+      logError(NotUpdatedException.forApplication(application))
     }
   }
 
-  private def log[T <: ApplicationsException](e: T): T = {
+  private def logError[T <: ApplicationsException](e: T): T = {
+    logger.error("Raised application exception", e)
+    e
+  }
+
+  private def logWarn[T <: ApplicationsException](e: T): T = {
     logger.warn("Raised application exception", e)
     e
   }

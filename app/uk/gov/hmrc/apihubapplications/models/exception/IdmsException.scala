@@ -16,12 +16,26 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
+import uk.gov.hmrc.http.UpstreamErrorResponse
+
 case class IdmsException(message: String, cause: Throwable) extends ApplicationsException(message, cause)
 
 object IdmsException {
 
   def apply(message: String): IdmsException = {
     IdmsException(message, null)
+  }
+
+  def clientNotFound(clientId: String): IdmsException = {
+    IdmsException(s"Client not found: clientId=$clientId")
+  }
+
+  def unexpectedResponse(response: UpstreamErrorResponse): IdmsException = {
+    IdmsException(s"Unexpected response ${response.statusCode} returned from IDMS", response)
+  }
+
+  def error(throwable: Throwable): IdmsException = {
+    IdmsException("Error calling IDMS", throwable)
   }
 
 }

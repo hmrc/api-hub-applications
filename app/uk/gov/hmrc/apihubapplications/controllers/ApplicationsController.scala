@@ -22,7 +22,7 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationBadException, ApplicationNotFoundException, ApplicationsException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
@@ -111,7 +111,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             logger.info(s"Setting scope $scopeName to ${Approved.toString} on application ID: $id")
             applicationsService.approvePrimaryScope(id, scopeName).flatMap {
               case Left(_: ApplicationNotFoundException) => Future.successful(NotFound)
-              case Left(_: ApplicationBadException) => Future.successful(NotFound)
+              case Left(_: ApplicationDataIssueException) => Future.successful(NotFound)
               case Left(_: IdmsException) => Future.successful(BadGateway)
               case _ => Future.successful(NoContent)
             }

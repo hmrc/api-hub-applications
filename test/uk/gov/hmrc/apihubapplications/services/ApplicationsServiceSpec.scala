@@ -26,7 +26,7 @@ import org.scalatest.{Assertion, EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationBadException, ApplicationNotFoundException, IdmsException, NotUpdatedException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
@@ -629,7 +629,7 @@ class ApplicationsServiceSpec
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(ApplicationBadException(s"Application $testAppId has invalid primary scope."))
+          actual mustBe Left(ApplicationDataIssueException(s"Application $testAppId has invalid primary scope."))
       }
     }
 
@@ -654,7 +654,7 @@ class ApplicationsServiceSpec
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier())  map {
         actual =>
-          actual mustBe Left(ApplicationBadException(s"Application $testAppId has invalid primary scope."))
+          actual mustBe Left(ApplicationDataIssueException(s"Application $testAppId has invalid primary scope."))
       }
     }
 
@@ -779,7 +779,7 @@ class ApplicationsServiceSpec
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))
+          actual mustBe Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials."))
       }
     }
 
@@ -805,7 +805,7 @@ class ApplicationsServiceSpec
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials."))
+          actual mustBe Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials."))
       }
     }
 
