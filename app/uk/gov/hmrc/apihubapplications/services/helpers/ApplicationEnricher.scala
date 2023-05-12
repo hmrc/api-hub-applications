@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Pending, Primary, Scope, Secondary}
-import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 

@@ -16,6 +16,4 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
-class ApplicationsException(message: String, cause: Throwable) extends RuntimeException(message, cause) {
-
-}
+abstract class ApplicationsException(message: String, cause: Throwable) extends RuntimeException(message, cause)

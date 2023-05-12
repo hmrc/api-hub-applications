@@ -21,8 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.http.HeaderCarrier
@@ -97,7 +97,7 @@ class ApplicationsService @Inject()(
         qaTechDeliveryValidSecondaryCredential(application) match {
           case Some(credential) => idmsConnector.addClientScope(Secondary, credential.clientId, newScope.name)
           case _ =>
-            Future.successful(Left(ApplicationBadException(s"Application ${application.id} has invalid secondary credentials.")))
+            Future.successful(Left(ApplicationDataIssueException(s"Application ${application.id} has invalid secondary credentials.")))
         }
       } else {
         Future.successful(Right(()))
@@ -134,9 +134,9 @@ class ApplicationsService @Inject()(
 
       if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
         val maybeIdmsResult = qaTechDeliveryValidPrimaryCredential(application).map(credential => idmsConnector.addClientScope(Primary, credential.clientId, scopeName))
-        maybeIdmsResult.getOrElse(Future.successful(Left(ApplicationBadException(s"Application ${application.id.orNull} has invalid primary credentials."))))
+        maybeIdmsResult.getOrElse(Future.successful(Left(ApplicationDataIssueException(s"Application ${application.id.orNull} has invalid primary credentials."))))
       } else {
-        Future.successful(Left(ApplicationBadException(s"Application ${application.id.orNull} has invalid primary scope.")))
+        Future.successful(Left(ApplicationDataIssueException(s"Application ${application.id.orNull} has invalid primary scope.")))
       }
     }
 
@@ -144,7 +144,7 @@ class ApplicationsService @Inject()(
       case Some(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
         case Right(_) => removePrimaryScope(application, scopeName).flatMap {
           case true => Future.successful(Right(()))
-          case false => Future.successful(Left(ApplicationBadException(s"Could not update application id $applicationId")))
+          case false => Future.successful(Left(ApplicationDataIssueException(s"Could not update application id $applicationId")))
         }
         case Left(e) => Future.successful(Left(e))
       }
@@ -169,7 +169,7 @@ class ApplicationsService @Inject()(
               case Left(e) => Future.successful(Left(e))
             }
           case _ =>
-            Future.successful(Left(ApplicationBadException(s"Application $applicationId has invalid primary credentials.")))
+            Future.successful(Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials.")))
         }
       case None => Future(Left(applicationNotFound(applicationId)))
     }

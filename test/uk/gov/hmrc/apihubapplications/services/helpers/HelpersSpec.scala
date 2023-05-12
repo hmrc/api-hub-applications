@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 
 class HelpersSpec extends AnyFreeSpec with Matchers {
 

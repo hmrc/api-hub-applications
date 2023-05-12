@@ -14,8 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.application
+package uk.gov.hmrc.apihubapplications.models.exception
 
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
+import uk.gov.hmrc.apihubapplications.models.application.Application
 
-case class ApplicationNotFoundException(message: String) extends ApplicationsException(message, null)
+case class NotUpdatedException(message: String) extends ApplicationsException(message, null)
+
+object NotUpdatedException {
+
+  def forId(id: String): NotUpdatedException = {
+    NotUpdatedException(s"There was no database update for application with id $id")
+  }
+
+  def forApplication(application: Application): NotUpdatedException = {
+    forId(application.id.getOrElse("<none>"))
+  }
+
+}
