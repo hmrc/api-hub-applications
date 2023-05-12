@@ -18,13 +18,13 @@ package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
+import com.github.tomakehurst.wiremock.matching.StringValuePattern
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.IdmsConnectorSpec.{authorizationHeaderFor, buildConnector, environmentNames, nonSuccessResponses, testClient, testClientId, testClientResponse, testScopeId, testSecret}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
@@ -42,6 +42,8 @@ class IdmsConnectorSpec
   with TableDrivenPropertyChecks
   with EitherValues {
 
+  import IdmsConnectorSpec._
+
   "IdmsConnector.createClient" - {
     "must place the correct request per environment to IDMS and return the ClientResponse" in {
       forAll(environmentNames) { environmentName: EnvironmentName =>
@@ -50,6 +52,7 @@ class IdmsConnectorSpec
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Content-Type", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
             .withRequestBody(
               equalToJson(Json.toJson(testClient).toString())
             )
@@ -114,6 +117,7 @@ class IdmsConnectorSpec
           get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
             .willReturn(
               aResponse()
                 .withBody(Json.toJson(testSecret).toString())
@@ -182,6 +186,7 @@ class IdmsConnectorSpec
           post(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
             .willReturn(
               aResponse()
                 .withBody(Json.toJson(testSecret).toString())
@@ -249,6 +254,7 @@ class IdmsConnectorSpec
         stubFor(
           put(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
             .willReturn(
               aResponse()
                 .withStatus(200)
@@ -316,6 +322,7 @@ class IdmsConnectorSpec
           get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
             .willReturn(
               aResponse()
                 .withBody(Json.toJson(scopes).toString())
@@ -396,7 +403,8 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
         "microservice.services.idms-secondary.port" -> wireMockSupport.wireMockPort,
         "microservice.services.idms-secondary.path" -> "secondary",
         "microservice.services.idms-secondary.clientId" -> secondaryClientId,
-        "microservice.services.idms-secondary.secret" -> secondarySecret
+        "microservice.services.idms-secondary.secret" -> secondarySecret,
+        "microservice.services.idms-secondary.apiKey" -> secondaryApiKey
       ))
     )
 
@@ -412,10 +420,18 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
     s"Basic $encoded"
   }
 
+  def apiKeyHeaderPatternFor(environmentName: EnvironmentName): StringValuePattern = {
+    environmentName match {
+      case Primary => absent()
+      case Secondary => equalTo(secondaryApiKey)
+    }
+  }
+
   val primaryClientId: String = "primary-client-id"
   val primarySecret: String = "primary-secret"
   val secondaryClientId: String = "secondary-client-id"
   val secondarySecret: String = "secondary-secret"
+  val secondaryApiKey: String = "secondary-api-key"
   val testClientId: String = "test-client-id"
   val testScopeId: String = "test-scope-id"
   val testSecret: Secret = Secret("test-secret")
