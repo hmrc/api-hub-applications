@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
@@ -35,6 +35,8 @@ class IdmsConnectorImpl @Inject()(
   httpClient: HttpClientV2
 )(implicit ec: ExecutionContext) extends IdmsConnector with Logging {
 
+  import IdmsConnectorImpl._
+
   override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients"
 
@@ -42,6 +44,7 @@ class IdmsConnectorImpl @Inject()(
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName): _*)
       .withBody(Json.toJson(client))
+      .withProxyIfRequired(environmentName)
       .execute[ClientResponse]
       .map(Right(_))
       .recover {
@@ -56,6 +59,7 @@ class IdmsConnectorImpl @Inject()(
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName): _*)
+      .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
         case Right(secret) => Right(ClientResponse(clientId, secret.secret))
@@ -106,6 +110,7 @@ class IdmsConnectorImpl @Inject()(
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName): _*)
+      .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
         case Right(secret) => Right(secret)
@@ -140,6 +145,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.put(url)
       .setHeader(headersForEnvironment(environmentName): _*)
+      .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
         case Right(_) => Right(())
@@ -166,6 +172,7 @@ class IdmsConnectorImpl @Inject()(
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName): _*)
+      .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Seq[ClientScope]]]
       .map {
         case Right(scopes) => Right(scopes)
@@ -184,6 +191,21 @@ class IdmsConnectorImpl @Inject()(
           logger.error(message, throwable)
           Left(IdmsException(message, throwable))
       }
+  }
+
+}
+
+object IdmsConnectorImpl {
+
+  implicit class RequestBuilderOps(requestBuilder: RequestBuilder) {
+
+    def withProxyIfRequired(environmentName: EnvironmentName): RequestBuilder = {
+      environmentName match {
+        case Primary => requestBuilder
+        case Secondary => requestBuilder.withProxy
+      }
+    }
+
   }
 
 }
