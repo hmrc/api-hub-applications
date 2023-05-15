@@ -65,7 +65,7 @@ class ApplicationsService @Inject()(
 
   def findById(id: String)(implicit hc: HeaderCarrier): Future[Option[Either[IdmsException, Application]]] = {
     repository.findById(id).flatMap {
-      case Some(application) =>
+      case Right(application) =>
         ApplicationEnrichers.process(
           application,
           Seq(
@@ -83,12 +83,12 @@ class ApplicationsService @Inject()(
 
   def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] = {
 
-    def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Boolean] = {
+    def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Either[ApplicationsException, Unit]] = {
       if (newScope.environments.exists(e => e.equals(Primary))) {
         val applicationWithNewPrimaryScope = application.addScopes(Primary, Seq(newScope.name)).copy(lastUpdated = LocalDateTime.now(clock))
         repository.update(applicationWithNewPrimaryScope)
       } else {
-        Future.successful(true)
+        Future.successful(Right(()))
       }
     }
 
@@ -105,7 +105,7 @@ class ApplicationsService @Inject()(
     }
 
     repository.findById(applicationId).flatMap {
-      case Some(application) =>
+      case Right(application) =>
         val repositoryUpdate = doRepositoryUpdate(application, newScope)
         val idmsUpdate = doIdmsUpdate(application, newScope)
 
@@ -113,18 +113,17 @@ class ApplicationsService @Inject()(
           repositoryUpdated <- repositoryUpdate
           idmsUpdated <- idmsUpdate
         } yield (repositoryUpdated, idmsUpdated) match {
-          case (true, Right(_)) => Right(true)
+          case (Right(()), Right(_)) => Right(true)
           case (_, Left(e)) => Left(e)
           case _ => Right(false)
         }
-      case None => Future.successful(Right(false))
+      case _ => Future.successful(Right(false))
     }
   }
 
-
   def approvePrimaryScope(applicationId: String, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
-    def removePrimaryScope(application: Application, scopeId: String): Future[Boolean] = {
+    def removePrimaryScope(application: Application, scopeId: String): Future[Either[ApplicationsException, Unit]] = {
       val prunedScopes = application.getPrimaryScopes.filterNot(scope => scope.name == scopeId)
       val prunedApplication = application.setPrimaryScopes(prunedScopes)
       repository.update(prunedApplication)
@@ -141,20 +140,17 @@ class ApplicationsService @Inject()(
     }
 
     repository.findById(applicationId).flatMap {
-      case Some(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
-        case Right(_) => removePrimaryScope(application, scopeName).flatMap {
-          case true => Future.successful(Right(()))
-          case false => Future.successful(Left(ApplicationDataIssueException(s"Could not update application id $applicationId")))
-        }
+      case Right(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
+        case Right(_) => removePrimaryScope(application, scopeName)
         case Left(e) => Future.successful(Left(e))
       }
-      case None => Future.successful(Left(applicationNotFound(applicationId)))
+      case _ => Future.successful(Left(applicationNotFound(applicationId)))
     }
   }
 
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
     repository.findById(applicationId).flatMap {
-      case Some(application) =>
+      case Right(application) =>
         qaTechDeliveryValidPrimaryCredentialNoSecret(application) match {
           case Some(credential) =>
             idmsConnector.newSecret(Primary, credential.clientId).flatMap {
@@ -171,7 +167,7 @@ class ApplicationsService @Inject()(
           case _ =>
             Future.successful(Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials.")))
         }
-      case None => Future(Left(applicationNotFound(applicationId)))
+      case _ => Future(Left(applicationNotFound(applicationId)))
     }
   }
 

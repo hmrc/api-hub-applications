@@ -22,6 +22,7 @@ import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -94,21 +95,21 @@ class ApplicationsRepositoryIntegrationSpec
       val expected = repository.insert(application).futureValue
       val actual = repository.findById(expected.id.value).futureValue
 
-      actual mustBe Some(expected)
+      actual mustBe Right(expected)
     }
 
     "must return None when the application does not exist in MongoDb" in {
       val id = List.fill(24)("0").mkString
       val actual = repository.findById(id).futureValue
 
-      actual mustBe None
+      actual mustBe Left(ApplicationNotFoundException.forId(id))
     }
 
     "must return None when the Id is not a valid Object Id" in {
       val id = "invalid"
       val actual = repository.findById(id).futureValue
 
-      actual mustBe None
+      actual mustBe Left(ApplicationNotFoundException.forId(id))
     }
   }
 
@@ -120,18 +121,18 @@ class ApplicationsRepositoryIntegrationSpec
       val updated = saved.copy(name = "test-app-updated")
 
       val result = repository.update(updated).futureValue
-      result mustBe true
+      result mustBe Right(())
 
       val actual = repository.findById(updated.id.value).futureValue
-      actual.value.copy(lastUpdated=updated.lastUpdated) mustBe updated
+      actual.map(_.copy(lastUpdated = updated.lastUpdated)) mustBe Right(updated)
     }
 
-    "must return false when the application does not exist in the database" in {
+    "must return NotUpdatedException when the application does not exist in the database" in {
       val id = List.fill(24)("0").mkString
       val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))
 
       val result = repository.update(application).futureValue
-      result mustBe false
+      result mustBe Left(NotUpdatedException.forId(id))
     }
   }
 

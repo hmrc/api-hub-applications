@@ -243,7 +243,7 @@ class ApplicationsServiceSpec
 
       val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
-        .thenReturn(Future.successful(Some(application)))
+        .thenReturn(Future.successful(Right(application)))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(secondaryClientId))(any()))
@@ -270,7 +270,7 @@ class ApplicationsServiceSpec
 
       val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
-        .thenReturn(Future.successful(None))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -289,7 +289,7 @@ class ApplicationsServiceSpec
 
       val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
-        .thenReturn(Future.successful(Some(application)))
+        .thenReturn(Future.successful(Right(application)))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
@@ -348,8 +348,8 @@ class ApplicationsServiceSpec
       val updatedApp = app
         .addScopes(Primary, Seq("test-name-1"))
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
 
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -380,7 +380,7 @@ class ApplicationsServiceSpec
         environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -411,7 +411,7 @@ class ApplicationsServiceSpec
         environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       val exception = IdmsException("Bad thing")
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
@@ -446,8 +446,8 @@ class ApplicationsServiceSpec
       val updatedApp = app
         .addScopes(Primary, Seq(testScopeId))
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
 
       val exception = IdmsException("Bad thing")
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
@@ -481,8 +481,8 @@ class ApplicationsServiceSpec
       val updatedApp = app
         .addScopes(Primary, Seq("test-name-1"))
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(false))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
       service.addScope(testAppId, newScopes)(HeaderCarrier()) map {
         actual =>
@@ -496,7 +496,7 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val testAppId = "test-app-id"
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
       service.addScope(testAppId, NewScope("test-name-1", Seq(Primary)))(HeaderCarrier()) map {
         actual =>
@@ -530,8 +530,8 @@ class ApplicationsServiceSpec
       )
 
       val updatedApp = app.setPrimaryScopes(Seq())
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(true))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
       when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope) )(any())).thenReturn(Future(Right(())))
 
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier())  map {
@@ -573,7 +573,7 @@ class ApplicationsServiceSpec
         environments = envs
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(IdmsException(":("))))
 
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier()) map {
@@ -591,7 +591,7 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
 
       val testAppId = "test-app-id"
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(None))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
       service.approvePrimaryScope(testAppId, "test-name-2")(HeaderCarrier())  map {
         actual =>
@@ -621,8 +621,7 @@ class ApplicationsServiceSpec
         environments = envs
       )
 
-
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier()) map {
         actual =>
@@ -647,7 +646,7 @@ class ApplicationsServiceSpec
         environments = Environments()
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Some(app)))
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier())  map {
         actual =>
@@ -687,8 +686,8 @@ class ApplicationsServiceSpec
         )
       )
 
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
-      when(repository.update(any())).thenReturn(Future.successful(true))
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
 
       val secretResponse = Secret(secret)
       when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
@@ -727,7 +726,8 @@ class ApplicationsServiceSpec
           secondary = Environment()
         )
       )
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
 
       val expected = Left(IdmsException("bad thing"))
       when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
@@ -746,7 +746,7 @@ class ApplicationsServiceSpec
 
       val applicationId = "app-1234"
 
-      when(repository.findById(applicationId)).thenReturn(Future.successful(None))
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
@@ -770,7 +770,9 @@ class ApplicationsServiceSpec
         teamMembers = Seq(),
         environments = Environments()
       )
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
+
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials."))
@@ -794,7 +796,9 @@ class ApplicationsServiceSpec
           secondary = Environment()
         )
       )
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Some(application)))
+
+      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
+
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials."))
