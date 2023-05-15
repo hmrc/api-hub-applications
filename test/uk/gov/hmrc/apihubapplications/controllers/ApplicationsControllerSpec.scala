@@ -37,7 +37,8 @@ import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.{IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
@@ -370,7 +371,7 @@ class ApplicationsControllerSpec
     "must return 404 Not Found when the scope does not exist" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Left(ApplicationBadException(":("))))
+        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Left(ApplicationDataIssueException(":("))))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
@@ -382,7 +383,7 @@ class ApplicationsControllerSpec
     "must return 404 Not Found when trying to set scope status to APPROVED on an existing scope where the status is not PENDING" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Left(ApplicationBadException(":("))))
+        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Left(ApplicationDataIssueException(":("))))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
@@ -430,7 +431,7 @@ class ApplicationsControllerSpec
           CONTENT_TYPE -> "application/json"
         )
         when(fixture.applicationsService.createPrimarySecret(ArgumentMatchers.eq(applicationId))(any()))
-          .thenReturn(Future.successful(Left(ApplicationBadException("bad thing"))))
+          .thenReturn(Future.successful(Left(ApplicationDataIssueException("bad thing"))))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST

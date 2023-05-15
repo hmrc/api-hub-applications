@@ -17,7 +17,8 @@
 package uk.gov.hmrc.apihubapplications.connectors
 
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, IdmsException, Secret}
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future

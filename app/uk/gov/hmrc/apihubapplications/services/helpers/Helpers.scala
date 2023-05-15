@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import uk.gov.hmrc.apihubapplications.models.idms.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 
 object Helpers {
 

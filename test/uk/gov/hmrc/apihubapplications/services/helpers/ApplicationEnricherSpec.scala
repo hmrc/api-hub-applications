@@ -23,7 +23,8 @@ import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Pending, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, ClientScope, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, ClientScope}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
