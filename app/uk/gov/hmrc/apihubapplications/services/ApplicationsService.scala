@@ -80,7 +80,7 @@ class ApplicationsService @Inject()(
 
   def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
 
-  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] = {
+  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
     def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Either[ApplicationsException, Unit]] = {
       if (newScope.environments.exists(e => e.equals(Primary))) {
@@ -112,11 +112,11 @@ class ApplicationsService @Inject()(
           repositoryUpdated <- repositoryUpdate
           idmsUpdated <- idmsUpdate
         } yield (repositoryUpdated, idmsUpdated) match {
-          case (Right(()), Right(_)) => Right(true)
+          case (Right(_), Right(_)) => Right(())
           case (_, Left(e)) => Left(e)
-          case _ => Right(false)
+          case (Left(e), _) => Left(e)
         }
-      case _ => Future.successful(Right(false))
+      case Left(e) => Future.successful(Left(e))
     }
   }
 

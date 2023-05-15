@@ -327,7 +327,7 @@ class ApplicationsServiceSpec
 
   "addScopes" - {
 
-    "must add new primary scope to Application and not update idms and return true" in {
+    "must add new primary scope to Application and not update idms" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -355,12 +355,12 @@ class ApplicationsServiceSpec
         actual =>
           verify(repository).update(updatedApp)
           verifyZeroInteractions(idmsConnector.addClientScope(any(), any(), any())(any()))
-          actual mustBe Right(true)
+          actual mustBe Right(())
       }
 
     }
 
-    "must update idms with new secondary scope and not update application and return true" in {
+    "must update idms with new secondary scope and not update application" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -386,7 +386,7 @@ class ApplicationsServiceSpec
         actual =>
           verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
-          actual mustBe Right(true)
+          actual mustBe Right(())
       }
 
     }
@@ -460,7 +460,7 @@ class ApplicationsServiceSpec
 
     }
 
-    "must return false if application not found whilst updating it with new scope" in {
+    "must return ApplicationNotFoundException if application not found whilst updating it with new scope" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -486,11 +486,11 @@ class ApplicationsServiceSpec
 
       service.addScope(testAppId, newScopes)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Right(false)
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
 
-    "must return false if application not initially found" in {
+    "must return ApplicationNotFoundException if application not initially found" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -500,7 +500,7 @@ class ApplicationsServiceSpec
 
       service.addScope(testAppId, NewScope("test-name-1", Seq(Primary)))(HeaderCarrier()) map {
         actual =>
-          actual mustBe Right(false)
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
   }

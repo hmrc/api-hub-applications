@@ -84,9 +84,10 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             case s if s.size > 1 => Future.successful(NotImplemented)
             case s if s.isEmpty => Future.successful(BadRequest)
             case _ => applicationsService.addScope(id, scopes.head).map {
-              case Right(true) => NoContent
-              case Right(false) => NotFound
-              case _ => BadGateway
+              case Right(_) => NoContent
+              case Left(_: ApplicationNotFoundException) => NotFound
+              case Left(_: IdmsException) => BadGateway
+              case _ => InternalServerError
             }
           }
         case e: JsError =>

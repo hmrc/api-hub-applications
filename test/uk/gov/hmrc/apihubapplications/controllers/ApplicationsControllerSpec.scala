@@ -211,7 +211,7 @@ class ApplicationsControllerSpec
       val json = Json.toJson(scopes)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScope(ArgumentMatchers.eq(id), ArgumentMatchers.eq(newScope))(any())).thenReturn(Future.successful(Right(true)))
+        when(fixture.applicationsService.addScope(ArgumentMatchers.eq(id), ArgumentMatchers.eq(newScope))(any())).thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
@@ -231,7 +231,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(false)))
+        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
@@ -249,7 +249,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(false)))
+        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
