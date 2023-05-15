@@ -67,9 +67,10 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
     implicit request =>
       applicationsService.findById(id)
         .map {
-          case Some(Right(application)) => Ok(Json.toJson(application))
-          case Some(Left(_)) => BadGateway
-          case None => NotFound
+          case Right(application) => Ok(Json.toJson(application))
+          case Left(_: ApplicationNotFoundException) => NotFound
+          case Left(_: IdmsException) => BadGateway
+          case _ => InternalServerError
         }
   }
 

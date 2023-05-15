@@ -177,7 +177,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Some(Right(expected))))
+        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Right(expected)))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 
@@ -193,7 +193,7 @@ class ApplicationsControllerSpec
       val id = "id"
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(None))
+        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 

@@ -261,11 +261,11 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result mustBe Some(Right(expected))
+          result mustBe Right(expected)
       }
     }
 
-    "must return None when the application does not exist" in {
+    "must return ApplicationNotFoundException when the application does not exist" in {
       val id = "test-id"
 
       val repository = mock[ApplicationsRepository]
@@ -276,7 +276,7 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map(
         result =>
-          result mustBe None
+          result mustBe Left(ApplicationNotFoundException.forId(id))
       )
     }
 
@@ -300,7 +300,7 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result.value.left.value mustBe a[IdmsException]
+          result.left.value mustBe a[IdmsException]
       }
     }
   }

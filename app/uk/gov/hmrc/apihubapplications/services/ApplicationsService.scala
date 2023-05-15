@@ -63,7 +63,7 @@ class ApplicationsService @Inject()(
     repository.filter(teamMemberEmail)
   }
 
-  def findById(id: String)(implicit hc: HeaderCarrier): Future[Option[Either[IdmsException, Application]]] = {
+  def findById(id: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     repository.findById(id).flatMap {
       case Right(application) =>
         ApplicationEnrichers.process(
@@ -73,13 +73,12 @@ class ApplicationsService @Inject()(
             ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
             ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
           )
-        ).map(Some(_))
-      case _ => Future.successful(None)
+        )
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
   def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
-
 
   def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] = {
 
