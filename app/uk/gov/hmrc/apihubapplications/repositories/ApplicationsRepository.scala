@@ -23,6 +23,7 @@ import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -42,23 +43,28 @@ class ApplicationsRepository @Inject()
                       Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
                      ),
     indexes = Seq(IndexModel(Indexes.ascending("teamMembers", "email")))
-  ) {
+  ) with Logging with ExceptionRaising {
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
-  def findAll():Future[Seq[Application]] = collection.find().toFuture()
 
-  def filter(teamMemberEmail: String):Future[Seq[Application]] = {
+  def findAll(): Future[Seq[Application]] = collection.find().toFuture()
+
+  def filter(teamMemberEmail: String): Future[Seq[Application]] = {
     val document = BsonDocument("teamMembers" -> BsonDocument("email" -> teamMemberEmail))
     collection.find(document).toFuture()
   }
 
-  def findById(id: String): Future[Option[Application]] = {
+  def findById(id: String): Future[Either[ApplicationsException, Application]] = {
     stringToObjectId(id) match {
       case Some(objectId) =>
         collection
-          .find (Filters.equal ("_id", objectId ) )
-          .headOption ()
-      case None => Future.successful(None)
+          .find(Filters.equal ("_id", objectId ) )
+          .headOption()
+          .map {
+            case Some(application) => Right(application)
+            case _ => Left(raiseApplicationNotFoundException.forId(id))
+          }
+      case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
     }
   }
 
@@ -75,7 +81,7 @@ class ApplicationsRepository @Inject()
       )
   }
 
-  def update(application: Application): Future[Boolean] = {
+  def update(application: Application): Future[Either[ApplicationsException, Unit]] = {
     stringToObjectId(application.id) match {
       case Some(id) =>
         collection
@@ -85,11 +91,18 @@ class ApplicationsRepository @Inject()
             options     = ReplaceOptions().upsert(false)
           )
           .toFuture()
-          .map(_.getModifiedCount == 1)
-      case None => Future.successful(false)
+          .map(
+            result =>
+              if (result.getModifiedCount > 0) {
+                Right(())
+              }
+              else {
+                Left(raiseApplicationNotFoundException.forApplication(application))
+              }
+          )
+      case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
     }
   }
-
 
 }
 
