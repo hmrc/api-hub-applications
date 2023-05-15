@@ -97,7 +97,7 @@ class ApplicationsRepository @Inject()
                 Right(())
               }
               else {
-                Left(raiseApplicationNotFoundException.forApplication(application))
+                Left(raiseNotUpdatedException.forApplication(application))
               }
           )
       case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))

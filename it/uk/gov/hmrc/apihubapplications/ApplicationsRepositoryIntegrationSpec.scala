@@ -22,7 +22,7 @@ import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationNotFoundException
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -127,12 +127,12 @@ class ApplicationsRepositoryIntegrationSpec
       actual.map(_.copy(lastUpdated = updated.lastUpdated)) mustBe Right(updated)
     }
 
-    "must return ApplicationNotFoundException when the application does not exist in the database" in {
+    "must return NotUpdatedException when the application does not exist in the database" in {
       val id = List.fill(24)("0").mkString
       val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))
 
       val result = repository.update(application).futureValue
-      result mustBe Left(ApplicationNotFoundException.forId(id))
+      result mustBe Left(NotUpdatedException.forId(id))
     }
   }
 
