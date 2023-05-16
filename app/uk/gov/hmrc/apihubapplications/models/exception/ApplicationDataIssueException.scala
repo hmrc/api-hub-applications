@@ -16,4 +16,22 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
+import uk.gov.hmrc.apihubapplications.models.WithName
+import uk.gov.hmrc.apihubapplications.models.application.Application
+
 case class ApplicationDataIssueException(message: String) extends ApplicationsException(message, null)
+
+sealed trait DataIssue
+
+case object InvalidPrimaryCredentials extends WithName("Invalid primary credentials") with DataIssue
+case object InvalidSecondaryCredentials extends WithName("Invalid secondary credentials") with DataIssue
+case object InvalidPrimaryScope extends WithName("Invalid primary scope") with DataIssue
+
+object ApplicationDataIssueException {
+
+  def forApplication(application: Application, dataIssue: DataIssue): ApplicationDataIssueException = {
+    val id = application.id.getOrElse("<none>")
+    ApplicationDataIssueException(s"Application with Id $id has a data issue: ${dataIssue.toString}")
+  }
+
+}

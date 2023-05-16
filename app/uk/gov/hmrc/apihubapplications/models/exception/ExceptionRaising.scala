@@ -27,6 +27,10 @@ trait ExceptionRaising {
     def apply(message: String): ApplicationDataIssueException = {
       logError(ApplicationDataIssueException(message))
     }
+
+    def forApplication(application: Application, dataIssue: DataIssue): ApplicationDataIssueException = {
+      logError(ApplicationDataIssueException.forApplication(application, dataIssue))
+    }
   }
 
   object raiseApplicationNotFoundException {
