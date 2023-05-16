@@ -22,7 +22,7 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
@@ -45,7 +45,8 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
           logger.info(s"Registering new application: ${newApp.name}")
           applicationsService.registerApplication(newApp).map {
             case Right(application) => Created(Json.toJson(application))
-            case Left(_) => BadGateway
+            case Left(_: IdmsException) => BadGateway
+            case Left(_) => InternalServerError
           }
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
@@ -108,11 +109,12 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         jsReq.validate[UpdateScopeStatus] match {
           case JsSuccess(UpdateScopeStatus(Approved), _) =>
             logger.info(s"Setting scope $scopeName to ${Approved.toString} on application ID: $id")
-            applicationsService.approvePrimaryScope(id, scopeName).flatMap {
-              case Left(_: ApplicationNotFoundException) => Future.successful(NotFound)
-              case Left(_: ApplicationDataIssueException) => Future.successful(NotFound)
-              case Left(_: IdmsException) => Future.successful(BadGateway)
-              case _ => Future.successful(NoContent)
+            applicationsService.approvePrimaryScope(id, scopeName).map {
+              case Right(_) => NoContent
+              case Left(_: ApplicationNotFoundException) => NotFound
+              case Left(e: ApplicationDataIssueException) if e.dataIssue == InvalidPrimaryScope => NotFound
+              case Left(_: IdmsException) => BadGateway
+              case Left(_) => InternalServerError
             }
           case JsSuccess(updateStatus, _) =>
             logger.warn(s"Unsupported status: ${updateStatus.status.toString}")
@@ -137,7 +139,8 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Right(secret) => Ok(Json.toJson(secret))
         case Left(_: IdmsException) => BadGateway
         case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: ApplicationsException) => BadRequest
+        case Left(_: ApplicationDataIssueException)  => BadRequest
+        case Left(_) => InternalServerError
       }
   }
 }
