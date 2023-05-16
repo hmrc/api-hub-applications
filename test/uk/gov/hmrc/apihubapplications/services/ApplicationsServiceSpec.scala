@@ -595,7 +595,7 @@ class ApplicationsServiceSpec
 
       service.approvePrimaryScope(testAppId, "test-name-2")(HeaderCarrier())  map {
         actual =>
-          actual mustBe Left(ApplicationNotFoundException(s"Can't find application with id $testAppId"))
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
 
@@ -750,7 +750,7 @@ class ApplicationsServiceSpec
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
-          val expected = Left(ApplicationNotFoundException(s"Can't find application with id $applicationId"))
+          val expected = Left(ApplicationNotFoundException.forId(applicationId))
           actual mustBe expected
       }
     }

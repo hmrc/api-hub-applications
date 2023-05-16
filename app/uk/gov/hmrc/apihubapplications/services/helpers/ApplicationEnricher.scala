@@ -18,8 +18,9 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Pending, Primary, Scope, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -132,6 +133,25 @@ object ApplicationEnrichers {
             }
       }
       .getOrElse(Future.successful(Right(noOpApplicationEnricher)))
+  }
+
+  def credentialCreatingApplicationEnricher(
+    environmentName: EnvironmentName,
+    original: Application,
+    idmsConnector: IdmsConnector
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+    idmsConnector.createClient(environmentName, Client(original)).map {
+      case Right(clientResponse) =>
+        Right(
+          (application: Application) => {
+            environmentName match {
+              case Primary => application.addPrimaryCredential(Credential(clientResponse.clientId, None, None))
+              case Secondary => application.addSecondaryCredential(clientResponse.asCredential())
+            }
+          }
+        )
+      case Left(e) => Left(e)
+    }
   }
 
 }
