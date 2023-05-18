@@ -26,7 +26,7 @@ import org.scalatest.{Assertion, EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
@@ -261,11 +261,11 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result mustBe Some(Right(expected))
+          result mustBe Right(expected)
       }
     }
 
-    "must return None when the application does not exist" in {
+    "must return ApplicationNotFoundException when the application does not exist" in {
       val id = "test-id"
 
       val repository = mock[ApplicationsRepository]
@@ -276,7 +276,7 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map(
         result =>
-          result mustBe None
+          result mustBe Left(ApplicationNotFoundException.forId(id))
       )
     }
 
@@ -300,7 +300,7 @@ class ApplicationsServiceSpec
       val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id)(HeaderCarrier()).map {
         result =>
-          result.value.left.value mustBe a[IdmsException]
+          result.left.value mustBe a[IdmsException]
       }
     }
   }
@@ -327,7 +327,7 @@ class ApplicationsServiceSpec
 
   "addScopes" - {
 
-    "must add new primary scope to Application and not update idms and return true" in {
+    "must add new primary scope to Application and not update idms" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -355,12 +355,12 @@ class ApplicationsServiceSpec
         actual =>
           verify(repository).update(updatedApp)
           verifyZeroInteractions(idmsConnector.addClientScope(any(), any(), any())(any()))
-          actual mustBe Right(true)
+          actual mustBe Right(())
       }
 
     }
 
-    "must update idms with new secondary scope and not update application and return true" in {
+    "must update idms with new secondary scope and not update application" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -386,7 +386,7 @@ class ApplicationsServiceSpec
         actual =>
           verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
-          actual mustBe Right(true)
+          actual mustBe Right(())
       }
 
     }
@@ -460,7 +460,7 @@ class ApplicationsServiceSpec
 
     }
 
-    "must return false if application not found whilst updating it with new scope" in {
+    "must return ApplicationNotFoundException if application not found whilst updating it with new scope" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -486,11 +486,11 @@ class ApplicationsServiceSpec
 
       service.addScope(testAppId, newScopes)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Right(false)
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
 
-    "must return false if application not initially found" in {
+    "must return ApplicationNotFoundException if application not initially found" in {
       val repository = mock[ApplicationsRepository]
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
@@ -500,7 +500,7 @@ class ApplicationsServiceSpec
 
       service.addScope(testAppId, NewScope("test-name-1", Seq(Primary)))(HeaderCarrier()) map {
         actual =>
-          actual mustBe Right(false)
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
   }
@@ -595,7 +595,7 @@ class ApplicationsServiceSpec
 
       service.approvePrimaryScope(testAppId, "test-name-2")(HeaderCarrier())  map {
         actual =>
-          actual mustBe Left(ApplicationNotFoundException(s"Can't find application with id $testAppId"))
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
 
@@ -625,7 +625,7 @@ class ApplicationsServiceSpec
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(ApplicationDataIssueException(s"Application $testAppId has invalid primary scope."))
+          actual mustBe Left(ApplicationDataIssueException.forApplication(app, InvalidPrimaryScope))
       }
     }
 
@@ -650,7 +650,7 @@ class ApplicationsServiceSpec
 
       service.approvePrimaryScope(testAppId, scopeName)(HeaderCarrier())  map {
         actual =>
-          actual mustBe Left(ApplicationDataIssueException(s"Application $testAppId has invalid primary scope."))
+          actual mustBe Left(ApplicationDataIssueException.forApplication(app, InvalidPrimaryScope))
       }
     }
 
@@ -750,7 +750,7 @@ class ApplicationsServiceSpec
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
-          val expected = Left(ApplicationNotFoundException(s"Can't find application with id $applicationId"))
+          val expected = Left(ApplicationNotFoundException.forId(applicationId))
           actual mustBe expected
       }
     }
@@ -775,7 +775,7 @@ class ApplicationsServiceSpec
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials."))
+          actual mustBe Left(ApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials))
       }
     }
 
@@ -801,7 +801,7 @@ class ApplicationsServiceSpec
 
       service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials."))
+          actual mustBe Left(ApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials))
       }
     }
 

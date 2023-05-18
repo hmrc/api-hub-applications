@@ -21,8 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, Secret}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising, InvalidPrimaryCredentials, InvalidPrimaryScope, InvalidSecondaryCredentials}
+import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.http.HeaderCarrier
@@ -35,23 +35,21 @@ class ApplicationsService @Inject()(
                                      repository: ApplicationsRepository,
                                      clock: Clock,
                                      idmsConnector: IdmsConnector
-                                   )(implicit ec: ExecutionContext) extends Logging {
+                                   )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
-  def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
-    Future.sequence(
+  def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    val application = Application(newApplication, clock)
+      .assertTeamMember(newApplication.createdBy.email)
+
+    ApplicationEnrichers.process(
+      application,
       Seq(
-        idmsConnector.createClient(Primary, Client(newApplication)),
-        idmsConnector.createClient(Secondary, Client(newApplication))
+        ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector),
+        ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector)
       )
     ).flatMap {
-      case Seq(Right(primaryClientResponse), Right(secondaryClientResponse)) =>
-        repository.insert(
-          Application(newApplication, clock)
-            .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, None, None)))
-            .setSecondaryCredentials(Seq(secondaryClientResponse.asCredential()))
-            .assertTeamMember(newApplication.createdBy.email)
-        ).map(Right(_))
-      case _ => Future.successful(Left(IdmsException("Unable to create credentials")))
+      case Right(enriched) => repository.insert(enriched).map(Right(_))
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
@@ -63,7 +61,7 @@ class ApplicationsService @Inject()(
     repository.filter(teamMemberEmail)
   }
 
-  def findById(id: String)(implicit hc: HeaderCarrier): Future[Option[Either[IdmsException, Application]]] = {
+  def findById(id: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     repository.findById(id).flatMap {
       case Right(application) =>
         ApplicationEnrichers.process(
@@ -73,15 +71,14 @@ class ApplicationsService @Inject()(
             ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
             ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
           )
-        ).map(Some(_))
-      case _ => Future.successful(None)
+        )
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
   def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
 
-
-  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Boolean]] = {
+  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
     def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Either[ApplicationsException, Unit]] = {
       if (newScope.environments.exists(e => e.equals(Primary))) {
@@ -97,7 +94,7 @@ class ApplicationsService @Inject()(
         qaTechDeliveryValidSecondaryCredential(application) match {
           case Some(credential) => idmsConnector.addClientScope(Secondary, credential.clientId, newScope.name)
           case _ =>
-            Future.successful(Left(ApplicationDataIssueException(s"Application ${application.id} has invalid secondary credentials.")))
+            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidSecondaryCredentials)))
         }
       } else {
         Future.successful(Right(()))
@@ -113,11 +110,11 @@ class ApplicationsService @Inject()(
           repositoryUpdated <- repositoryUpdate
           idmsUpdated <- idmsUpdate
         } yield (repositoryUpdated, idmsUpdated) match {
-          case (Right(()), Right(_)) => Right(true)
+          case (Right(_), Right(_)) => Right(())
           case (_, Left(e)) => Left(e)
-          case _ => Right(false)
+          case (Left(e), _) => Left(e)
         }
-      case _ => Future.successful(Right(false))
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
@@ -133,9 +130,9 @@ class ApplicationsService @Inject()(
 
       if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
         val maybeIdmsResult = qaTechDeliveryValidPrimaryCredential(application).map(credential => idmsConnector.addClientScope(Primary, credential.clientId, scopeName))
-        maybeIdmsResult.getOrElse(Future.successful(Left(ApplicationDataIssueException(s"Application ${application.id.orNull} has invalid primary credentials."))))
+        maybeIdmsResult.getOrElse(Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials))))
       } else {
-        Future.successful(Left(ApplicationDataIssueException(s"Application ${application.id.orNull} has invalid primary scope.")))
+        Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryScope)))
       }
     }
 
@@ -144,7 +141,7 @@ class ApplicationsService @Inject()(
         case Right(_) => removePrimaryScope(application, scopeName)
         case Left(e) => Future.successful(Left(e))
       }
-      case _ => Future.successful(Left(applicationNotFound(applicationId)))
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
@@ -165,14 +162,10 @@ class ApplicationsService @Inject()(
               case Left(e) => Future.successful(Left(e))
             }
           case _ =>
-            Future.successful(Left(ApplicationDataIssueException(s"Application $applicationId has invalid primary credentials.")))
+            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
         }
-      case _ => Future(Left(applicationNotFound(applicationId)))
+      case Left(e) => Future.successful(Left(e))
     }
-  }
-
-  private def applicationNotFound(applicationId: String) = {
-    ApplicationNotFoundException(s"Can't find application with id $applicationId")
   }
 
   private def qaTechDeliveryValidPrimaryCredential(application: Application): Option[Credential] = {

@@ -37,7 +37,7 @@ import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -123,6 +123,31 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.BAD_GATEWAY
       }
     }
+
+    "must return 500 Internal Server Error for unexpected application exceptions" in {
+      val fixture = buildFixture()
+      val newApplication = NewApplication(
+        "test-app",
+        Creator("test1@test.com"),
+        Seq(TeamMember("test1@test.com"), TeamMember("test2@test.com"))
+      )
+
+      val json = Json.toJson(newApplication)
+
+      when(fixture.applicationsService.registerApplication(any())(any()))
+        .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+      running(fixture.application) {
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
   }
 
   "retrieve all Applications" - {
@@ -177,7 +202,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Some(Right(expected))))
+        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Right(expected)))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 
@@ -193,12 +218,25 @@ class ApplicationsControllerSpec
       val id = "id"
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(None))
+        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.NOT_FOUND
+      }
+    }
+
+    "must return 500 Internal Server Error for unexpected application exceptions" in {
+      val id = "id"
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.INTERNAL_SERVER_ERROR
       }
     }
   }
@@ -211,7 +249,7 @@ class ApplicationsControllerSpec
       val json = Json.toJson(scopes)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScope(ArgumentMatchers.eq(id), ArgumentMatchers.eq(newScope))(any())).thenReturn(Future.successful(Right(true)))
+        when(fixture.applicationsService.addScope(ArgumentMatchers.eq(id), ArgumentMatchers.eq(newScope))(any())).thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
@@ -231,7 +269,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(false)))
+        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
@@ -249,7 +287,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Right(false)))
+        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addScopes(id).url)
           .withHeaders(
@@ -312,6 +350,22 @@ class ApplicationsControllerSpec
       }
     }
 
+    "must return 500 Internal Server Error for unexpected application exceptions" in {
+      val scopes: Seq[NewScope] = Seq(NewScope("scope1", Seq(Secondary, Primary)))
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.addScope(any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addScopes("id").url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(scopes))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
   }
 
   "pendingScopes" - {
@@ -334,7 +388,6 @@ class ApplicationsControllerSpec
       }
     }
   }
-
 
   "set scope to APPROVED for primary PENDING scope" - {
     val appId = "my-app-id"
@@ -371,7 +424,8 @@ class ApplicationsControllerSpec
     "must return 404 Not Found when the scope does not exist" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Left(ApplicationDataIssueException(":("))))
+        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any()))
+          .thenReturn(Future.successful(Left(ApplicationDataIssueException(appId, InvalidPrimaryScope))))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
@@ -383,7 +437,8 @@ class ApplicationsControllerSpec
     "must return 404 Not Found when trying to set scope status to APPROVED on an existing scope where the status is not PENDING" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Left(ApplicationDataIssueException(":("))))
+        when(fixture.applicationsService.approvePrimaryScope(ArgumentMatchers.eq(appId), ArgumentMatchers.eq(scopeName))(any()))
+          .thenReturn(Future.successful(Left(ApplicationDataIssueException(appId, InvalidPrimaryScope))))
 
         val request = requestUpdateStatus(UpdateScopeStatus(Approved))
 
@@ -402,6 +457,18 @@ class ApplicationsControllerSpec
       }
     }
 
+    "must return 500 Internal Server Error for unexpected application exceptions" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.approvePrimaryScope(any(), any())(any()))
+          .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = requestUpdateStatus(UpdateScopeStatus(Approved))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
   }
 
   "createPrimarySecret" - {
@@ -431,7 +498,7 @@ class ApplicationsControllerSpec
           CONTENT_TYPE -> "application/json"
         )
         when(fixture.applicationsService.createPrimarySecret(ArgumentMatchers.eq(applicationId))(any()))
-          .thenReturn(Future.successful(Left(ApplicationDataIssueException("bad thing"))))
+          .thenReturn(Future.successful(Left(ApplicationDataIssueException(applicationId, InvalidPrimaryCredentials))))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
@@ -467,9 +534,23 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.BAD_GATEWAY
       }
     }
+
+    "must return 500 Internal Server Error for unexpected application exceptions" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val request = FakeRequest(POST, routes.ApplicationsController.createPrimarySecret("id").url).withHeaders(
+          CONTENT_TYPE -> "application/json"
+        )
+
+        when(fixture.applicationsService.createPrimarySecret(any)(any()))
+          .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
   }
 }
-
 
 object ApplicationsControllerSpec {
 
@@ -499,5 +580,7 @@ object ApplicationsControllerSpec {
   def testApplication: Application = {
     Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator, Seq(TeamMember(testCreator.email)))
   }
+
+  case object UnexpectedApplicationsException extends ApplicationsException("unexpected-message", null)
 
 }

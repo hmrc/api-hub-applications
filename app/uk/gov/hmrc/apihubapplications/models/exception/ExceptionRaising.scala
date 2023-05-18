@@ -24,67 +24,62 @@ trait ExceptionRaising {
   self: Logging =>
 
   object raiseApplicationDataIssueException {
-    def apply(message: String): ApplicationDataIssueException = {
-      logError(ApplicationDataIssueException(message))
+    def forApplication(application: Application, dataIssue: DataIssue): ApplicationDataIssueException = {
+      log(ApplicationDataIssueException.forApplication(application, dataIssue))
     }
   }
 
   object raiseApplicationNotFoundException {
     def apply(message: String): ApplicationNotFoundException = {
-      logWarn(ApplicationNotFoundException(message))
+      log(ApplicationNotFoundException(message))
     }
 
     def forId(id: String): ApplicationNotFoundException = {
-      logWarn(ApplicationNotFoundException.forId(id))
+      log(ApplicationNotFoundException.forId(id))
     }
 
     def forApplication(application: Application): ApplicationNotFoundException = {
-      logWarn(ApplicationNotFoundException.forApplication(application))
+      log(ApplicationNotFoundException.forApplication(application))
     }
   }
 
   object raiseIdmsException {
     def apply(message: String, cause: Throwable): IdmsException = {
-      logError(IdmsException(message, cause))
+      log(IdmsException(message, cause))
     }
 
     def apply(message: String): IdmsException = {
-      logError(IdmsException(message))
+      log(IdmsException(message))
     }
 
     def clientNotFound(clientId: String): IdmsException = {
-      logError(IdmsException.clientNotFound(clientId))
+      log(IdmsException.clientNotFound(clientId))
     }
 
     def unexpectedResponse(response: UpstreamErrorResponse): IdmsException = {
-      logError(IdmsException.unexpectedResponse(response))
+      log(IdmsException.unexpectedResponse(response))
     }
 
     def error(throwable: Throwable): IdmsException = {
-      logError(IdmsException.error(throwable))
+      log(IdmsException.error(throwable))
     }
   }
 
   object raiseNotUpdatedException {
     def apply(message: String): NotUpdatedException = {
-      logError(NotUpdatedException(message))
+      log(NotUpdatedException(message))
     }
 
     def forId(id: String): NotUpdatedException = {
-      logError(NotUpdatedException.forId(id))
+      log(NotUpdatedException.forId(id))
     }
 
     def forApplication(application: Application): NotUpdatedException = {
-      logError(NotUpdatedException.forApplication(application))
+      log(NotUpdatedException.forApplication(application))
     }
   }
 
-  private def logError[T <: ApplicationsException](e: T): T = {
-    logger.error("Raised application exception", e)
-    e
-  }
-
-  private def logWarn[T <: ApplicationsException](e: T): T = {
+  private def log[T <: ApplicationsException](e: T): T = {
     logger.warn("Raised application exception", e)
     e
   }

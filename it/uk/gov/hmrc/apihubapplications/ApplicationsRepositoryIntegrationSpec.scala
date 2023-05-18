@@ -98,14 +98,14 @@ class ApplicationsRepositoryIntegrationSpec
       actual mustBe Right(expected)
     }
 
-    "must return None when the application does not exist in MongoDb" in {
+    "must return ApplicationNotFoundException when the application does not exist in MongoDb" in {
       val id = List.fill(24)("0").mkString
       val actual = repository.findById(id).futureValue
 
       actual mustBe Left(ApplicationNotFoundException.forId(id))
     }
 
-    "must return None when the Id is not a valid Object Id" in {
+    "must return ApplicationNotFoundException when the Id is not a valid Object Id" in {
       val id = "invalid"
       val actual = repository.findById(id).futureValue
 
@@ -114,7 +114,7 @@ class ApplicationsRepositoryIntegrationSpec
   }
 
   "update" - {
-    "must update MongoDb and return true when the application exists in the database" in {
+    "must update MongoDb when the application exists in the database" in {
       val application = Application(None, "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))
 
       val saved = repository.insert(application).futureValue
