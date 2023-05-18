@@ -27,9 +27,9 @@ case object InvalidSecondaryCredentials extends WithName("Invalid secondary cred
 case object InvalidPrimaryScope extends WithName("Invalid primary scope") with DataIssue
 
 case class ApplicationDataIssueException(
-  id: String,
+  applicationId: String,
   dataIssue: DataIssue
-) extends ApplicationsException(buildMessage(id, dataIssue), null)
+) extends ApplicationsException(buildMessage(applicationId, dataIssue), null)
 
 object ApplicationDataIssueException {
 
@@ -38,8 +38,8 @@ object ApplicationDataIssueException {
     ApplicationDataIssueException(id, dataIssue)
   }
 
-  def buildMessage(id: String, dataIssue: DataIssue): String = {
-    s"Application with Id $id has a data issue: ${dataIssue.toString}"
+  def buildMessage(applicationId: String, dataIssue: DataIssue): String = {
+    s"Application with Id $applicationId has a data issue: ${dataIssue.toString}"
   }
 
 }

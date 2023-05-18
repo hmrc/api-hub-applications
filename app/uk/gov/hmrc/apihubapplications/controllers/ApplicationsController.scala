@@ -112,7 +112,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             applicationsService.approvePrimaryScope(id, scopeName).map {
               case Right(_) => NoContent
               case Left(_: ApplicationNotFoundException) => NotFound
-              case Left(e: ApplicationDataIssueException) if e.dataIssue == InvalidPrimaryScope => NotFound
+              case Left(ApplicationDataIssueException(_, InvalidPrimaryScope)) => NotFound
               case Left(_: IdmsException) => BadGateway
               case Left(_) => InternalServerError
             }
