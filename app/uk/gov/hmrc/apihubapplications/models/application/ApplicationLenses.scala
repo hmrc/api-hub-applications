@@ -18,6 +18,8 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import uk.gov.hmrc.apihubapplications.models.Lens
 
+import java.time.LocalDateTime
+
 object ApplicationLenses {
 
   val applicationEnvironments: Lens[Application, Environments] =
@@ -72,6 +74,12 @@ object ApplicationLenses {
     Lens[Application, Seq[TeamMember]](
       get = _.teamMembers,
       set = (application, teamMembers) => application.copy(teamMembers = teamMembers)
+    )
+
+  val applicationLastUpdated: Lens[Application, LocalDateTime] =
+    Lens[Application, LocalDateTime](
+      get = _.lastUpdated,
+      set = (application, lastUpdated) => application.copy(lastUpdated = lastUpdated)
     )
 
   implicit class ApplicationLensOps(application: Application) {
@@ -153,6 +161,9 @@ object ApplicationLenses {
       }
     }
 
+    def setLastUpdated(lastUpdated: LocalDateTime): Application = {
+      applicationLastUpdated.set(application, lastUpdated)
+    }
   }
 
 }

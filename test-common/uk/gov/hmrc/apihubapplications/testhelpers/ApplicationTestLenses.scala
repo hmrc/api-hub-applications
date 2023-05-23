@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.apihubapplications.testhelpers
 
+import org.scalatest.OptionValues
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 
-object ApplicationTestLenses {
+object ApplicationTestLenses extends OptionValues {
   implicit class ApplicationTestLensOps(application: Application) {
     val pendingScopeName = "my-pending-scope"
     val approvedScopeName = "my-approved-scope"
@@ -44,6 +45,14 @@ object ApplicationTestLenses {
 
     def withPrimaryCredentialClientIdOnly: Application = {
       application.setPrimaryCredentials(Seq(Credential(clientId,None,None)))
+    }
+
+    def primaryCredential: Credential = {
+      application.getPrimaryCredentials.headOption.value
+    }
+
+    def secondaryCredential: Credential = {
+      application.getSecondaryCredentials.headOption.value
     }
   }
 

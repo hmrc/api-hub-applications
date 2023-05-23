@@ -130,6 +130,83 @@ trait ApplicationGenerator {
       Gen.listOf(newScopeGenerator)
     }
 
+  //--------------------------------
+  val nonEmptyText: Gen[String] = {
+    Gen.alphaStr.suchThat(_.nonEmpty)
+  }
+
+  val pendingScopeGenerator: Gen[Scope] = {
+    for {
+      name <- nonEmptyText
+    } yield Scope(name, Pending)
+  }
+
+  val approvedScopeGenerator: Gen[Seq[Scope]] = {
+    for {
+      scopeNames <- Gen.nonEmptyListOf(nonEmptyText)
+    } yield scopeNames.map(scopeName => Scope(scopeName, Approved))
+  }
+
+  val basicEnvironmentsGen: Gen[Environments] = {
+    for {
+      primaryClientId <- Gen.uuid
+      primarySecret <- Gen.uuid
+      primaryScopes <- Gen.nonEmptyListOf(pendingScopeGenerator)
+      secondaryClientId <- Gen.uuid
+      secondarySecret <- Gen.uuid
+    } yield
+      Environments(
+        primary = Environment(
+          primaryScopes,  // Only pending scopes are stored
+          Seq(Credential(primaryClientId.toString, None, Some(primarySecret.toString.takeRight(4))))
+        ),
+        secondary = Environment(
+          Seq.empty,  // We don't store these any more
+          Seq(Credential(secondaryClientId.toString, Some(secondarySecret.toString), Some(secondarySecret.toString.takeRight(4))))
+        )
+      )
+  }
+
+  val emailGenerator2: Gen[String] = {
+    for {
+      firstName <- nonEmptyText
+      lastName <- nonEmptyText
+      emailDomain <- Gen.oneOf(Seq("hmrc.gov.uk", "digital.hmrc.gov.uk"))
+    } yield s"$firstName.$lastName@$emailDomain"
+  }
+
+  val creatorGenerator2: Gen[Creator] = {
+    for {
+      email <- emailGenerator2
+    } yield Creator(email)
+  }
+
+  val basicApplicationGen: Gen[Application] = {
+    for {
+      appId <- appIdGenerator
+      name <- nonEmptyText
+      created <- localDateTimeGenerator
+      createdBy <- creatorGenerator2
+      lastUpdated <- localDateTimeGenerator
+      environments <- basicEnvironmentsGen
+    } yield
+      Application(
+        appId,
+        name,
+        created,
+        createdBy,
+        lastUpdated,
+        Seq(TeamMember(createdBy.email)),
+        environments
+      )
+  }
+
+  val applicationsGen: Gen[Seq[Application]] = {
+    for {
+      applications <- Gen.nonEmptyListOf(basicApplicationGen)
+    } yield applications
+  }
+
 }
 
 object ApplicationGenerator extends ApplicationGenerator {
@@ -149,6 +226,17 @@ object ApplicationGenerator extends ApplicationGenerator {
           } yield existing.setPrimaryCredentials(Seq(credential.copy(clientSecret = None, secretFragment = None)))
       }
     }
+  }
+
+  implicit class SeqApplicationGenOps(gen: Gen[Seq[Application]]) {
+
+    def withTeamMember(email: String): Gen[Seq[Application]] = {
+      gen.map {
+        applications =>
+          applications.map(_.addTeamMember(email))
+      }
+    }
+
   }
 
 }
