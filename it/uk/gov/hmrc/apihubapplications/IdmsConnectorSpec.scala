@@ -24,6 +24,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
@@ -176,6 +177,73 @@ class IdmsConnectorSpec
       buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
         clientResponse =>
           clientResponse.left.value mustBe a [IdmsException]
+      }
+    }
+  }
+
+  "IdmsConnector.deleteClient" - {
+    "must place the correct request per environment to IDMS and succeed" in {
+      forAll(environmentNames) { environmentName: EnvironmentName =>
+        stubFor(
+          delete(urlEqualTo(s"/$environmentName/identity/clients/$testClientId"))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .willReturn(
+              aResponse()
+            )
+        )
+
+        buildConnector(this).deleteClient(environmentName, testClientId)(HeaderCarrier()) map {
+          actual =>
+            actual mustBe Right(())
+        }
+      }
+    }
+
+    "must succeed when IDMS returns 404 Not Found to allow tolerant retries" in {
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Right(())
+      }
+    }
+
+    "must return IdmsException for any non-2xx or 404 response" in {
+      forAll(nonSuccessResponses) { status: Int =>
+        stubFor(
+          delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+            .willReturn(
+              aResponse()
+                .withStatus(status)
+            )
+        )
+
+        buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+          actual =>
+            actual.left.value mustBe a[IdmsException]
+        }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+        actual =>
+          actual.left.value mustBe a[IdmsException]
       }
     }
   }
