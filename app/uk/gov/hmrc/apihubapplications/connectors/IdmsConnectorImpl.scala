@@ -75,6 +75,10 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
+  override def deleteClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+    ???
+  }
+
   private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
     val baseUrl = servicesConfig.baseUrl(s"idms-$environmentName")
     val path = servicesConfig.getConfString(s"idms-$environmentName.path", "")
