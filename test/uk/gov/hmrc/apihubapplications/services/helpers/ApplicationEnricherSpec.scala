@@ -23,7 +23,7 @@ import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Pending, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{CallError, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -125,7 +125,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
           )
         )
 
-      val expected = IdmsException("test-message")
+      val expected = IdmsException("test-message", CallError)
 
       val idmsConnector = mock[IdmsConnector]
 
@@ -175,7 +175,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       val application = testApplication
         .setSecondaryCredentials(Seq(testClientResponse1.asCredential()))
 
-      val expected = IdmsException("test-message")
+      val expected = IdmsException("test-message", CallError)
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
@@ -229,7 +229,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       val application = testApplication
         .setPrimaryCredentials(Seq(testClientResponse1.asCredential()))
 
-      val expected = IdmsException("test-message")
+      val expected = IdmsException("test-message", CallError)
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
@@ -270,7 +270,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     }
 
     "must return IdmsException if any call to IDMS fails" in {
-      val expected = IdmsException("test-message")
+      val expected = IdmsException("test-message", CallError)
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(testApplication)))(any()))
@@ -292,7 +292,7 @@ object ApplicationEnricherSpec {
   val testClientResponse2: ClientResponse = ClientResponse("test-client-id-2", "test-secret-2")
   val testClientScope1: ClientScope = ClientScope("test-client-scope-1")
   val testClientScope2: ClientScope = ClientScope("test-client-scope-2")
-  val testException: IdmsException = IdmsException("test-exception")
+  val testException: IdmsException = IdmsException("test-exception", CallError)
 
   def successfulEnricher(mutator: Application => Application): Future[Either[IdmsException, ApplicationEnricher]] = {
     Future.successful(

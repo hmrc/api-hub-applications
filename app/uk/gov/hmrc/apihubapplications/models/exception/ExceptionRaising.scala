@@ -44,14 +44,6 @@ trait ExceptionRaising {
   }
 
   object raiseIdmsException {
-    def apply(message: String, cause: Throwable): IdmsException = {
-      log(IdmsException(message, cause))
-    }
-
-    def apply(message: String): IdmsException = {
-      log(IdmsException(message))
-    }
-
     def clientNotFound(clientId: String): IdmsException = {
       log(IdmsException.clientNotFound(clientId))
     }

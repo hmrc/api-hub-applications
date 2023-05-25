@@ -26,7 +26,7 @@ import org.scalatest.{Assertion, EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, CallError, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
@@ -106,7 +106,7 @@ class ApplicationsServiceSpec
       )
 
       when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(newApplication)))(any()))
-        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
 
       val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
       when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
@@ -136,7 +136,7 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(primaryClientResponse)))
 
       when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
-        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
@@ -293,7 +293,7 @@ class ApplicationsServiceSpec
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
-        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(Seq.empty)))
 
@@ -412,7 +412,7 @@ class ApplicationsServiceSpec
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
-      val exception = IdmsException("Bad thing")
+      val exception = IdmsException("Bad thing", CallError)
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -449,7 +449,7 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
 
-      val exception = IdmsException("Bad thing")
+      val exception = IdmsException("Bad thing", CallError)
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -574,13 +574,13 @@ class ApplicationsServiceSpec
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
-      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(IdmsException(":("))))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(IdmsException(":(", CallError))))
 
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier()) map {
         actual => {
           verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())
-          actual mustBe Left(IdmsException(":("))
+          actual mustBe Left(IdmsException(":(", CallError))
         }
       }
     }
@@ -729,7 +729,7 @@ class ApplicationsServiceSpec
 
       when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
 
-      val expected = Left(IdmsException("bad thing"))
+      val expected = Left(IdmsException("bad thing", CallError))
       when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(expected))
 

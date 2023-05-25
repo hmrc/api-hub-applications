@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{CallError, IdmsException}
 
 class HelpersSpec extends AnyFreeSpec with Matchers {
 
@@ -41,7 +41,7 @@ class HelpersSpec extends AnyFreeSpec with Matchers {
     }
 
     "must return an IdmsException given a mix sequence of success and failure" in {
-      val expected = IdmsException("test-message")
+      val expected = IdmsException("test-message", CallError)
       val input: Seq[Either[IdmsException, String]] =
         Seq(
           Right("test-1"),
