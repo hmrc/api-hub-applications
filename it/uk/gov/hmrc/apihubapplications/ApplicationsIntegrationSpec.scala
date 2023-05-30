@@ -22,6 +22,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+import play.api.http.Status.{NOT_FOUND, NO_CONTENT}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -247,6 +248,38 @@ class ApplicationsIntegrationSpec
 
       response.status shouldBe 404
 
+    }
+  }
+
+  "DELETE an application" should {
+    "delete the application and respond with 204 No Content when successful" in {
+      forAll { (application: Application) =>
+        deleteAll().futureValue
+        insert(application).futureValue
+
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .delete()
+            .futureValue
+
+        response.status shouldBe NO_CONTENT
+
+        val storedApplications = findAll().futureValue
+        storedApplications.size shouldBe 0
+      }
+    }
+
+    "respond with 404 Not Found when the application does not exist" in {
+      forAll { (application: Application) =>
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .delete()
+            .futureValue
+
+        response.status shouldBe NOT_FOUND
+      }
     }
   }
 
