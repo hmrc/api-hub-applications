@@ -325,6 +325,121 @@ class ApplicationsServiceSpec
     }
   }
 
+  "delete" - {
+    "must delete the application from the repository" in {
+      val id = "test-id"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(())
+          verify(repository).delete(any())
+          succeed
+      }
+    }
+
+    "must delete the primary credential from IDMS" in {
+      val id = "test-id"
+      val clientId = "test-client-id"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+        .setPrimaryCredentials(Seq(Credential(clientId, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(())
+          verify(repository).delete(any())
+          verify(idmsConnector).deleteClient(any(), any())(any())
+          succeed
+      }
+    }
+
+    "must delete the secondary credential from IDMS" in {
+      val id = "test-id"
+      val clientId = "test-client-id"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+        .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(())
+          verify(repository).delete(any())
+          verify(idmsConnector).deleteClient(any(), any())(any())
+          succeed
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application does not exist" in {
+      val id = "test-id"
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id)))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(ApplicationNotFoundException.forId(id))
+      }
+    }
+
+    "must return IdmsException when that is returned from any call to the IDMS connector" in {
+      val id = "test-id"
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+        .setPrimaryCredentials(Seq(Credential(clientId1, None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId2, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1))(any()))
+        .thenReturn(Future.successful(Right(())))
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId2))(any()))
+        .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(IdmsException.unexpectedResponse(500))
+          verify(repository, times(0)).delete(any())
+          succeed
+      }
+    }
+  }
+
   "addScopes" - {
 
     "must add new primary scope to Application and not update idms" in {

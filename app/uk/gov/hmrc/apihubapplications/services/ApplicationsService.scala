@@ -78,6 +78,27 @@ class ApplicationsService @Inject()(
 
   def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
 
+  def delete(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    repository.findById(applicationId).flatMap {
+      case Right(application) =>
+        ApplicationEnrichers.process(
+          application,
+          application.getPrimaryCredentials.map(
+            credential =>
+              ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, credential.clientId, idmsConnector)
+          ) ++
+          application.getSecondaryCredentials.map(
+            credential =>
+              ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, credential.clientId, idmsConnector)
+          )
+        ).flatMap {
+          case Right(_) => repository.delete(application)
+          case Left(e) => Future.successful(Left(e))
+        }
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
   def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
     def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Either[ApplicationsException, Unit]] = {

@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{ClientNotFound, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
@@ -150,6 +150,27 @@ object ApplicationEnrichers {
             }
           }
         )
+      case Left(e) => Left(e)
+    }
+  }
+
+  def credentialDeletingApplicationEnricher(
+    environmentName: EnvironmentName,
+    clientId: String,
+    idmsConnector: IdmsConnector
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+    def buildEnricher(): ApplicationEnricher = {
+      (application: Application) => {
+        environmentName match {
+          case Primary => application.removePrimaryCredential(clientId)
+          case Secondary => application.removeSecondaryCredential(clientId)
+        }
+      }
+    }
+
+    idmsConnector.deleteClient(environmentName, clientId).map {
+      case Right(()) => Right(buildEnricher())
+      case Left(IdmsException(_, _, ClientNotFound)) => Right(buildEnricher())
       case Left(e) => Left(e)
     }
   }
