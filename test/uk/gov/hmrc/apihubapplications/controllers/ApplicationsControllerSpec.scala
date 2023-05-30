@@ -241,6 +241,69 @@ class ApplicationsControllerSpec
     }
   }
 
+  "deleteApplication" - {
+    "must delete the application and return 204 No Content" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Right(())))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.applicationsService).delete(any())(any())
+      }
+    }
+
+    "must return 404 Not Found when the application does not exist" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 502 Bad Gateway if an IDMS exception is encountered" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_GATEWAY
+      }
+    }
+
+    "must return 500 Internal Server Error for any unexpected exception" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+  }
+
   "add scopes" - {
     "must return 204 NoContent" in {
       val id = "app-id-1"
