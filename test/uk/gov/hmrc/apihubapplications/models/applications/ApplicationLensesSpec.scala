@@ -255,6 +255,15 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "removePrimaryCredential" - {
+      "must" - {
+        behave like applicationRemoveCredentialFunction(
+          applicationPrimaryCredentials,
+          (application, clientId) => ApplicationLensOps(application).removePrimaryCredential(clientId)
+        )
+      }
+    }
+
     "getSecondaryScopes" - {
       "must" - {
         behave like applicationScopesGetterFunction(
@@ -305,6 +314,15 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
         behave like applicationAddCredentialFunction(
           applicationSecondaryCredentials,
           (application, credential) => ApplicationLensOps(application).addSecondaryCredential(credential)
+        )
+      }
+    }
+
+    "removeSecondaryCredential" - {
+      "must" - {
+        behave like applicationRemoveCredentialFunction(
+          applicationSecondaryCredentials,
+          (application, clientId) => ApplicationLensOps(application).removeSecondaryCredential(clientId)
         )
       }
     }
@@ -592,6 +610,20 @@ object ApplicationLensesSpec {
 
         val actual = lens.get(addsCredential(application, newCredential))
         actual mustBe expected
+      }
+    }
+
+    def applicationRemoveCredentialFunction(
+      lens: Lens[Application, Seq[Credential]],
+      removesCredential: (Application, String) => Application
+    ): Unit ={
+      "must remove the correct credential" in {
+        val credential1 = randomCredential()
+        val credential2 = randomCredential()
+        val application = lens.set(testApplication, Seq(credential1, credential2))
+
+        val actual = lens.get(removesCredential(application, credential1.clientId))
+        actual mustBe Seq(credential2)
       }
     }
   }
