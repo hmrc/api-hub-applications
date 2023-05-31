@@ -158,19 +158,28 @@ object ApplicationsRepository extends Logging {
       json => json.transform(
         JsPath.json.update((JsPath \ "_id" \ "$oid").json.copyFrom((JsPath \ "id").json.pick))
           andThen (JsPath \ "id").json.prune
+          andThen (JsPath \ "issues").json.prune
+      ).get
+    )
+
+  private val mongoApplicationWithoutIdWrites: Writes[Application] =
+    Application.applicationFormat.transform(
+      json => json.transform(
+        (JsPath \ "issues").json.prune
       ).get
     )
 
   private val mongoApplicationWrites: Writes[Application] = (application: Application) => {
     application.id match {
       case Some(_) => mongoApplicationWithIdWrites.writes(application)
-      case _ => Application.applicationFormat.writes(application)
+      case _ => mongoApplicationWithoutIdWrites.writes(application)
     }
   }
 
   private val mongoApplicationReads: Reads[Application] =
     JsPath.json.update((JsPath \ "id").json
       .copyFrom((JsPath \ "_id" \ "$oid").json.pick))
+      .andThen(JsPath.json.update(__.read[JsObject].map(o => o ++ Json.obj("issues" -> Json.arr()))))
       .andThen(Application.applicationFormat)
 
   val mongoApplicationFormat: Format[Application] = Format(mongoApplicationReads, mongoApplicationWrites)

@@ -74,6 +74,12 @@ object ApplicationLenses {
       set = (application, teamMembers) => application.copy(teamMembers = teamMembers)
     )
 
+  val applicationIssues: Lens[Application, Seq[String]] =
+    Lens[Application, Seq[String]](
+      get = _.issues,
+      set = (application, issues) => application.copy(issues = issues)
+    )
+
   implicit class ApplicationLensOps(application: Application) {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
@@ -165,6 +171,16 @@ object ApplicationLenses {
       }
     }
 
+    def setIssues(issues: Seq[String]): Application = {
+      applicationIssues.set(application, issues)
+    }
+
+    def addIssue(issue: String): Application = {
+      applicationIssues.set(
+        application,
+        applicationIssues.get(application) :+ issue
+      )
+    }
   }
 
 }

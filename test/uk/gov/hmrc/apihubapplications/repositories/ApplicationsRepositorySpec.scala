@@ -20,6 +20,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
 
@@ -75,6 +76,22 @@ class ApplicationsRepositorySpec
       (result \ "name") mustBe JsDefined(JsString("test-app-without-id"))
     }
 
+    "must strip out the issues sequence while serialising an application without an Id" in {
+      val application = Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
+        .setIssues(Seq("test-issue"))
+
+      val result = Json.toJson(application)(mongoApplicationFormat)
+      (result \ "issues") mustBe a [JsUndefined]
+    }
+
+    "must strip out the issues sequence while serialising an application with an Id" in {
+      val application = Application(Some("test-id"), "test-app-1", Creator("test1@test.com"), Seq.empty)
+        .setIssues(Seq("test-issue"))
+
+      val result = Json.toJson(application)(mongoApplicationFormat)
+      (result \ "issues") mustBe a [JsUndefined]
+    }
+
     "must successfully serialise a collection of new scopes" in {
       val newScopes = Seq(NewScope("scope1", Seq(Primary, Secondary)), NewScope("scope2", Seq(Primary)))
       val result = Json.toJson(newScopes)
@@ -96,12 +113,12 @@ class ApplicationsRepositorySpec
       val result = Json.toJson(request)
       (result \ "status") mustBe JsDefined(JsString("APPROVED"))
     }
+
     "must successfully de-serialise UpdateScopeStatus Request" in {
       val json = Json.parse(s"""{"status": "PENDING"}""".stripMargin)
       val result = json.validate(UpdateScopeStatus.updateScopeStatusFormat)
       result mustBe a[JsSuccess[_]]
     }
-
   }
 
 }

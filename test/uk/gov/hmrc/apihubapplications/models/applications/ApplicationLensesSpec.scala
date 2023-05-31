@@ -21,7 +21,7 @@ import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.Lens
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomCredentials, randomEnvironment, randomEnvironments, randomScopes, randomString, randomTeamMembers, testApplication}
+import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomCredentials, randomEnvironment, randomEnvironments, randomIssues, randomScopes, randomString, randomTeamMembers, testApplication}
 
 import scala.util.Random
 
@@ -180,6 +180,21 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       val application = testApplication.copy(teamMembers = randomTeamMembers())
       val expected = randomTeamMembers()
       val actual = applicationTeamMembers.set(application, expected).teamMembers
+      actual mustBe expected
+    }
+  }
+
+  "applicationIssues" - {
+    "must get the correct issues in " in {
+      val application = testApplication.copy(issues = randomIssues())
+      val actual = applicationIssues.get(application)
+      actual mustBe application.issues
+    }
+
+    "must set the issues correctly" in {
+      val application = testApplication.copy(issues = randomIssues())
+      val expected = randomIssues()
+      val actual = applicationIssues.set(application, expected).issues
       actual mustBe expected
     }
   }
@@ -394,6 +409,26 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "setIssues" - {
+      "must set the issues correctly" in {
+        val application = testApplication
+        val expected = randomIssues()
+
+        val actual = application.setIssues(expected).issues
+        actual mustBe expected
+      }
+    }
+
+    "addIssue" - {
+      "must add the issue" in {
+        val existingIssues = randomIssues()
+        val application = testApplication.setIssues(existingIssues)
+        val issue = "new-issue"
+
+        val actual = application.addIssue(issue).issues
+        actual mustBe existingIssues :+ issue
+      }
+    }
   }
 
 }
@@ -449,6 +484,10 @@ object ApplicationLensesSpec {
   private def randomTeamMembers(): Seq[TeamMember] =
     (0 to Random.nextInt(5))
       .map(_ => randomTeamMember())
+
+  private def randomIssues(): Seq[String] =
+    (0 to Random.nextInt(5))
+      .map(_ => randomString())
 
   private def randomString(): String = Random.alphanumeric.take(Random.nextInt(10) + 1).mkString
 
