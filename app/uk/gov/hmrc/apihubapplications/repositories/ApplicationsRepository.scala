@@ -104,6 +104,24 @@ class ApplicationsRepository @Inject()
     }
   }
 
+  def delete(application: Application): Future[Either[ApplicationsException, Unit]] = {
+    stringToObjectId(application.id) match {
+      case Some(id) =>
+        collection.deleteOne(Filters.equal("_id", id))
+          .toFuture()
+          .map(
+            result =>
+              if (result.getDeletedCount != 0) {
+                Right(())
+              }
+              else {
+                Left(raiseNotUpdatedException.forApplication(application))
+              }
+          )
+      case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
+    }
+  }
+
 }
 
 object ApplicationsRepository extends Logging {

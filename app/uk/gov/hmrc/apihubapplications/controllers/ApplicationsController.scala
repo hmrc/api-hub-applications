@@ -75,6 +75,16 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         }
   }
 
+  def deleteApplication(id: String): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      applicationsService.delete(id).map {
+        case Right(()) => NoContent
+        case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: IdmsException) => BadGateway
+        case _ => InternalServerError
+      }
+  }
+
   def addScopes(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request: Request[JsValue] => {
       val jsReq = request.body

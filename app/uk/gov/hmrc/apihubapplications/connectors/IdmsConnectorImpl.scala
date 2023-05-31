@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.connectors
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
@@ -46,8 +47,11 @@ class IdmsConnectorImpl @Inject()(
       .setHeader(headersForEnvironment(environmentName): _*)
       .withBody(Json.toJson(client))
       .withProxyIfRequired(environmentName)
-      .execute[ClientResponse]
-      .map(Right(_))
+      .execute[Either[UpstreamErrorResponse, ClientResponse]]
+      .map {
+        case Right(clientResponse) => Right(clientResponse)
+        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e))
+      }
       .recover {
         case throwable =>
           Left(raiseIdmsException.error(throwable))
@@ -68,6 +72,24 @@ class IdmsConnectorImpl @Inject()(
           Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
           Left(raiseIdmsException.unexpectedResponse(e))
+      }
+      .recover {
+        case throwable =>
+          Left(raiseIdmsException.error(throwable))
+      }
+  }
+
+  override def deleteClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+    val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId"
+
+    httpClient.delete(url)
+      .setHeader(headersForEnvironment(environmentName): _*)
+      .withProxyIfRequired(environmentName)
+      .execute[Either[UpstreamErrorResponse, Unit]]
+      .map {
+        case Right(()) => Right(())
+        case Left(e) if e.statusCode == NOT_FOUND => Left(raiseIdmsException.clientNotFound(clientId))
+        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e))
       }
       .recover {
         case throwable =>

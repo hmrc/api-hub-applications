@@ -24,11 +24,12 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{CallError, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
@@ -86,7 +87,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
           result =>
-            result.left.value mustBe a [IdmsException]
+            result mustBe Left(IdmsException.unexpectedResponse(status))
         }
       }
     }
@@ -107,6 +108,7 @@ class IdmsConnectorSpec
       buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
         result =>
           result.left.value mustBe a [IdmsException]
+          result.left.value.issue mustBe CallError
       }
     }
   }
@@ -143,7 +145,7 @@ class IdmsConnectorSpec
 
       buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
         clientResponse =>
-          clientResponse.left.value mustBe a [IdmsException]
+          clientResponse mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
@@ -159,7 +161,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
           clientResponse =>
-            clientResponse.left.value mustBe a [IdmsException]
+            clientResponse mustBe Left(IdmsException.unexpectedResponse(status))
         }
       }
     }
@@ -176,6 +178,75 @@ class IdmsConnectorSpec
       buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
         clientResponse =>
           clientResponse.left.value mustBe a [IdmsException]
+          clientResponse.left.value.issue mustBe CallError
+      }
+    }
+  }
+
+  "IdmsConnector.deleteClient" - {
+    "must place the correct request per environment to IDMS and succeed" in {
+      forAll(environmentNames) { environmentName: EnvironmentName =>
+        stubFor(
+          delete(urlEqualTo(s"/$environmentName/identity/clients/$testClientId"))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .willReturn(
+              aResponse()
+            )
+        )
+
+        buildConnector(this).deleteClient(environmentName, testClientId)(HeaderCarrier()) map {
+          actual =>
+            actual mustBe Right(())
+        }
+      }
+    }
+
+    "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(IdmsException.clientNotFound(testClientId))
+      }
+    }
+
+    "must return IdmsException for any non-2xx or 404 response" in {
+      forAll(nonSuccessResponses) { status: Int =>
+        stubFor(
+          delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+            .willReturn(
+              aResponse()
+                .withStatus(status)
+            )
+        )
+
+        buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+          actual =>
+            actual mustBe Left(IdmsException.unexpectedResponse(status))
+        }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+        actual =>
+          actual.left.value mustBe a[IdmsException]
+          actual.left.value.issue mustBe CallError
       }
     }
   }
@@ -201,7 +272,7 @@ class IdmsConnectorSpec
       }
     }
 
-    "must return IdmsException when IDMS returns 404 Not Found for a given Client Id" in {
+    "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
         post(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
           .willReturn(
@@ -212,7 +283,7 @@ class IdmsConnectorSpec
 
       buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
         clientResponse =>
-          clientResponse.left.value mustBe a[IdmsException]
+          clientResponse mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
@@ -226,9 +297,9 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier()) map {
           clientResponse =>
-            clientResponse.left.value mustBe a[IdmsException]
+            clientResponse mustBe Left(IdmsException.unexpectedResponse(status))
         }
       }
     }
@@ -242,9 +313,10 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier()) map {
         clientResponse =>
           clientResponse.left.value mustBe a[IdmsException]
+          clientResponse.left.value.issue mustBe CallError
       }
     }
   }
@@ -263,12 +335,12 @@ class IdmsConnectorSpec
         )
 
         buildConnector(this).addClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier()) map {
-          response => response mustBe Right({})
+          response => response mustBe Right(())
         }
       }
     }
 
-    "must return IdmsException when IDMS returns 404 Not Found for a given Client Id" in {
+    "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
         put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
           .willReturn(
@@ -278,7 +350,8 @@ class IdmsConnectorSpec
       )
 
       buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
-        response => response.left.value mustBe a[IdmsException]
+        response =>
+          response mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
@@ -294,7 +367,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
           response =>
-            response.left.value mustBe a[IdmsException]
+            response mustBe Left(IdmsException.unexpectedResponse(status))
         }
       }
     }
@@ -311,9 +384,11 @@ class IdmsConnectorSpec
       buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
         response =>
           response.left.value mustBe a[IdmsException]
+          response.left.value.issue mustBe CallError
       }
     }
   }
+
   "IdmsConnector.fetchClientScopes" - {
     "must place the correct request per environment to IDMS and return the client scopes" in {
       val scopes = Seq(ClientScope("test-scope-1"), ClientScope("test-scope-2"))
@@ -337,7 +412,7 @@ class IdmsConnectorSpec
       }
     }
 
-    "must return IdmsException when IDMS returns 404 Not Found for a given Client Id" in {
+    "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
         get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
           .withHeader("Accept", equalTo("application/json"))
@@ -349,7 +424,7 @@ class IdmsConnectorSpec
 
       buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
         actual =>
-          actual.left.value mustBe a[IdmsException]
+          actual mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
@@ -366,7 +441,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
           actual =>
-            actual.left.value mustBe a[IdmsException]
+            actual mustBe Left(IdmsException.unexpectedResponse(status))
         }
       }
     }
@@ -384,6 +459,7 @@ class IdmsConnectorSpec
       buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
+          actual.left.value.issue mustBe CallError
       }
     }
   }

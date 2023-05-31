@@ -26,7 +26,7 @@ import org.scalatest.{Assertion, EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, CallError, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
@@ -106,7 +106,7 @@ class ApplicationsServiceSpec
       )
 
       when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(newApplication)))(any()))
-        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
 
       val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
       when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
@@ -136,7 +136,7 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(primaryClientResponse)))
 
       when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
-        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
@@ -293,7 +293,7 @@ class ApplicationsServiceSpec
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
-        .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(Seq.empty)))
 
@@ -322,6 +322,121 @@ class ApplicationsServiceSpec
         actual mustBe Seq(appWithPrimaryPending)
         verify(repository).findAll()
         succeed
+    }
+  }
+
+  "delete" - {
+    "must delete the application from the repository" in {
+      val id = "test-id"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(())
+          verify(repository).delete(any())
+          succeed
+      }
+    }
+
+    "must delete the primary credential from IDMS" in {
+      val id = "test-id"
+      val clientId = "test-client-id"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+        .setPrimaryCredentials(Seq(Credential(clientId, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(())
+          verify(repository).delete(any())
+          verify(idmsConnector).deleteClient(any(), any())(any())
+          succeed
+      }
+    }
+
+    "must delete the secondary credential from IDMS" in {
+      val id = "test-id"
+      val clientId = "test-client-id"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+        .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(())
+          verify(repository).delete(any())
+          verify(idmsConnector).deleteClient(any(), any())(any())
+          succeed
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application does not exist" in {
+      val id = "test-id"
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id)))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(ApplicationNotFoundException.forId(id))
+      }
+    }
+
+    "must return IdmsException when that is returned from any call to the IDMS connector" in {
+      val id = "test-id"
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+        .setPrimaryCredentials(Seq(Credential(clientId1, None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId2, None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1))(any()))
+        .thenReturn(Future.successful(Right(())))
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId2))(any()))
+        .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+
+      service.delete(id)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(IdmsException.unexpectedResponse(500))
+          verify(repository, times(0)).delete(any())
+          succeed
+      }
     }
   }
 
@@ -412,7 +527,7 @@ class ApplicationsServiceSpec
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
-      val exception = IdmsException("Bad thing")
+      val exception = IdmsException("Bad thing", CallError)
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -449,7 +564,7 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
 
-      val exception = IdmsException("Bad thing")
+      val exception = IdmsException("Bad thing", CallError)
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
       service.addScope(testAppId, newScope)(HeaderCarrier()) map {
         actual =>
@@ -574,13 +689,13 @@ class ApplicationsServiceSpec
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
-      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(IdmsException(":("))))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())).thenReturn(Future(Left(IdmsException(":(", CallError))))
 
       service.approvePrimaryScope(testAppId, testScope)(HeaderCarrier()) map {
         actual => {
           verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScope))(any())
-          actual mustBe Left(IdmsException(":("))
+          actual mustBe Left(IdmsException(":(", CallError))
         }
       }
     }
@@ -729,7 +844,7 @@ class ApplicationsServiceSpec
 
       when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
 
-      val expected = Left(IdmsException("bad thing"))
+      val expected = Left(IdmsException("bad thing", CallError))
       when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(expected))
 

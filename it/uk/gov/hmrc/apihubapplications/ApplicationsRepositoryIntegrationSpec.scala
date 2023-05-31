@@ -136,4 +136,30 @@ class ApplicationsRepositoryIntegrationSpec
     }
   }
 
+  "delete" - {
+    "must delete the application from MongoDb" in {
+      val application = Application(None, "test-app", Creator("test1@test.com"), Seq.empty)
+
+      val saved = repository.insert(application).futureValue
+
+      repository.delete(saved).futureValue mustBe Right(())
+
+      repository.findById(saved.id.value).futureValue mustBe Left(ApplicationNotFoundException.forApplication(saved))
+    }
+
+    "must return ApplicationNotFoundException when the application Id is invalid" in {
+      val id = "invalid-id"
+      val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq.empty)
+
+      repository.delete(application).futureValue mustBe Left(ApplicationNotFoundException.forId(id))
+    }
+
+    "must return NotUpdatedException when the application does not exist in MongoDb" in {
+      val id = List.fill(24)("0").mkString
+      val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq.empty)
+
+      repository.delete(application).futureValue mustBe Left(NotUpdatedException.forApplication(application))
+    }
+  }
+
 }

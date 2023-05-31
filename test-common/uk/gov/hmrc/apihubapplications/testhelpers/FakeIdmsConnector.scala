@@ -35,6 +35,10 @@ class FakeIdmsConnector extends IdmsConnector {
     Future.successful(Right(ClientResponse(clientId, fakeSecret)))
   }
 
+  override def deleteClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+    Future.successful(Right(()))
+  }
+
   override def newSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
     Future.successful(Right(Secret(fakeSecret)))
   }

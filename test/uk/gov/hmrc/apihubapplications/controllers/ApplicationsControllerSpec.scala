@@ -37,7 +37,7 @@ import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, CallError, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -117,7 +117,7 @@ class ApplicationsControllerSpec
           .withBody(json)
 
         when(fixture.applicationsService.registerApplication(any())(any()))
-          .thenReturn(Future.successful(Left(IdmsException("test-message"))))
+          .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_GATEWAY
@@ -237,6 +237,69 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.INTERNAL_SERVER_ERROR
+      }
+    }
+  }
+
+  "deleteApplication" - {
+    "must delete the application and return 204 No Content" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Right(())))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.applicationsService).delete(any())(any())
+      }
+    }
+
+    "must return 404 Not Found when the application does not exist" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 502 Bad Gateway if an IDMS exception is encountered" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_GATEWAY
+      }
+    }
+
+    "must return 500 Internal Server Error for any unexpected exception" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+          .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
       }
     }
   }
@@ -528,7 +591,7 @@ class ApplicationsControllerSpec
           CONTENT_TYPE -> "application/json"
         )
         when(fixture.applicationsService.createPrimarySecret(ArgumentMatchers.eq(applicationId))(any()))
-          .thenReturn(Future.successful(Left(IdmsException("bad thing"))))
+          .thenReturn(Future.successful(Left(IdmsException("bad thing", CallError))))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_GATEWAY

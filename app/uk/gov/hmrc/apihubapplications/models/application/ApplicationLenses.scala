@@ -110,6 +110,12 @@ object ApplicationLenses {
         applicationPrimaryCredentials.get(application) :+ credential
       )
 
+    def removePrimaryCredential(clientId: String): Application =
+      applicationPrimaryCredentials.set(
+        application,
+        application.getPrimaryCredentials.filterNot(_.clientId == clientId)
+      )
+
     def getSecondaryScopes: Seq[Scope] =
       applicationSecondaryScopes.get(application)
 
@@ -132,6 +138,12 @@ object ApplicationLenses {
       applicationSecondaryCredentials.set(
         application,
         applicationSecondaryCredentials.get(application) :+ credential
+      )
+
+    def removeSecondaryCredential(clientId: String): Application =
+      applicationSecondaryCredentials.set(
+        application,
+        application.getSecondaryCredentials.filterNot(_.clientId == clientId)
       )
 
     def hasTeamMember(email: String): Boolean =
