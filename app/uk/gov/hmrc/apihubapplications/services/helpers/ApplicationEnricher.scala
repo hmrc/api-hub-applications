@@ -115,6 +115,14 @@ object ApplicationEnrichers {
                     }
                   }
                 )
+              case Left(e @ IdmsException(_, _, ClientNotFound)) =>
+                Right(
+                  new ApplicationEnricher {
+                    override def enrich(application: Application): Application = {
+                      application.addIssue(Issues.secondaryScopesNotFound(e))
+                    }
+                  }
+                )
               case Left(e) => Left(e)
             }
       }

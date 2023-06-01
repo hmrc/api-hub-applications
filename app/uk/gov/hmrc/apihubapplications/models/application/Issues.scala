@@ -24,4 +24,8 @@ object Issues {
     s"Secondary credential not found. ${idmsException.message}"
   }
 
+  def secondaryScopesNotFound(idmsException: IdmsException): String = {
+    s"Secondary scopes not found. ${idmsException.message}"
+  }
+
 }
