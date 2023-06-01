@@ -21,7 +21,7 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Pending, Primary, Scope, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Issues, Pending, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.{CallError, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
@@ -137,6 +137,37 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
         actual =>
           actual mustBe Left(expected)
+      }
+    }
+
+    "must add an application issue if a credential cannot be found" in {
+      val application = testApplication
+        .setSecondaryCredentials(
+          Seq(
+            testClientResponse1.asCredential(),
+            testClientResponse2.asCredential()
+          )
+        )
+
+      val expected = application
+        .setSecondaryCredentials(
+          Seq(
+            testClientResponse1.asCredentialWithSecret(),
+            testClientResponse2.asCredential()
+          )
+        )
+        .addIssue(Issues.secondaryCredentialNotFound(IdmsException.clientNotFound(testClientId2)))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
+        .thenReturn(Future.successful(Right(testClientResponse1)))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
+        .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId2))))
+
+      ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
+        case Right(enricher) => enricher.enrich(application) mustBe expected
+        case Left(e) => fail("Unexpected Left response", e)
       }
     }
   }

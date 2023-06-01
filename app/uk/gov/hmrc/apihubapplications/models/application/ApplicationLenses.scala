@@ -152,6 +152,15 @@ object ApplicationLenses {
         application.getSecondaryCredentials.filterNot(_.clientId == clientId)
       )
 
+    def updateSecondaryCredential(credential: Credential): Application = {
+      application.getSecondaryCredentials.indexWhere(_.clientId == credential.clientId) match {
+        case -1 => application
+        case i => application.setSecondaryCredentials(
+          application.getSecondaryCredentials.updated(i, credential)
+        )
+      }
+    }
+
     def hasTeamMember(email: String): Boolean =
       applicationTeamMembers.get(application)
         .exists(teamMember => teamMember.email.equalsIgnoreCase(email))

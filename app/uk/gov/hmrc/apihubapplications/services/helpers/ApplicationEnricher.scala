@@ -20,7 +20,7 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ClientNotFound, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.Client
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -57,22 +57,38 @@ object ApplicationEnrichers {
     original: Application,
     idmsConnector: IdmsConnector
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+    type IssueOrClientResponse = Either[String, ClientResponse]
+
+    def toIssuesOrClientResponses(results: Seq[Either[IdmsException, ClientResponse]]): Seq[Either[IdmsException, IssueOrClientResponse]] = {
+      results.map {
+        case Right(clientResponse) => Right(Right(clientResponse))
+        case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(Left(Issues.secondaryCredentialNotFound(e)))
+        case Left(e) => Left(e)
+      }
+    }
+
+    def buildEnricher(issuesOrResponses: Seq[IssueOrClientResponse]): ApplicationEnricher = {
+      (application: Application) => {
+        issuesOrResponses.foldLeft(application)(
+          (app, issueOrResponse) =>
+            issueOrResponse match {
+              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.asCredentialWithSecret())
+              case Left(issue) => app.addIssue(issue)
+            }
+        )
+      }
+    }
+
     Future.sequence(
       original.getSecondaryCredentials.map {
         credential =>
           idmsConnector.fetchClient(Secondary, credential.clientId)
       }
     )
+      .map(toIssuesOrClientResponses)
       .map(useFirstException)
       .map {
-        case Right(clientResponses) =>
-          Right(
-            (application: Application) => {
-              application.setSecondaryCredentials(
-                clientResponses.map(_.asCredentialWithSecret())
-              )
-            }
-          )
+        case Right(issuesOrResponses) => Right(buildEnricher(issuesOrResponses))
         case Left(e) => Left(e)
       }
   }
