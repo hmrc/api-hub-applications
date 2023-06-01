@@ -20,6 +20,10 @@ import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 
 object Issues {
 
+  def primaryScopesNotFound(idmsException: IdmsException): String = {
+    s"Primary scopes not found. ${idmsException.message}"
+  }
+
   def secondaryCredentialNotFound(idmsException: IdmsException): String = {
     s"Secondary credential not found. ${idmsException.message}"
   }

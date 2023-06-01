@@ -288,6 +288,25 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
           actual mustBe Left(expected)
       }
     }
+
+    "must add an application issue if the secondary credential cannot be found" in {
+      val pendingScope = Scope("test-pending-scope", Pending)
+      val application = testApplication
+        .setPrimaryCredentials(Seq(testClientResponse1.asCredential()))
+        .setPrimaryScopes(Seq(pendingScope))
+
+      val expected = application
+        .addIssue(Issues.primaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
+
+      val idmsConnector = mock[IdmsConnector]
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
+        .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
+
+      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
+        case Right(enricher) => enricher.enrich(application) mustBe expected
+        case Left(e) => fail("Unexpected Left response", e)
+      }
+    }
   }
 
   "credentialCreatingApplicationEnricher" - {

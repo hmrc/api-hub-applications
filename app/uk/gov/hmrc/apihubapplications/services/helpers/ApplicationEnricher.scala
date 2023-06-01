@@ -20,7 +20,7 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ClientNotFound, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -100,29 +100,28 @@ object ApplicationEnrichers {
     // Note that this enricher processes the first secondary credential only
     // There is no definition of how to combine scopes from multiple credentials
     // into a single collection of scopes.
+
+    def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
+      (application: Application) => {
+        application.setSecondaryScopes(
+          clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
+        )
+      }
+    }
+
+    def buildIssuesEnricher(idmsException: IdmsException): ApplicationEnricher = {
+      (application: Application) => {
+        application.addIssue(Issues.secondaryScopesNotFound(idmsException))
+      }
+    }
+
     original.getSecondaryCredentials.headOption
       .map {
         credential =>
           idmsConnector.fetchClientScopes(Secondary, credential.clientId)
             .map {
-              case Right(clientScopes) =>
-                Right(
-                  new ApplicationEnricher {
-                    override def enrich(application: Application): Application = {
-                      application.setSecondaryScopes(
-                        clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
-                      )
-                    }
-                  }
-                )
-              case Left(e @ IdmsException(_, _, ClientNotFound)) =>
-                Right(
-                  new ApplicationEnricher {
-                    override def enrich(application: Application): Application = {
-                      application.addIssue(Issues.secondaryScopesNotFound(e))
-                    }
-                  }
-                )
+              case Right(clientScopes) => Right(buildEnricher(clientScopes))
+              case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
               case Left(e) => Left(e)
             }
       }
@@ -136,23 +135,30 @@ object ApplicationEnrichers {
     // Note that this enricher processes the first primary credential only
     // There is no definition of how to combine scopes from multiple credentials
     // into a single collection of scopes.
+
+    def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
+      (application: Application) => {
+        val approved = clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
+        val pending = application.getPrimaryScopes.filter(scope => scope.status == Pending)
+        application.setPrimaryScopes(
+          approved ++ pending
+        )
+      }
+    }
+
+    def buildIssuesEnricher(idmsException: IdmsException): ApplicationEnricher = {
+      (application: Application) => {
+        application.addIssue(Issues.primaryScopesNotFound(idmsException))
+      }
+    }
+
     original.getPrimaryCredentials.headOption
       .map {
         credential =>
           idmsConnector.fetchClientScopes(Primary, credential.clientId)
             .map {
-              case Right(clientScopes) =>
-                Right(
-                  new ApplicationEnricher {
-                    override def enrich(application: Application): Application = {
-                      val approved = clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
-                      val pending = application.getPrimaryScopes.filter(scope => scope.status == Pending)
-                      application.setPrimaryScopes(
-                        approved ++ pending
-                      )
-                    }
-                  }
-                )
+              case Right(clientScopes) => Right(buildEnricher(clientScopes))
+              case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
               case Left(e) => Left(e)
             }
       }
