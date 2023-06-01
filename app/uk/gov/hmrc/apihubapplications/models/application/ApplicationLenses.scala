@@ -154,7 +154,9 @@ object ApplicationLenses {
 
     def updateSecondaryCredential(credential: Credential): Application = {
       application.getSecondaryCredentials.indexWhere(_.clientId == credential.clientId) match {
-        case -1 => application
+        case -1 => throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
+        )
         case i => application.setSecondaryCredentials(
           application.getSecondaryCredentials.updated(i, credential)
         )

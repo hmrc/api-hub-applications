@@ -342,6 +342,30 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "updateSecondaryCredential" - {
+      "must correctly update a specific credential" in {
+        val credential1 = Credential("test-client-id-1", None, None)
+        val credential2 = Credential("test-client-id-2", None, None)
+        val credential3 = Credential("test-client-id-3", None, None)
+
+        val credential2Updated = Credential(credential2.clientId, Some("test-secret"), Some("test-fragment"))
+
+        val application = testApplication
+          .setSecondaryCredentials(Seq(credential1, credential2, credential3))
+
+        val expected = testApplication
+          .setSecondaryCredentials(Seq(credential1, credential2Updated, credential3))
+
+        application.updateSecondaryCredential(credential2Updated) mustBe expected
+      }
+
+      "must throw IllegalArgumentException when the credential does not exist" in {
+        an [IllegalArgumentException] mustBe thrownBy(
+          testApplication.updateSecondaryCredential(Credential("test-client-id", None, None))
+        )
+      }
+    }
+
     "hasTeamMember" - {
       "must return true when the given email address belongs to a team member" in {
         val application = testApplication.copy(

@@ -151,7 +151,12 @@ object ApplicationsRepository extends Logging {
     elements. We only want to apply our write transform when we have Some(id).
     When we have None we can use the standard write which simply omits id's
     element.
-   */
+
+    An "issues" array exists in Applications that is transient and should not be
+    stored. To avoid this happening it is stripped out from an application
+    before storage. An empty array is added to applications retrieved from the
+    database.
+  */
 
   private val mongoApplicationWithIdWrites: Writes[Application] =
     Application.applicationFormat.transform(
