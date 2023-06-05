@@ -151,26 +151,40 @@ object ApplicationsRepository extends Logging {
     elements. We only want to apply our write transform when we have Some(id).
     When we have None we can use the standard write which simply omits id's
     element.
-   */
+
+    An "issues" array exists in Applications that is transient and should not be
+    stored. To avoid this happening it is stripped out from an application
+    before storage. An empty array is added to applications retrieved from the
+    database.
+  */
 
   private val mongoApplicationWithIdWrites: Writes[Application] =
     Application.applicationFormat.transform(
       json => json.transform(
         JsPath.json.update((JsPath \ "_id" \ "$oid").json.copyFrom((JsPath \ "id").json.pick))
           andThen (JsPath \ "id").json.prune
+          andThen (JsPath \ "issues").json.prune
+      ).get
+    )
+
+  private val mongoApplicationWithoutIdWrites: Writes[Application] =
+    Application.applicationFormat.transform(
+      json => json.transform(
+        (JsPath \ "issues").json.prune
       ).get
     )
 
   private val mongoApplicationWrites: Writes[Application] = (application: Application) => {
     application.id match {
       case Some(_) => mongoApplicationWithIdWrites.writes(application)
-      case _ => Application.applicationFormat.writes(application)
+      case _ => mongoApplicationWithoutIdWrites.writes(application)
     }
   }
 
   private val mongoApplicationReads: Reads[Application] =
     JsPath.json.update((JsPath \ "id").json
       .copyFrom((JsPath \ "_id" \ "$oid").json.pick))
+      .andThen(JsPath.json.update(__.read[JsObject].map(o => o ++ Json.obj("issues" -> Json.arr()))))
       .andThen(Application.applicationFormat)
 
   val mongoApplicationFormat: Format[Application] = Format(mongoApplicationReads, mongoApplicationWrites)

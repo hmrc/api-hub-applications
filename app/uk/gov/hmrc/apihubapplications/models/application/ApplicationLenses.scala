@@ -74,6 +74,12 @@ object ApplicationLenses {
       set = (application, teamMembers) => application.copy(teamMembers = teamMembers)
     )
 
+  val applicationIssues: Lens[Application, Seq[String]] =
+    Lens[Application, Seq[String]](
+      get = _.issues,
+      set = (application, issues) => application.copy(issues = issues)
+    )
+
   implicit class ApplicationLensOps(application: Application) {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
@@ -146,6 +152,17 @@ object ApplicationLenses {
         application.getSecondaryCredentials.filterNot(_.clientId == clientId)
       )
 
+    def updateSecondaryCredential(credential: Credential): Application = {
+      application.getSecondaryCredentials.indexWhere(_.clientId == credential.clientId) match {
+        case -1 => throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
+        )
+        case i => application.setSecondaryCredentials(
+          application.getSecondaryCredentials.updated(i, credential)
+        )
+      }
+    }
+
     def hasTeamMember(email: String): Boolean =
       applicationTeamMembers.get(application)
         .exists(teamMember => teamMember.email.equalsIgnoreCase(email))
@@ -165,6 +182,16 @@ object ApplicationLenses {
       }
     }
 
+    def setIssues(issues: Seq[String]): Application = {
+      applicationIssues.set(application, issues)
+    }
+
+    def addIssue(issue: String): Application = {
+      applicationIssues.set(
+        application,
+        applicationIssues.get(application) :+ issue
+      )
+    }
   }
 
 }

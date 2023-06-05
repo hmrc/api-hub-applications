@@ -20,7 +20,7 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ClientNotFound, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.Client
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -57,22 +57,38 @@ object ApplicationEnrichers {
     original: Application,
     idmsConnector: IdmsConnector
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+    type IssueOrClientResponse = Either[String, ClientResponse]
+
+    def toIssuesOrClientResponses(results: Seq[Either[IdmsException, ClientResponse]]): Seq[Either[IdmsException, IssueOrClientResponse]] = {
+      results.map {
+        case Right(clientResponse) => Right(Right(clientResponse))
+        case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(Left(Issues.secondaryCredentialNotFound(e)))
+        case Left(e) => Left(e)
+      }
+    }
+
+    def buildEnricher(issuesOrResponses: Seq[IssueOrClientResponse]): ApplicationEnricher = {
+      (application: Application) => {
+        issuesOrResponses.foldLeft(application)(
+          (app, issueOrResponse) =>
+            issueOrResponse match {
+              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.asCredentialWithSecret())
+              case Left(issue) => app.addIssue(issue)
+            }
+        )
+      }
+    }
+
     Future.sequence(
       original.getSecondaryCredentials.map {
         credential =>
           idmsConnector.fetchClient(Secondary, credential.clientId)
       }
     )
+      .map(toIssuesOrClientResponses)
       .map(useFirstException)
       .map {
-        case Right(clientResponses) =>
-          Right(
-            (application: Application) => {
-              application.setSecondaryCredentials(
-                clientResponses.map(_.asCredentialWithSecret())
-              )
-            }
-          )
+        case Right(issuesOrResponses) => Right(buildEnricher(issuesOrResponses))
         case Left(e) => Left(e)
       }
   }
@@ -84,21 +100,28 @@ object ApplicationEnrichers {
     // Note that this enricher processes the first secondary credential only
     // There is no definition of how to combine scopes from multiple credentials
     // into a single collection of scopes.
+
+    def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
+      (application: Application) => {
+        application.setSecondaryScopes(
+          clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
+        )
+      }
+    }
+
+    def buildIssuesEnricher(idmsException: IdmsException): ApplicationEnricher = {
+      (application: Application) => {
+        application.addIssue(Issues.secondaryScopesNotFound(idmsException))
+      }
+    }
+
     original.getSecondaryCredentials.headOption
       .map {
         credential =>
           idmsConnector.fetchClientScopes(Secondary, credential.clientId)
             .map {
-              case Right(clientScopes) =>
-                Right(
-                  new ApplicationEnricher {
-                    override def enrich(application: Application): Application = {
-                      application.setSecondaryScopes(
-                        clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
-                      )
-                    }
-                  }
-                )
+              case Right(clientScopes) => Right(buildEnricher(clientScopes))
+              case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
               case Left(e) => Left(e)
             }
       }
@@ -112,23 +135,30 @@ object ApplicationEnrichers {
     // Note that this enricher processes the first primary credential only
     // There is no definition of how to combine scopes from multiple credentials
     // into a single collection of scopes.
+
+    def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
+      (application: Application) => {
+        val approved = clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
+        val pending = application.getPrimaryScopes.filter(scope => scope.status == Pending)
+        application.setPrimaryScopes(
+          approved ++ pending
+        )
+      }
+    }
+
+    def buildIssuesEnricher(idmsException: IdmsException): ApplicationEnricher = {
+      (application: Application) => {
+        application.addIssue(Issues.primaryScopesNotFound(idmsException))
+      }
+    }
+
     original.getPrimaryCredentials.headOption
       .map {
         credential =>
           idmsConnector.fetchClientScopes(Primary, credential.clientId)
             .map {
-              case Right(clientScopes) =>
-                Right(
-                  new ApplicationEnricher {
-                    override def enrich(application: Application): Application = {
-                      val approved = clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
-                      val pending = application.getPrimaryScopes.filter(scope => scope.status == Pending)
-                      application.setPrimaryScopes(
-                        approved ++ pending
-                      )
-                    }
-                  }
-                )
+              case Right(clientScopes) => Right(buildEnricher(clientScopes))
+              case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
               case Left(e) => Left(e)
             }
       }
