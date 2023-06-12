@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
+import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -42,7 +42,10 @@ class ApplicationsRepository @Inject()
     extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat),
                       Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
                      ),
-    indexes = Seq(IndexModel(Indexes.ascending("teamMembers", "email")))
+    indexes = Seq(
+      IndexModel(Indexes.ascending("teamMembers", "email")),
+      IndexModel(Indexes.ascending("environments.primary.scopes.status"))
+    )
   ) with Logging with ExceptionRaising {
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
@@ -120,6 +123,33 @@ class ApplicationsRepository @Inject()
           )
       case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
     }
+  }
+
+  def countOfAllApplications(): Future[Long] = {
+    collection
+      .countDocuments()
+      .toFuture()
+  }
+
+  def countOfPendingApprovals(): Future[Int] = {
+    collection
+      .aggregate[BsonDocument](
+        Seq(
+          Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
+          Aggregates.unwind("$environments.primary.scopes"),
+          Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
+          Aggregates.count("pendingApprovals")
+        )
+      )
+      .toFuture()
+      .map(_.headOption
+        .map(bsonDocument =>
+          bsonDocument.get("pendingApprovals")
+            .asInt32()
+            .getValue
+        )
+      )
+      .map(_.getOrElse(0))
   }
 
 }
