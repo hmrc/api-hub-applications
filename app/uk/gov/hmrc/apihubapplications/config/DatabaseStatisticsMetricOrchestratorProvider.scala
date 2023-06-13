@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.config
 
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.config.MetricOrchestratorProvider.DatabaseStatisticMetricSource
+import uk.gov.hmrc.apihubapplications.config.DatabaseStatisticsMetricOrchestratorProvider.DatabaseStatisticsMetricSource
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.metrix.{MetricOrchestrator, MetricRepository, MetricSource}
@@ -27,7 +27,7 @@ import javax.inject.{Inject, Provider, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MetricOrchestratorProvider @Inject()(
+class DatabaseStatisticsMetricOrchestratorProvider @Inject()(
   lockRepository: MongoLockRepository,
   metricRepository: MetricRepository,
   metrics: Metrics,
@@ -38,12 +38,12 @@ class MetricOrchestratorProvider @Inject()(
   override def get(): MetricOrchestrator = {
     val lockService = LockService(
       lockRepository,
-      lockId = "metrix-orchestrator",
-      ttl = appConfig.metricOrchestratorTaskLockTtl
+      lockId = "database-statistics",
+      ttl = appConfig.databaseStatisticsTaskLockTtl
     )
 
     new MetricOrchestrator(
-      metricSources    = List(new DatabaseStatisticMetricSource(repository)),
+      metricSources    = List(new DatabaseStatisticsMetricSource(repository)),
       lockService      = lockService,
       metricRepository = metricRepository,
       metricRegistry   = metrics.defaultRegistry
@@ -52,9 +52,9 @@ class MetricOrchestratorProvider @Inject()(
 
 }
 
-object MetricOrchestratorProvider {
+object DatabaseStatisticsMetricOrchestratorProvider {
 
-  class DatabaseStatisticMetricSource(repository: ApplicationsRepository) extends MetricSource with Logging {
+  class DatabaseStatisticsMetricSource(repository: ApplicationsRepository) extends MetricSource with Logging {
 
     override def metrics(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
       for {

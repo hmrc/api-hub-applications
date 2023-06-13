@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.config
 import org.mockito.MockitoSugar
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.apihubapplications.config.MetricOrchestratorProvider.DatabaseStatisticMetricSource
+import uk.gov.hmrc.apihubapplications.config.DatabaseStatisticsMetricOrchestratorProvider.DatabaseStatisticsMetricSource
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import scala.concurrent.Future
@@ -32,7 +32,7 @@ class DatabaseStatisticMetricSourceSpec extends AsyncFreeSpec with Matchers with
       when(repository.countOfAllApplications()).thenReturn(Future.successful(42))
       when(repository.countOfPendingApprovals()).thenReturn(Future.successful(13))
 
-      val metricSource = new DatabaseStatisticMetricSource(repository)
+      val metricSource = new DatabaseStatisticsMetricSource(repository)
 
       val expected = Map(
         "applications.total.count" -> 42,

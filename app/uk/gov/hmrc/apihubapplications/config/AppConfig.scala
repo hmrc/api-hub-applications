@@ -26,8 +26,8 @@ class AppConfig @Inject()(config: Configuration) {
 
   val appName: String = config.get[String]("appName")
 
-  val metricOrchestratorTaskLockTtl: Duration = config.get[Duration]("tasks.metricOrchestratorTask.lockTtl")
-  val metricOrchestratorTaskInitialDelay: Duration = config.get[Duration]("tasks.metricOrchestratorTask.initialDelay")
-  val metricOrchestratorTaskInterval: Duration = config.get[Duration]("tasks.metricOrchestratorTask.interval")
+  val databaseStatisticsTaskLockTtl: Duration = config.get[Duration]("tasks.databaseStatistics.lockTtl")
+  val databaseStatisticsTaskInitialDelay: Duration = config.get[Duration]("tasks.databaseStatistics.initialDelay")
+  val databaseStatisticsTaskInterval: Duration = config.get[Duration]("tasks.databaseStatistics.interval")
 
 }

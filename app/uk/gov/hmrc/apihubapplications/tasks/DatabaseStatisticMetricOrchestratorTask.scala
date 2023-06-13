@@ -25,15 +25,15 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 @Singleton
-class MetricOrchestratorTask @Inject() (
+class DatabaseStatisticMetricOrchestratorTask @Inject()(
   actorSystem: ActorSystem,
   metricOrchestrator: MetricOrchestrator,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext) {
 
   actorSystem.scheduler.scheduleAtFixedRate(
-    initialDelay = toFiniteDuration(appConfig.metricOrchestratorTaskInitialDelay),
-    interval = toFiniteDuration(appConfig.metricOrchestratorTaskInterval),
+    initialDelay = toFiniteDuration(appConfig.databaseStatisticsTaskInitialDelay),
+    interval = toFiniteDuration(appConfig.databaseStatisticsTaskInterval),
   ) {
     () => metricOrchestrator.attemptMetricRefresh()
   }
