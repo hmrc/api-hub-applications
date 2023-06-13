@@ -19,8 +19,15 @@ package uk.gov.hmrc.apihubapplications.config
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 
+import scala.concurrent.duration.Duration
+
 @Singleton
 class AppConfig @Inject()(config: Configuration) {
 
   val appName: String = config.get[String]("appName")
+
+  val metricOrchestratorTaskLockTtl: Duration = config.get[Duration]("tasks.metricOrchestratorTask.lockTtl")
+  val metricOrchestratorTaskInitialDelay: Duration = config.get[Duration]("tasks.metricOrchestratorTask.initialDelay")
+  val metricOrchestratorTaskInterval: Duration = config.get[Duration]("tasks.metricOrchestratorTask.interval")
+
 }
