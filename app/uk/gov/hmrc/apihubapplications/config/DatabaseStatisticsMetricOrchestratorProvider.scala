@@ -25,6 +25,7 @@ import uk.gov.hmrc.mongo.metrix.{MetricOrchestrator, MetricRepository, MetricSou
 
 import javax.inject.{Inject, Provider, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 @Singleton
 class DatabaseStatisticsMetricOrchestratorProvider @Inject()(
@@ -57,7 +58,7 @@ object DatabaseStatisticsMetricOrchestratorProvider {
   class DatabaseStatisticsMetricSource(repository: ApplicationsRepository) extends MetricSource with Logging {
 
     override def metrics(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
-      for {
+      (for {
         countOfAllApplications <- repository.countOfAllApplications()
         countOfPendingApprovals <- repository.countOfPendingApprovals()
       } yield {
@@ -66,6 +67,10 @@ object DatabaseStatisticsMetricOrchestratorProvider {
           "applications.total.count" -> countOfAllApplications.intValue,
           "applications.pending-approval.count" -> countOfPendingApprovals
         )
+      }).recover {
+        case NonFatal(e) =>
+          logger.error("Error gathering database statistics", e)
+          throw e
       }
     }
 
