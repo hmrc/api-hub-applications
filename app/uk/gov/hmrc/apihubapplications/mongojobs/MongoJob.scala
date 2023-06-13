@@ -52,7 +52,7 @@ class LockClient @Inject()(mongoLockRepository: MongoLockRepository,
 
 
   def runJob = {
-    logger.info(s"Example mongo job starting...")
+    logger.info(s"Example mongo job is running...")
     applicationsRepository.findById(UUID.randomUUID().toString)
   }
 }
