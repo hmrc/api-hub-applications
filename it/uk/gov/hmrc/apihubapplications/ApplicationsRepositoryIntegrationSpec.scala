@@ -22,6 +22,7 @@ import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -159,6 +160,41 @@ class ApplicationsRepositoryIntegrationSpec
       val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq.empty)
 
       repository.delete(application).futureValue mustBe Left(NotUpdatedException.forApplication(application))
+    }
+  }
+
+  "countOfAllApplications" - {
+    "must return the correct count of applications" in {
+      val count = 3
+      (1 to count).foreach(
+        i =>
+          repository.insert(Application(None, s"test-app-$i", Creator(s"test$i@test.com"), Seq.empty)).futureValue
+      )
+
+      repository.countOfAllApplications().futureValue mustBe count
+    }
+  }
+
+  "countOfPendingApprovals" - {
+    "must return the correct count of pending approvals" in {
+      repository.insert(
+        Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
+          .addPrimaryScope(Scope("scope-name", Pending))
+          .addPrimaryScope(Scope("scope-name", Denied))
+      ).futureValue
+
+      repository.insert(
+        Application(None, "test-app-2", Creator("test1@test.com"), Seq.empty)
+          .addPrimaryScope(Scope("scope-name", Pending))
+          .addPrimaryScope(Scope("scope-name", Pending))
+      ).futureValue
+
+      repository.insert(
+        Application(None, "test-app-3", Creator("test1@test.com"), Seq.empty)
+          .addPrimaryScope(Scope("scope-name", Denied))
+      ).futureValue
+
+      repository.countOfPendingApprovals().futureValue mustBe 3
     }
   }
 

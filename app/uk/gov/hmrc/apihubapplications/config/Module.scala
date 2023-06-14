@@ -19,6 +19,8 @@ package uk.gov.hmrc.apihubapplications.config
 import com.google.inject.AbstractModule
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.tasks.DatabaseStatisticMetricOrchestratorTask
+import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
 import java.time.Clock
 
@@ -29,6 +31,8 @@ class Module extends AbstractModule {
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone())
     bind(classOf[IdentifierAction]).to(classOf[AuthenticatedIdentifierAction]).asEagerSingleton()
     bind(classOf[IdmsConnector]).to(classOf[IdmsConnectorImpl]).asEagerSingleton()
+    bind(classOf[MetricOrchestrator]).toProvider(classOf[DatabaseStatisticsMetricOrchestratorProvider]).asEagerSingleton()
+    bind(classOf[DatabaseStatisticMetricOrchestratorTask]).asEagerSingleton()
   }
 
 }
