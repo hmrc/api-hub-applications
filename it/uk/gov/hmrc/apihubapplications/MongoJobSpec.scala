@@ -22,6 +22,7 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.{verifyNoInteractions, when}
 import org.mockito.MockitoSugar
 import org.mockito.MockitoSugar.mock
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
@@ -45,7 +46,7 @@ class MongoJobSpec
       val fixture = buildFixture(Some(true))
       running(fixture.application) {
         val repository = fixture.application.injector.instanceOf[ApplicationsRepository]
-        verify(repository).findById(anyString())
+        eventually {verify(repository).findById(anyString())}
       }
 
     }
