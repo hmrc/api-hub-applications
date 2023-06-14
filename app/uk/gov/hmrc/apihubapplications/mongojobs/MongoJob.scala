@@ -45,8 +45,8 @@ class LockClient @Inject()(mongoLockRepository: MongoLockRepository,
     lockService.withLock {
       runJob
     }.map {
-      case Some(res) => logger.debug(s"Finished with $res. Lock has been released.")
-      case None => logger.debug("Failed to take lock")
+      case Some(res) => logger.info(s"Finished with $res. Lock has been released.")
+      case None => logger.error("Failed to take lock")
     }
   }
 
