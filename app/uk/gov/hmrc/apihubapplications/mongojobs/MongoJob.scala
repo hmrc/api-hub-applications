@@ -21,8 +21,7 @@ import play.api.{Configuration, Logging}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
-import java.util.UUID
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 
 class MongoJob extends AbstractModule with Logging {
@@ -37,7 +36,7 @@ class LockClient @Inject()(mongoLockRepository: MongoLockRepository,
 
   private val workToDo: Boolean = config.getOptional[Boolean]("mongoJobEnabled").getOrElse(false)
 
-  logger.warn(s"Startup mongo job needs doing: $workToDo")
+  logger.info(s"Startup mongo job needs doing: $workToDo")
 
   if (workToDo) {
     val lockService = LockService(mongoLockRepository, lockId = "mongo_update_lock", ttl = 1.hour)
@@ -52,7 +51,8 @@ class LockClient @Inject()(mongoLockRepository: MongoLockRepository,
 
 
   def runJob = {
-    logger.warn(s"Example mongo job is running...")
-    applicationsRepository.findById(UUID.randomUUID().toString)
+    logger.info(s"Example mongo job is running...")
+    applicationsRepository.listIndexes.foreach(i => logger.info(s"Index: $i"))
+    Future(())
   }
 }

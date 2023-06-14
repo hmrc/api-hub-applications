@@ -41,19 +41,17 @@ class MongoJobSpec
     with MockitoSugar {
 
   "Example Mongo Job should" - {
-    "lookup an application when mongo job is enabled" in {
-
+    "lookup application indexes when mongo job is enabled" in {
       val fixture = buildFixture(Some(true))
       running(fixture.application) {
         val repository = fixture.application.injector.instanceOf[ApplicationsRepository]
-        eventually {verify(repository).findById(anyString())}
+        Thread.sleep(1000)
+        eventually {verify(repository).listIndexes}
       }
-
     }
   }
 
-  "not lookup an application when mongo job is disabled" in {
-
+  "not lookup application indexes when mongo job is disabled" in {
     val fixture = buildFixture(Some(false))
     running(fixture.application) {
       val repository = fixture.application.injector.instanceOf[ApplicationsRepository]
@@ -61,15 +59,13 @@ class MongoJobSpec
     }
   }
 
-  "not lookup an application when mongo job config is absent" in {
-
+  "not lookup application indexes when mongo job config is absent" in {
     val fixture = buildFixture(None)
     running(fixture.application) {
       val repository = fixture.application.injector.instanceOf[ApplicationsRepository]
       verifyNoInteractions(repository)
     }
   }
-
 }
 
 object MongoJobSpec {
