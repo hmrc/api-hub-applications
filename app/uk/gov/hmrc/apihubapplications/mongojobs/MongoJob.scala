@@ -37,7 +37,7 @@ class LockClient @Inject()(mongoLockRepository: MongoLockRepository,
 
   private val workToDo: Boolean = config.getOptional[Boolean]("mongoJobEnabled").getOrElse(false)
 
-  logger.info(s"Startup mongo job needs doing: $workToDo")
+  logger.warn(s"Startup mongo job needs doing: $workToDo")
 
   if (workToDo) {
     val lockService = LockService(mongoLockRepository, lockId = "mongo_update_lock", ttl = 1.hour)
@@ -52,7 +52,7 @@ class LockClient @Inject()(mongoLockRepository: MongoLockRepository,
 
 
   def runJob = {
-    logger.info(s"Example mongo job is running...")
+    logger.warn(s"Example mongo job is running...")
     applicationsRepository.findById(UUID.randomUUID().toString)
   }
 }
