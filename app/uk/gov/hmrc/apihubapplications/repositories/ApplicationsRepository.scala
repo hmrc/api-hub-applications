@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.types.ObjectId
-import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.bson.{BsonDocument, Document}
 import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json._
@@ -150,6 +150,10 @@ class ApplicationsRepository @Inject()
         )
       )
       .map(_.getOrElse(0))
+  }
+
+  def listIndexes: Future[Seq[Document]] = {
+    collection.listIndexes().toFuture()
   }
 
 }
