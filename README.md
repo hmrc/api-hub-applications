@@ -41,12 +41,18 @@ The MongoDb version should be 4.2 or 4.4 and is constrained by the wider platfor
 This service uses IDMS to create and retrieve client identifiers and secrets and 
 also authorised scopes.
 
-Two insances of IDMS are used: primary and secondary. The primary instance represents
+Two instances of IDMS are used: primary and secondary. The primary instance represents
 the environment this service is deployed to. The secondary instance represents
 the test environment for the primary environment.
 
 IDMS is only available in production and QA. For other environments we rely on
 a stubbed implementation called identity-management-service-stubs.
+
+In production the primary IDMS is accessed via HODS Proxy and Scrubbing Centre. The 
+secondary IDMS is in QA. We connect out via the Squid proxy and back in via ebridge 
+to the QA environment. We cannot then connect directly out via HODS Proxy so have 
+our own MDTP proxy component, identitiy-management-service-proxy. This forwards
+calls to the real IDMS.
 
 Each instance of IDMS requires a client identifier and secret to be configured
 for use when authenticating calls.
