@@ -14,29 +14,31 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.testonly
+package uk.gov.hmrc.apihubapplications.controllers
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.http.{HttpResponse, StringContextOps}
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HttpResponse, StringContextOps}
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TestConnectivityController @Inject()(identify: IdentifierAction,
                                            httpClient: HttpClientV2,
-                                           cc: ControllerComponents)(implicit ec: ExecutionContext)
+                                           cc: ControllerComponents,
+                                           servicesConfig: ServicesConfig )(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
   def connectToHip: Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
       val response: Future[HttpResponse] = httpClient
-        .get(url"https://hip.ws.ibt.hmrc.gov.uk/_health")
+        .get(url"${servicesConfig.baseUrl("hip")}/_health")
         .execute
 
       response
