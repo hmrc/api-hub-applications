@@ -10,3 +10,5 @@ GET        /applications/pending-primary-scopes                                 
 GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None)
 GET        /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String)
 DELETE     /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
+
+GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip
