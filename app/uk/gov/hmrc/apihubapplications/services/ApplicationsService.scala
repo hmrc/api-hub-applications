@@ -61,17 +61,21 @@ class ApplicationsService @Inject()(
     repository.filter(teamMemberEmail)
   }
 
-  def findById(id: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+  def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     repository.findById(id).flatMap {
       case Right(application) =>
-        ApplicationEnrichers.process(
-          application,
-          Seq(
-            ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
-            ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
-            ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
+        if (enrich) {
+          ApplicationEnrichers.process(
+            application,
+            Seq(
+              ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
+              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
+              ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
+            )
           )
-        )
+        } else {
+          Future.successful(Right(application))
+        }
       case Left(e) => Future.successful(Left(e))
     }
   }

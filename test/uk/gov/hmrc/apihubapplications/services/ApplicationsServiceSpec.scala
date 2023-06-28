@@ -26,7 +26,7 @@ import org.scalatest.{Assertion, EitherValues, OptionValues}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, CallError, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
@@ -259,7 +259,7 @@ class ApplicationsServiceSpec
         .setPrimaryScopes(Seq(Scope(scope3, Approved), Scope(scope4, Approved)))
 
       val service = new ApplicationsService(repository, clock, idmsConnector)
-      service.findById(id)(HeaderCarrier()).map {
+      service.findById(id, enrich = true)(HeaderCarrier()).map {
         result =>
           result mustBe Right(expected)
       }
@@ -274,7 +274,7 @@ class ApplicationsServiceSpec
 
       val idmsConnector = mock[IdmsConnector]
       val service = new ApplicationsService(repository, clock, idmsConnector)
-      service.findById(id)(HeaderCarrier()).map(
+      service.findById(id, enrich = true)(HeaderCarrier()).map(
         result =>
           result mustBe Left(ApplicationNotFoundException.forId(id))
       )
@@ -298,9 +298,31 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(Seq.empty)))
 
       val service = new ApplicationsService(repository, clock, idmsConnector)
-      service.findById(id)(HeaderCarrier()).map {
+      service.findById(id, enrich = true)(HeaderCarrier()).map {
         result =>
           result.left.value mustBe a[IdmsException]
+      }
+    }
+
+    "must not enrich with IDMS data unless asked to" in {
+      val id = "test-id"
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", None, None)))
+        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", None, None)))
+
+      val repository = mock[ApplicationsRepository]
+      when(repository.findById(ArgumentMatchers.eq(id)))
+        .thenReturn(Future.successful(Right(application)))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      val service = new ApplicationsService(repository, clock, idmsConnector)
+      service.findById(id, enrich = false)(HeaderCarrier()).map {
+        result =>
+          result mustBe Right(application)
+          verifyZeroInteractions(idmsConnector)
+          succeed
       }
     }
   }
