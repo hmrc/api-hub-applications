@@ -202,15 +202,15 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Right(expected)))
+        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Right(expected)))
 
-        val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id, enrich = true).url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe Json.toJson(expected)
 
-        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id))(any())
+        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(true))(any())
       }
     }
 
@@ -218,7 +218,7 @@ class ApplicationsControllerSpec
       val id = "id"
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 
@@ -231,12 +231,30 @@ class ApplicationsControllerSpec
       val id = "id"
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.INTERNAL_SERVER_ERROR
+      }
+    }
+
+    "must not enrich with IDMS data unless asked to" in {
+      val id = "1"
+      val expected = Application(Some(id), "test-app-1", Creator("test1@test.com"), Seq.empty)
+
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Right(expected)))
+
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id, enrich = false).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(expected)
+
+        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(false))(any())
       }
     }
   }

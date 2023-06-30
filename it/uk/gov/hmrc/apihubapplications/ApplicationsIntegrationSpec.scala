@@ -228,7 +228,7 @@ class ApplicationsIntegrationSpec
 
         val response =
           wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}?enrich=true")
             .addHttpHeaders(("Accept", "application/json"))
             .get()
             .futureValue
