@@ -9,6 +9,6 @@
         <appender-ref ref="STDOUT"/>
     </root>
 
-    <logger name="uk.gov.hmrc.apihubapplications.mongojobs" level="${uk.gov.hmrc.apihubapplications.mongojobs:-INFO}"/>
+    <logger name="uk.gov.hmrc.apihubapplications.mongojobs" level="INFO"/>
 
 </configuration>
