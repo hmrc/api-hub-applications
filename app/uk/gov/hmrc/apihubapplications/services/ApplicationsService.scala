@@ -26,6 +26,7 @@ import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,7 +55,9 @@ class ApplicationsService @Inject()(
   }
 
   def findAll(): Future[Seq[Application]] = {
-    repository.findAll()
+    Mdc.preservingMdc {
+      repository.findAll()
+    }
   }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {

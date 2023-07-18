@@ -28,6 +28,7 @@ import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,7 +51,10 @@ class ApplicationsRepository @Inject()
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
-  def findAll(): Future[Seq[Application]] = collection.find().toFuture()
+  def findAll(): Future[Seq[Application]] = {
+    logger.info(s"TEST LOGGING: ${Mdc.mdcData.toString()}")
+    collection.find().toFuture()
+  }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
     val document = BsonDocument("teamMembers" -> BsonDocument("email" -> teamMemberEmail))
