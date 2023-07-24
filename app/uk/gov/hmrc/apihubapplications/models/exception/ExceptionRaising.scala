@@ -57,6 +57,20 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseEmailException {
+    def missingConfig(configPath: String): EmailException = {
+      log(EmailException.missingConfig(configPath))
+    }
+
+    def unexpectedResponse(response: UpstreamErrorResponse): EmailException = {
+      log(EmailException.unexpectedResponse(response))
+    }
+
+    def error(throwable: Throwable): EmailException = {
+      log(EmailException.error(throwable))
+    }
+  }
+
   object raiseNotUpdatedException {
     def apply(message: String): NotUpdatedException = {
       log(NotUpdatedException(message))
