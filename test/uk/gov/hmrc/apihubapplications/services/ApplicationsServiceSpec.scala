@@ -47,14 +47,6 @@ class ApplicationsServiceSpec
     with OptionValues
     with EitherValues {
 
-  private def buildFixture = new {
-    val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-    val repository: ApplicationsRepository = mock[ApplicationsRepository]
-    val idmsConnector: IdmsConnector = mock[IdmsConnector]
-    val emailConnector: EmailConnector = mock[EmailConnector]
-    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector)
-  }
-
   "registerApplication" - {
     "must build the correct application and submit it to the repository" in {
       val fixture = buildFixture
@@ -193,7 +185,7 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must email team members except for the creator" in {
+    "must email team members" in {
       val fixture = buildFixture
       import fixture._
 
@@ -202,10 +194,8 @@ class ApplicationsServiceSpec
       val teamMember2 = TeamMember("test-email-2")
       val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
 
-      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
-
       when(idmsConnector.createClient(any(), any())(any()))
-        .thenReturn(Future.successful(Right(clientResponse)))
+        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
 
       when(repository.insert(any()))
         .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
@@ -215,7 +205,9 @@ class ApplicationsServiceSpec
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
-          val expected = Seq(teamMember1.email, teamMember2.email)
+          val captor = ArgCaptor[Application]
+          verify(repository).insert(captor.capture)
+          val expected = captor.value.copy(id = Some("id"))
           verify(emailConnector).sendAddTeamMemberEmail(ArgumentMatchers.eq(expected))(any())
           succeed
       }
@@ -230,10 +222,8 @@ class ApplicationsServiceSpec
       val teamMember2 = TeamMember("test-email-2")
       val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
 
-      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
-
       when(idmsConnector.createClient(any(), any())(any()))
-        .thenReturn(Future.successful(Right(clientResponse)))
+        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
 
       when(repository.insert(any()))
         .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
@@ -981,6 +971,14 @@ class ApplicationsServiceSpec
       }
     }
 
+  }
+
+  private def buildFixture = new {
+    val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+    val repository: ApplicationsRepository = mock[ApplicationsRepository]
+    val idmsConnector: IdmsConnector = mock[IdmsConnector]
+    val emailConnector: EmailConnector = mock[EmailConnector]
+    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector)
   }
 
 }

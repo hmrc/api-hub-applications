@@ -26,6 +26,7 @@ import play.api.Configuration
 import play.api.http.Status.ACCEPTED
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.CallError
 import uk.gov.hmrc.http.HeaderCarrier
@@ -45,9 +46,14 @@ class EmailConnectorSpec
 
   "EmailConnector.sendAddTeamMemberEmail" - {
     "must place the correct request" in {
-      val email1 = "test-email1@test.com"
-      val email2 = "test-email1@test.com"
-      val request = SendEmailRequest(Seq(email1, email2), addTeamMemberTemplateId)
+      val request = SendEmailRequest(
+        Seq(email1, email2),
+        addTeamMemberTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "creatorusername" -> application.createdBy.email
+        )
+      )
 
       stubFor(
         post(urlEqualTo("/hmrc/email"))
@@ -61,7 +67,7 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendAddTeamMemberEmail(Seq(email1, email2))(new HeaderCarrier()) map {
+      buildConnector(this).sendAddTeamMemberEmail(application)(new HeaderCarrier()) map {
         response =>
           response mustBe Right(())
       }
@@ -77,7 +83,7 @@ class EmailConnectorSpec
             )
         )
 
-        buildConnector(this).sendAddTeamMemberEmail(Seq.empty)(new HeaderCarrier()) map {
+        buildConnector(this).sendAddTeamMemberEmail(application)(new HeaderCarrier()) map {
           result =>
             result mustBe Left(EmailException.unexpectedResponse(status))
         }
@@ -93,10 +99,19 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendAddTeamMemberEmail(Seq.empty)(new HeaderCarrier()) map {
+      buildConnector(this).sendAddTeamMemberEmail(application)(new HeaderCarrier()) map {
         result =>
           result.left.value mustBe a [EmailException]
           result.left.value.issue mustBe CallError
+      }
+    }
+
+    "must not call the Email API if the creator is the only team member" in {
+      val applicationWithoutTeam = application.copy(teamMembers = Seq.empty)
+      buildConnector(this).sendAddTeamMemberEmail(applicationWithoutTeam)(new HeaderCarrier()) map {
+        _ =>
+          verify(0, postRequestedFor(urlEqualTo("/hmrc/email")))
+          succeed
       }
     }
   }
@@ -106,6 +121,16 @@ class EmailConnectorSpec
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
 
   val addTeamMemberTemplateId: String = "test-add-team-member-template-id"
+
+  val email1: String = "test-email1@test.com"
+  val email2: String = "test-email1@test.com"
+
+  val application: Application = Application(
+    Some("test-id"),
+    "test-name",
+    Creator("creator-email@test.com"),
+    Seq(TeamMember(email1), TeamMember(email2))
+  )
 
   def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): EmailConnector = {
     val servicesConfig = new ServicesConfig(

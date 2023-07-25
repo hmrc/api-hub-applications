@@ -19,6 +19,7 @@ package uk.gov.hmrc.apihubapplications.connectors
 import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, ExceptionRaising}
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -42,20 +43,38 @@ class EmailConnectorImpl @Inject()(
     templateId
   }
 
-  def sendAddTeamMemberEmail(emails: Seq[String])(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
-    val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
-    val request = SendEmailRequest(emails, addTeamMemberToApplicationTemplateId)
+  def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val to = application
+      .teamMembers
+      .filterNot(_.email.equals(application.createdBy.email))
+      .map(_.email)
 
-    httpClient.post(url)
-      .withBody(Json.toJson(request))
-      .execute[Either[UpstreamErrorResponse, Unit]]
-      .map {
-        case Right(()) => Right(())
-        case Left(e) => Left(raiseEmailException.unexpectedResponse(e))
-      }
-      .recover {
-        case throwable => Left(raiseEmailException.error(throwable))
-      }
+    if (to.nonEmpty) {
+      val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
+
+      val request = SendEmailRequest(
+        to,
+        addTeamMemberToApplicationTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "creatorusername" -> application.createdBy.email
+        )
+      )
+
+      httpClient.post(url)
+        .withBody(Json.toJson(request))
+        .execute[Either[UpstreamErrorResponse, Unit]]
+        .map {
+          case Right(()) => Right(())
+          case Left(e) => Left(raiseEmailException.unexpectedResponse(e))
+        }
+        .recover {
+          case throwable => Left(raiseEmailException.error(throwable))
+        }
+    }
+    else {
+      Future.successful(Right(()))
+    }
   }
 
 }
@@ -64,7 +83,8 @@ class EmailConnectorImpl @Inject()(
 // See https://github.com/hmrc/email/blob/main/app/uk/gov/hmrc/email/controllers/model/SendEmailRequest.scala
 case class SendEmailRequest(
   to: Seq[String],
-  templateId: String
+  templateId: String,
+  parameters: Map[String, String]
 )
 
 object SendEmailRequest {

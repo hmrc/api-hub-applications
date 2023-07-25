@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -23,6 +24,6 @@ import scala.concurrent.Future
 
 trait EmailConnector {
 
-  def sendAddTeamMemberEmail(emails: Seq[String])(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+  def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
 }

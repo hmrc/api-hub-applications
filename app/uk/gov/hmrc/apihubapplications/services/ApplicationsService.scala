@@ -52,23 +52,9 @@ class ApplicationsService @Inject()(
       case Right(enriched) =>
         for {
           saved <- repository.insert(enriched)
-          _ <- sendAddTeamMemberEmail(saved)
+          _ <- emailConnector.sendAddTeamMemberEmail(saved)
         } yield Right(saved)
       case Left(e) => Future.successful(Left(e))
-    }
-  }
-
-  private def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Unit] = {
-    val emails = application
-      .teamMembers
-      .filterNot(teamMember => teamMember.email.equals(application.createdBy.email))
-      .map(_.email)
-
-    if (emails.nonEmpty) {
-      emailConnector.sendAddTeamMemberEmail(emails).map(_ => ())
-    }
-    else {
-      Future.successful(())
     }
   }
 
