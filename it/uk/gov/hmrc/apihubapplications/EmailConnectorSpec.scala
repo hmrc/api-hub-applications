@@ -25,7 +25,7 @@ import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
 import play.api.http.Status.ACCEPTED
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, SendEmailRequest}
+import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.CallError
 import uk.gov.hmrc.http.HeaderCarrier
@@ -116,7 +116,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
       ))
     )
 
-    new EmailConnector(servicesConfig, httpClientV2)
+    new EmailConnectorImpl(servicesConfig, httpClientV2)
   }
 
   val nonSuccessResponses: TableFor1[Int] = Table(

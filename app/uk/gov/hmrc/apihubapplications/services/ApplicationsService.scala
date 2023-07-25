@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
+import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising, InvalidPrimaryCredentials, InvalidPrimaryScope, InvalidSecondaryCredentials}
@@ -34,7 +34,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApplicationsService @Inject()(
                                      repository: ApplicationsRepository,
                                      clock: Clock,
-                                     idmsConnector: IdmsConnector
+                                     idmsConnector: IdmsConnector,
+                                     emailConnector: EmailConnector
                                    )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
@@ -48,8 +49,26 @@ class ApplicationsService @Inject()(
         ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector)
       )
     ).flatMap {
-      case Right(enriched) => repository.insert(enriched).map(Right(_))
+      case Right(enriched) =>
+        for {
+          saved <- repository.insert(enriched)
+          _ <- sendAddTeamMemberEmail(saved)
+        } yield Right(saved)
       case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+  private def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Unit] = {
+    val emails = application
+      .teamMembers
+      .filterNot(teamMember => teamMember.email.equals(application.createdBy.email))
+      .map(_.email)
+
+    if (emails.nonEmpty) {
+      emailConnector.sendAddTeamMemberEmail(emails).map(_ => ())
+    }
+    else {
+      Future.successful(())
     }
   }
 

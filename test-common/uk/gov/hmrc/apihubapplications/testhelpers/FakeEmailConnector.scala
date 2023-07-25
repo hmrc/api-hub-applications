@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.connectors
+package uk.gov.hmrc.apihubapplications.testhelpers
 
+import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 
-trait EmailConnector {
+class FakeEmailConnector extends EmailConnector {
 
-  def sendAddTeamMemberEmail(emails: Seq[String])(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+  override def sendAddTeamMemberEmail(emails: Seq[String])(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    Future.successful(Right(()))
+  }
 
 }
