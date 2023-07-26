@@ -23,9 +23,11 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.{Assertion, EitherValues, OptionValues}
-import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
@@ -45,13 +47,10 @@ class ApplicationsServiceSpec
     with OptionValues
     with EitherValues {
 
-  private val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-
   "registerApplication" - {
     "must build the correct application and submit it to the repository" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val teamMember1 = TeamMember("test-email-1")
       val teamMember2 = TeamMember("test-email-2")
@@ -79,6 +78,9 @@ class ApplicationsServiceSpec
       when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(newApplication)))(any()))
         .thenReturn(Future.successful(Right(secondaryClientResponse)))
 
+      when(emailConnector.sendAddTeamMemberEmail(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
       val applicationWithCreds = application
         .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, None, None)))
         .setSecondaryCredentials(Seq(secondaryClientResponse.asCredential()))
@@ -95,9 +97,8 @@ class ApplicationsServiceSpec
     }
 
     "must return IdmsException and not persist in MongoDb if the primary credentials fail" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val newApplication = NewApplication(
         "test-name",
@@ -121,9 +122,8 @@ class ApplicationsServiceSpec
     }
 
     "must return IdmsException and not persist in MongoDb if the secondary credentials fail" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val newApplication = NewApplication(
         "test-name",
@@ -147,9 +147,8 @@ class ApplicationsServiceSpec
     }
 
     "must add the creator as a team member if they are not already one" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val creator = Creator("test-email")
       val teamMember1 = TeamMember("test-email-1")
@@ -174,6 +173,9 @@ class ApplicationsServiceSpec
       when(repository.insert(any()))
         .thenReturn(Future.successful(expected.copy(id = Some("id"))))
 
+      when(emailConnector.sendAddTeamMemberEmail(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
           val captor = ArgCaptor[Application]
@@ -182,21 +184,72 @@ class ApplicationsServiceSpec
           succeed
       }
     }
+
+    "must email team members" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+      val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
+
+      when(idmsConnector.createClient(any(), any())(any()))
+        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+
+      when(repository.insert(any()))
+        .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
+
+      when(emailConnector.sendAddTeamMemberEmail(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
+        _ =>
+          val captor = ArgCaptor[Application]
+          verify(repository).insert(captor.capture)
+          val expected = captor.value.copy(id = Some("id"))
+          verify(emailConnector).sendAddTeamMemberEmail(ArgumentMatchers.eq(expected))(any())
+          succeed
+      }
+    }
+
+    "must not throw an exception when the Email API errors" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+      val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
+
+      when(idmsConnector.createClient(any(), any())(any()))
+        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+
+      when(repository.insert(any()))
+        .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
+
+      when(emailConnector.sendAddTeamMemberEmail(any())(any()))
+        .thenReturn(Future.successful(Left(EmailException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
+
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
+        result =>
+          result.isRight mustBe true
+      }
+    }
   }
 
   "findAll" - {
     "must return all applications from the repository" in {
+      val fixture = buildFixture
+      import fixture._
+
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty),
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty)
       )
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findAll()).thenReturn(Future.successful(applications))
 
-      val idmsConnector = mock[IdmsConnector]
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findAll() map {
         actual =>
           actual mustBe applications
@@ -206,16 +259,15 @@ class ApplicationsServiceSpec
     }
 
     "must return all applications from the repository for named team member" in {
+      val fixture = buildFixture
+      import fixture._
+
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq(TeamMember("test-email-1"))),
       )
 
-      val repository = mock[ApplicationsRepository]
       when(repository.filter("test-email-1")).thenReturn(Future.successful(applications))
 
-      val idmsConnector = mock[IdmsConnector]
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.filter("test-email-1") map {
         actual =>
           actual mustBe applications
@@ -228,6 +280,9 @@ class ApplicationsServiceSpec
 
   "findById" - {
     "must return the application when it exists" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
       val primaryClientId = "test-primary-client-id"
       val secondaryClientId = "test-secondary-client-id"
@@ -241,11 +296,9 @@ class ApplicationsServiceSpec
         .setPrimaryCredentials(Seq(Credential(primaryClientId, None, None)))
         .setSecondaryCredentials(Seq(Credential(secondaryClientId, None, None)))
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
 
-      val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(secondaryClientId))(any()))
         .thenReturn(Future.successful(Right(ClientResponse(secondaryClientId, secondaryClientSecret))))
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(secondaryClientId))(any()))
@@ -258,7 +311,6 @@ class ApplicationsServiceSpec
         .setSecondaryScopes(Seq(Scope(scope1, Approved), Scope(scope2, Approved)))
         .setPrimaryScopes(Seq(Scope(scope3, Approved), Scope(scope4, Approved)))
 
-      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id, enrich = true)(HeaderCarrier()).map {
         result =>
           result mustBe Right(expected)
@@ -266,14 +318,14 @@ class ApplicationsServiceSpec
     }
 
     "must return ApplicationNotFoundException when the application does not exist" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id, enrich = true)(HeaderCarrier()).map(
         result =>
           result mustBe Left(ApplicationNotFoundException.forId(id))
@@ -281,23 +333,23 @@ class ApplicationsServiceSpec
     }
 
     "must return IdmsException when that is returned from the IDMS connector" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
       val clientId = "test-client-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
         .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
 
-      val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(Seq.empty)))
 
-      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id, enrich = true)(HeaderCarrier()).map {
         result =>
           result.left.value mustBe a[IdmsException]
@@ -305,19 +357,18 @@ class ApplicationsServiceSpec
     }
 
     "must not enrich with IDMS data unless asked to" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
         .setPrimaryCredentials(Seq(Credential("test-primary-client-id", None, None)))
         .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", None, None)))
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
 
-      val idmsConnector = mock[IdmsConnector]
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
       service.findById(id, enrich = false)(HeaderCarrier()).map {
         result =>
           result mustBe Right(application)
@@ -328,17 +379,16 @@ class ApplicationsServiceSpec
   }
 
   "get apps where primary env has pending scopes" - {
+    val fixture = buildFixture
+    import fixture._
+
     val appWithPrimaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
       .addPrimaryScope(Scope("test-scope-1", Pending))
     val appWithSecondaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
       .addSecondaryScope(Scope("test-scope-2", Pending))
 
-    val repository = mock[ApplicationsRepository]
     when(repository.findAll()).thenReturn(Future.successful(Seq(appWithPrimaryPending, appWithSecondaryPending)))
 
-    val idmsConnector = mock[IdmsConnector]
-
-    val service = new ApplicationsService(repository, clock, idmsConnector)
     service.getApplicationsWithPendingPrimaryScope map {
       actual =>
         actual mustBe Seq(appWithPrimaryPending)
@@ -349,16 +399,14 @@ class ApplicationsServiceSpec
 
   "delete" - {
     "must delete the application from the repository" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
-
-      val idmsConnector = mock[IdmsConnector]
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>
@@ -369,20 +417,19 @@ class ApplicationsServiceSpec
     }
 
     "must delete the primary credential from IDMS" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
         .setPrimaryCredentials(Seq(Credential(clientId, None, None)))
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
 
-      val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>
@@ -394,20 +441,19 @@ class ApplicationsServiceSpec
     }
 
     "must delete the secondary credential from IDMS" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
         .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
 
-      val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>
@@ -419,14 +465,12 @@ class ApplicationsServiceSpec
     }
 
     "must return ApplicationNotFoundException when the application does not exist" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
-
-      val idmsConnector = mock[IdmsConnector]
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>
@@ -435,6 +479,9 @@ class ApplicationsServiceSpec
     }
 
     "must return IdmsException when that is returned from any call to the IDMS connector" in {
+      val fixture = buildFixture
+      import fixture._
+
       val id = "test-id"
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
@@ -442,16 +489,12 @@ class ApplicationsServiceSpec
         .setPrimaryCredentials(Seq(Credential(clientId1, None, None)))
         .setSecondaryCredentials(Seq(Credential(clientId2, None, None)))
 
-      val repository = mock[ApplicationsRepository]
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
 
-      val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1))(any()))
         .thenReturn(Future.successful(Right(())))
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId2))(any()))
         .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
-
-      val service = new ApplicationsService(repository, clock, idmsConnector)
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>
@@ -465,9 +508,8 @@ class ApplicationsServiceSpec
   "addScopes" - {
 
     "must add new primary scope to Application and not update idms" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val newScope = NewScope("test-name-1", Seq(Primary))
 
@@ -498,9 +540,8 @@ class ApplicationsServiceSpec
     }
 
     "must update idms with new secondary scope and not update application" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val testScopeId = "test-name-1"
       val newScope = NewScope(testScopeId, Seq(Secondary))
@@ -529,9 +570,8 @@ class ApplicationsServiceSpec
     }
 
     "must handle idms fail and return error for secondary scope" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val testScopeId = "test-name-1"
       val newScope = NewScope(testScopeId, Seq(Secondary))
@@ -561,9 +601,8 @@ class ApplicationsServiceSpec
     }
 
     "must handle idms fail and return error for secondary scope but also process primary and update" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val testScopeId = "test-name-1"
       val newScope = NewScope(testScopeId, Seq(Primary, Secondary))
@@ -598,9 +637,8 @@ class ApplicationsServiceSpec
     }
 
     "must return ApplicationNotFoundException if application not found whilst updating it with new scope" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val newScopes = NewScope("test-name-1", Seq(Primary))
 
@@ -628,9 +666,8 @@ class ApplicationsServiceSpec
     }
 
     "must return ApplicationNotFoundException if application not initially found" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
@@ -644,9 +681,8 @@ class ApplicationsServiceSpec
 
   "Approving primary scope" - {
     def runTest(secret: Option[String]): Future[Assertion] = {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val testScope = "test-scope-1"
       val testClientId = "test-client-id"
@@ -688,9 +724,8 @@ class ApplicationsServiceSpec
     }
 
     "must not delete primary scope if idms update fails" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val testScope = "test-scope-1"
       val testClientId = "test-client-id"
@@ -723,9 +758,8 @@ class ApplicationsServiceSpec
     }
 
     "must return not found exception if application does not exist" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
@@ -737,9 +771,9 @@ class ApplicationsServiceSpec
     }
 
     "must return bad application exception when trying to APPROVE scope when scope exists but is not PENDING" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
+
       val scopeName = "test-scope-1"
 
       val envs = Environments(
@@ -767,9 +801,9 @@ class ApplicationsServiceSpec
     }
 
     "must return bad application exception when scope does not exist" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
+
       val scopeName = "test-scope-1"
 
       val testAppId = "test-app-id"
@@ -795,9 +829,8 @@ class ApplicationsServiceSpec
 
   "create primary secret" - {
     "must map success result" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val teamMember1 = TeamMember("test-email-1")
       val teamMember2 = TeamMember("test-email-2")
@@ -837,9 +870,8 @@ class ApplicationsServiceSpec
     }
 
     "must map handle idms fail" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val teamMember1 = TeamMember("test-email-1")
       val teamMember2 = TeamMember("test-email-2")
@@ -877,9 +909,8 @@ class ApplicationsServiceSpec
     }
 
     "must handle application not found" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val applicationId = "app-1234"
 
@@ -893,9 +924,8 @@ class ApplicationsServiceSpec
     }
 
     "must map handle application has no primary credentials" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val applicationId = "app-1234"
       val application = Application(
@@ -917,9 +947,8 @@ class ApplicationsServiceSpec
     }
 
     "must handle application has no client id in credentials" in {
-      val repository = mock[ApplicationsRepository]
-      val idmsConnector = mock[IdmsConnector]
-      val service = new ApplicationsService(repository, clock, idmsConnector)
+      val fixture = buildFixture
+      import fixture._
 
       val applicationId = "app-1234"
       val application = Application(
@@ -942,6 +971,14 @@ class ApplicationsServiceSpec
       }
     }
 
+  }
+
+  private def buildFixture = new {
+    val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+    val repository: ApplicationsRepository = mock[ApplicationsRepository]
+    val idmsConnector: IdmsConnector = mock[IdmsConnector]
+    val emailConnector: EmailConnector = mock[EmailConnector]
+    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector)
   }
 
 }
