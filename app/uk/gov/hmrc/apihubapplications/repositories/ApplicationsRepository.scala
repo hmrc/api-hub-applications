@@ -28,6 +28,7 @@ import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -60,13 +61,14 @@ class ApplicationsRepository @Inject()
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {
     stringToObjectId(id) match {
       case Some(objectId) =>
-        collection
-          .find(Filters.equal ("_id", objectId ) )
-          .headOption()
-          .map {
-            case Some(application) => Right(application)
-            case _ => Left(raiseApplicationNotFoundException.forId(id))
-          }
+        Mdc.preservingMdc {
+          collection
+            .find(Filters.equal("_id", objectId))
+            .headOption()
+        } map {
+          case Some(application) => Right(application)
+          case _ => Left(raiseApplicationNotFoundException.forId(id))
+        }
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
     }
   }

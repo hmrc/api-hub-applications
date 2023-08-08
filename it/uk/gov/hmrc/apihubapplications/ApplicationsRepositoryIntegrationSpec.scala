@@ -21,14 +21,18 @@ import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.time.LocalDateTime
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class ApplicationsRepositoryIntegrationSpec
   extends AnyFreeSpec
@@ -36,8 +40,14 @@ class ApplicationsRepositoryIntegrationSpec
   with DefaultPlayMongoRepositorySupport[Application]
   with OptionValues {
 
+  private lazy val playApplication = {
+    new GuiceApplicationBuilder()
+      .overrides(bind[MongoComponent].toInstance(mongoComponent))
+      .build()
+  }
+
   override protected lazy val repository: ApplicationsRepository = {
-    new ApplicationsRepository(mongoComponent)
+    playApplication.injector.instanceOf[ApplicationsRepository]
   }
 
   "insert" - {
@@ -111,6 +121,22 @@ class ApplicationsRepositoryIntegrationSpec
       val actual = repository.findById(id).futureValue
 
       actual mustBe Left(ApplicationNotFoundException.forId(id))
+    }
+
+    "must preserve MDC data" in {
+      val mdcData = Map("X-Request-Id" -> "test-request-id")
+      Mdc.putMdc(mdcData)
+
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+
+      val expected = repository.insert(application).futureValue
+      val actual = repository
+        .findById(expected.id.value)
+        .map(_ => Mdc.mdcData)(playApplication.injector.instanceOf[ExecutionContext])
+        .futureValue
+
+      actual mustBe mdcData
     }
   }
 
