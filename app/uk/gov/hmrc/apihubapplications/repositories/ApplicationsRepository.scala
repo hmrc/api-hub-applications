@@ -21,50 +21,71 @@ import org.bson.types.ObjectId
 import org.mongodb.scala.bson.{BsonDocument, Document}
 import org.mongodb.scala.model._
 import play.api.Logging
-import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application._
+import play.api.libs.json.Format
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Pending, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
-import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{mongoApplicationFormat, stringToObjectId}
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{sensitiveStringFormat, stringToObjectId}
+import uk.gov.hmrc.apihubapplications.repositories.models.{SensitiveApplication, SensitiveTeamMember}
+import uk.gov.hmrc.crypto.Sensitive.SensitiveString
+import uk.gov.hmrc.crypto.json.JsonEncryption
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
+import javax.inject.Named
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ApplicationsRepository @Inject()
-  (mongoComponent: MongoComponent)
-  (implicit ec: ExecutionContext)
-  extends PlayMongoRepository[Application](
+class ApplicationsRepository @Inject()(
+  mongoComponent: MongoComponent,
+  @Named("aes") crypto: Encrypter with Decrypter
+)(implicit ec: ExecutionContext)
+  extends PlayMongoRepository[SensitiveApplication](
     collectionName = "applications",
+    domainFormat = SensitiveApplication.formatSensitiveApplication(crypto),
     mongoComponent = mongoComponent,
-    domainFormat   = mongoApplicationFormat,
-    extraCodecs = Seq(Codecs.playFormatCodec(Scope.scopeFormat),
-                      Codecs.playFormatCodec(UpdateScopeStatus.updateScopeStatusFormat)
-                     ),
     indexes = Seq(
-      IndexModel(Indexes.ascending("teamMembers", "email")),
+      IndexModel(Indexes.ascending("teamMembers.email")),
       IndexModel(Indexes.ascending("environments.primary.scopes.status"))
+    ),
+    extraCodecs = Seq(
+      // Sensitive string codec so we can operate on individual string fields
+      Codecs.playFormatCodec(sensitiveStringFormat(crypto))
     )
   ) with Logging with ExceptionRaising {
 
+  // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
+  require(
+    crypto.encrypt(PlainText("foo")) == crypto.encrypt(PlainText("foo")),
+    s"Crypto algorithm provided is not deterministic."
+  )
+
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
-  def findAll(): Future[Seq[Application]] = collection.find().toFuture()
+  implicit val theCrypto: Encrypter with Decrypter = crypto
+
+  def findAll(): Future[Seq[Application]] = {
+    collection
+      .find()
+      .toFuture()
+      .map(_.map(_.decryptedValue))
+  }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
-    val document = BsonDocument("teamMembers" -> BsonDocument("email" -> teamMemberEmail))
-    collection.find(document).toFuture()
+    collection
+      .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
+      .toFuture()
+      .map(_.map(_.decryptedValue))
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {
     stringToObjectId(id) match {
       case Some(objectId) =>
         collection
-          .find(Filters.equal ("_id", objectId ) )
+          .find(Filters.equal("_id", objectId))
           .headOption()
           .map {
-            case Some(application) => Right(application)
+            case Some(application) => Right(application.decryptedValue)
             case _ => Left(raiseApplicationNotFoundException.forId(id))
           }
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
@@ -74,7 +95,7 @@ class ApplicationsRepository @Inject()
   def insert(application: Application): Future[Application] = {
     collection
       .insertOne(
-        document = application
+        document = SensitiveApplication(application)
       )
       .toFuture()
       .map(
@@ -90,7 +111,7 @@ class ApplicationsRepository @Inject()
         collection
           .replaceOne(
             filter = Filters.equal("_id", id),
-            replacement = application,
+            replacement = SensitiveApplication(application),
             options     = ReplaceOptions().upsert(false)
           )
           .toFuture()
@@ -160,69 +181,6 @@ class ApplicationsRepository @Inject()
 
 object ApplicationsRepository extends Logging {
 
-  /*
-    We have a JSON serializer/deserializer for the Application case class. This
-    reads and writes the "id" element. If its value is None then it is not output.
-
-    Mongo wants the "id" element to be called "_id" with this structure:
-      "_id" : {
-        "$oid" : "63bebf8bbbeccc26c12294e5"
-      }
-
-    The gibberish string is a hex string based on Mongo's internal Id value.
-
-    When we read/write JSON with Mongo we need to transform between the "id"
-    and "_id" structures:
-      1) When reading from Mongo we transform from "_id" to "id" and then use
-         our standard reads to deserialize to an Application object
-      2) When writing to Mongo we need to serialize an Application object using
-         our standard writes and then transform from "id" to "_id"
-
-    Read about Play's JSON transformers here:
-      https://www.playframework.com/documentation/2.8.x/ScalaJsonTransformers
-
-    One problem wth transformers is that they don't work well with optional
-    elements. We only want to apply our write transform when we have Some(id).
-    When we have None we can use the standard write which simply omits id's
-    element.
-
-    An "issues" array exists in Applications that is transient and should not be
-    stored. To avoid this happening it is stripped out from an application
-    before storage. An empty array is added to applications retrieved from the
-    database.
-  */
-
-  private val mongoApplicationWithIdWrites: Writes[Application] =
-    Application.applicationFormat.transform(
-      json => json.transform(
-        JsPath.json.update((JsPath \ "_id" \ "$oid").json.copyFrom((JsPath \ "id").json.pick))
-          andThen (JsPath \ "id").json.prune
-          andThen (JsPath \ "issues").json.prune
-      ).get
-    )
-
-  private val mongoApplicationWithoutIdWrites: Writes[Application] =
-    Application.applicationFormat.transform(
-      json => json.transform(
-        (JsPath \ "issues").json.prune
-      ).get
-    )
-
-  private val mongoApplicationWrites: Writes[Application] = (application: Application) => {
-    application.id match {
-      case Some(_) => mongoApplicationWithIdWrites.writes(application)
-      case _ => mongoApplicationWithoutIdWrites.writes(application)
-    }
-  }
-
-  private val mongoApplicationReads: Reads[Application] =
-    JsPath.json.update((JsPath \ "id").json
-      .copyFrom((JsPath \ "_id" \ "$oid").json.pick))
-      .andThen(JsPath.json.update(__.read[JsObject].map(o => o ++ Json.obj("issues" -> Json.arr()))))
-      .andThen(Application.applicationFormat)
-
-  val mongoApplicationFormat: Format[Application] = Format(mongoApplicationReads, mongoApplicationWrites)
-
   def stringToObjectId(id: String): Option[ObjectId] = {
     try {
       Some(new ObjectId(id))
@@ -237,5 +195,8 @@ object ApplicationsRepository extends Logging {
   def stringToObjectId(id: Option[String]): Option[ObjectId] = {
     id.flatMap(stringToObjectId)
   }
+
+  private def sensitiveStringFormat(implicit crypto: Encrypter with Decrypter): Format[SensitiveString] =
+    JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
 
 }
