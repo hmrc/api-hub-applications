@@ -51,7 +51,8 @@ class ApplicationsRepository @Inject()(
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
       Codecs.playFormatCodec(sensitiveStringFormat(crypto))
-    )
+    ),
+    replaceIndexes = true
   ) with Logging with ExceptionRaising {
 
   // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
