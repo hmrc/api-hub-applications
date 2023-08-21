@@ -21,10 +21,12 @@ import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.LocalDateTime
@@ -33,11 +35,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ApplicationsRepositoryIntegrationSpec
   extends AnyFreeSpec
   with Matchers
-  with DefaultPlayMongoRepositorySupport[Application]
+  with DefaultPlayMongoRepositorySupport[SensitiveApplication]
   with OptionValues {
 
   override protected lazy val repository: ApplicationsRepository = {
-    new ApplicationsRepository(mongoComponent)
+    new ApplicationsRepository(mongoComponent, NoCrypto)
   }
 
   "insert" - {
@@ -49,7 +51,7 @@ class ApplicationsRepositoryIntegrationSpec
 
       result.id mustBe defined
 
-      val persisted = find(Filters.equal("_id", new ObjectId(result.id.value))).futureValue.head
+      val persisted = find(Filters.equal("_id", new ObjectId(result.id.value))).futureValue.head.decryptedValue
       persisted mustEqual result
     }
   }

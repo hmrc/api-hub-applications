@@ -19,10 +19,11 @@ package uk.gov.hmrc.apihubapplications.repositories
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.mongoApplicationFormat
+import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
 
 import java.time.LocalDateTime
 
@@ -37,7 +38,7 @@ class ApplicationsRepositorySpec
         s"""
            |{
            |"lastUpdated":"${now.toString}",
-           |"createdBy":{"email":"test1@test.com"},
+           |"createdBy":{"email": "\\"test1@test.com\\""},
            |"environments":{
            |  "primary":{"scopes":[],"credentials":[]},
            |  "secondary":{"scopes":[],"credentials":[]}
@@ -45,50 +46,58 @@ class ApplicationsRepositorySpec
            |"created":"${now.toString}",
            |"name":"test-app-1",
            |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},
-           |"teamMembers":[]
+           |"teamMembers":[{"email": "\\"test2@test.com\\""}]
            |}
            |""".stripMargin)
 
-      val result = json.validate(mongoApplicationFormat)
+      val result = json.validate(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       result mustBe a [JsSuccess[_]]
 
-      val expected = Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val expected = Application(
+        Some("63bebf8bbbeccc26c12294e5"),
+        "test-app-1",
+        now,
+        Creator("test1@test.com"),
+        now,
+        Seq(TeamMember("test2@test.com")),
+        Environments()
+      )
 
-      result.get mustBe expected
+      result.get.decryptedValue mustBe expected
     }
 
     "must successfully serialise an Application with an Id" in {
       val now = LocalDateTime.now()
-      val application = Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application = SensitiveApplication(Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()))
 
-      val result = Json.toJson(application)(mongoApplicationFormat)
+      val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "id") mustBe a [JsUndefined]
       (result \ "_id" \ "$oid") mustBe JsDefined(JsString("63bebf8bbbeccc26c12294e5"))
       (result \ "name") mustBe JsDefined(JsString("test-app-1"))
     }
 
     "must successfully serialise an Application without an Id" in {
-      val application = Application(NewApplication("test-app-without-id", Creator("test1@test.com"), Seq(TeamMember("test1@test.com"))))
+      val application = SensitiveApplication(Application(NewApplication("test-app-without-id", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))))
 
-      val result = Json.toJson(application)(mongoApplicationFormat)
+      val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "id") mustBe a [JsUndefined]
       (result \ "_id") mustBe a [JsUndefined]
       (result \ "name") mustBe JsDefined(JsString("test-app-without-id"))
     }
 
     "must strip out the issues sequence while serialising an application without an Id" in {
-      val application = Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
-        .setIssues(Seq("test-issue"))
+      val application = SensitiveApplication(Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
+        .setIssues(Seq("test-issue")))
 
-      val result = Json.toJson(application)(mongoApplicationFormat)
+      val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "issues") mustBe a [JsUndefined]
     }
 
     "must strip out the issues sequence while serialising an application with an Id" in {
-      val application = Application(Some("test-id"), "test-app-1", Creator("test1@test.com"), Seq.empty)
-        .setIssues(Seq("test-issue"))
+      val application = SensitiveApplication(Application(Some("test-id"), "test-app-1", Creator("test1@test.com"), Seq.empty)
+        .setIssues(Seq("test-issue")))
 
-      val result = Json.toJson(application)(mongoApplicationFormat)
+      val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "issues") mustBe a [JsUndefined]
     }
 

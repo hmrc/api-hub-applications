@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications
 
+import org.mongodb.scala.result.InsertOneResult
 import org.scalatest.OptionValues
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
@@ -30,11 +31,13 @@ import play.api.libs.ws.{EmptyBody, WSClient}
 import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
@@ -42,13 +45,14 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class ApplicationsIntegrationSpec
   extends AnyWordSpec
     with Matchers
     with OptionValues
     with GuiceOneServerPerSuite
-    with DefaultPlayMongoRepositorySupport[Application]
+    with DefaultPlayMongoRepositorySupport[SensitiveApplication]
     with ScalaCheckPropertyChecks
     with ApplicationGenerator {
 
@@ -67,7 +71,7 @@ class ApplicationsIntegrationSpec
       .build()
 
   override protected lazy val repository: ApplicationsRepository = {
-    new ApplicationsRepository(mongoComponent)
+    new ApplicationsRepository(mongoComponent, NoCrypto)
   }
 
   "POST to register a new application" should {
@@ -120,7 +124,7 @@ class ApplicationsIntegrationSpec
 
         val storedApplications = findAll().futureValue.filter(app => app.id == responseApplication.id)
         storedApplications.size shouldBe 1
-        val storedApplication = storedApplications.head
+        val storedApplication = storedApplications.head.decryptedValue
 
         val expectedTeamMembers =
           if (newApplication.teamMembers.contains(TeamMember(newApplication.createdBy.email))) {
@@ -147,7 +151,7 @@ class ApplicationsIntegrationSpec
         insert(application1).futureValue
         insert(application2).futureValue
 
-        val storedApplications: Seq[Application] = findAll().futureValue
+        val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue)
 
         val response =
           wsClient
@@ -174,7 +178,7 @@ class ApplicationsIntegrationSpec
       insert(application1).futureValue
       insert(application2).futureValue
 
-      val storedApplications: Seq[Application] = findAll().futureValue
+      val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue)
       val myApplications = storedApplications.filter(application => application.teamMembers.contains(TeamMember(myEmail)))
 
       val response =
@@ -202,7 +206,7 @@ class ApplicationsIntegrationSpec
           .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, None, None)))
       ).futureValue
 
-      val storedApplication = findAll().futureValue.head
+      val storedApplication = findAll().futureValue.head.decryptedValue
 
       val expected = storedApplication
         .setSecondaryCredentials(
@@ -483,9 +487,14 @@ class ApplicationsIntegrationSpec
         response.status shouldBe 200
         noException should be thrownBy response.json.as[Secret]
 
-        val updatedApp = findAll().futureValue.head
+        val updatedApp = findAll().futureValue.head.decryptedValue
         updatedApp.getPrimaryCredentials.head.secretFragment mustBe Some("1234")
       }
     }
   }
+
+  private def insert(application: Application): Future[InsertOneResult] = {
+    insert(SensitiveApplication(application))
+  }
+
 }
