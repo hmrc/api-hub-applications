@@ -31,6 +31,7 @@ import uk.gov.hmrc.crypto.json.JsonEncryption
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import javax.inject.Named
 import scala.concurrent.{ExecutionContext, Future}
@@ -65,65 +66,70 @@ class ApplicationsRepository @Inject()(
   implicit val theCrypto: Encrypter with Decrypter = crypto
 
   def findAll(): Future[Seq[Application]] = {
-    collection
-      .find()
-      .toFuture()
-      .map(_.map(_.decryptedValue))
+    Mdc.preservingMdc {
+      collection
+        .find()
+        .toFuture()
+    } map (_.map(_.decryptedValue))
   }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
-    collection
-      .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
-      .toFuture()
-      .map(_.map(_.decryptedValue))
+    Mdc.preservingMdc {
+      collection
+        .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
+        .toFuture()
+    } map (_.map(_.decryptedValue))
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {
     stringToObjectId(id) match {
       case Some(objectId) =>
-        collection
-          .find(Filters.equal("_id", objectId))
-          .headOption()
-          .map {
-            case Some(application) => Right(application.decryptedValue)
-            case _ => Left(raiseApplicationNotFoundException.forId(id))
-          }
+        Mdc.preservingMdc {
+          collection
+            .find(Filters.equal("_id", objectId))
+            .headOption()
+        } map {
+          case Some(application) => Right(application.decryptedValue)
+          case _ => Left(raiseApplicationNotFoundException.forId(id))
+        }
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
     }
   }
 
   def insert(application: Application): Future[Application] = {
-    collection
-      .insertOne(
-        document = SensitiveApplication(application)
-      )
-      .toFuture()
-      .map(
-        result => application.copy(
-          id = Some(result.getInsertedId.asObjectId().getValue.toString)
+    Mdc.preservingMdc {
+      collection
+        .insertOne(
+          document = SensitiveApplication(application)
         )
+        .toFuture()
+    } map (
+      result => application.copy(
+        id = Some(result.getInsertedId.asObjectId().getValue.toString)
       )
+    )
   }
 
   def update(application: Application): Future[Either[ApplicationsException, Unit]] = {
     stringToObjectId(application.id) match {
       case Some(id) =>
-        collection
-          .replaceOne(
-            filter = Filters.equal("_id", id),
-            replacement = SensitiveApplication(application),
-            options     = ReplaceOptions().upsert(false)
-          )
-          .toFuture()
-          .map(
-            result =>
-              if (result.getModifiedCount > 0) {
-                Right(())
-              }
-              else {
-                Left(raiseNotUpdatedException.forApplication(application))
-              }
-          )
+        Mdc.preservingMdc {
+          collection
+            .replaceOne(
+              filter = Filters.equal("_id", id),
+              replacement = SensitiveApplication(application),
+              options     = ReplaceOptions().upsert(false)
+            )
+            .toFuture()
+        } map (
+          result =>
+            if (result.getModifiedCount > 0) {
+              Right(())
+            }
+            else {
+              Left(raiseNotUpdatedException.forApplication(application))
+            }
+        )
       case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
     }
   }
@@ -131,46 +137,50 @@ class ApplicationsRepository @Inject()(
   def delete(application: Application): Future[Either[ApplicationsException, Unit]] = {
     stringToObjectId(application.id) match {
       case Some(id) =>
-        collection.deleteOne(Filters.equal("_id", id))
-          .toFuture()
-          .map(
-            result =>
-              if (result.getDeletedCount != 0) {
-                Right(())
-              }
-              else {
-                Left(raiseNotUpdatedException.forApplication(application))
-              }
-          )
+        Mdc.preservingMdc {
+          collection.deleteOne(Filters.equal("_id", id))
+            .toFuture()
+        } map (
+          result =>
+            if (result.getDeletedCount != 0) {
+              Right(())
+            }
+            else {
+              Left(raiseNotUpdatedException.forApplication(application))
+            }
+        )
       case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
     }
   }
 
   def countOfAllApplications(): Future[Long] = {
-    collection
-      .countDocuments()
-      .toFuture()
+    Mdc.preservingMdc {
+      collection
+        .countDocuments()
+        .toFuture()
+    }
   }
 
   def countOfPendingApprovals(): Future[Int] = {
-    collection
-      .aggregate[BsonDocument](
-        Seq(
-          Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
-          Aggregates.unwind("$environments.primary.scopes"),
-          Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
-          Aggregates.count("pendingApprovals")
+    Mdc.preservingMdc {
+      collection
+        .aggregate[BsonDocument](
+          Seq(
+            Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
+            Aggregates.unwind("$environments.primary.scopes"),
+            Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
+            Aggregates.count("pendingApprovals")
+          )
         )
+        .toFuture()
+    }.map(_.headOption
+      .map(bsonDocument =>
+        bsonDocument.get("pendingApprovals")
+          .asInt32()
+          .getValue
       )
-      .toFuture()
-      .map(_.headOption
-        .map(bsonDocument =>
-          bsonDocument.get("pendingApprovals")
-            .asInt32()
-            .getValue
-        )
-      )
-      .map(_.getOrElse(0))
+    )
+    .map(_.getOrElse(0))
   }
 
   def listIndexes: Future[Seq[Document]] = {
