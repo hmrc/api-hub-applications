@@ -47,7 +47,7 @@ class ApplicationsRepositoryIntegrationSpec
       .build()
   }
 
-  private implicit lazy val executionControl: ExecutionContext = {
+  private implicit lazy val executionContext: ExecutionContext = {
     playApplication.injector.instanceOf[ExecutionContext]
   }
 
@@ -55,10 +55,10 @@ class ApplicationsRepositoryIntegrationSpec
     playApplication.injector.instanceOf[ApplicationsRepository]
   }
 
-  private val mdcData = Map("X-Request-Id" -> "test-request-id")
+  private val testMdcData = Map("X-Request-Id" -> "test-request-id")
 
-  private def saveMdc(): Unit = {
-    Mdc.putMdc(mdcData)
+  private def setMdcData(): Unit = {
+    Mdc.putMdc(testMdcData)
   }
 
   private case class ResultWithMdcData[T](data: T, mdcData: Map[String, String])
@@ -73,7 +73,7 @@ class ApplicationsRepositoryIntegrationSpec
 
   "insert" - {
     "must persist an application in MongoDb" in {
-      saveMdc()
+      setMdcData()
 
       val now = LocalDateTime.now()
       val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
@@ -84,7 +84,7 @@ class ApplicationsRepositoryIntegrationSpec
         .futureValue
 
       result.data.id mustBe defined
-      result.mdcData mustBe mdcData
+      result.mdcData mustBe testMdcData
 
       val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue
       persisted mustEqual result.data
@@ -93,96 +93,96 @@ class ApplicationsRepositoryIntegrationSpec
 
   "findAll" - {
     "must retrieve all applications from MongoDb" in {
-      saveMdc()
+      setMdcData()
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
       val application2 = Application(None, "test-app-2", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
-      val result1 = repository.insert(application1).futureValue
-      val result2 = repository.insert(application2).futureValue
+      val saved1 = repository.insert(application1).futureValue
+      val saved2 = repository.insert(application2).futureValue
 
-      val actual = repository
+      val result = repository
         .findAll()
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data must contain theSameElementsAs Set(result1, result2)
-      actual.mdcData mustBe mdcData
+      result.data must contain theSameElementsAs Set(saved1, saved2)
+      result.mdcData mustBe testMdcData
     }
   }
 
   "filter" - {
     "must retrieve all applications from MongoDb belonging to named team member" in {
-      saveMdc()
+      setMdcData()
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", now, Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
       val application2 = Application(None, "test-app-2", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
-      val result1 = repository.insert(application1).futureValue
+      val saved1 = repository.insert(application1).futureValue
       repository.insert(application2).futureValue
 
-      val actual = repository
+      val result = repository
         .filter("test1@test.com")
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustEqual Seq(result1)
-      actual.mdcData mustBe mdcData
+      result.data mustEqual Seq(saved1)
+      result.mdcData mustBe testMdcData
     }
   }
 
   "findById" - {
     "must return an application when it exists in MongoDb" in {
-      saveMdc()
+      setMdcData()
 
       val now = LocalDateTime.now()
       val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val expected = repository.insert(application).futureValue
 
-      val actual = repository
+      val result = repository
         .findById(expected.id.value)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe Right(expected)
-      actual.mdcData mustBe mdcData
+      result.data mustBe Right(expected)
+      result.mdcData mustBe testMdcData
     }
 
     "must return ApplicationNotFoundException when the application does not exist in MongoDb" in {
-      saveMdc()
+      setMdcData()
 
       val id = List.fill(24)("0").mkString
 
-      val actual = repository
+      val result = repository
         .findById(id)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe Left(ApplicationNotFoundException.forId(id))
-      actual.mdcData mustBe mdcData
+      result.data mustBe Left(ApplicationNotFoundException.forId(id))
+      result.mdcData mustBe testMdcData
     }
 
     "must return ApplicationNotFoundException when the Id is not a valid Object Id" in {
-      saveMdc()
+      setMdcData()
 
       val id = "invalid"
 
-      val actual = repository
+      val result = repository
         .findById(id)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe Left(ApplicationNotFoundException.forId(id))
-      actual.mdcData mustBe mdcData
+      result.data mustBe Left(ApplicationNotFoundException.forId(id))
+      result.mdcData mustBe testMdcData
     }
   }
 
   "update" - {
     "must update MongoDb when the application exists in the database" in {
-      saveMdc()
+      setMdcData()
 
       val application = Application(None, "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))
 
@@ -195,14 +195,14 @@ class ApplicationsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe Right(())
-      result.mdcData mustBe mdcData
+      result.mdcData mustBe testMdcData
 
       val actual = repository.findById(updated.id.value).futureValue
       actual.map(_.copy(lastUpdated = updated.lastUpdated)) mustBe Right(updated)
     }
 
     "must return NotUpdatedException when the application does not exist in the database" in {
-      saveMdc()
+      setMdcData()
 
       val id = List.fill(24)("0").mkString
       val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))
@@ -213,63 +213,63 @@ class ApplicationsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe Left(NotUpdatedException.forId(id))
-      result.mdcData mustBe mdcData
+      result.mdcData mustBe testMdcData
     }
   }
 
   "delete" - {
     "must delete the application from MongoDb" in {
-      saveMdc()
+      setMdcData()
 
       val application = Application(None, "test-app", Creator("test1@test.com"), Seq.empty)
 
       val saved = repository.insert(application).futureValue
 
-      val actual = repository
+      val result = repository
         .delete(saved)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe Right(())
-      actual.mdcData mustBe mdcData
+      result.data mustBe Right(())
+      result.mdcData mustBe testMdcData
 
       repository.findById(saved.id.value).futureValue mustBe Left(ApplicationNotFoundException.forApplication(saved))
     }
 
     "must return ApplicationNotFoundException when the application Id is invalid" in {
-      saveMdc()
+      setMdcData()
 
       val id = "invalid-id"
       val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq.empty)
 
-      val actual = repository
+      val result = repository
         .delete(application)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe Left(ApplicationNotFoundException.forId(id))
-      actual.mdcData mustBe mdcData
+      result.data mustBe Left(ApplicationNotFoundException.forId(id))
+      result.mdcData mustBe testMdcData
     }
 
     "must return NotUpdatedException when the application does not exist in MongoDb" in {
-      saveMdc()
+      setMdcData()
 
       val id = List.fill(24)("0").mkString
       val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq.empty)
 
-      val actual = repository
+      val result = repository
         .delete(application)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe Left(NotUpdatedException.forApplication(application))
-      actual.mdcData mustBe mdcData
+      result.data mustBe Left(NotUpdatedException.forApplication(application))
+      result.mdcData mustBe testMdcData
     }
   }
 
   "countOfAllApplications" - {
     "must return the correct count of applications" in {
-      saveMdc()
+      setMdcData()
 
       val count = 3
       (1 to count).foreach(
@@ -277,19 +277,19 @@ class ApplicationsRepositoryIntegrationSpec
           repository.insert(Application(None, s"test-app-$i", Creator(s"test$i@test.com"), Seq.empty)).futureValue
       )
 
-      val actual = repository
+      val result = repository
         .countOfAllApplications()
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe count
-      actual.mdcData mustBe mdcData
+      result.data mustBe count
+      result.mdcData mustBe testMdcData
     }
   }
 
   "countOfPendingApprovals" - {
     "must return the correct count of pending approvals" in {
-      saveMdc()
+      setMdcData()
 
       repository.insert(
         Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
@@ -308,13 +308,13 @@ class ApplicationsRepositoryIntegrationSpec
           .addPrimaryScope(Scope("scope-name", Denied))
       ).futureValue
 
-      val actual = repository
+      val result = repository
         .countOfPendingApprovals()
         .map(ResultWithMdcData(_))
         .futureValue
 
-      actual.data mustBe 3
-      actual.mdcData mustBe mdcData
+      result.data mustBe 3
+      result.mdcData mustBe testMdcData
     }
   }
 
