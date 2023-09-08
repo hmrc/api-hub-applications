@@ -1,3 +1,4 @@
 # External routes, via inbound HODS Proxy
 
 GET         /connectivity-test                  uk.gov.hmrc.apihubapplications.controllers.external.ConnectivityTestController.testing123
+GET         /health                             uk.gov.hmrc.apihubapplications.controllers.external.ConnectivityTestController.testing123
