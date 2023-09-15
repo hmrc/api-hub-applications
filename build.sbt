@@ -22,3 +22,4 @@ lazy val microservice = Project("api-hub-applications", file("."))
     Test / unmanagedSourceDirectories += baseDirectory.value / "test-common",
     IntegrationTest / unmanagedSourceDirectories += baseDirectory.value / "test-common"
   )
+  .settings(scalacOptions ++= Seq("-deprecation", "-feature"))

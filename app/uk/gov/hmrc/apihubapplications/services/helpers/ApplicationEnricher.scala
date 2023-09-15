@@ -35,6 +35,8 @@ trait ApplicationEnricher {
 
 object ApplicationEnrichers {
 
+  type EnricherProvider = (Application, IdmsConnector, Boolean) => Future[Either[IdmsException, ApplicationEnricher]]
+
   def process(
     application: Application,
     enrichers: Seq[Future[Either[IdmsException, ApplicationEnricher]]]
@@ -46,6 +48,23 @@ object ApplicationEnrichers {
           Right(enrichers.foldLeft(application)((newApplication, enricher) => enricher.enrich(newApplication)))
         case Left(e) => Left(e)
       }
+  }
+
+  def processAll(
+    applications: Seq[Application],
+    enricherProvider: EnricherProvider,
+    idmsConnector: IdmsConnector,
+    failOnError: Boolean
+  )(implicit ec: ExecutionContext): Future[Either[IdmsException, Seq[Application]]] = {
+    Future.sequence(
+      applications.map(
+        application =>
+          enricherProvider(application, idmsConnector, failOnError).map {
+            case Right(enricher) => Right(enricher.enrich(application))
+            case Left(error: IdmsException) => Left(error)
+          }
+      )
+    ).map(useFirstException)
   }
 
   private val noOpApplicationEnricher = new ApplicationEnricher {
@@ -96,7 +115,8 @@ object ApplicationEnrichers {
 
   def secondaryScopeApplicationEnricher(
     original: Application,
-    idmsConnector: IdmsConnector
+    idmsConnector: IdmsConnector,
+    failOnError: Boolean
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     // Note that this enricher processes the first secondary credential only
     // There is no definition of how to combine scopes from multiple credentials
@@ -122,7 +142,7 @@ object ApplicationEnrichers {
           idmsConnector.fetchClientScopes(Secondary, credential.clientId)
             .map {
               case Right(clientScopes) => Right(buildEnricher(clientScopes))
-              case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
+              case Left(e @ IdmsException(_, _, ClientNotFound)) if !failOnError => Right(buildIssuesEnricher(e))
               case Left(e) => Left(e)
             }
       }

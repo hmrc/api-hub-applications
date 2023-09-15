@@ -21,7 +21,7 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising, InvalidPrimaryCredentials, InvalidPrimaryScope, InvalidSecondaryCredentials}
+import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
@@ -62,8 +62,21 @@ class ApplicationsService @Inject()(
     repository.findAll()
   }
 
-  def filter(teamMemberEmail: String): Future[Seq[Application]] = {
-    repository.filter(teamMemberEmail)
+  def filter(teamMemberEmail: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]] = {
+    repository.filter(teamMemberEmail).flatMap {
+      applications =>
+        if (enrich) {
+          ApplicationEnrichers.processAll(
+            applications,
+            ApplicationEnrichers.secondaryScopeApplicationEnricher _,
+            idmsConnector,
+            failOnError = true
+          )
+        }
+        else {
+          Future.successful(Right(applications))
+        }
+    }
   }
 
   def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
@@ -74,7 +87,7 @@ class ApplicationsService @Inject()(
             application,
             Seq(
               ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
-              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
+              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false),
               ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
             )
           )
