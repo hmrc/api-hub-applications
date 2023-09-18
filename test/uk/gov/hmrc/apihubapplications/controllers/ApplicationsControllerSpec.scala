@@ -68,7 +68,7 @@ class ApplicationsControllerSpec
 
         val json = Json.toJson(newApplication)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -89,7 +89,7 @@ class ApplicationsControllerSpec
     "must return 400 Bad Request when the JSON is not a valid application" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -111,7 +111,7 @@ class ApplicationsControllerSpec
 
         val json = Json.toJson(newApplication)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -139,7 +139,7 @@ class ApplicationsControllerSpec
         .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
       running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication.url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.ApplicationsController.registerApplication().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -185,7 +185,8 @@ class ApplicationsControllerSpec
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
           Some(encrypt(crypto, teamMemberEmail))).url)
 
-        when(fixture.applicationsService.filter(teamMemberEmail)).thenReturn(Future.successful(expected_apps))
+        when(fixture.applicationsService.filter(ArgumentMatchers.eq(teamMemberEmail), ArgumentMatchers.eq(false))(any()))
+          .thenReturn(Future.successful(Right(expected_apps)))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
@@ -193,6 +194,47 @@ class ApplicationsControllerSpec
       }
     }
 
+    "must enrich and return applications for a team member when requested" in {
+      val fixture = buildFixture()
+      val now = LocalDateTime.now()
+      running(fixture.application) {
+
+        val teamMemberEmail = "jo.bloggs@hmrc.gov.uk"
+        val expected_apps = Seq(Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments()))
+
+        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
+          Some(encrypt(crypto, teamMemberEmail)),
+          enrich = true
+        ).url)
+
+        when(fixture.applicationsService.filter(ArgumentMatchers.eq(teamMemberEmail), ArgumentMatchers.eq(true))(any()))
+          .thenReturn(Future.successful(Right(expected_apps)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(expected_apps)
+      }
+    }
+
+    "must return Bad Gateway when an IdmsException is encountered" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val teamMemberEmail = "jo.bloggs@hmrc.gov.uk"
+
+        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
+          Some(encrypt(crypto, teamMemberEmail)),
+          enrich = true
+        ).url)
+
+        when(fixture.applicationsService.filter(ArgumentMatchers.eq(teamMemberEmail), ArgumentMatchers.eq(true))(any()))
+          .thenReturn(Future.successful(Left(IdmsException.clientNotFound("test-client-id"))))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_GATEWAY
+      }
+    }
   }
 
   "getApplication" - {

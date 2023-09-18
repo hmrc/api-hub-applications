@@ -54,14 +54,23 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
-  def getApplications(teamMember: Option[String]): Action[AnyContent] = identify.compose(Action).async {
-    val result = teamMember match {
-      case None => applicationsService.findAll()
-      case Some(encryptedEmail) =>
-        applicationsService.filter(decrypt(encryptedEmail))
-    }
-
-    result.map(apps => Json.toJson(apps)).map(Ok(_))
+  def getApplications(teamMember: Option[String], enrich: Boolean): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      teamMember match {
+        case None =>
+          applicationsService
+            .findAll()
+            .map(Json.toJson(_))
+            .map(Ok(_))
+        case Some(encryptedEmail) =>
+          applicationsService
+            .filter(decrypt(encryptedEmail), enrich)
+            .map {
+              case Right(applications) => Ok(Json.toJson(applications))
+              case Left(_: IdmsException) => BadGateway
+              case Left(error) => throw error
+            }
+      }
   }
 
   def getApplication(id: String, enrich: Boolean): Action[AnyContent] = identify.compose(Action).async {
