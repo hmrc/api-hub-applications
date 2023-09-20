@@ -29,4 +29,7 @@ class FakeEmailConnector extends EmailConnector {
     Future.successful(Right(()))
   }
 
+  override def sendApplicationDeletedEmailToCreator(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
+
+  override def sendApplicationDeletedEmailToTeam(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
 }

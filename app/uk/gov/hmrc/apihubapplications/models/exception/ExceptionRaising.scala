@@ -86,7 +86,10 @@ trait ExceptionRaising {
   }
 
   private def log[T <: ApplicationsException](e: T): T = {
-    logger.warn("Raised application exception", e)
+    e match {
+      case emailException: EmailException => logger.error("Raised EmailException:", emailException)
+      case _ => logger.warn("Raised application exception", e)
+    }
     e
   }
 

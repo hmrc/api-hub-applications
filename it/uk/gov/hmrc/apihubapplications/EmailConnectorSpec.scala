@@ -121,6 +121,8 @@ class EmailConnectorSpec
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
 
   val addTeamMemberTemplateId: String = "test-add-team-member-template-id"
+  val deleteApplicationEmailToCreatorTemplateId: String = "test-delete-application-to-creator-template-id"
+  val deleteApplicationEmailToTeamTemplateId: String = "test-delete-application-to-team-template-id"
 
   val email1: String = "test-email1@test.com"
   val email2: String = "test-email1@test.com"
@@ -137,7 +139,9 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
       Configuration.from(Map(
         "microservice.services.email.host" -> wireMockSupport.wireMockHost,
         "microservice.services.email.port" -> wireMockSupport.wireMockPort,
-        "microservice.services.email.addTeamMemberToApplicationTemplateId" -> addTeamMemberTemplateId
+        "microservice.services.email.addTeamMemberToApplicationTemplateId" -> addTeamMemberTemplateId,
+        "microservice.services.email.deleteApplicationEmailToCreatorTemplateId" -> deleteApplicationEmailToCreatorTemplateId,
+        "microservice.services.email.deleteApplicationEmailToTeamTemplateId" -> deleteApplicationEmailToTeamTemplateId
       ))
     )
 

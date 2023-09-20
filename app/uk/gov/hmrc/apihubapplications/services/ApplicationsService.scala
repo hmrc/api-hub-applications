@@ -114,7 +114,11 @@ class ApplicationsService @Inject()(
               ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, credential.clientId, idmsConnector)
           )
         ).flatMap {
-          case Right(_) => repository.delete(application)
+          case Right(_) => for {
+            deleteOperationResult <- repository.delete(application)
+            _ <- emailConnector.sendApplicationDeletedEmailToCreator(application)
+            _ <- emailConnector.sendApplicationDeletedEmailToTeam(application)
+          } yield deleteOperationResult
           case Left(e) => Future.successful(Left(e))
         }
       case Left(e) => Future.successful(Left(e))
