@@ -116,6 +116,64 @@ class EmailConnectorSpec
     }
   }
 
+  "EmailConnector.sendApplicationDeletedEmailToCreator" - {
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(application.createdBy.email),
+        deleteApplicationEmailToCreatorTemplateId,
+        Map(
+          "applicationname" -> application.name
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendApplicationDeletedEmailToCreator(application)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+  }
+
+  "EmailConnector.sendApplicationDeletedEmailToTeam" - {
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(email1, email2),
+        deleteApplicationEmailToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendApplicationDeletedEmailToTeam(application)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+  }
+
 }
 
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
@@ -125,7 +183,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val deleteApplicationEmailToTeamTemplateId: String = "test-delete-application-to-team-template-id"
 
   val email1: String = "test-email1@test.com"
-  val email2: String = "test-email1@test.com"
+  val email2: String = "test-email2@test.com"
 
   val application: Application = Application(
     Some("test-id"),
