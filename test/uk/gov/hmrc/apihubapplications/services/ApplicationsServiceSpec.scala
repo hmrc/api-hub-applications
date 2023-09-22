@@ -17,9 +17,9 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.captor.ArgCaptor
 import org.mockito.{ArgumentMatchers, MockitoSugar}
-import org.mongodb.scala.result
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -479,8 +479,8 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>
@@ -538,6 +538,28 @@ class ApplicationsServiceSpec
       }
     }
 
+    "must not send email when delete operation fails" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-description", creator, Seq(teamMember1, teamMember2))
+
+      val notFoundException = ApplicationNotFoundException("Not found")
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Left(notFoundException)))
+
+      service.delete(application.id.get)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(notFoundException)
+          verifyNoInteractions(emailConnector)
+          succeed
+      }
+    }
+
     "must delete the primary credential from IDMS" in {
       val fixture = buildFixture
       import fixture._
@@ -552,8 +574,8 @@ class ApplicationsServiceSpec
 
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>
@@ -578,8 +600,8 @@ class ApplicationsServiceSpec
 
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
 
       service.delete(id)(HeaderCarrier()).map {
         actual =>

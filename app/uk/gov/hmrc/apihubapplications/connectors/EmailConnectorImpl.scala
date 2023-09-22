@@ -33,84 +33,22 @@ class EmailConnectorImpl @Inject()(
   httpClient: HttpClientV2
 )(implicit ec: ExecutionContext) extends EmailConnector with Logging with ExceptionRaising {
 
-  private val addTeamMemberToApplicationTemplateId = {
-    val templateId = servicesConfig.getConfString("email.addTeamMemberToApplicationTemplateId", "")
+  private def getAndValidate(configKey: String): String = {
+    val templateId = servicesConfig.getConfString(configKey, "")
 
     if (templateId.isEmpty) {
-      raiseEmailException.missingConfig("email.addTeamMemberToApplicationTemplateId")
+      raiseEmailException.missingConfig(configKey)
     }
 
     templateId
   }
 
-  private val applicationDeletedToCreatorTemplateId = {
-    val templateId = servicesConfig.getConfString("email.deleteApplicationEmailToCreatorTemplateId", "")
+  private val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
+  private val addTeamMemberToApplicationTemplateId = getAndValidate("email.addTeamMemberToApplicationTemplateId")
+  private val applicationDeletedToCreatorTemplateId = getAndValidate("email.deleteApplicationEmailToCreatorTemplateId")
+  private val applicationDeletedToTeamTemplateId = getAndValidate("email.deleteApplicationEmailToTeamTemplateId")
 
-    if (templateId.isEmpty) {
-      raiseEmailException.missingConfig("email.deleteApplicationEmailToCreatorTemplateId")
-    }
-
-    templateId
-  }
-
-  private val applicationDeletedToTeamTemplateId = {
-    val templateId = servicesConfig.getConfString("email.deleteApplicationEmailToTeamTemplateId", "")
-
-    if (templateId.isEmpty) {
-      raiseEmailException.missingConfig("email.deleteApplicationEmailToTeamTemplateId")
-    }
-
-    templateId
-  }
-
-  def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
-    val to = application
-      .teamMembers
-      .filterNot(_.email.equals(application.createdBy.email))
-      .map(_.email)
-
-    if (to.nonEmpty) {
-      val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
-
-      val request = SendEmailRequest(
-        to,
-        addTeamMemberToApplicationTemplateId,
-        Map(
-          "applicationname" -> application.name,
-          "creatorusername" -> application.createdBy.email
-        )
-      )
-
-      httpClient.post(url)
-        .withBody(Json.toJson(request))
-        .execute[Either[UpstreamErrorResponse, Unit]]
-        .map {
-          case Right(()) => Right(())
-          case Left(e) => Left(raiseEmailException.unexpectedResponse(e))
-        }
-        .recover {
-          case throwable => Left(raiseEmailException.error(throwable))
-        }
-    }
-    else {
-      Future.successful(Right(()))
-    }
-  }
-
-  def sendApplicationDeletedEmailToCreator(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
-
-    val toCreator = application.createdBy.email
-
-    val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
-
-    val request = SendEmailRequest(
-      Seq(toCreator),
-      applicationDeletedToCreatorTemplateId,
-      Map(
-        "applicationname" -> application.name
-      )
-    )
-
+  private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
       .withBody(Json.toJson(request))
       .execute[Either[UpstreamErrorResponse, Unit]]
@@ -122,6 +60,42 @@ class EmailConnectorImpl @Inject()(
         case throwable => Left(raiseEmailException.error(throwable))
       }
   }
+  def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val to = application
+      .teamMembers
+      .filterNot(_.email.equals(application.createdBy.email))
+      .map(_.email)
+
+    if (to.nonEmpty) {
+      val request = SendEmailRequest(
+        to,
+        addTeamMemberToApplicationTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "creatorusername" -> application.createdBy.email
+        )
+      )
+      doPost(request)
+    }
+    else {
+      Future.successful(Right(()))
+    }
+  }
+
+  def sendApplicationDeletedEmailToCreator(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+
+    val toCreator = application.createdBy.email
+
+    val request = SendEmailRequest(
+      Seq(toCreator),
+      applicationDeletedToCreatorTemplateId,
+      Map(
+        "applicationname" -> application.name
+      )
+    )
+
+    doPost(request)
+  }
 
 
   def sendApplicationDeletedEmailToTeam(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
@@ -131,8 +105,6 @@ class EmailConnectorImpl @Inject()(
       .map(_.email)
 
     if (to.nonEmpty) {
-      val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
-
       val request = SendEmailRequest(
         to,
         applicationDeletedToTeamTemplateId,
@@ -140,17 +112,7 @@ class EmailConnectorImpl @Inject()(
           "applicationname" -> application.name
         )
       )
-
-      httpClient.post(url)
-        .withBody(Json.toJson(request))
-        .execute[Either[UpstreamErrorResponse, Unit]]
-        .map {
-          case Right(()) => Right(())
-          case Left(e) => Left(raiseEmailException.unexpectedResponse(e))
-        }
-        .recover {
-          case throwable => Left(raiseEmailException.error(throwable))
-        }
+      doPost(request)
     }
     else {
       Future.successful(Right(()))
