@@ -23,7 +23,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
-import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
+import uk.gov.hmrc.apihubapplications.models.requests.{UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -84,13 +84,20 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         }
   }
 
-  def deleteApplication(id: String): Action[AnyContent] = identify.compose(Action).async {
+  def deleteApplication(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
-      applicationsService.delete(id).map {
-        case Right(()) => NoContent
-        case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: IdmsException) => BadGateway
-        case _ => InternalServerError
+
+      request.body.validate[UserEmail] match {
+        case JsSuccess(userEmail, _) =>
+          applicationsService.delete(id, userEmail.userEmail).map {
+            case Right(()) => NoContent
+            case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(_: IdmsException) => BadGateway
+            case _ => InternalServerError
+          }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
       }
   }
 

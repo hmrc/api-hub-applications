@@ -48,6 +48,8 @@ class ApplicationsServiceSpec
     with OptionValues
     with EitherValues {
 
+  val currentUser = "me@test.com"
+
   "registerApplication" - {
     "must build the correct application and submit it to the repository" in {
       val fixture = buildFixture
@@ -476,13 +478,12 @@ class ApplicationsServiceSpec
 
       val id = "test-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).delete(any())
@@ -490,7 +491,7 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must email creator and team members" in {
+    "must email current user and team members" in {
       val fixture = buildFixture
       import fixture._
 
@@ -503,15 +504,15 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right()))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
 
-      service.delete(application.id.get)(HeaderCarrier()) map {
+      service.delete(application.id.get, currentUser)(HeaderCarrier()) map {
         _ =>
           val captor = ArgCaptor[Application]
           verify(repository).delete(captor.capture)
-          verify(emailConnector).sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())
-          verify(emailConnector).sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())
+          verify(emailConnector).sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())
+          verify(emailConnector).sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())
           succeed
       }
     }
@@ -529,10 +530,10 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
 
-      service.delete(application.id.get)(HeaderCarrier()).map {
+      service.delete(application.id.get, currentUser)(HeaderCarrier()).map {
         result => result mustBe Right(())
         succeed
       }
@@ -552,7 +553,7 @@ class ApplicationsServiceSpec
       val notFoundException = ApplicationNotFoundException("Not found")
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Left(notFoundException)))
 
-      service.delete(application.id.get)(HeaderCarrier()).map {
+      service.delete(application.id.get, currentUser)(HeaderCarrier()).map {
         result =>
           result mustBe Left(notFoundException)
           verifyNoInteractions(emailConnector)
@@ -569,15 +570,16 @@ class ApplicationsServiceSpec
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
         .setPrimaryCredentials(Seq(Credential(clientId, None, None)))
 
+      val currentUser = "user@hmrc.gov.uk"
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
 
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).delete(any())
@@ -600,10 +602,10 @@ class ApplicationsServiceSpec
 
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
-      when(emailConnector.sendApplicationDeletedEmailToCreator(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Right(())))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).delete(any())
@@ -620,7 +622,7 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(id))
       }
@@ -644,7 +646,7 @@ class ApplicationsServiceSpec
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId2))(any()))
         .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(IdmsException.unexpectedResponse(500))
           verify(repository, times(0)).delete(any())

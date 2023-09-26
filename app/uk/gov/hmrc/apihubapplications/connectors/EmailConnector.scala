@@ -25,7 +25,7 @@ import scala.concurrent.Future
 trait EmailConnector {
 
   def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
-  def sendApplicationDeletedEmailToCreator(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+  def sendApplicationDeletedEmailToCurrentUser(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
-  def sendApplicationDeletedEmailToTeam(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+  def sendApplicationDeletedEmailToTeam(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 }

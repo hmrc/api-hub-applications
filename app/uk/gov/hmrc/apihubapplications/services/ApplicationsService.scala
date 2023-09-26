@@ -100,7 +100,7 @@ class ApplicationsService @Inject()(
 
   def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
 
-  def delete(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(applicationId).flatMap {
       case Right(application) =>
         ApplicationEnrichers.process(
@@ -116,8 +116,8 @@ class ApplicationsService @Inject()(
         ).flatMap {
           case Right(_) => for {
             deleteOperationResult <- repository.delete(application)
-            _ <- emailConnector.sendApplicationDeletedEmailToCreator(application)
-            _ <- emailConnector.sendApplicationDeletedEmailToTeam(application)
+            _ <- emailConnector.sendApplicationDeletedEmailToCurrentUser(application, currentUser)
+            _ <- emailConnector.sendApplicationDeletedEmailToTeam(application, currentUser)
           } yield deleteOperationResult
           case Left(e) => Future.successful(Left(e))
         }

@@ -38,9 +38,9 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction,
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, ApplicationsException, IdmsException, InvalidPrimaryCredentials, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
-import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
+import uk.gov.hmrc.apihubapplications.models.requests.{UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
@@ -55,6 +55,9 @@ class ApplicationsControllerSpec
     with MockitoSugar
     with OptionValues
     with CryptoUtils {
+
+  val userEmail = "me@test.com"
+  val userEmailRequestBody = Json.toJson(UserEmail(userEmail)).toString()
 
   "registerApplication" - {
     "must return 201 Created for a valid request" in {
@@ -308,14 +311,16 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), ArgumentMatchers.eq(userEmail))(any()))
           .thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+          .withBody(userEmailRequestBody)
+          .withHeaders(CONTENT_TYPE -> "application/json")
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).delete(any())(any())
+        verify(fixture.applicationsService).delete(any(), ArgumentMatchers.eq(userEmail))(any())
       }
     }
 
@@ -324,10 +329,12 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+          .withBody(userEmailRequestBody)
+          .withHeaders(CONTENT_TYPE -> "application/json")
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -339,10 +346,13 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+          .withBody(userEmailRequestBody)
+          .withHeaders(CONTENT_TYPE -> "application/json")
+
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_GATEWAY
@@ -354,15 +364,33 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id))(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+          .withBody(userEmailRequestBody)
+          .withHeaders(CONTENT_TYPE -> "application/json")
         val result = route(fixture.application, request).value
 
         status(result) mustBe INTERNAL_SERVER_ERROR
       }
     }
+
+    "must return 400 Bad Request for missing user email request body" in {
+      val id = "test-id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
+          .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url).withHeaders(CONTENT_TYPE -> "application/json")
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+
   }
 
   "add scopes" - {

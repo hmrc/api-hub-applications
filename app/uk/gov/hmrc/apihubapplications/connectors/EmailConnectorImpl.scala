@@ -21,9 +21,9 @@ import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, ExceptionRaising}
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,7 +45,7 @@ class EmailConnectorImpl @Inject()(
 
   private val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
   private val addTeamMemberToApplicationTemplateId = getAndValidate("email.addTeamMemberToApplicationTemplateId")
-  private val applicationDeletedToCreatorTemplateId = getAndValidate("email.deleteApplicationEmailToCreatorTemplateId")
+  private val applicationDeletedToUserTemplateId = getAndValidate("email.deleteApplicationEmailToUserTemplateId")
   private val applicationDeletedToTeamTemplateId = getAndValidate("email.deleteApplicationEmailToTeamTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
@@ -82,26 +82,23 @@ class EmailConnectorImpl @Inject()(
     }
   }
 
-  def sendApplicationDeletedEmailToCreator(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
-
-    val toCreator = application.createdBy.email
+  def sendApplicationDeletedEmailToCurrentUser(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
 
     val request = SendEmailRequest(
-      Seq(toCreator),
-      applicationDeletedToCreatorTemplateId,
-      Map(
-        "applicationname" -> application.name
+        Seq(currentUser),
+        applicationDeletedToUserTemplateId,
+        Map(
+          "applicationname" -> application.name
+        )
       )
-    )
-
-    doPost(request)
+      doPost(request)
   }
 
 
-  def sendApplicationDeletedEmailToTeam(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+  def sendApplicationDeletedEmailToTeam(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val to = application
       .teamMembers
-      .filterNot(_.email.equals(application.createdBy.email))
+      .filterNot(_.email.equals(currentUser))
       .map(_.email)
 
     if (to.nonEmpty) {
