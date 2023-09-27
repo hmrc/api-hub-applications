@@ -27,6 +27,9 @@ object EmailException {
 
   case object MissingConfig extends EmailIssue
   case object UnexpectedResponse extends EmailIssue
+
+  case object MissingRecipient extends EmailIssue
+
   case object CallError extends EmailIssue
 
   def missingConfig(configPath: String): EmailException = {
@@ -43,6 +46,10 @@ object EmailException {
 
   def error(throwable: Throwable): EmailException = {
     EmailException("Error calling Email API", throwable, CallError)
+  }
+
+  def missingRecipient(): EmailException = {
+    EmailException("No recipients for email.", null, MissingRecipient)
   }
 
 }

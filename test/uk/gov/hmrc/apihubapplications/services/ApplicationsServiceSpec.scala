@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.captor.ArgCaptor
 import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.concurrent.ScalaFutures
@@ -46,6 +47,8 @@ class ApplicationsServiceSpec
     with ScalaFutures
     with OptionValues
     with EitherValues {
+
+  val currentUser = "me@test.com"
 
   "registerApplication" - {
     "must build the correct application and submit it to the repository" in {
@@ -475,14 +478,85 @@ class ApplicationsServiceSpec
 
       val id = "test-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).delete(any())
+          succeed
+      }
+    }
+
+    "must email current user and team members" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-description", creator, Seq(teamMember1, teamMember2))
+
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+
+      service.delete(application.id.get, currentUser)(HeaderCarrier()) map {
+        _ =>
+          val captor = ArgCaptor[Application]
+          verify(repository).delete(captor.capture)
+          verify(emailConnector).sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())
+          verify(emailConnector).sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())
+          succeed
+      }
+    }
+
+    "must tolerate email failure and return success" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-description", creator, Seq(teamMember1, teamMember2))
+
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+
+      service.delete(application.id.get, currentUser)(HeaderCarrier()).map {
+        result => result mustBe Right(())
+        succeed
+      }
+    }
+
+    "must not send email when delete operation fails" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val teamMember1 = TeamMember("test-email-1")
+      val teamMember2 = TeamMember("test-email-2")
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-description", creator, Seq(teamMember1, teamMember2))
+
+      val notFoundException = ApplicationNotFoundException("Not found")
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Left(notFoundException)))
+
+      service.delete(application.id.get, currentUser)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(notFoundException)
+          verifyNoInteractions(emailConnector)
           succeed
       }
     }
@@ -496,13 +570,16 @@ class ApplicationsServiceSpec
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
         .setPrimaryCredentials(Seq(Credential(clientId, None, None)))
 
+      val currentUser = "user@hmrc.gov.uk"
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
 
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).delete(any())
@@ -525,8 +602,10 @@ class ApplicationsServiceSpec
 
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId))(any()))
         .thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), any())(any())).thenReturn(Future.successful(Right(())))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).delete(any())
@@ -543,7 +622,7 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(id))
       }
@@ -567,7 +646,7 @@ class ApplicationsServiceSpec
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId2))(any()))
         .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
-      service.delete(id)(HeaderCarrier()).map {
+      service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(IdmsException.unexpectedResponse(500))
           verify(repository, times(0)).delete(any())

@@ -21,9 +21,9 @@ import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, ExceptionRaising}
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,16 +33,33 @@ class EmailConnectorImpl @Inject()(
   httpClient: HttpClientV2
 )(implicit ec: ExecutionContext) extends EmailConnector with Logging with ExceptionRaising {
 
-  private val addTeamMemberToApplicationTemplateId = {
-    val templateId = servicesConfig.getConfString("email.addTeamMemberToApplicationTemplateId", "")
+  private def getAndValidate(configKey: String): String = {
+    val templateId = servicesConfig.getConfString(configKey, "")
 
     if (templateId.isEmpty) {
-      raiseEmailException.missingConfig("email.addTeamMemberToApplicationTemplateId")
+      raiseEmailException.missingConfig(configKey)
     }
 
     templateId
   }
 
+  private val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
+  private val addTeamMemberToApplicationTemplateId = getAndValidate("email.addTeamMemberToApplicationTemplateId")
+  private val applicationDeletedToUserTemplateId = getAndValidate("email.deleteApplicationEmailToUserTemplateId")
+  private val applicationDeletedToTeamTemplateId = getAndValidate("email.deleteApplicationEmailToTeamTemplateId")
+
+  private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    httpClient.post(url)
+      .withBody(Json.toJson(request))
+      .execute[Either[UpstreamErrorResponse, Unit]]
+      .map {
+        case Right(()) => Right(())
+        case Left(e) => Left(raiseEmailException.unexpectedResponse(e))
+      }
+      .recover {
+        case throwable => Left(raiseEmailException.error(throwable))
+      }
+  }
   def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val to = application
       .teamMembers
@@ -50,8 +67,6 @@ class EmailConnectorImpl @Inject()(
       .map(_.email)
 
     if (to.nonEmpty) {
-      val url = url"${servicesConfig.baseUrl("email")}/hmrc/email"
-
       val request = SendEmailRequest(
         to,
         addTeamMemberToApplicationTemplateId,
@@ -60,25 +75,47 @@ class EmailConnectorImpl @Inject()(
           "creatorusername" -> application.createdBy.email
         )
       )
-
-      httpClient.post(url)
-        .withBody(Json.toJson(request))
-        .execute[Either[UpstreamErrorResponse, Unit]]
-        .map {
-          case Right(()) => Right(())
-          case Left(e) => Left(raiseEmailException.unexpectedResponse(e))
-        }
-        .recover {
-          case throwable => Left(raiseEmailException.error(throwable))
-        }
+      doPost(request)
     }
     else {
       Future.successful(Right(()))
     }
   }
 
-}
+  def sendApplicationDeletedEmailToCurrentUser(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
 
+    val request = SendEmailRequest(
+        Seq(currentUser),
+        applicationDeletedToUserTemplateId,
+        Map(
+          "applicationname" -> application.name
+        )
+      )
+      doPost(request)
+  }
+
+
+  def sendApplicationDeletedEmailToTeam(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val to = application
+      .teamMembers
+      .filterNot(_.email.equals(currentUser))
+      .map(_.email)
+
+    if (to.nonEmpty) {
+      val request = SendEmailRequest(
+        to,
+        applicationDeletedToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name
+        )
+      )
+      doPost(request)
+    }
+    else {
+      Future.successful(Right(()))
+    }
+  }
+}
 // Elided class from the email api
 // See https://github.com/hmrc/email/blob/main/app/uk/gov/hmrc/email/controllers/model/SendEmailRequest.scala
 case class SendEmailRequest(

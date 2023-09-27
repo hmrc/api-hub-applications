@@ -23,11 +23,12 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import play.api.http.Status.{NOT_FOUND, NO_CONTENT}
+import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.{EmptyBody, WSClient}
+import play.api.test.Helpers.CONTENT_TYPE
 import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
@@ -35,7 +36,7 @@ import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
-import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
+import uk.gov.hmrc.apihubapplications.models.requests.{UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
@@ -265,6 +266,8 @@ class ApplicationsIntegrationSpec
         val response =
           wsClient
             .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .withHttpHeaders((CONTENT_TYPE, "application/json"))
+            .withBody(Json.toJson(UserEmail("me@test.com")).toString())
             .delete()
             .futureValue
 
@@ -280,10 +283,23 @@ class ApplicationsIntegrationSpec
         val response =
           wsClient
             .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .withHttpHeaders((CONTENT_TYPE, "application/json"))
+            .withBody(Json.toJson(UserEmail("me@test.com")).toString())
             .delete()
             .futureValue
-
         response.status shouldBe NOT_FOUND
+      }
+    }
+
+    "respond with 400 Bad Request when the request does not have a user email body" in {
+      forAll { (application: Application) =>
+        val response =
+          wsClient
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .withHttpHeaders((CONTENT_TYPE, "application/json"))
+            .delete()
+            .futureValue
+        response.status shouldBe BAD_REQUEST
       }
     }
   }
