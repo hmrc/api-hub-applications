@@ -9,6 +9,6 @@ PUT        /applications/:id/environments/primary/scopes/:scopeName             
 GET        /applications/pending-primary-scopes                                     uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.pendingPrimaryScopes
 GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None, enrich: Boolean ?= false)
 GET        /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String, enrich: Boolean ?= false)
-DELETE     /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
+POST       /applications/:id/delete                                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
 
 GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip

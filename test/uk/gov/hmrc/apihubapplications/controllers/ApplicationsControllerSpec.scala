@@ -314,7 +314,7 @@ class ApplicationsControllerSpec
         when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), ArgumentMatchers.eq(userEmail))(any()))
           .thenReturn(Future.successful(Right(())))
 
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
           .withBody(userEmailRequestBody)
           .withHeaders(CONTENT_TYPE -> "application/json")
         val result = route(fixture.application, request).value
@@ -332,7 +332,7 @@ class ApplicationsControllerSpec
         when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
           .withBody(userEmailRequestBody)
           .withHeaders(CONTENT_TYPE -> "application/json")
         val result = route(fixture.application, request).value
@@ -349,7 +349,7 @@ class ApplicationsControllerSpec
         when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
           .withBody(userEmailRequestBody)
           .withHeaders(CONTENT_TYPE -> "application/json")
 
@@ -367,7 +367,7 @@ class ApplicationsControllerSpec
         when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
           .withBody(userEmailRequestBody)
           .withHeaders(CONTENT_TYPE -> "application/json")
         val result = route(fixture.application, request).value
@@ -384,7 +384,7 @@ class ApplicationsControllerSpec
         when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteApplication(id).url).withHeaders(CONTENT_TYPE -> "application/json")
+        val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url).withHeaders(CONTENT_TYPE -> "application/json")
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST

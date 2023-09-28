@@ -257,7 +257,7 @@ class ApplicationsIntegrationSpec
     }
   }
 
-  "DELETE an application" should {
+  "Deleting an application" should {
     "delete the application and respond with 204 No Content when successful" in {
       forAll { (application: Application) =>
         deleteAll().futureValue
@@ -265,10 +265,9 @@ class ApplicationsIntegrationSpec
 
         val response =
           wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/delete")
             .withHttpHeaders((CONTENT_TYPE, "application/json"))
-            .withBody(Json.toJson(UserEmail("me@test.com")).toString())
-            .delete()
+            .post(Json.toJson(UserEmail("me@test.com")).toString())
             .futureValue
 
         response.status shouldBe NO_CONTENT
@@ -282,10 +281,9 @@ class ApplicationsIntegrationSpec
       forAll { (application: Application) =>
         val response =
           wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/delete")
             .withHttpHeaders((CONTENT_TYPE, "application/json"))
-            .withBody(Json.toJson(UserEmail("me@test.com")).toString())
-            .delete()
+            .post(Json.toJson(UserEmail("me@test.com")).toString())
             .futureValue
         response.status shouldBe NOT_FOUND
       }
@@ -295,9 +293,9 @@ class ApplicationsIntegrationSpec
       forAll { (application: Application) =>
         val response =
           wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/delete")
             .withHttpHeaders((CONTENT_TYPE, "application/json"))
-            .delete()
+            .post("{}")
             .futureValue
         response.status shouldBe BAD_REQUEST
       }
