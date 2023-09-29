@@ -84,6 +84,9 @@ class ApplicationsServiceSpec
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
         .thenReturn(Future.successful(Right(())))
 
+      when(emailConnector.sendApplicationCreatedEmailToCreator(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
       val applicationWithCreds = application
         .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, None, None)))
         .setSecondaryCredentials(Seq(secondaryClientResponse.asCredential()))
@@ -179,6 +182,9 @@ class ApplicationsServiceSpec
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
         .thenReturn(Future.successful(Right(())))
 
+      when(emailConnector.sendApplicationCreatedEmailToCreator(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
           val captor = ArgCaptor[Application]
@@ -206,12 +212,44 @@ class ApplicationsServiceSpec
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
         .thenReturn(Future.successful(Right(())))
 
+      when(emailConnector.sendApplicationCreatedEmailToCreator(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
           val captor = ArgCaptor[Application]
           verify(repository).insert(captor.capture)
           val expected = captor.value.copy(id = Some("id"))
           verify(emailConnector).sendAddTeamMemberEmail(ArgumentMatchers.eq(expected))(any())
+          succeed
+      }
+    }
+
+    "must email application creator" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val newApplication = NewApplication("test-name", creator, Seq.empty)
+
+      when(idmsConnector.createClient(any(), any())(any()))
+        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+
+      when(repository.insert(any()))
+        .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
+
+      when(emailConnector.sendAddTeamMemberEmail(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      when(emailConnector.sendApplicationCreatedEmailToCreator(any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
+        _ =>
+          val captor = ArgCaptor[Application]
+          verify(repository).insert(captor.capture)
+          val expected = captor.value.copy(id = Some("id"))
+          verify(emailConnector).sendApplicationCreatedEmailToCreator(ArgumentMatchers.eq(expected))(any())
           succeed
       }
     }
@@ -232,6 +270,9 @@ class ApplicationsServiceSpec
         .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
 
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
+        .thenReturn(Future.successful(Left(EmailException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
+
+      when(emailConnector.sendApplicationCreatedEmailToCreator(any())(any()))
         .thenReturn(Future.successful(Left(EmailException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {

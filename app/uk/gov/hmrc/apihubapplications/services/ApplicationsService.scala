@@ -53,6 +53,7 @@ class ApplicationsService @Inject()(
         for {
           saved <- repository.insert(enriched)
           _ <- emailConnector.sendAddTeamMemberEmail(saved)
+          _ <- emailConnector.sendApplicationCreatedEmailToCreator(saved)
         } yield Right(saved)
       case Left(e) => Future.successful(Left(e))
     }
