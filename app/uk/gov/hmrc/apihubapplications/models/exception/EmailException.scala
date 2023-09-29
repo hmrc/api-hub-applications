@@ -48,8 +48,4 @@ object EmailException {
     EmailException("Error calling Email API", throwable, CallError)
   }
 
-  def missingRecipient(): EmailException = {
-    EmailException("No recipients for email.", null, MissingRecipient)
-  }
-
 }

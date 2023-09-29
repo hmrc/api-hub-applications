@@ -146,6 +146,35 @@ class EmailConnectorSpec
     }
   }
 
+  "EmailConnector.sendApplicationCreatedEmailToCreator" - {
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(application.createdBy.email),
+        applicationCreatedEmailToCreatorTemplateId,
+        Map(
+          "applicationname" -> application.name
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendApplicationCreatedEmailToCreator(application)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+  }
+
   "EmailConnector.sendApplicationDeletedEmailToTeam" - {
     "must place the correct request" in {
       val request = SendEmailRequest(
@@ -207,6 +236,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val addTeamMemberTemplateId: String = "test-add-team-member-template-id"
   val deleteApplicationEmailToUserTemplateId: String = "test-delete-application-to-user-template-id"
   val deleteApplicationEmailToTeamTemplateId: String = "test-delete-application-to-team-template-id"
+  val applicationCreatedEmailToCreatorTemplateId: String = "test-application-created-to-creator-template-id"
 
   val email1: String = "test-email1@test.com"
   val email2: String = "test-email2@test.com"
@@ -225,7 +255,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.port" -> wireMockSupport.wireMockPort,
         "microservice.services.email.addTeamMemberToApplicationTemplateId" -> addTeamMemberTemplateId,
         "microservice.services.email.deleteApplicationEmailToUserTemplateId" -> deleteApplicationEmailToUserTemplateId,
-        "microservice.services.email.deleteApplicationEmailToTeamTemplateId" -> deleteApplicationEmailToTeamTemplateId
+        "microservice.services.email.deleteApplicationEmailToTeamTemplateId" -> deleteApplicationEmailToTeamTemplateId,
+        "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId
       ))
     )
 

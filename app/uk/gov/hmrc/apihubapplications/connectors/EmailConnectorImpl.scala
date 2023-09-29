@@ -47,6 +47,8 @@ class EmailConnectorImpl @Inject()(
   private val addTeamMemberToApplicationTemplateId = getAndValidate("email.addTeamMemberToApplicationTemplateId")
   private val applicationDeletedToUserTemplateId = getAndValidate("email.deleteApplicationEmailToUserTemplateId")
   private val applicationDeletedToTeamTemplateId = getAndValidate("email.deleteApplicationEmailToTeamTemplateId")
+  private val applicationCreatedToCreatorTemplateId = getAndValidate("email.applicationCreatedEmailToCreatorTemplateId")
+
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
@@ -94,6 +96,17 @@ class EmailConnectorImpl @Inject()(
       doPost(request)
   }
 
+  def sendApplicationCreatedEmailToCreator(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+
+    val request = SendEmailRequest(
+      Seq(application.createdBy.email),
+      applicationCreatedToCreatorTemplateId,
+      Map(
+        "applicationname" -> application.name
+      )
+    )
+    doPost(request)
+  }
 
   def sendApplicationDeletedEmailToTeam(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val to = application
