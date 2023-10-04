@@ -721,7 +721,7 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
 
-      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+      service.addScopes(testAppId, Seq(newScope))(HeaderCarrier()) map {
         actual =>
           verify(repository).update(updatedApp)
           verifyZeroInteractions(idmsConnector.addClientScope(any(), any(), any())(any()))
@@ -734,8 +734,8 @@ class ApplicationsServiceSpec
       val fixture = buildFixture
       import fixture._
 
-      val testScopeId = "test-name-1"
-      val newScope = NewScope(testScopeId, Seq(Secondary))
+      val newScope1 = NewScope("test-scope-1", Seq(Secondary))
+      val newScope2 = NewScope("test-scope-2", Seq(Secondary))
 
       val testAppId = "test-app-id"
       val testClientId = "test-client-id"
@@ -751,10 +751,12 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
-      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+
+      service.addScopes(testAppId, Seq(newScope1, newScope2))(HeaderCarrier()) map {
         actual =>
           verifyZeroInteractions(repository.update(any()))
-          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(newScope1.name))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(newScope2.name))(any())
           actual mustBe Right(())
       }
 
@@ -782,7 +784,7 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       val exception = IdmsException("Bad thing", CallError)
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
-      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+      service.addScopes(testAppId, Seq(newScope))(HeaderCarrier()) map {
         actual =>
           verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
@@ -818,7 +820,7 @@ class ApplicationsServiceSpec
 
       val exception = IdmsException("Bad thing", CallError)
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
-      service.addScope(testAppId, newScope)(HeaderCarrier()) map {
+      service.addScopes(testAppId, Seq(newScope))(HeaderCarrier()) map {
         actual =>
           verify(repository).update(updatedApp)
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
@@ -850,7 +852,7 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
-      service.addScope(testAppId, newScopes)(HeaderCarrier()) map {
+      service.addScopes(testAppId, Seq(newScopes))(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
@@ -863,7 +865,7 @@ class ApplicationsServiceSpec
       val testAppId = "test-app-id"
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
-      service.addScope(testAppId, NewScope("test-name-1", Seq(Primary)))(HeaderCarrier()) map {
+      service.addScopes(testAppId, Seq(NewScope("test-name-1", Seq(Primary))))(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
