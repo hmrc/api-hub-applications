@@ -136,7 +136,7 @@ class ApplicationsService @Inject()(
             .addScopes(
               Primary,
               newScopes
-                .filter(_.environments.exists(_.equals(Primary)))
+                .filter(_.hasPrimaryEnvironment)
                 .map(_.name)
             )
             .copy(lastUpdated = LocalDateTime.now(clock))
@@ -151,10 +151,12 @@ class ApplicationsService @Inject()(
       if (newScopes.hasSecondaryEnvironment) {
         ApplicationEnrichers.process(
           application,
-          newScopes.map(
-            newScope =>
-              ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, newScope.name)
-          )
+          newScopes
+            .filter(_.hasSecondaryEnvironment)
+            .map(
+              newScope =>
+                ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, newScope.name)
+            )
         ).map(_.map(_ => ()))
       }
       else {
