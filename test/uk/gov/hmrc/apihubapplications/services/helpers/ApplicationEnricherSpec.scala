@@ -468,6 +468,53 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     }
   }
 
+  "scopeAddingApplicationEnricher" - {
+    "must add a scope in the primary environment and enrich the application with it" in {
+      val clientId = "test-client-id"
+      val application = testApplication.setPrimaryCredentials(Seq(Credential(clientId, None, None)))
+      val scope = "test-scope"
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId), ArgumentMatchers.eq(scope))(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      ApplicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope).map {
+        case Right(enricher) =>
+          enricher.enrich(application) mustBe application.addPrimaryScope(Scope(scope, Approved))
+        case Left(e) => fail("Unexpected Left response", e)
+      }
+    }
+
+    "must add a scope in the secondary environment and enrich the application with it" in {
+      val clientId = "test-client-id"
+      val application = testApplication.setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+      val scope = "test-scope"
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId), ArgumentMatchers.eq(scope))(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope).map {
+        case Right(enricher) =>
+          enricher.enrich(application) mustBe application.addSecondaryScope(Scope(scope, Approved))
+        case Left(e) => fail("Unexpected Left response", e)
+      }
+    }
+
+    "must return IdmsException if any call to IDMS fails" in {
+      val application = testApplication.setSecondaryCredentials(Seq(Credential("test-client-id", None, None)))
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.addClientScope(any(), any(), any())(any()))
+        .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+      ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, "test-scope").map {
+        actual =>
+          actual mustBe Left(IdmsException.unexpectedResponse(500))
+      }
+    }
+  }
+
 }
 
 object ApplicationEnricherSpec {

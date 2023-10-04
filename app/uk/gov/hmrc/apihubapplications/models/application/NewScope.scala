@@ -24,4 +24,26 @@ object NewScope {
 
   implicit val newScopeFormat: Format[NewScope] = Json.format[NewScope]
 
+  object implicits {
+    implicit class NewScopeLensOps(newScope: NewScope) {
+      def hasPrimaryEnvironment: Boolean = {
+        newScope.environments.contains(Primary)
+      }
+
+      def hasSecondaryEnvironment: Boolean = {
+        newScope.environments.contains(Secondary)
+      }
+    }
+
+    implicit class NewScopesLensOps(newScopes: Seq[NewScope]) {
+      def hasPrimaryEnvironment: Boolean = {
+        newScopes.exists(_.hasPrimaryEnvironment)
+      }
+
+      def hasSecondaryEnvironment: Boolean = {
+        newScopes.exists(_.hasSecondaryEnvironment)
+      }
+    }
+  }
+
 }

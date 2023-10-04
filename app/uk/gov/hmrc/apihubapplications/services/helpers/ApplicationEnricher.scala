@@ -226,4 +226,36 @@ object ApplicationEnrichers {
     }
   }
 
+  def scopeAddingApplicationEnricher(
+    environmentName: EnvironmentName,
+    original: Application,
+    idmsConnector: IdmsConnector,
+    scopeName: String
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+    // Note that this enricher processes the first credential only.
+    // There is no definition of how to add scopes to multiple credentials.
+    (environmentName match {
+      case Primary => original.getPrimaryCredentials.headOption
+      case Secondary => original.getSecondaryCredentials.headOption
+    }).map {
+      credential =>
+        idmsConnector.addClientScope(environmentName, credential.clientId, scopeName) map {
+          case Right(_) =>
+            Right(
+              new ApplicationEnricher() {
+                override def enrich(application: Application): Application = {
+                  environmentName match {
+                    case Primary => application.addPrimaryScope(Scope(scopeName, Approved))
+                    case Secondary => application.addSecondaryScope(Scope(scopeName, Approved))
+                  }
+
+                }
+              }
+            )
+          case Left(e) => Left(e)
+        }
+    }.getOrElse(Future.successful(Right(noOpApplicationEnricher)))
+
+  }
+
 }

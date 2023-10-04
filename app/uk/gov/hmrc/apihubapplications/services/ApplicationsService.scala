@@ -20,6 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
@@ -126,33 +127,45 @@ class ApplicationsService @Inject()(
     }
   }
 
-  def addScope(applicationId: String, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  def addScopes(applicationId: String, newScopes: Seq[NewScope])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
-    def doRepositoryUpdate(application: Application, newScope: NewScope): Future[Either[ApplicationsException, Unit]] = {
-      if (newScope.environments.exists(e => e.equals(Primary))) {
-        val applicationWithNewPrimaryScope = application.addScopes(Primary, Seq(newScope.name)).copy(lastUpdated = LocalDateTime.now(clock))
-        repository.update(applicationWithNewPrimaryScope)
-      } else {
+    def doRepositoryUpdate(application: Application, newScopes: Seq[NewScope]): Future[Either[ApplicationsException, Unit]] = {
+      if (newScopes.hasPrimaryEnvironment) {
+        repository.update(
+          application
+            .addScopes(
+              Primary,
+              newScopes
+                .filter(_.environments.exists(_.equals(Primary)))
+                .map(_.name)
+            )
+            .copy(lastUpdated = LocalDateTime.now(clock))
+        )
+      }
+      else {
         Future.successful(Right(()))
       }
     }
 
-    def doIdmsUpdate(application: Application, newScope: NewScope)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-      if (newScope.environments.exists(e => e.equals(Secondary))) {
-        qaTechDeliveryValidSecondaryCredential(application) match {
-          case Some(credential) => idmsConnector.addClientScope(Secondary, credential.clientId, newScope.name)
-          case _ =>
-            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidSecondaryCredentials)))
-        }
-      } else {
+    def doIdmsUpdate(application: Application, newScopes: Seq[NewScope])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+      if (newScopes.hasSecondaryEnvironment) {
+        ApplicationEnrichers.process(
+          application,
+          newScopes.map(
+            newScope =>
+              ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, newScope.name)
+          )
+        ).map(_.map(_ => ()))
+      }
+      else {
         Future.successful(Right(()))
       }
     }
 
     repository.findById(applicationId).flatMap {
       case Right(application) =>
-        val repositoryUpdate = doRepositoryUpdate(application, newScope)
-        val idmsUpdate = doIdmsUpdate(application, newScope)
+        val repositoryUpdate = doRepositoryUpdate(application, newScopes)
+        val idmsUpdate = doIdmsUpdate(application, newScopes)
 
         for {
           repositoryUpdated <- repositoryUpdate
@@ -230,12 +243,4 @@ class ApplicationsService @Inject()(
       .filter(_.secretFragment.isEmpty)
   }
 
-  private def qaTechDeliveryValidSecondaryCredential(application: Application): Option[Credential] = {
-    if (application.getSecondaryCredentials.length != 1) {
-      None
-    }
-    else {
-      application.getSecondaryCredentials.headOption.filter(_.clientId != null)
-    }
-  }
 }

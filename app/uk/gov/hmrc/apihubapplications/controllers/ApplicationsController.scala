@@ -22,6 +22,7 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.requests.{UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -108,9 +109,9 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case JsSuccess(scopes, _) =>
           logger.info(s"Adding scopes ($scopes) to application ID: $id")
           scopes match {
-            case s if s.size > 1 => Future.successful(NotImplemented)
+            case s if s.hasPrimaryEnvironment && s.size > 1 => Future.successful(NotImplemented)
             case s if s.isEmpty => Future.successful(BadRequest)
-            case _ => applicationsService.addScope(id, scopes.head).map {
+            case _ => applicationsService.addScopes(id, scopes).map {
               case Right(_) => NoContent
               case Left(_: ApplicationNotFoundException) => NotFound
               case Left(_: IdmsException) => BadGateway
