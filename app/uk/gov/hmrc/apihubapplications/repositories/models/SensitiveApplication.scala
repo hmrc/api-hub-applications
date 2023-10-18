@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.repositories.models
 
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{Format, JsObject, JsPath, Json, Reads, Writes, __}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Environments}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Environments, TeamMember}
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 
 import java.time.LocalDateTime
@@ -29,7 +30,8 @@ case class SensitiveApplication(
   createdBy: SensitiveCreator,
   lastUpdated: LocalDateTime,
   teamMembers: Seq[SensitiveTeamMember],
-  environments: Environments
+  environments: Environments,
+  apis: Seq[Api]
 ) extends Sensitive[Application] {
 
   override def decryptedValue: Application = {
@@ -41,7 +43,8 @@ case class SensitiveApplication(
       lastUpdated = lastUpdated,
       teamMembers = teamMembers.map(_.decryptedValue),
       environments = environments,
-      issues = Seq.empty
+      issues = Seq.empty,
+      apis = apis
     )
   }
 
@@ -57,12 +60,41 @@ object SensitiveApplication {
       createdBy = SensitiveCreator(application.createdBy),
       lastUpdated = application.lastUpdated,
       teamMembers = application.teamMembers.map(SensitiveTeamMember(_)),
-      environments = application.environments
+      environments = application.environments,
+      apis = application.apis
     )
   }
 
+  def apply(id: Some[String], name: String, created: LocalDateTime, createdBy: Creator, lastUpdated: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments, apis: Seq[Api]): SensitiveApplication = {
+    SensitiveApplication(
+      id = id,
+      name = name,
+      created = created,
+      createdBy = SensitiveCreator(createdBy),
+      lastUpdated = lastUpdated,
+      teamMembers = teamMembers.map(SensitiveTeamMember(_)),
+      environments = environments,
+      apis = apis
+    )
+  }
+
+  private val sensitiveApplicationReads: Reads[SensitiveApplication] = (
+    (JsPath \ "id").readNullable[String] and
+      (JsPath \ "name").read[String] and
+      (JsPath \ "created").read[LocalDateTime] and
+      (JsPath \ "createdBy").read[Creator] and
+      (JsPath \ "lastUpdated").read[LocalDateTime] and
+      (JsPath \ "teamMembers").read[Seq[TeamMember]] and
+      (JsPath \ "environments").read[Environments] and
+      (JsPath \ "apis").readWithDefault[Seq[Api]](Seq.empty)
+    )(SensitiveApplication.apply _)
+
+
+  private val sensitiveApplicationWrites: Writes[SensitiveApplication] = Json.writes[SensitiveApplication]
+  private val sensitiveApplicationFormats: Format[SensitiveApplication] = Format(sensitiveApplicationReads, sensitiveApplicationWrites)
+
   private def defaultFormat(implicit crypto: Encrypter with Decrypter): Format[SensitiveApplication] = {
-    Json.format[SensitiveApplication]
+    sensitiveApplicationFormats
   }
 
   private def writesSensitiveApplicationWithId(implicit crypto: Encrypter with Decrypter): Writes[SensitiveApplication] = {

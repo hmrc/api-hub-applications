@@ -76,7 +76,7 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val result = repository
         .insert(application)
@@ -96,8 +96,8 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application2 = Application(None, "test-app-2", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val saved1 = repository.insert(application1).futureValue
       val saved2 = repository.insert(application2).futureValue
@@ -117,8 +117,8 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", now, Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
-      val application2 = Application(None, "test-app-2", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val saved1 = repository.insert(application1).futureValue
       repository.insert(application2).futureValue
@@ -138,7 +138,7 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val expected = repository.insert(application).futureValue
 
