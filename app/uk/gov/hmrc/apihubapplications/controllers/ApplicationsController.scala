@@ -21,10 +21,10 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
-import uk.gov.hmrc.apihubapplications.models.requests.{UpdateScopeStatus, UserEmail}
+import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -170,4 +170,28 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Left(_) => InternalServerError
       }
   }
+
+  def addApi(id: String): Action[JsValue] =
+    identify.compose(Action(parse.json)).async {
+      implicit request: Request[JsValue] => {
+        val jsReq = request.body
+        jsReq.validate[AddApiRequest] match {
+          case JsSuccess(api, _) =>
+            logger.info(s"Adding api $api to application ID: $id")
+            applicationsService.addApi(id, api).map {
+              case Right(_) => NoContent
+              case Left(_: ApplicationNotFoundException) => NotFound
+              case Left(ApplicationDataIssueException(_, InvalidPrimaryScope)) => NotFound
+              case Left(_: IdmsException) => BadGateway
+              case Left(_) => InternalServerError
+            }
+          case e: JsError =>
+            logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+            Future.successful(BadRequest)
+        }
+      }
+
+    }
+
+
 }

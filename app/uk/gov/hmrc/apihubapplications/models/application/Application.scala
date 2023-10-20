@@ -29,7 +29,7 @@ case class Application (
   teamMembers: Seq[TeamMember],
   environments: Environments,
   issues: Seq[String] = Seq.empty,
-  apis: Seq[Api]
+  apis: Seq[Api] = Seq.empty
 )
 
 object Application {

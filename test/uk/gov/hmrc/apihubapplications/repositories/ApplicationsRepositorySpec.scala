@@ -26,13 +26,14 @@ import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
 
 import java.time.LocalDateTime
+import scala.Console
 
 class ApplicationsRepositorySpec
   extends AnyFreeSpec
     with Matchers {
 
   "JSON serialisation and deserialisation" - {
-    "must successfully deserialise JSON without endpoints to create an Application object" in {
+    "must successfully deserialise JSON without apis to create an Application object" in {
       val now = LocalDateTime.now()
       val json = Json.parse(
         s"""
@@ -66,7 +67,7 @@ class ApplicationsRepositorySpec
       result.get.decryptedValue mustBe expected
     }
 
-    "must successfully deserialise JSON with endpoints to create an Application object" in {
+    "must successfully deserialise JSON with apis to create an Application object" in {
       val now = LocalDateTime.now()
             val json = Json.parse(
               s"""
@@ -100,6 +101,7 @@ class ApplicationsRepositorySpec
 
 //      val json = Json.parse(value1)
       val result = json.validate(SensitiveApplication.formatSensitiveApplication(NoCrypto))
+      Console.println(s"result: $result")
       result mustBe a[JsSuccess[_]]
 
       val anEndpoint = Endpoint("GET", "/foo/bar")

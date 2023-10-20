@@ -24,6 +24,7 @@ import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
+import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.http.HeaderCarrier
@@ -38,6 +39,37 @@ class ApplicationsService @Inject()(
                                      idmsConnector: IdmsConnector,
                                      emailConnector: EmailConnector
                                    )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+  def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+
+    def doRepositoryUpdate(application: Application, newApi: AddApiRequest): Future[Either[ApplicationsException, Unit]] = {
+      repository.update(
+        application
+          .copy(lastUpdated = LocalDateTime.now(clock), apis = application.apis ++ Seq(Api(newApi.id, newApi.endpoints)))
+      )
+    }
+
+    this.findById(applicationId, true).flatMap {
+      case Right(application) =>
+        val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
+
+        val enrichmentFutures = scopesRequired.map(scope =>
+          ApplicationEnrichers.process(
+            application,
+            Seq(ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope))));
+
+        Future.sequence(enrichmentFutures)
+          .map(results =>
+            results.find(result => result match {
+              case Left(_) => true
+              case _ => false
+            }).getOrElse(Right(application)))
+          .flatMap {
+            case Right(_) => doRepositoryUpdate(application, newApi)
+            case Left(e: ApplicationsException) => Future.successful(Left(e))
+          }
+      case Left(e: ApplicationsException) => Future.successful(Left(e))
+    }
+  }
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     val application = Application(newApplication, clock)
@@ -111,10 +143,10 @@ class ApplicationsService @Inject()(
             credential =>
               ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, credential.clientId, idmsConnector)
           ) ++
-          application.getSecondaryCredentials.map(
-            credential =>
-              ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, credential.clientId, idmsConnector)
-          )
+            application.getSecondaryCredentials.map(
+              credential =>
+                ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, credential.clientId, idmsConnector)
+            )
         ).flatMap {
           case Right(_) => for {
             deleteOperationResult <- repository.delete(application)

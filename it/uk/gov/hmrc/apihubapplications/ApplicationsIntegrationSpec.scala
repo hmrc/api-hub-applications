@@ -36,7 +36,7 @@ import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
-import uk.gov.hmrc.apihubapplications.models.requests.{UpdateScopeStatus, UserEmail}
+import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
@@ -503,6 +503,45 @@ class ApplicationsIntegrationSpec
 
         val updatedApp = findAll().futureValue.head.decryptedValue
         updatedApp.getPrimaryCredentials.head.secretFragment mustBe Some("1234")
+      }
+    }
+
+    "POST to add apis to an application" should {
+      "respond with a 204 No Content" in {
+        forAll { (application: Application) =>
+
+          val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", None, None)))
+          deleteAll().futureValue
+          insert(applicationWithSecondaryCredentials).futureValue
+
+          val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+
+          val response =
+            wsClient
+              .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/apis")
+              .addHttpHeaders(("Content", "application/json"))
+              .post(Json.toJson(api))
+              .futureValue
+
+          response.status shouldBe 204
+        }
+      }
+
+      "respond with a 404 NotFound if the application does not exist" in {
+        forAll { (application: Application) =>
+          deleteAll().futureValue
+
+          val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+
+          val response =
+            wsClient
+              .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/apis")
+              .addHttpHeaders(("Content", "application/json"))
+              .post(Json.toJson(api))
+              .futureValue
+
+          response.status shouldBe 404
+        }
       }
     }
   }

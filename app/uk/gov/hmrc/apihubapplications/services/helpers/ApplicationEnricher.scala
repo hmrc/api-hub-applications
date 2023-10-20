@@ -239,6 +239,7 @@ object ApplicationEnrichers {
       case Secondary => original.getSecondaryCredentials.headOption
     }).map {
       credential =>
+        Console.println(s"ADDING SCOPE $environmentName, ${credential.clientId}, $scopeName")
         idmsConnector.addClientScope(environmentName, credential.clientId, scopeName) map {
           case Right(_) =>
             Right(

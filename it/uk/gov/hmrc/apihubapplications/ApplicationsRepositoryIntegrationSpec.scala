@@ -184,7 +184,8 @@ class ApplicationsRepositoryIntegrationSpec
     "must update MongoDb when the application exists in the database" in {
       setMdcData()
 
-      val application = Application(None, "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))
+      val api = Api("api_id", Seq(Endpoint("GET", "/foo/bar")))
+      val application = Application(None, "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com"))).copy(apis = Seq(api))
 
       val saved = repository.insert(application).futureValue
       val updated = saved.copy(name = "test-app-updated")
