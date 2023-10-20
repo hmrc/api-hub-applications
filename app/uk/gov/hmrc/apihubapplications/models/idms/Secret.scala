@@ -17,31 +17,8 @@
 package uk.gov.hmrc.apihubapplications.models.idms
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application.Credential
 
-import java.time.{Clock, LocalDateTime}
-
-case class Secret(secret: String) {
-
-  def toCredential(clientId: String, clock: Clock): Credential = {
-    Credential(
-      clientId = clientId,
-      created = LocalDateTime.now(clock),
-      clientSecret = Some(secret),
-      secretFragment = Some(secret.takeRight(4))
-    )
-  }
-
-  def toCredentialWithFragment(clientId: String, clock: Clock): Credential = {
-    Credential(
-      clientId = clientId,
-      created = LocalDateTime.now(clock),
-      clientSecret = None,
-      secretFragment = Some(secret.takeRight(4))
-    )
-  }
-
-}
+case class Secret(secret: String)
 
 object Secret {
 
