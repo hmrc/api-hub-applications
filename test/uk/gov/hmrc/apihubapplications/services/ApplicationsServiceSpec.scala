@@ -1224,9 +1224,7 @@ class ApplicationsServiceSpec
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
 
-      val value1 = service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).value
-
-      value1 map {
+      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
         actual =>
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-1"))(any())
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-2"))(any())
