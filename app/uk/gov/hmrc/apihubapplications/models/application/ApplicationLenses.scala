@@ -104,6 +104,11 @@ object ApplicationLenses {
       applicationPrimaryScopes.get(application)
         .exists(scope => scope.status == Pending)
 
+    def getPrimaryMasterCredential: Credential =
+      applicationPrimaryCredentials.get(application)
+        .sortWith((a, b) => a.created.isAfter(b.created))
+        .head
+
     def getPrimaryCredentials: Seq[Credential] =
       applicationPrimaryCredentials.get(application)
 
@@ -134,6 +139,11 @@ object ApplicationLenses {
         applicationSecondaryScopes.get(application) :+ scope
       )
 
+    def getSecondaryMasterCredential: Credential =
+      applicationSecondaryCredentials.get(application)
+        .sortWith((a, b) => a.created.isAfter(b.created))
+        .head
+
     def getSecondaryCredentials: Seq[Credential] =
       applicationSecondaryCredentials.get(application)
 
@@ -152,15 +162,23 @@ object ApplicationLenses {
         application.getSecondaryCredentials.filterNot(_.clientId == clientId)
       )
 
-    def updateSecondaryCredential(credential: Credential): Application = {
-      application.getSecondaryCredentials.indexWhere(_.clientId == credential.clientId) match {
-        case -1 => throw new IllegalArgumentException(
-          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
-        )
-        case i => application.setSecondaryCredentials(
-          application.getSecondaryCredentials.updated(i, credential)
+    def updateSecondaryCredential(clientId: String, secret: String): Application = {
+      if (!application.getSecondaryCredentials.exists(_.clientId == clientId)) {
+        throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${clientId}"
         )
       }
+
+      application.setSecondaryCredentials(
+          application.getSecondaryCredentials.map {
+            case credential @ Credential(id, _, _, _) if id == clientId =>
+              credential.copy(
+                clientSecret = Some(secret),
+                secretFragment = Some(secret.takeRight(4))
+              )
+            case credential => credential
+          }
+        )
     }
 
     def hasTeamMember(email: String): Boolean =
@@ -190,6 +208,12 @@ object ApplicationLenses {
       applicationIssues.set(
         application,
         applicationIssues.get(application) :+ issue
+      )
+    }
+
+    def makePublic(): Application = {
+      application.setPrimaryCredentials(
+        application.getPrimaryCredentials.filter(_.secretFragment.isDefined)
       )
     }
   }

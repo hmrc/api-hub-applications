@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.repositories.models
+package uk.gov.hmrc.apihubapplications.repositories.models.encrypted
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.Creator
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 import uk.gov.hmrc.crypto.json.JsonEncryption
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 
 case class SensitiveCreator(email: SensitiveString) extends Sensitive[Creator] {
 

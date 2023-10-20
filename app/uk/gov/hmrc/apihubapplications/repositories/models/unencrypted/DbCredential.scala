@@ -14,28 +14,38 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.idms
+package uk.gov.hmrc.apihubapplications.repositories.models.unencrypted
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.Credential
 
-import java.time.{Clock, LocalDateTime}
+import java.time.LocalDateTime
 
-case class ClientResponse(clientId: String, secret: String) {
+case class DbCredential(
+  clientId: String,
+  created: Option[LocalDateTime],
+  secretFragment: Option[String]
+) extends DbModel[Credential] {
 
-  def asNewCredential(clock: Clock): Credential = {
+  override def toModel(dbApplication: DbApplication): Credential =
     Credential(
       clientId = clientId,
-      created = LocalDateTime.now(clock),
+      created = created.getOrElse(dbApplication.created),
       clientSecret = None,
-      secretFragment = Some(secret.takeRight(4))
+      secretFragment = secretFragment
     )
-  }
 
 }
 
-object ClientResponse {
+object DbCredential {
 
-  implicit val formatClientResponse: Format[ClientResponse] = Json.format[ClientResponse]
+  def apply(credential: Credential): DbCredential =
+    DbCredential(
+      clientId = credential.clientId,
+      created = Some(credential.created),
+      secretFragment = credential.secretFragment
+    )
+
+  implicit val formatDbCredential: Format[DbCredential] = Json.format[DbCredential]
 
 }

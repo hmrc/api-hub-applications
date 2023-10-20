@@ -21,8 +21,9 @@ import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.Lens
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomCredentials, randomEnvironment, randomEnvironments, randomIssues, randomScopes, randomString, randomTeamMembers, testApplication}
+import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomCredential, randomCredentials, randomEnvironment, randomEnvironments, randomIssues, randomScopes, randomString, randomTeamMembers, testApplication}
 
+import java.time.LocalDateTime
 import scala.util.Random
 
 class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviours {
@@ -243,6 +244,19 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "getPrimaryMasterCredential" - {
+      "must return the most recently created credential" in {
+        val master = randomCredential().copy(created = LocalDateTime.now())
+        val credential1 = randomCredential().copy(created = LocalDateTime.now().minusDays(1))
+        val credential2 = randomCredential().copy(created = LocalDateTime.now().minusDays(2))
+
+        val application = testApplication
+          .setPrimaryCredentials(Seq(credential1, master, credential2))
+
+        application.getPrimaryMasterCredential mustBe master
+      }
+    }
+
     "getPrimaryCredentials" - {
       "must" - {
         behave like applicationCredentialsGetterFunction(
@@ -306,6 +320,19 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "getSecondaryMasterCredential" - {
+      "must return the most recently created credential" in {
+        val master = randomCredential().copy(created = LocalDateTime.now())
+        val credential1 = randomCredential().copy(created = LocalDateTime.now().minusDays(1))
+        val credential2 = randomCredential().copy(created = LocalDateTime.now().minusDays(2))
+
+        val application = testApplication
+          .setSecondaryCredentials(Seq(credential1, master, credential2))
+
+        application.getSecondaryMasterCredential mustBe master
+      }
+    }
+
     "getSecondaryCredentials" - {
       "must" - {
         behave like applicationCredentialsGetterFunction(
@@ -344,11 +371,11 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
 
     "updateSecondaryCredential" - {
       "must correctly update a specific credential" in {
-        val credential1 = Credential("test-client-id-1", None, None)
-        val credential2 = Credential("test-client-id-2", None, None)
-        val credential3 = Credential("test-client-id-3", None, None)
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None)
+        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None)
 
-        val credential2Updated = Credential(credential2.clientId, Some("test-secret"), Some("test-fragment"))
+        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"))
 
         val application = testApplication
           .setSecondaryCredentials(Seq(credential1, credential2, credential3))
@@ -356,12 +383,12 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
         val expected = testApplication
           .setSecondaryCredentials(Seq(credential1, credential2Updated, credential3))
 
-        application.updateSecondaryCredential(credential2Updated) mustBe expected
+        application.updateSecondaryCredential(credential2Updated.clientId, "test-secret") mustBe expected
       }
 
       "must throw IllegalArgumentException when the credential does not exist" in {
         an [IllegalArgumentException] mustBe thrownBy(
-          testApplication.updateSecondaryCredential(Credential("test-client-id", None, None))
+          testApplication.updateSecondaryCredential("test-client-id", "test-secret")
         )
       }
     }
@@ -453,6 +480,17 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
         actual mustBe existingIssues :+ issue
       }
     }
+
+    "makePublic" - {
+      "must remove hidden primary credentials" in {
+        val hidden = randomCredential().copy(secretFragment = None)
+        val visible = randomCredential()
+
+        val application = testApplication.setPrimaryCredentials(Seq(hidden, visible))
+
+        application.makePublic().getPrimaryCredentials mustBe Seq(visible)
+      }
+    }
   }
 
 }
@@ -480,6 +518,7 @@ object ApplicationLensesSpec {
     val clientSecret = s"test-client-secret${randomString()}"
     Credential(
       clientId = s"test-client-id${randomString()}",
+      created = LocalDateTime.now(),
       clientSecret = Some(clientSecret),
       secretFragment = Some(clientSecret.takeRight(4))
     )

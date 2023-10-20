@@ -14,36 +14,33 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.repositories.models
+package uk.gov.hmrc.apihubapplications.repositories.models.encrypted
 
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Environments}
+import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.{DbApplication, DbEnvironments}
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 
 import java.time.LocalDateTime
 
 case class SensitiveApplication(
-                                 id: Option[String],
-                                 name: String,
-                                 created: LocalDateTime,
-                                 createdBy: SensitiveCreator,
-                                 lastUpdated: LocalDateTime,
-                                 teamMembers: Seq[SensitiveTeamMember],
-                                 environments: Environments,
-                                 apis: Seq[Api]
-                               ) extends Sensitive[Application] {
+  id: Option[String],
+  name: String,
+  created: LocalDateTime,
+  createdBy: SensitiveCreator,
+  lastUpdated: LocalDateTime,
+  teamMembers: Seq[SensitiveTeamMember],
+  environments: DbEnvironments
+) extends Sensitive[DbApplication] {
 
-  override def decryptedValue: Application = {
-    Application(
+  override def decryptedValue: DbApplication = {
+    DbApplication(
       id = id,
       name = name,
       created = created,
       createdBy = createdBy.decryptedValue,
       lastUpdated = lastUpdated,
       teamMembers = teamMembers.map(_.decryptedValue),
-      environments = environments,
-      issues = Seq.empty,
-      apis = apis
+      environments = environments
     )
   }
 
@@ -51,16 +48,15 @@ case class SensitiveApplication(
 
 object SensitiveApplication {
 
-  def apply(application: Application): SensitiveApplication = {
+  def apply(dbApplication: DbApplication): SensitiveApplication = {
     SensitiveApplication(
-      id = application.id,
-      name = application.name,
-      created = application.created,
-      createdBy = SensitiveCreator(application.createdBy),
-      lastUpdated = application.lastUpdated,
-      teamMembers = application.teamMembers.map(SensitiveTeamMember(_)),
-      environments = application.environments,
-      apis = application.apis
+      id = dbApplication.id,
+      name = dbApplication.name,
+      created = dbApplication.created,
+      createdBy = SensitiveCreator(dbApplication.createdBy),
+      lastUpdated = dbApplication.lastUpdated,
+      teamMembers = dbApplication.teamMembers.map(SensitiveTeamMember(_)),
+      environments = dbApplication.environments
     )
   }
 
@@ -89,18 +85,7 @@ object SensitiveApplication {
   private def readsSensitiveApplication(implicit crypto: Encrypter with Decrypter): Reads[SensitiveApplication] = {
     JsPath.json.update((JsPath \ "id").json
       .copyFrom((JsPath \ "_id" \ "$oid").json.pick))
-      .andThen(JsPath.json.update(__.read[JsObject].map(o => {
-        val jsObject = o ++ Json.obj("issues" -> Json.arr()) ++ {
-          if (o.keys.contains("apis")) {
-            Json.obj()
-          } else {
-            Json.obj("apis" -> Json.arr())
-          }
-        }
-        jsObject
-      })))
       .andThen(SensitiveApplication.defaultFormat)
-
   }
 
   implicit def formatSensitiveApplication(implicit crypto: Encrypter with Decrypter): Format[SensitiveApplication] = {

@@ -27,7 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.SensitiveApplication
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.play.http.logging.Mdc
@@ -86,7 +86,7 @@ class ApplicationsRepositoryIntegrationSpec
       result.data.id mustBe defined
       result.mdcData mustBe testMdcData
 
-      val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue
+      val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue.toModel
       persisted mustEqual result.data
     }
   }

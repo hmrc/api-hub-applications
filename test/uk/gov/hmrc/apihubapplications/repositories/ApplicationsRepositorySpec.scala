@@ -23,7 +23,8 @@ import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.DbApplication
 
 import java.time.LocalDateTime
 import scala.Console
@@ -64,7 +65,7 @@ class ApplicationsRepositorySpec
         Environments()
       )
 
-      result.get.decryptedValue mustBe expected
+      result.get.decryptedValue.toModel mustBe expected
     }
 
     "must successfully deserialise JSON with apis to create an Application object" in {
@@ -121,7 +122,7 @@ class ApplicationsRepositorySpec
 
     "must successfully serialise an Application with an Id" in {
       val now = LocalDateTime.now()
-      val application = SensitiveApplication(Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()))
+      val application = SensitiveApplication(DbApplication(Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())))
 
       val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "id") mustBe a[JsUndefined]
@@ -130,7 +131,7 @@ class ApplicationsRepositorySpec
     }
 
     "must successfully serialise an Application without an Id" in {
-      val application = SensitiveApplication(Application(NewApplication("test-app-without-id", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))))
+      val application = SensitiveApplication(DbApplication(Application(NewApplication("test-app-without-id", Creator("test1@test.com"), Seq(TeamMember("test1@test.com"))))))
 
       val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "id") mustBe a[JsUndefined]
@@ -139,16 +140,16 @@ class ApplicationsRepositorySpec
     }
 
     "must strip out the issues sequence while serialising an application without an Id" in {
-      val application = SensitiveApplication(Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
-        .setIssues(Seq("test-issue")))
+      val application = SensitiveApplication(DbApplication(Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
+        .setIssues(Seq("test-issue"))))
 
       val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "issues") mustBe a[JsUndefined]
     }
 
     "must strip out the issues sequence while serialising an application with an Id" in {
-      val application = SensitiveApplication(Application(Some("test-id"), "test-app-1", Creator("test1@test.com"), Seq.empty)
-        .setIssues(Seq("test-issue")))
+      val application = SensitiveApplication(DbApplication(Application(Some("test-id"), "test-app-1", Creator("test1@test.com"), Seq.empty)
+        .setIssues(Seq("test-issue"))))
 
       val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "issues") mustBe a[JsUndefined]

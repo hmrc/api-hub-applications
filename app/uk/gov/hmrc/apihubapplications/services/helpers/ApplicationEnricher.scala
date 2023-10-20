@@ -25,6 +25,8 @@ import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, Clien
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.{Clock, LocalDateTime}
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationEnricher {
@@ -33,7 +35,8 @@ trait ApplicationEnricher {
 
 }
 
-object ApplicationEnrichers {
+@Singleton
+class ApplicationEnrichers @Inject()(clock: Clock) {
 
   type EnricherProvider = (Application, IdmsConnector, Boolean) => Future[Either[IdmsException, ApplicationEnricher]]
 
@@ -92,7 +95,7 @@ object ApplicationEnrichers {
         issuesOrResponses.foldLeft(application)(
           (app, issueOrResponse) =>
             issueOrResponse match {
-              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.asCredentialWithSecret())
+              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.clientId, clientResponse.secret)
               case Left(issue) => app.addIssue(issue)
             }
         )
@@ -196,8 +199,8 @@ object ApplicationEnrichers {
         Right(
           (application: Application) => {
             environmentName match {
-              case Primary => application.addPrimaryCredential(Credential(clientResponse.clientId, None, None))
-              case Secondary => application.addSecondaryCredential(clientResponse.asCredential())
+              case Primary => application.addPrimaryCredential(Credential(clientResponse.clientId, LocalDateTime.now(clock), None, None))
+              case Secondary => application.addSecondaryCredential(clientResponse.asNewCredential(clock))
             }
           }
         )

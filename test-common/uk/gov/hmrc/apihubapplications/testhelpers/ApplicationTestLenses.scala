@@ -19,6 +19,8 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 
+import java.time.LocalDateTime
+
 object ApplicationTestLenses {
   implicit class ApplicationTestLensOps(application: Application) {
     val pendingScopeName = "my-pending-scope"
@@ -43,7 +45,7 @@ object ApplicationTestLenses {
     }
 
     def withPrimaryCredentialClientIdOnly: Application = {
-      application.setPrimaryCredentials(Seq(Credential(clientId,None,None)))
+      application.setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(), None, None)))
     }
   }
 

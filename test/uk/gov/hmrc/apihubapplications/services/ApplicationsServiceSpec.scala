@@ -33,6 +33,7 @@ import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -89,8 +90,8 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(())))
 
       val applicationWithCreds = application
-        .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, None, None)))
-        .setSecondaryCredentials(Seq(secondaryClientResponse.asCredential()))
+        .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, LocalDateTime.now(fixture.clock), None, None)))
+        .setSecondaryCredentials(Seq(secondaryClientResponse.asNewCredential(clock)))
 
       val expected = applicationWithCreds.copy(id = Some("test-id"))
 
@@ -172,7 +173,7 @@ class ApplicationsServiceSpec
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2, TeamMember(creator.email)),
         environments = Environments()
-      ).setSecondaryCredentials(Seq(clientResponse.asCredential()))
+      ).setSecondaryCredentials(Seq(clientResponse.asNewCredential(clock)))
 
       when(idmsConnector.createClient(any(), any())(any()))
         .thenReturn(Future.successful(Right(clientResponse)))
@@ -332,8 +333,8 @@ class ApplicationsServiceSpec
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
 
-      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-creator-1"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId1, None, None))
-      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-creator-2"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId2, None, None))
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-creator-1"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None))
+      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-creator-2"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None))
 
       val scopes1 = Seq("read:app1-scope1")
       val scopes2 = Seq("read:app2-scope1", "read:app2-scope2")
@@ -371,8 +372,8 @@ class ApplicationsServiceSpec
       val clientId2 = "test-client-id-2"
       val idmsException = IdmsException.clientNotFound(clientId2)
 
-      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-creator-1"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId1, None, None))
-      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-creator-2"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId2, None, None))
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-creator-1"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None))
+      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-creator-2"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None))
 
       val applications = Seq(
         application1,
@@ -409,8 +410,8 @@ class ApplicationsServiceSpec
       val scope4 = "test-scope-4"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setPrimaryCredentials(Seq(Credential(primaryClientId, None, None)))
-        .setSecondaryCredentials(Seq(Credential(secondaryClientId, None, None)))
+        .setPrimaryCredentials(Seq(Credential(primaryClientId, LocalDateTime.now(fixture.clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(fixture.clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
@@ -423,7 +424,7 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application
-        .setSecondaryCredentials(Seq(Credential(secondaryClientId, Some(secondaryClientSecret), Some("1234"))))
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(fixture.clock), Some(secondaryClientSecret), Some("1234"))))
         .setSecondaryScopes(Seq(Scope(scope1, Approved), Scope(scope2, Approved)))
         .setPrimaryScopes(Seq(Scope(scope3, Approved), Scope(scope4, Approved)))
 
@@ -456,7 +457,7 @@ class ApplicationsServiceSpec
       val clientId = "test-client-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(fixture.clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
@@ -479,8 +480,8 @@ class ApplicationsServiceSpec
       val id = "test-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", None, None)))
-        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", None, None)))
+        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(fixture.clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(fixture.clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
@@ -611,7 +612,7 @@ class ApplicationsServiceSpec
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId, None, None)))
+        .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(fixture.clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
@@ -638,7 +639,7 @@ class ApplicationsServiceSpec
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setSecondaryCredentials(Seq(Credential(clientId, None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(fixture.clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.delete(ArgumentMatchers.eq(application))).thenReturn(Future.successful(Right(())))
@@ -679,8 +680,8 @@ class ApplicationsServiceSpec
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId1, None, None)))
-        .setSecondaryCredentials(Seq(Credential(clientId2, None, None)))
+        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
 
@@ -748,7 +749,7 @@ class ApplicationsServiceSpec
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(fixture.clock), None, None))))
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
@@ -780,7 +781,7 @@ class ApplicationsServiceSpec
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(fixture.clock), None, None))))
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
@@ -811,7 +812,7 @@ class ApplicationsServiceSpec
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(fixture.clock), None, None))))
       )
 
       val updatedApp = app
@@ -882,7 +883,7 @@ class ApplicationsServiceSpec
       val testScope = "test-scope-1"
       val testClientId = "test-client-id"
       val envs = Environments(
-        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, secret))),
+        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, LocalDateTime.now(fixture.clock), None, secret))),
         Environment(Seq.empty, Seq.empty)
       )
 
@@ -925,7 +926,7 @@ class ApplicationsServiceSpec
       val testScope = "test-scope-1"
       val testClientId = "test-client-id"
       val envs = Environments(
-        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, None, None))),
+        Environment(Seq(Scope(testScope, Pending)), Seq(Credential(testClientId, LocalDateTime.now(fixture.clock), None, None))),
         Environment(Seq.empty, Seq.empty)
       )
 
@@ -1046,7 +1047,7 @@ class ApplicationsServiceSpec
         createdBy = newApplication.createdBy,
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2),
-        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, clientSecret = None, secretFragment = None))),
+        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, created = LocalDateTime.now(fixture.clock), clientSecret = None, secretFragment = None))),
           secondary = Environment()
         )
       )
@@ -1086,7 +1087,7 @@ class ApplicationsServiceSpec
         createdBy = newApplication.createdBy,
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2),
-        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, clientSecret = None, secretFragment = None))),
+        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = clientId, created = LocalDateTime.now(fixture.clock), clientSecret = None, secretFragment = None))),
           secondary = Environment()
         )
       )
@@ -1153,7 +1154,7 @@ class ApplicationsServiceSpec
         createdBy = Creator("created by"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(),
-        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = null, clientSecret = None, secretFragment = None))),
+        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = null, created = LocalDateTime.now(fixture.clock), clientSecret = None, secretFragment = None))),
           secondary = Environment()
         )
       )
@@ -1360,7 +1361,8 @@ class ApplicationsServiceSpec
     val repository: ApplicationsRepository = mock[ApplicationsRepository]
     val idmsConnector: IdmsConnector = mock[IdmsConnector]
     val emailConnector: EmailConnector = mock[EmailConnector]
-    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector)
+    val applicationEnrichers: ApplicationEnrichers = new ApplicationEnrichers(clock)
+    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, applicationEnrichers)
     Fixture(clock, repository, idmsConnector, emailConnector, service)
   }
 
