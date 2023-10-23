@@ -223,9 +223,12 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
   }
 
   "secondaryScopeApplicationEnricher" - {
-    "must enrich an application with secondary scopes" in {
+    "must enrich an application with secondary scopes using the secondary master credential" in {
+      val masterCredential = testClientResponse1.asNewCredential(clock)
+      val oldCredential = Credential("test-older-client-id", LocalDateTime.now(clock).minusDays(1), None, None)
+
       val application = testApplication
-        .setSecondaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+        .setSecondaryCredentials(Seq(oldCredential, masterCredential))
 
       val expected = application
         .setSecondaryScopes(
@@ -287,13 +290,16 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
   }
 
   "primaryScopeApplicationEnricher" - {
-    "must enrich an application with secondary scopes and still include pending scopes" in {
+    "must enrich an application with secondary scopes using the secondary master credential and still include pending scopes" in {
+      val masterCredential = testClientResponse1.asNewCredential(clock)
+      val oldCredential = Credential("test-older-client-id", LocalDateTime.now(clock).minusDays(1), None, None)
+
       val pendingScope1 = Scope("test-pending-scope-1", Pending)
       val pendingScope2 = Scope("test-pending-scope-2", Pending)
       val approvedScope = Scope("test-approved-scope", Approved)
 
       val application = testApplication
-        .setPrimaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+        .setPrimaryCredentials(Seq(oldCredential, masterCredential))
         .setPrimaryScopes(Seq(pendingScope1, pendingScope2, approvedScope))
 
       val expected = application
@@ -463,17 +469,28 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
 
   "scopeAddingApplicationEnricher" - {
     "must add a scope in the primary environment and enrich the application with it" in {
-      val clientId = "test-client-id"
-      val application = testApplication.setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+
+      val application = testApplication.setPrimaryCredentials(
+        Seq(
+          Credential(clientId1, LocalDateTime.now(clock), None, None),
+          Credential(clientId2, LocalDateTime.now(clock), None, None)
+        )
+      )
+
       val scope = "test-scope"
       val idmsConnector = mock[IdmsConnector]
 
-      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId), ArgumentMatchers.eq(scope))(any()))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), any(), ArgumentMatchers.eq(scope))(any()))
         .thenReturn(Future.successful(Right(())))
 
       ApplicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope).map {
         case Right(enricher) =>
           enricher.enrich(application) mustBe application.addPrimaryScope(Scope(scope, Approved))
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1), ArgumentMatchers.eq(scope))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId2), ArgumentMatchers.eq(scope))(any())
+          succeed
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
