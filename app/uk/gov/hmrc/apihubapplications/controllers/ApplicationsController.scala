@@ -172,7 +172,6 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
   }
 
   def addApi(id: String): Action[JsValue] = {
-    Console.println("FFS!")
     identify.compose(Action(parse.json)).async {
       implicit request: Request[JsValue] => {
         val jsReq = request.body
