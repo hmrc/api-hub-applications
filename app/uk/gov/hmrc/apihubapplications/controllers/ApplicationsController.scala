@@ -181,7 +181,6 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             applicationsService.addApi(id, api).map {
               case Right(_) => NoContent
               case Left(_: ApplicationNotFoundException) => NotFound
-              case Left(ApplicationDataIssueException(_, InvalidPrimaryScope)) => NotFound
               case Left(_: IdmsException) => BadGateway
               case Left(_) => InternalServerError
             }
