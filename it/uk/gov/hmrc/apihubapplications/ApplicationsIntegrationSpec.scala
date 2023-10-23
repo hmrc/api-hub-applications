@@ -509,16 +509,17 @@ class ApplicationsIntegrationSpec
     "POST to add apis to an application" should {
       "respond with a 204 No Content" in {
         forAll { (application: Application) =>
-
-          val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", None, None)))
           deleteAll().futureValue
-          insert(applicationWithSecondaryCredentials).futureValue
+          insert(application).futureValue
 
           val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
 
+          val id = application.id.get
+
+          Console.println(s"id: $id")
           val response =
             wsClient
-              .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/apis")
+              .url(s"$baseUrl/api-hub-applications/applications/$id/apis")
               .addHttpHeaders(("Content", "application/json"))
               .post(Json.toJson(api))
               .futureValue

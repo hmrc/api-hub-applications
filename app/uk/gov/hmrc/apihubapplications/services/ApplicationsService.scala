@@ -47,7 +47,6 @@ class ApplicationsService @Inject()(
           .copy(lastUpdated = LocalDateTime.now(clock), apis = application.apis ++ Seq(Api(newApi.id, newApi.endpoints)))
       )
     }
-
     this.findById(applicationId, true).flatMap {
       case Right(application) =>
         val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
@@ -57,9 +56,13 @@ class ApplicationsService @Inject()(
             scopesRequired.toSeq.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope))
           ).flatMap {
             case Right(_) => doRepositoryUpdate(application, newApi)
-            case Left(e) => Future.successful(Left(e))
+            case Left(e) => {
+              Future.successful(Left(e))
+            }
         }
-      case Left(e) => Future.successful(Left(e))
+      case Left(e) => {
+        Future.successful(Left(e))
+      }
     }
   }
 

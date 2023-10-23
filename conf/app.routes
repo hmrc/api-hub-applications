@@ -12,4 +12,4 @@ GET        /applications/:id                                                    
 POST       /applications/:id/delete                                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
 
 GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip
-POST       /api-hub-applications/applications/:id/apis                              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
+POST       /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
