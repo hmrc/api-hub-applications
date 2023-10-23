@@ -165,7 +165,7 @@ object ApplicationLenses {
     def updateSecondaryCredential(clientId: String, secret: String): Application = {
       if (!application.getSecondaryCredentials.exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
-          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${clientId}"
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
         )
       }
 
@@ -213,7 +213,7 @@ object ApplicationLenses {
 
     def makePublic(): Application = {
       application.setPrimaryCredentials(
-        application.getPrimaryCredentials.filter(_.secretFragment.isDefined)
+        application.getPrimaryCredentials.filter(!_.isHidden)
       )
     }
   }

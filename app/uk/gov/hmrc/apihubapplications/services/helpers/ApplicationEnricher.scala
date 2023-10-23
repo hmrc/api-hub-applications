@@ -25,7 +25,7 @@ import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, Clien
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.{Clock, LocalDateTime}
+import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationEnricher {
@@ -198,7 +198,7 @@ object ApplicationEnrichers {
         Right(
           (application: Application) => {
             environmentName match {
-              case Primary => application.addPrimaryCredential(Credential(clientResponse.clientId, LocalDateTime.now(clock), None, None))
+              case Primary => application.addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
               case Secondary => application.addSecondaryCredential(clientResponse.asNewCredential(clock))
             }
           }

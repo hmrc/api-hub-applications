@@ -20,7 +20,13 @@ import play.api.libs.json.{Format, Json}
 
 import java.time.LocalDateTime
 
-case class Credential(clientId: String, created: LocalDateTime, clientSecret: Option[String], secretFragment: Option[String])
+case class Credential(clientId: String, created: LocalDateTime, clientSecret: Option[String], secretFragment: Option[String]) {
+
+  def isHidden: Boolean = {
+    secretFragment.isEmpty
+  }
+
+}
 
 object Credential {
 

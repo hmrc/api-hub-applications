@@ -89,7 +89,7 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(())))
 
       val applicationWithCreds = application
-        .setPrimaryCredentials(Seq(Credential(primaryClientResponse.clientId, LocalDateTime.now(fixture.clock), None, None)))
+        .setPrimaryCredentials(Seq(primaryClientResponse.asNewHiddenCredential(clock)))
         .setSecondaryCredentials(Seq(secondaryClientResponse.asNewCredential(clock)))
 
       val expected = applicationWithCreds.copy(id = Some("test-id"))
