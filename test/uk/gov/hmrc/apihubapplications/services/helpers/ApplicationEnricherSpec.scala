@@ -39,14 +39,13 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
   private val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-  private val applicationEnrichers: ApplicationEnrichers = new ApplicationEnrichers(clock)
 
   "process" - {
     "must correctly combine successful enrichers" in {
       val scope1 = Scope("test-scope-1", Approved)
       val scope2 = Scope("test-scope-2", Approved)
 
-      applicationEnrichers.process(
+      ApplicationEnrichers.process(
         testApplication,
         Seq(
           successfulEnricher(_.addPrimaryScope(scope1)),
@@ -59,7 +58,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     }
 
     "must return an exception if any enricher returns an exception" in {
-      applicationEnrichers.process(
+      ApplicationEnrichers.process(
         testApplication,
         Seq(
           successfulEnricher(identity),
@@ -72,7 +71,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     }
 
     "must handle an empty sequence" in {
-      applicationEnrichers.process(
+      ApplicationEnrichers.process(
         testApplication,
         Seq.empty
       ).map {
@@ -84,7 +83,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
 
   "processAll" - {
     "must successfully process multiple applications" in {
-      applicationEnrichers.processAll(
+      ApplicationEnrichers.processAll(
         Seq(testApplication, testApplication2),
         (application, _, _) =>
           successfulEnricher(
@@ -107,7 +106,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     "must return an exception if the enricher returns an exception for any application" in {
       val idmsException = IdmsException.clientNotFound("test-client-id")
 
-      applicationEnrichers.processAll(
+      ApplicationEnrichers.processAll(
         Seq(testApplication, testApplication2),
         (application, _, _) =>
           if (application == testApplication) {
@@ -126,7 +125,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     }
 
     "must handle an empty sequence of applications" in {
-      applicationEnrichers.processAll(
+      ApplicationEnrichers.processAll(
         Seq.empty,
         (_, _, _) => successfulEnricher(identity),
         mock[IdmsConnector],
@@ -159,14 +158,14 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
         .thenReturn(Future.successful(Right(testClientResponse2)))
 
-      applicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
+      ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
 
     "must not modify an application if there are zero secondary credentials" in {
-      applicationEnrichers.secondaryCredentialApplicationEnricher(testApplication, mock[IdmsConnector]).map {
+      ApplicationEnrichers.secondaryCredentialApplicationEnricher(testApplication, mock[IdmsConnector]).map {
         case Right(enricher) => enricher.enrich(testApplication) mustBe testApplication
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -190,7 +189,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
         .thenReturn(Future.successful(Left(expected)))
 
-      applicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
+      ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
         actual =>
           actual mustBe Left(expected)
       }
@@ -216,7 +215,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId2))))
 
-      applicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
+      ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -240,14 +239,14 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(Seq(testClientScope1, testClientScope2))))
 
-      applicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
 
     "must not modify an application if there are zero secondary credentials" in {
-      applicationEnrichers.secondaryScopeApplicationEnricher(testApplication, mock[IdmsConnector], failOnError = false).map {
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(testApplication, mock[IdmsConnector], failOnError = false).map {
         case Right(enricher) => enricher.enrich(testApplication) mustBe testApplication
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -263,7 +262,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(expected)))
 
-      applicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
         actual =>
           actual mustBe Left(expected)
       }
@@ -280,7 +279,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
 
-      applicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -311,14 +310,14 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(Seq(testClientScope1, testClientScope2))))
 
-      applicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
+      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
 
     "must not modify an application if there are zero primary credentials" in {
-      applicationEnrichers.primaryScopeApplicationEnricher(testApplication, mock[IdmsConnector]).map {
+      ApplicationEnrichers.primaryScopeApplicationEnricher(testApplication, mock[IdmsConnector]).map {
         case Right(enricher) => enricher.enrich(testApplication) mustBe testApplication
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -334,7 +333,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(expected)))
 
-      applicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
+      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
         actual =>
           actual mustBe Left(expected)
       }
@@ -353,7 +352,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
 
-      applicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
+      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -368,7 +367,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
 
-      applicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector).map {
+      ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector, clock).map {
         case Right(enricher) => enricher.enrich(testApplication) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -381,7 +380,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
 
-      applicationEnrichers.credentialCreatingApplicationEnricher(Secondary, testApplication, idmsConnector).map {
+      ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, testApplication, idmsConnector, clock).map {
         case Right(enricher) => enricher.enrich(testApplication) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -394,7 +393,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Left(expected)))
 
-      applicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector).map {
+      ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector, clock).map {
         actual =>
           actual mustBe Left(expected)
       }
@@ -409,7 +408,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId1))(any()))
         .thenReturn(Future.successful(Right(())))
 
-      applicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
+      ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
         case Right(enricher) =>
           enricher.enrich(application) mustBe testApplication
           verify(idmsConnector).deleteClient(any(), any())(any())
@@ -425,7 +424,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId1))(any()))
         .thenReturn(Future.successful(Right(())))
 
-      applicationEnrichers.credentialDeletingApplicationEnricher(Secondary, testClientId1, idmsConnector).map {
+      ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, testClientId1, idmsConnector).map {
         case Right(enricher) =>
           enricher.enrich(application) mustBe testApplication
           verify(idmsConnector).deleteClient(any(), any())(any())
@@ -441,7 +440,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId1))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
 
-      applicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
+      ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
         case Right(enricher) =>
           enricher.enrich(application) mustBe testApplication
           verify(idmsConnector).deleteClient(any(), any())(any())
@@ -455,7 +454,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.deleteClient(any(), any())(any()))
         .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
-      applicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
+      ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
         actual =>
           actual mustBe Left(IdmsException.unexpectedResponse(500))
       }
@@ -472,7 +471,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId), ArgumentMatchers.eq(scope))(any()))
         .thenReturn(Future.successful(Right(())))
 
-      applicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope).map {
+      ApplicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope).map {
         case Right(enricher) =>
           enricher.enrich(application) mustBe application.addPrimaryScope(Scope(scope, Approved))
         case Left(e) => fail("Unexpected Left response", e)
@@ -488,7 +487,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId), ArgumentMatchers.eq(scope))(any()))
         .thenReturn(Future.successful(Right(())))
 
-      applicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope).map {
+      ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope).map {
         case Right(enricher) =>
           enricher.enrich(application) mustBe application.addSecondaryScope(Scope(scope, Approved))
         case Left(e) => fail("Unexpected Left response", e)
@@ -502,7 +501,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.addClientScope(any(), any(), any())(any()))
         .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
-      applicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, "test-scope").map {
+      ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, "test-scope").map {
         actual =>
           actual mustBe Left(IdmsException.unexpectedResponse(500))
       }

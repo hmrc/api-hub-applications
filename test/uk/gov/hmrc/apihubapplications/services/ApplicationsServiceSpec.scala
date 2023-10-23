@@ -33,7 +33,6 @@ import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -1361,8 +1360,7 @@ class ApplicationsServiceSpec
     val repository: ApplicationsRepository = mock[ApplicationsRepository]
     val idmsConnector: IdmsConnector = mock[IdmsConnector]
     val emailConnector: EmailConnector = mock[EmailConnector]
-    val applicationEnrichers: ApplicationEnrichers = new ApplicationEnrichers(clock)
-    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, applicationEnrichers)
+    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector)
     Fixture(clock, repository, idmsConnector, emailConnector, service)
   }
 
