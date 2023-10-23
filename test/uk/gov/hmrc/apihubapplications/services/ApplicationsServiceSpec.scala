@@ -1285,6 +1285,7 @@ class ApplicationsServiceSpec
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
       val exception = IdmsException("Bad thing", CallError)
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
@@ -1292,7 +1293,6 @@ class ApplicationsServiceSpec
 
       service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
         actual =>
-          verifyZeroInteractions(repository.update(any()))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
           actual mustBe Left(exception)
       }

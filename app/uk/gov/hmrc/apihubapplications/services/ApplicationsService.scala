@@ -51,18 +51,17 @@ class ApplicationsService @Inject()(
       case Right(application) =>
         val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
 
-        ApplicationEnrichers.process(
+        doRepositoryUpdate(application, newApi).flatMap {
+          case Right(_) => ApplicationEnrichers.process(
             application,
             scopesRequired.toSeq.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope))
           ).flatMap {
-            case Right(_) => doRepositoryUpdate(application, newApi)
-            case Left(e) => {
-              Future.successful(Left(e))
-            }
+            case Right(_) => Future.successful(Right(()))
+            case Left(e) => Future.successful(Left(e))
+          }
+          case Left(e) => Future.successful(Left(e))
         }
-      case Left(e) => {
-        Future.successful(Left(e))
-      }
+      case Left(e) => Future.successful(Left(e))
     }
   }
 
