@@ -96,10 +96,6 @@ class ApplicationsRepositorySpec
                  |}
                  |""".stripMargin)
 
-//      val value1 = s"""{"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},"name":"test-app-1","created":"${now.toString}","createdBy":{"email":"\\"test1@test.com\\""},"lastUpdated":"${now.toString}","teamMembers":[{"email":"\\"test2@test.com\\""}],"environments":{"primary":{"scopes":[],"credentials":[]},"secondary":{"scopes":[],"credentials":[]}},"issues":[],"apis":[{"id":"63bebf8bbbeccc26c12294e6","endpoints":[{"httpMethod":"GET","path":"/foo/bar"}]}]}"""
-//      Console.println(s"value1: $value1")
-
-//      val json = Json.parse(value1)
       val result = json.validate(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       Console.println(s"result: $result")
       result mustBe a[JsSuccess[_]]
