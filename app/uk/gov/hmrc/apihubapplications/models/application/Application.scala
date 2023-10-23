@@ -28,7 +28,8 @@ case class Application (
   lastUpdated: LocalDateTime,
   teamMembers: Seq[TeamMember],
   environments: Environments,
-  issues: Seq[String] = Seq.empty
+  issues: Seq[String] = Seq.empty,
+  apis: Seq[Api] = Seq.empty
 )
 
 object Application {
@@ -39,7 +40,7 @@ object Application {
 
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
-    Application(id, name, now, createdBy, now, teamMembers, Environments())
+    Application(id, name, now, createdBy, now, teamMembers, Environments(), apis = Seq.empty)
   }
 
   def apply(newApplication: NewApplication): Application = {
@@ -48,6 +49,14 @@ object Application {
 
   def apply(newApplication: NewApplication, clock: Clock): Application = {
     apply(None, newApplication.name, newApplication.createdBy, newApplication.teamMembers, clock)
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
+    Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty)
+  }
+
+  def apply(id: Option[String], name: String, created: LocalDateTime, createdBy: Creator, lastUpdated: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
+    Application(id, name, created, createdBy, lastUpdated, teamMembers, environments, apis = Seq.empty)
   }
 
   implicit val applicationFormat: Format[Application] = Json.format[Application]

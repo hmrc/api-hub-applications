@@ -40,7 +40,7 @@ import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
-import uk.gov.hmrc.apihubapplications.models.requests.{UpdateScopeStatus, UserEmail}
+import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
@@ -695,6 +695,82 @@ class ApplicationsControllerSpec
 
         when(fixture.applicationsService.createPrimarySecret(any)(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+  }
+
+  "add api" - {
+    "must return 204 NoContent" in {
+      val id = "app-id-1"
+      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val json = Json.toJson(api)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.addApi(ArgumentMatchers.eq(id), ArgumentMatchers.eq(api))(any())).thenReturn(Future.successful(Right(())))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addApi(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe NoContent.code
+      }
+    }
+
+    "must return 400 bad request when adding no api" in {
+      val id = "id"
+
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.addApi(any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addApi(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson("{}"))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
+    }
+
+    "must return 404 Not Found when adding new scopes but the application does not exist in the repository" in {
+      val id = "id"
+      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val json = Json.toJson(api)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.addApi(any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addApi(id).url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+      }
+    }
+
+    "must return 500 Internal Server Error for unexpected application exceptions" in {
+      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val json = Json.toJson(api)
+      val fixture = buildFixture()
+      running(fixture.application) {
+        when(fixture.applicationsService.addApi(any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addApi("id").url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
 
         val result = route(fixture.application, request).value
         status(result) mustBe INTERNAL_SERVER_ERROR
