@@ -52,22 +52,14 @@ class ApplicationsService @Inject()(
       case Right(application) =>
         val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
 
-        val enrichmentFutures = scopesRequired.map(scope =>
-          ApplicationEnrichers.process(
+        ApplicationEnrichers.process(
             application,
-            Seq(ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope))));
-
-        Future.sequence(enrichmentFutures)
-          .map(results =>
-            results.find(result => result match {
-              case Left(_) => true
-              case _ => false
-            }).getOrElse(Right(application)))
-          .flatMap {
+            scopesRequired.toSeq.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope))
+          ).flatMap {
             case Right(_) => doRepositoryUpdate(application, newApi)
-            case Left(e: ApplicationsException) => Future.successful(Left(e))
-          }
-      case Left(e: ApplicationsException) => Future.successful(Left(e))
+            case Left(e) => Future.successful(Left(e))
+        }
+      case Left(e) => Future.successful(Left(e))
     }
   }
 

@@ -1197,41 +1197,41 @@ class ApplicationsServiceSpec
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
-          verify(repository.update(ArgumentMatchers.eq(updatedApp)))
+          verify(repository).update(ArgumentMatchers.eq(updatedApp))
           actual mustBe Right(())
       }
     }
 
-//    "must update idms with new secondary scope when additional scopes are required" in {
-//      val fixture = buildFixture
-//      import fixture._
-//
-//      val testAppId = "test-app-id"
-//      val testClientId = "test-client-id"
-//      val app = Application(
-//        id = Some(testAppId),
-//        name = "test-app-name",
-//        created = LocalDateTime.now(clock),
-//        createdBy = Creator("test-email"),
-//        lastUpdated = LocalDateTime.now(clock),
-//        teamMembers = Seq(TeamMember(email = "test-email")),
-//        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
-//      )
-//
-//      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
-//      when(repository.update(any())).thenReturn(Future.successful(Right(())))
-//      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
-//      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
-//      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
-//
-//      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1","test-scope-2)))(HeaderCarrier()).map {
-//        actual =>
-//          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-1"))(any())
-//          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-2"))(any())
+    "must update idms with new secondary scope when additional scopes are required" in {
+      val fixture = buildFixture
+      import fixture._
 
-//          actual mustBe Right(())
-//      }
-//    }
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, None, None))))
+      )
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
+
+      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1","test-scope-2")))(HeaderCarrier()).map {
+        actual =>
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-1"))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-2"))(any())
+
+          actual mustBe Right(())
+      }
+    }
 
     "must not update idms with new secondary scope when additional scopes are already present" in {
       val fixture = buildFixture
