@@ -52,7 +52,7 @@ class ApplicationsServiceSpec
   val currentUser = "me@test.com"
 
   "registerApplication" - {
-    "must build the correct application and submit it to the repository" in {
+    "must build the correct application, submit it to the repository and return its public form" in {
       val fixture = buildFixture
       import fixture._
 
@@ -92,10 +92,12 @@ class ApplicationsServiceSpec
         .setPrimaryCredentials(Seq(primaryClientResponse.asNewHiddenCredential(clock)))
         .setSecondaryCredentials(Seq(secondaryClientResponse.asNewCredential(clock)))
 
-      val expected = applicationWithCreds.copy(id = Some("test-id"))
+      val saved = applicationWithCreds.copy(id = Some("test-id"))
 
       when(repository.insert(ArgumentMatchers.eq(applicationWithCreds)))
-        .thenReturn(Future.successful(expected))
+        .thenReturn(Future.successful(saved))
+
+      val expected = saved.makePublic()
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
@@ -284,20 +286,27 @@ class ApplicationsServiceSpec
   }
 
   "findAll" - {
-    "must return all applications from the repository" in {
+    "must return all applications from the repository in public form" in {
       val fixture = buildFixture
       import fixture._
 
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty),
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty)
-      )
+      ).zipWithIndex.map {
+        case (application, index) =>
+          application.addPrimaryCredential(
+            Credential(s"test-client-id-$index", LocalDateTime.now(clock), None, None)
+          )
+      }
 
       when(repository.findAll()).thenReturn(Future.successful(applications))
 
+      val expected = applications.map(_.makePublic())
+
       service.findAll() map {
         actual =>
-          actual mustBe applications
+          actual mustBe expected
           verify(repository).findAll()
           succeed
       }
@@ -305,26 +314,33 @@ class ApplicationsServiceSpec
   }
 
   "filter" - {
-    "must return all applications from the repository for named team member without enrichment" in {
+    "must return all applications from the repository in public form for named team member without enrichment" in {
       val fixture = buildFixture
       import fixture._
 
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq(TeamMember("test-email-1"))),
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-1"), Seq(TeamMember("test-email-1")))
-      )
+      ).zipWithIndex.map {
+        case (application, index) =>
+          application.addPrimaryCredential(
+            Credential(s"test-client-id-$index", LocalDateTime.now(clock), None, None)
+          )
+      }
 
       when(repository.filter("test-email-1")).thenReturn(Future.successful(applications))
 
+      val expected = applications.map(_.makePublic())
+
       service.filter("test-email-1", enrich = false)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Right(applications)
+          actual mustBe Right(expected)
           verify(repository).filter("test-email-1")
           succeed
       }
     }
 
-    "must return all applications from the repository for named team member with enrichment" in {
+    "must return all applications from the repository in public form for named team member with enrichment" in {
       val fixture = buildFixture
       import fixture._
 
@@ -341,7 +357,12 @@ class ApplicationsServiceSpec
       val applications = Seq(
         application1,
         application2
-      )
+      ).zipWithIndex.map {
+        case (application, index) =>
+          application.addPrimaryCredential(
+            Credential(s"test-client-id-$index", LocalDateTime.now(clock), None, None)
+          )
+      }
 
       when(repository.filter(ArgumentMatchers.eq(email)))
         .thenReturn(Future.successful(applications))
@@ -355,8 +376,8 @@ class ApplicationsServiceSpec
         actual =>
           actual mustBe Right(
             Seq(
-              application1.setSecondaryScopes(scopes1.map(Scope(_, Approved))),
-              application2.setSecondaryScopes(scopes2.map(Scope(_, Approved)))
+              application1.setSecondaryScopes(scopes1.map(Scope(_, Approved))).makePublic(),
+              application2.setSecondaryScopes(scopes2.map(Scope(_, Approved))).makePublic()
             )
           )
       }
@@ -395,7 +416,7 @@ class ApplicationsServiceSpec
   }
 
   "findById" - {
-    "must return the application when it exists" in {
+    "must return the application in public form when it exists" in {
       val fixture = buildFixture
       import fixture._
 
@@ -426,6 +447,7 @@ class ApplicationsServiceSpec
         .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(fixture.clock), Some(secondaryClientSecret), Some("1234"))))
         .setSecondaryScopes(Seq(Scope(scope1, Approved), Scope(scope2, Approved)))
         .setPrimaryScopes(Seq(Scope(scope3, Approved), Scope(scope4, Approved)))
+        .makePublic()
 
       service.findById(id, enrich = true)(HeaderCarrier()).map {
         result =>
@@ -485,9 +507,11 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
 
+      val expected = application.makePublic()
+
       service.findById(id, enrich = false)(HeaderCarrier()).map {
         result =>
-          result mustBe Right(application)
+          result mustBe Right(expected)
           verifyZeroInteractions(idmsConnector)
           succeed
       }
@@ -499,6 +523,7 @@ class ApplicationsServiceSpec
     import fixture._
 
     val appWithPrimaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
+      .addPrimaryCredential(Credential("test-client_id", LocalDateTime.now(clock), None, None))
       .addPrimaryScope(Scope("test-scope-1", Pending))
     val appWithSecondaryPending = Application(Some(UUID.randomUUID().toString), "test-app-name", Creator("test@email.com"), Seq.empty)
       .addSecondaryScope(Scope("test-scope-2", Pending))
@@ -507,7 +532,7 @@ class ApplicationsServiceSpec
 
     service.getApplicationsWithPendingPrimaryScope map {
       actual =>
-        actual mustBe Seq(appWithPrimaryPending)
+        actual mustBe Seq(appWithPrimaryPending.makePublic())
         verify(repository).findAll()
         succeed
     }

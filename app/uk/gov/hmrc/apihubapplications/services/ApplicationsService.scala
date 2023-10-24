@@ -81,19 +81,19 @@ class ApplicationsService @Inject()(
           saved <- repository.insert(enriched)
           _ <- emailConnector.sendAddTeamMemberEmail(saved)
           _ <- emailConnector.sendApplicationCreatedEmailToCreator(saved)
-        } yield Right(saved)
+        } yield Right(saved.makePublic())
       case Left(e) => Future.successful(Left(e))
     }
   }
 
   def findAll(): Future[Seq[Application]] = {
-    repository.findAll()
+    repository.findAll().map(_.map(_.makePublic()))
   }
 
   def filter(teamMemberEmail: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]] = {
     repository.filter(teamMemberEmail).flatMap {
       applications =>
-        if (enrich) {
+        (if (enrich) {
           ApplicationEnrichers.processAll(
             applications,
             ApplicationEnrichers.secondaryScopeApplicationEnricher _,
@@ -103,14 +103,14 @@ class ApplicationsService @Inject()(
         }
         else {
           Future.successful(Right(applications))
-        }
+        }).map(_.map(_.map(_.makePublic())))
     }
   }
 
   def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     repository.findById(id).flatMap {
       case Right(application) =>
-        if (enrich) {
+        (if (enrich) {
           ApplicationEnrichers.process(
             application,
             Seq(
@@ -121,12 +121,15 @@ class ApplicationsService @Inject()(
           )
         } else {
           Future.successful(Right(application))
-        }
+        }).map(_.map(_.makePublic()))
       case Left(e) => Future.successful(Left(e))
     }
   }
 
-  def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = findAll().map(_.filter(_.hasPrimaryPendingScope))
+  def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = {
+    findAll()
+      .map(_.filter(_.hasPrimaryPendingScope))
+  }
 
   def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(applicationId).flatMap {

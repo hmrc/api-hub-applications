@@ -136,10 +136,12 @@ class ApplicationsIntegrationSpec
             newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
           }
 
-        responseApplication shouldBe storedApplication
+        val expectedApplication = storedApplication.makePublic()
+
+        responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name
         storedApplication.createdBy shouldBe newApplication.createdBy
-        storedApplication.created shouldBe storedApplication.lastUpdated
+        storedApplication.created shouldBe expectedApplication.lastUpdated
         storedApplication.teamMembers shouldBe expectedTeamMembers
       }
     }
@@ -232,6 +234,7 @@ class ApplicationsIntegrationSpec
             Scope(FakeIdmsConnector.fakeClientScopeId2, Approved)
           )
         )
+        .makePublic()
 
         val response =
           wsClient
