@@ -1118,7 +1118,7 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must map handle application has no primary credentials" in {
+    "must map handle application does not have a hidden master primary credential" in {
       val fixture = buildFixture
       import fixture._
 
@@ -1131,7 +1131,7 @@ class ApplicationsServiceSpec
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(),
         environments = Environments()
-      )
+      ).addPrimaryCredential(Credential("test-client-id", LocalDateTime.now(clock), None, Some("test-fragment")))
 
       when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
 
@@ -1141,31 +1141,8 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must handle application has no client id in credentials" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val applicationId = "app-1234"
-      val application = Application(
-        id = Some(applicationId),
-        name = "an app",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("created by"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(),
-        environments = Environments(primary = Environment(scopes = Seq(), credentials = Seq(Credential(clientId = null, created = LocalDateTime.now(fixture.clock), clientSecret = None, secretFragment = None))),
-          secondary = Environment()
-        )
-      )
-
-      when(repository.findById(applicationId)).thenReturn(Future.successful(Right(application)))
-
-      service.createPrimarySecret(applicationId)(HeaderCarrier()) map {
-        actual =>
-          actual mustBe Left(ApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials))
-      }
-    }
   }
+
   "addApi" - {
 
     "must update the application with the new Api" in {

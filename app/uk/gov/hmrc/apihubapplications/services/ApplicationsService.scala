@@ -47,7 +47,7 @@ class ApplicationsService @Inject()(
           .copy(lastUpdated = LocalDateTime.now(clock), apis = application.apis ++ Seq(Api(newApi.id, newApi.endpoints)))
       )
     }
-    this.findById(applicationId, true).flatMap {
+    this.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
         val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
 
@@ -216,10 +216,8 @@ class ApplicationsService @Inject()(
     }
 
     def idmsApprovePrimaryScope(application: Application, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-
       if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
-        val maybeIdmsResult = qaTechDeliveryValidPrimaryCredential(application).map(credential => idmsConnector.addClientScope(Primary, credential.clientId, scopeName))
-        maybeIdmsResult.getOrElse(Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials))))
+        idmsConnector.addClientScope(Primary, application.getPrimaryMasterCredential.clientId, scopeName)
       } else {
         Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryScope)))
       }
@@ -237,38 +235,24 @@ class ApplicationsService @Inject()(
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
     repository.findById(applicationId).flatMap {
       case Right(application) =>
-        qaTechDeliveryValidPrimaryCredentialNoSecret(application) match {
-          case Some(credential) =>
-            idmsConnector.newSecret(Primary, credential.clientId).flatMap {
-              case Right(secret) =>
-                val updatedApplication = application
-                  .setPrimaryCredentials(Seq(credential.setSecretFragment(secret.secret)))
-                  .copy(lastUpdated = LocalDateTime.now(clock))
+        if (application.getPrimaryMasterCredential.isHidden) {
+          idmsConnector.newSecret(Primary, application.getPrimaryMasterCredential.clientId).flatMap {
+            case Right(secret) =>
+              val updatedApplication = application
+                .setPrimaryCredentials(Seq(application.getPrimaryMasterCredential.setSecretFragment(secret.secret)))
+                .copy(lastUpdated = LocalDateTime.now(clock))
 
-                repository.update(updatedApplication).map(
-                  _ => Right(secret)
-                )
-              case Left(e) => Future.successful(Left(e))
-            }
-          case _ =>
-            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
+              repository.update(updatedApplication).map(
+                _ => Right(secret)
+              )
+            case Left(e) => Future.successful(Left(e))
+          }
+        }
+        else {
+          Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
         }
       case Left(e) => Future.successful(Left(e))
     }
-  }
-
-  private def qaTechDeliveryValidPrimaryCredential(application: Application): Option[Credential] = {
-    if (application.getPrimaryCredentials.length != 1) {
-      None
-    }
-    else {
-      application.getPrimaryCredentials.headOption.filter(_.clientId != null)
-    }
-  }
-
-  private def qaTechDeliveryValidPrimaryCredentialNoSecret(application: Application): Option[Credential] = {
-    qaTechDeliveryValidPrimaryCredential(application)
-      .filter(_.secretFragment.isEmpty)
   }
 
 }
