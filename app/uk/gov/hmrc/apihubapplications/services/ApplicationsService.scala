@@ -72,8 +72,8 @@ class ApplicationsService @Inject()(
     ApplicationEnrichers.process(
       application,
       Seq(
-        ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector),
-        ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector)
+        ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector, clock),
+        ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector, clock)
       )
     ).flatMap {
       case Right(enriched) =>
@@ -242,7 +242,7 @@ class ApplicationsService @Inject()(
             idmsConnector.newSecret(Primary, credential.clientId).flatMap {
               case Right(secret) =>
                 val updatedApplication = application
-                  .setPrimaryCredentials(Seq(secret.toCredentialWithFragment(credential.clientId)))
+                  .setPrimaryCredentials(Seq(credential.setSecretFragment(secret.secret)))
                   .copy(lastUpdated = LocalDateTime.now(clock))
 
                 repository.update(updatedApplication).map(

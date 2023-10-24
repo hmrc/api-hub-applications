@@ -26,6 +26,10 @@ case class Credential(clientId: String, created: LocalDateTime, clientSecret: Op
     secretFragment.isEmpty
   }
 
+  def setSecretFragment(secret: String): Credential = {
+    this.copy(secretFragment = Some(secret.takeRight(4)))
+  }
+
 }
 
 object Credential {

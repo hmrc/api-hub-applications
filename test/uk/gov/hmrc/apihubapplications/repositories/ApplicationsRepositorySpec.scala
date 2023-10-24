@@ -117,7 +117,7 @@ class ApplicationsRepositorySpec
       Console.println(s"expected: $expected")
       Console.println(s"expected as json: ${Json.toJson(expected)}")
 
-      result.get.decryptedValue mustBe expected
+      result.get.decryptedValue.toModel mustBe expected
     }
 
     "must successfully serialise an Application with an Id" in {
