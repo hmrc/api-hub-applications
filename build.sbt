@@ -1,3 +1,4 @@
+import play.sbt.routes.RoutesKeys
 import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
 
 lazy val microservice = Project("api-hub-applications", file("."))
@@ -13,6 +14,9 @@ lazy val microservice = Project("api-hub-applications", file("."))
     PlayKeys.devSettings ++= Seq(
       "play.http.router" -> "testOnlyDoNotUseInAppConf.Routes"
     ),
+    RoutesKeys.routesImport ++= Seq(
+      "uk.gov.hmrc.apihubapplications.models.application.EnvironmentName"
+    )
   )
   .configs(IntegrationTest)
   .settings(integrationTestSettings(): _*)

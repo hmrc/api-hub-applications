@@ -171,6 +171,10 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
+  def addCredential(id: String, environmentName: EnvironmentName): Action[AnyContent] = Action {
+    Ok
+  }
+
   def addApi(id: String): Action[JsValue] = {
     identify.compose(Action(parse.json)).async {
       implicit request: Request[JsValue] => {

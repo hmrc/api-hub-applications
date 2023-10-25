@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models.application
 
+import play.api.mvc.PathBindable
 import uk.gov.hmrc.apihubapplications.models._
 
 sealed trait EnvironmentName
@@ -29,5 +30,17 @@ object EnvironmentName extends Enumerable.Implicits {
 
   implicit val enumerable: Enumerable[EnvironmentName] =
     Enumerable(values.map(value => value.toString -> value): _*)
+
+  implicit val pathBindableEnvironmentName: PathBindable[EnvironmentName] = new PathBindable[EnvironmentName] {
+    override def bind(key: String, value: String): Either[String, EnvironmentName] = {
+      enumerable
+        .withName(value)
+        .toRight(s"Unknown environment name: $value")
+    }
+
+    override def unbind(key: String, value: EnvironmentName): String = {
+      value.toString
+    }
+  }
 
 }
