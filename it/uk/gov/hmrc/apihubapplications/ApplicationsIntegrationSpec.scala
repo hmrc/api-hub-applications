@@ -38,7 +38,8 @@ import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.repositories.models.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.DbApplication
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
@@ -125,7 +126,7 @@ class ApplicationsIntegrationSpec
 
         val storedApplications = findAll().futureValue.filter(app => app.id == responseApplication.id)
         storedApplications.size shouldBe 1
-        val storedApplication = storedApplications.head.decryptedValue
+        val storedApplication = storedApplications.head.decryptedValue.toModel
 
         val expectedTeamMembers =
           if (newApplication.teamMembers.contains(TeamMember(newApplication.createdBy.email))) {
@@ -135,10 +136,12 @@ class ApplicationsIntegrationSpec
             newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
           }
 
-        responseApplication shouldBe storedApplication
+        val expectedApplication = storedApplication.makePublic()
+
+        responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name
         storedApplication.createdBy shouldBe newApplication.createdBy
-        storedApplication.created shouldBe storedApplication.lastUpdated
+        storedApplication.created shouldBe expectedApplication.lastUpdated
         storedApplication.teamMembers shouldBe expectedTeamMembers
       }
     }
@@ -152,7 +155,7 @@ class ApplicationsIntegrationSpec
         insert(application1).futureValue
         insert(application2).futureValue
 
-        val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue)
+        val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue.toModel)
 
         val response =
           wsClient
@@ -179,7 +182,7 @@ class ApplicationsIntegrationSpec
       insert(application1).futureValue
       insert(application2).futureValue
 
-      val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue)
+      val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue.toModel)
       val myApplications = storedApplications.filter(application => application.teamMembers.contains(TeamMember(myEmail)))
 
       val response =
@@ -202,12 +205,12 @@ class ApplicationsIntegrationSpec
 
       insert(
         application
-          .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, None, None)))
+          .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
           .setPrimaryScopes(Seq.empty)
-          .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, None, None)))
+          .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
       ).futureValue
 
-      val storedApplication = findAll().futureValue.head.decryptedValue
+      val storedApplication = findAll().futureValue.head.decryptedValue.toModel
 
       val expected = storedApplication
         .setSecondaryCredentials(
@@ -231,6 +234,7 @@ class ApplicationsIntegrationSpec
             Scope(FakeIdmsConnector.fakeClientScopeId2, Approved)
           )
         )
+        .makePublic()
 
         val response =
           wsClient
@@ -306,7 +310,7 @@ class ApplicationsIntegrationSpec
   "respond with a 204 No Content" in {
     forAll { (application: Application) =>
 
-      val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", None, None)))
+      val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", LocalDateTime.now(), None, None)))
       deleteAll().futureValue
       insert(applicationWithSecondaryCredentials).futureValue
 
@@ -403,8 +407,29 @@ class ApplicationsIntegrationSpec
           .get()
           .futureValue
 
+        // This expectation has to match what is stored and retrieved from MongoDb
+        // The translation from Application to DbApplication does the following:
+        //  1) Remove non-pending scopes
+        //  2) Sets all secrets to None
+        val expected = appWithPendingPrimaryScopes
+          .setPrimaryScopes(
+            appWithPendingPrimaryScopes
+              .getPrimaryScopes
+              .filter(_.status == Pending)
+          )
+          .setPrimaryCredentials(
+            appWithPendingPrimaryScopes
+              .getPrimaryCredentials
+              .map(_.copy(clientSecret = None))
+          )
+          .setSecondaryCredentials(
+            appWithPendingPrimaryScopes
+              .getSecondaryCredentials
+              .map(_.copy(clientSecret = None))
+          )
+
         response.status shouldBe 200
-        response.json shouldBe Json.toJson(Seq(appWithPendingPrimaryScopes))
+        response.json shouldBe Json.toJson(Seq(expected))
       }
     }
   }
@@ -502,7 +527,7 @@ class ApplicationsIntegrationSpec
         noException should be thrownBy response.json.as[Secret]
 
         val updatedApp = findAll().futureValue.head.decryptedValue
-        updatedApp.getPrimaryCredentials.head.secretFragment mustBe Some("1234")
+        updatedApp.toModel.getPrimaryCredentials.head.secretFragment mustBe Some("1234")
       }
     }
 
@@ -548,7 +573,7 @@ class ApplicationsIntegrationSpec
   }
 
   private def insert(application: Application): Future[InsertOneResult] = {
-    insert(SensitiveApplication(application))
+    insert(SensitiveApplication(DbApplication(application)))
   }
 
 }

@@ -14,26 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.application
+package uk.gov.hmrc.apihubapplications.repositories.models.unencrypted
 
-import play.api.libs.json.{Format, Json}
+trait DbModel[T] {
 
-import java.time.LocalDateTime
-
-case class Credential(clientId: String, created: LocalDateTime, clientSecret: Option[String], secretFragment: Option[String]) {
-
-  def isHidden: Boolean = {
-    secretFragment.isEmpty
-  }
-
-  def setSecretFragment(secret: String): Credential = {
-    this.copy(secretFragment = Some(secret.takeRight(4)))
-  }
-
-}
-
-object Credential {
-
-  implicit val credentialFormat: Format[Credential] = Json.format[Credential]
+  def toModel(dbApplication: DbApplication): T
 
 }

@@ -25,6 +25,7 @@ import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, Clien
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationEnricher {
@@ -92,7 +93,7 @@ object ApplicationEnrichers {
         issuesOrResponses.foldLeft(application)(
           (app, issueOrResponse) =>
             issueOrResponse match {
-              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.asCredentialWithSecret())
+              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.clientId, clientResponse.secret)
               case Left(issue) => app.addIssue(issue)
             }
         )
@@ -118,9 +119,6 @@ object ApplicationEnrichers {
     idmsConnector: IdmsConnector,
     failOnError: Boolean
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
-    // Note that this enricher processes the first secondary credential only
-    // There is no definition of how to combine scopes from multiple credentials
-    // into a single collection of scopes.
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
@@ -136,26 +134,24 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getSecondaryCredentials.headOption
-      .map {
-        credential =>
-          idmsConnector.fetchClientScopes(Secondary, credential.clientId)
-            .map {
-              case Right(clientScopes) => Right(buildEnricher(clientScopes))
-              case Left(e @ IdmsException(_, _, ClientNotFound)) if !failOnError => Right(buildIssuesEnricher(e))
-              case Left(e) => Left(e)
-            }
-      }
-      .getOrElse(Future.successful(Right(noOpApplicationEnricher)))
+    if (original.getSecondaryCredentials.nonEmpty) {
+      idmsConnector
+        .fetchClientScopes(Secondary, original.getSecondaryMasterCredential.clientId)
+        .map {
+          case Right(clientScopes) => Right(buildEnricher(clientScopes))
+          case Left(e @ IdmsException(_, _, ClientNotFound)) if !failOnError => Right(buildIssuesEnricher(e))
+          case Left(e) => Left(e)
+        }
+    }
+    else {
+      Future.successful(Right(noOpApplicationEnricher))
+    }
   }
 
   def primaryScopeApplicationEnricher(
     original: Application,
     idmsConnector: IdmsConnector
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
-    // Note that this enricher processes the first primary credential only
-    // There is no definition of how to combine scopes from multiple credentials
-    // into a single collection of scopes.
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
@@ -173,31 +169,33 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getPrimaryCredentials.headOption
-      .map {
-        credential =>
-          idmsConnector.fetchClientScopes(Primary, credential.clientId)
-            .map {
-              case Right(clientScopes) => Right(buildEnricher(clientScopes))
-              case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
-              case Left(e) => Left(e)
-            }
-      }
-      .getOrElse(Future.successful(Right(noOpApplicationEnricher)))
+    if (original.getPrimaryCredentials.nonEmpty) {
+      idmsConnector
+        .fetchClientScopes(Primary, original.getPrimaryMasterCredential.clientId)
+        .map {
+          case Right(clientScopes) => Right(buildEnricher(clientScopes))
+          case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
+          case Left(e) => Left(e)
+        }
+    }
+    else {
+      Future.successful(Right(noOpApplicationEnricher))
+    }
   }
 
   def credentialCreatingApplicationEnricher(
     environmentName: EnvironmentName,
     original: Application,
-    idmsConnector: IdmsConnector
+    idmsConnector: IdmsConnector,
+    clock: Clock
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     idmsConnector.createClient(environmentName, Client(original)).map {
       case Right(clientResponse) =>
         Right(
           (application: Application) => {
             environmentName match {
-              case Primary => application.addPrimaryCredential(Credential(clientResponse.clientId, None, None))
-              case Secondary => application.addSecondaryCredential(clientResponse.asCredential())
+              case Primary => application.addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
+              case Secondary => application.addSecondaryCredential(clientResponse.asNewCredential(clock))
             }
           }
         )
@@ -232,32 +230,28 @@ object ApplicationEnrichers {
     idmsConnector: IdmsConnector,
     scopeName: String
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
-    // Note that this enricher processes the first credential only.
-    // There is no definition of how to add scopes to multiple credentials.
-    (environmentName match {
-      case Primary => original.getPrimaryCredentials.headOption
-      case Secondary => original.getSecondaryCredentials.headOption
-    }).map {
-      credential =>
-        idmsConnector.addClientScope(environmentName, credential.clientId, scopeName) map {
-          case Right(_) =>
-            Right(
-              new ApplicationEnricher() {
-                override def enrich(application: Application): Application = {
-                  environmentName match {
-                    case Primary => application.addPrimaryScope(Scope(scopeName, Approved))
-                    case Secondary => application.addSecondaryScope(Scope(scopeName, Approved))
-                  }
-
-                }
+    Future.sequence(
+      (environmentName match {
+        case Primary => original.getPrimaryCredentials
+        case Secondary => original.getSecondaryCredentials
+      }).map(
+        credential =>
+          idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
+      )
+    )
+      .map(useFirstException)
+      .map {
+        case Right(_) =>
+          Right(
+            (application: Application) => {
+              environmentName match {
+                case Primary => application.addPrimaryScope(Scope(scopeName, Approved))
+                case Secondary => application.addSecondaryScope(Scope(scopeName, Approved))
               }
-            )
-          case Left(e) => {
-            Left(e)
-          }
-        }
-    }.getOrElse(Future.successful(Right(noOpApplicationEnricher)))
-
+            }
+          )
+        case Left(e) => Left(e)
+      }
   }
 
 }

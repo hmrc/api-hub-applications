@@ -25,7 +25,8 @@ import play.api.libs.json.Format
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Pending, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{sensitiveStringFormat, stringToObjectId}
-import uk.gov.hmrc.apihubapplications.repositories.models.{SensitiveApplication, SensitiveTeamMember}
+import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.DbApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.{SensitiveApplication, SensitiveTeamMember}
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 import uk.gov.hmrc.crypto.json.JsonEncryption
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
@@ -70,7 +71,7 @@ class ApplicationsRepository @Inject()(
       collection
         .find()
         .toFuture()
-    } map (_.map(_.decryptedValue))
+    } map (_.map(_.decryptedValue.toModel))
   }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
@@ -78,7 +79,7 @@ class ApplicationsRepository @Inject()(
       collection
         .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
         .toFuture()
-    } map (_.map(_.decryptedValue))
+    } map (_.map(_.decryptedValue.toModel))
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {
@@ -89,7 +90,7 @@ class ApplicationsRepository @Inject()(
             .find(Filters.equal("_id", objectId))
             .headOption()
         } map {
-          case Some(application) => Right(application.decryptedValue)
+          case Some(application) => Right(application.decryptedValue.toModel)
           case _ => Left(raiseApplicationNotFoundException.forId(id))
         }
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
@@ -100,7 +101,7 @@ class ApplicationsRepository @Inject()(
     Mdc.preservingMdc {
       collection
         .insertOne(
-          document = SensitiveApplication(application)
+          document = SensitiveApplication(DbApplication(application))
         )
         .toFuture()
     } map (
@@ -117,7 +118,7 @@ class ApplicationsRepository @Inject()(
           collection
             .replaceOne(
               filter = Filters.equal("_id", id),
-              replacement = SensitiveApplication(application),
+              replacement = SensitiveApplication(DbApplication(application)),
               options     = ReplaceOptions().upsert(false)
             )
             .toFuture()

@@ -63,7 +63,8 @@ trait ApplicationGenerator {
     for {
       clientId <- Gen.uuid
       clientSecret <- Gen.uuid
-    } yield Credential(clientId.toString, Some(clientSecret.toString), Some(clientSecret.toString.takeRight(4)))
+      created <- localDateTimeGenerator
+    } yield Credential(clientId.toString, created, Some(clientSecret.toString), Some(clientSecret.toString.takeRight(4)))
   }
 
   val environmentGenerator: Gen[Environment] = {
