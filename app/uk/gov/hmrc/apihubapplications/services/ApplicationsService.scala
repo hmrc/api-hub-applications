@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.{ApplicationLensOps, applicationPrimaryCredentials}
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception._
@@ -257,5 +257,98 @@ class ApplicationsService @Inject()(
       case Left(e) => Future.successful(Left(e))
     }
   }
+
+  def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+    findById(applicationId, true).flatMap {
+      case Right(application) => environmentName match {
+        case Primary => addPrimaryCredential(application)
+        case Secondary => addSecondaryCredential(application)
+      }
+      case Left(_) => Future.successful(Left(ApplicationNotFoundException.forId(applicationId)))
+    }
+  }
+
+  private def addPrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+    val credentials = application.getPrimaryCredentials
+
+    if (credentials.isEmpty) {
+
+      // ERROR
+      createNewCredential(application, Primary).map {
+        case Right(application) => Right(application.getPrimaryMasterCredential)
+        case Left(e) => Left(e)
+      }
+    } else {
+      updateOrCreatePrimaryCredential(application)
+    }
+  }
+
+  private def addSecondaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+    val credentials = application.getSecondaryCredentials
+
+    val eventualExceptionOrCredential = if (credentials.isEmpty) {
+      createNewCredential(application, Secondary)
+    } else {
+      createNewCredentialAndCopyScopesFromPrevious(application, Secondary)
+    }
+    eventualExceptionOrCredential.map{
+      case Right(credential) => ApplicationEnrichers.process(application, ApplicationEnrichers.secondaryCredentialApplicationEnricher())
+      case Left(exception) => Left(exception)
+    }
+  }
+
+  private def updateOrCreatePrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]  = {
+    if (application.getPrimaryMasterCredential.isHidden) {
+      updateExistingPrimaryMasterCredential(application)
+    } else {
+      createNewCredentialAndCopyScopesFromPrevious(application, Primary)
+    }
+  }
+
+  private def updateExistingPrimaryMasterCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+    val masterCredential = application.getPrimaryMasterCredential
+    idmsConnector.newSecret(Primary, masterCredential.clientId).flatMap {
+      case Right(secret) => repository
+        .update(
+          application // set updateSecondary?
+            .removePrimaryCredential(masterCredential.clientId)
+            .addPrimaryCredential(masterCredential.setSecretFragment(secret.secret)))
+        .map {
+          case Right(_) => Right(masterCredential)
+          case Left(e) => Left(e)
+      }
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+  private def createNewCredential(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
+    ApplicationEnrichers
+      .process(application, Seq(ApplicationEnrichers.credentialCreatingApplicationEnricher(environmentName, application, idmsConnector, clock)))
+  }
+
+  private def createNewCredentialAndCopyScopesFromPrevious(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier)  = {
+    val currentMasterCredential = masterCredentialFor(application, environmentName)
+
+    ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.credentialCreatingApplicationEnricher(environmentName, application, idmsConnector, clock))).flatMap {
+        case Right(application) =>
+          idmsConnector.fetchClientScopes(environmentName, currentMasterCredential.clientId).flatMap { // Use application scopes
+            case Right(scopes) => ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, clientId, idmsConnector, scopes)
+            case Left(e) => Future.successful(Left(e))
+          }
+
+        case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+  private def masterCredentialFor(application: Application, environmentName: EnvironmentName): Credential = {
+    environmentName match {
+      case Primary => application.getPrimaryMasterCredential
+      case Secondary => application.getSecondaryMasterCredential
+    }
+  }
+
+//  private def addSecondaryCredential(application: Application): Future[Either[ApplicationsException, Credential]] = {
+//    Future.successful(Left(ApplicationNotFoundException.forApplication(application)))
+//  }
 
 }

@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, RequestImpl, WrappedRequest}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -167,7 +167,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Right(secret) => Ok(Json.toJson(secret))
         case Left(_: IdmsException) => BadGateway
         case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: ApplicationDataIssueException)  => BadRequest
+        case Left(_: ApplicationDataIssueException) => BadRequest
         case Left(_) => InternalServerError
       }
   }
@@ -190,9 +190,16 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             Future.successful(BadRequest)
         }
       }
-
     }
   }
 
-
+  def addCredential(applicationId: String, environmentName: EnvironmentName): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      applicationsService.addCredential(applicationId, environmentName).map {
+        case Right(_) => Ok
+        case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: IdmsException) => BadGateway
+        case Left(_) => InternalServerError
+      }
+  }
 }

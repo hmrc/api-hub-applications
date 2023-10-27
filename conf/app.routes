@@ -3,6 +3,7 @@
 POST       /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.registerApplication()
 POST       /applications/:id/environments/scopes                                    uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addScopes(id: String)
 POST       /applications/:id/environments/primary/credentials/secret                uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.createPrimarySecret(id: String)
+POST       /applications/:id/environments/:environmentName/credentials              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addCredential(id: String, environmentName: EnvironmentName)
 
 PUT        /applications/:id/environments/primary/scopes/:scopeName                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.updatePrimaryScopeStatus(id:String, scopeName:String)
 

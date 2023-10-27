@@ -1202,7 +1202,7 @@ class ApplicationsServiceSpec
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
 
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1","test-scope-2")))(HeaderCarrier()).map {
+      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
         actual =>
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-1"))(any())
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-2"))(any())
@@ -1322,7 +1322,45 @@ class ApplicationsServiceSpec
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
+  }
 
+  "addCredential" - {
+
+    "must create a new secondary credential where none existed previously" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val secret = "test-secret-1234"
+
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      )
+
+      val expectedCredential = Credential(testClientId, LocalDateTime.now(clock), None, Some("1234"))
+      val expectedClient = Client(app.name, app.name)
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), any())(any()))
+        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+
+      val updatedApp = app.setSecondaryCredentials(Seq(expectedCredential))
+
+      service.addCredential(testAppId, Secondary)(HeaderCarrier()) map {
+        actual =>
+          verify(repository).update(updatedApp)
+          verify(idmsConnector).createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(expectedClient))(any())
+          verifyNoMoreInteractions(idmsConnector)
+          actual mustBe Right(expectedCredential)
+      }
+    }
   }
 
   private case class Fixture(

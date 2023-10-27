@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -165,7 +165,6 @@ class IdmsConnectorImpl @Inject()(
         case throwable =>
           Left(raiseIdmsException.error(throwable))
       }
-
   }
 
   override def fetchClientScopes(
