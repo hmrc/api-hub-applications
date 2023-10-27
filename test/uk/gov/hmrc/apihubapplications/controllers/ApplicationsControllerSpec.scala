@@ -60,7 +60,7 @@ class ApplicationsControllerSpec
   private val userEmailRequestBody = Json.toJson(UserEmail(userEmail)).toString()
 
   "registerApplication" - {
-    "must return 201 Created for a valid request" in {
+    "must return 201 Created for a valid request and the application in public form" in {
       val fixture = buildFixture()
       running(fixture.application) {
         val newApplication = NewApplication(
@@ -78,6 +78,8 @@ class ApplicationsControllerSpec
           .withBody(json)
 
         val expected = Application(newApplication)
+          .addPrimaryCredential(Credential("test-client-id-1", LocalDateTime.now(), None, None))
+          .addSecondaryCredential(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment")))
           .copy(id = Some("test-id"))
 
         when(fixture.applicationsService.registerApplication(ArgumentMatchers.eq(newApplication))(any()))
@@ -85,7 +87,7 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
-        contentAsJson(result) mustBe Json.toJson(expected)
+        contentAsJson(result) mustBe Json.toJson(expected.makePublic())
       }
     }
 
@@ -155,15 +157,21 @@ class ApplicationsControllerSpec
   }
 
   "retrieve all Applications" - {
-    "must return 200 and a JSON array representing all applications in db" in {
+    "must return 200 and a JSON array representing all applications in db in public form" in {
       val fixture = buildFixture()
       val now = LocalDateTime.now()
       running(fixture.application) {
         val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
         val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments())
 
-        val expected_apps = Seq(application1, application2)
-        val expected_json = Json.toJson(expected_apps)
+        val expected_apps = Seq(application1, application2).zipWithIndex.map {
+          case (application, index) =>
+            application
+              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+        }
+
+        val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(None).url)
 
@@ -175,14 +183,20 @@ class ApplicationsControllerSpec
       }
     }
 
-    "must return 200 and a JSON array representing all applications in db for the specified team member" in {
+    "must return 200 and a JSON array representing all applications in db in public form for the specified team member" in {
       val fixture = buildFixture()
       val now = LocalDateTime.now()
       running(fixture.application) {
 
         val teamMemberEmail = "jo.bloggs@hmrc.gov.uk"
-        val expected_apps = Seq(Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments()))
-        val expected_json = Json.toJson(expected_apps)
+
+        val expected_apps = Seq(
+          Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments())
+            .setPrimaryCredentials(Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None)))
+            .setSecondaryCredentials(Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"))))
+        )
+
+        val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
 
         val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
@@ -241,10 +255,12 @@ class ApplicationsControllerSpec
   }
 
   "getApplication" - {
-    "must return 200 Ok and a JSON body representing the application when it exists in the repository" in {
+    "must return 200 Ok and a JSON body representing the application in public form when it exists in the repository" in {
       val id = "1"
       val now = LocalDateTime.now()
       val expected = Application(Some(id), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+        .setPrimaryCredentials(Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None)))
+        .setSecondaryCredentials(Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"))))
 
       val fixture = buildFixture()
       running(fixture.application) {
@@ -254,7 +270,7 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
-        contentAsJson(result) mustBe Json.toJson(expected)
+        contentAsJson(result) mustBe Json.toJson(expected.makePublic())
 
         verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(true))(any())
       }

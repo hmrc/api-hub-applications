@@ -23,6 +23,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -45,7 +46,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case JsSuccess(newApp, _) =>
           logger.info(s"Registering new application: ${newApp.name}")
           applicationsService.registerApplication(newApp).map {
-            case Right(application) => Created(Json.toJson(application))
+            case Right(application) => Created(Json.toJson(application.makePublic()))
             case Left(_: IdmsException) => BadGateway
             case Left(_) => InternalServerError
           }
@@ -61,13 +62,13 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case None =>
           applicationsService
             .findAll()
-            .map(Json.toJson(_))
+            .map(applications => Json.toJson(applications.map(_.makePublic())))
             .map(Ok(_))
         case Some(encryptedEmail) =>
           applicationsService
             .filter(decrypt(encryptedEmail), enrich)
             .map {
-              case Right(applications) => Ok(Json.toJson(applications))
+              case Right(applications) => Ok(Json.toJson(applications.map(_.makePublic())))
               case Left(_: IdmsException) => BadGateway
               case Left(error) => throw error
             }
@@ -78,7 +79,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
     implicit request =>
       applicationsService.findById(id, enrich)
         .map {
-          case Right(application) => Ok(Json.toJson(application))
+          case Right(application) => Ok(Json.toJson(application.makePublic()))
           case Left(_: ApplicationNotFoundException) => NotFound
           case Left(_: IdmsException) => BadGateway
           case _ => InternalServerError
