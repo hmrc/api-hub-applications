@@ -258,18 +258,11 @@ object ApplicationEnrichers {
                                         environmentName: EnvironmentName,
                                         original: Application,
                                         idmsConnector: IdmsConnector,
-                                        clientScopes: Seq[ClientScope]
+                                        approvedScopes: Seq[Scope]
                                     )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
 
-    def masterCredentialFor(application: Application, environmentName: EnvironmentName): Credential = {
-      environmentName match {
-        case Primary => application.getPrimaryMasterCredential
-        case Secondary => application.getSecondaryMasterCredential
-      }
-    }
 
-
-    val idmsFutures = clientScopes.map(scope => idmsConnector.addClientScope(environmentName, masterCredentialFor(original, environmentName), scope.clientScopeId))
+    val idmsFutures = approvedScopes.map(scope => idmsConnector.addClientScope(environmentName, original.getMasterCredentialFor(environmentName).clientId, scope.name))
 
     Future.sequence(idmsFutures)
       .map(useFirstException)
@@ -278,8 +271,8 @@ object ApplicationEnrichers {
           Right(
             (application: Application) => {
               environmentName match {
-                case Primary => application.setPrimaryScopes(clientScopes.map(cs => Scope(cs.)))
-                case Secondary => application.setSecondaryScopes(clientScopes)
+                case Primary => application.setPrimaryScopes(approvedScopes)
+                case Secondary => application.setSecondaryScopes(approvedScopes)
               }
             }
           )

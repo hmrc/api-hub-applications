@@ -265,39 +265,40 @@ class ApplicationsService @Inject()(
         case Secondary => addSecondaryCredential(application)
       }
       case Left(_) => Future.successful(Left(ApplicationNotFoundException.forId(applicationId)))
+    }.flatMap {
+      case Right(application) =>
+        Console.println(s"application: $application")
+        Console.println(s"secondary creds: ${application.getSecondaryCredentials}")
+        repository.update(application).map {
+          case Right(()) => Right(application.getMasterCredentialFor(environmentName))
+          case Left(e) => Left(e)
+        }
+      case Left(e) => Future.successful(Left(e))
     }
+
   }
 
-  private def addPrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+  private def addPrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     val credentials = application.getPrimaryCredentials
 
     if (credentials.isEmpty) {
-
-      // ERROR
-      createNewCredential(application, Primary).map {
-        case Right(application) => Right(application.getPrimaryMasterCredential)
-        case Left(e) => Left(e)
-      }
+      throw ApplicationDataIssueException.forApplication(application, NoCredentialsFound)
     } else {
       updateOrCreatePrimaryCredential(application)
     }
   }
 
-  private def addSecondaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+  private def addSecondaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     val credentials = application.getSecondaryCredentials
 
-    val eventualExceptionOrCredential = if (credentials.isEmpty) {
-      createNewCredential(application, Secondary)
-    } else {
-      createNewCredentialAndCopyScopesFromPrevious(application, Secondary)
+    if (credentials.isEmpty) {
+      throw ApplicationDataIssueException.forApplication(application, NoCredentialsFound)
     }
-    eventualExceptionOrCredential.map{
-      case Right(credential) => ApplicationEnrichers.process(application, ApplicationEnrichers.secondaryCredentialApplicationEnricher())
-      case Left(exception) => Left(exception)
-    }
+    createNewCredentialAndCopyScopesFromPrevious(application, Secondary)
+
   }
 
-  private def updateOrCreatePrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]  = {
+  private def updateOrCreatePrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
     if (application.getPrimaryMasterCredential.isHidden) {
       updateExistingPrimaryMasterCredential(application)
     } else {
@@ -305,19 +306,11 @@ class ApplicationsService @Inject()(
     }
   }
 
-  private def updateExistingPrimaryMasterCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+  private def updateExistingPrimaryMasterCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     val masterCredential = application.getPrimaryMasterCredential
-    idmsConnector.newSecret(Primary, masterCredential.clientId).flatMap {
-      case Right(secret) => repository
-        .update(
-          application // set updateSecondary?
-            .removePrimaryCredential(masterCredential.clientId)
-            .addPrimaryCredential(masterCredential.setSecretFragment(secret.secret)))
-        .map {
-          case Right(_) => Right(masterCredential)
-          case Left(e) => Left(e)
-      }
-      case Left(e) => Future.successful(Left(e))
+    idmsConnector.newSecret(Primary, masterCredential.clientId).map {
+      case Right(secret) => Right(application.setPrimaryMasterCredentialSecretFragment(secret))
+      case Left(e) => Left(e)
     }
   }
 
@@ -326,29 +319,15 @@ class ApplicationsService @Inject()(
       .process(application, Seq(ApplicationEnrichers.credentialCreatingApplicationEnricher(environmentName, application, idmsConnector, clock)))
   }
 
-  private def createNewCredentialAndCopyScopesFromPrevious(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier)  = {
-    val currentMasterCredential = masterCredentialFor(application, environmentName)
+  private def createNewCredentialAndCopyScopesFromPrevious(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
+    val currentScopes = application.getScopesFor(environmentName).filter(scope => scope.status == Approved)
 
-    ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.credentialCreatingApplicationEnricher(environmentName, application, idmsConnector, clock))).flatMap {
-        case Right(application) =>
-          idmsConnector.fetchClientScopes(environmentName, currentMasterCredential.clientId).flatMap { // Use application scopes
-            case Right(scopes) => ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, clientId, idmsConnector, scopes)
-            case Left(e) => Future.successful(Left(e))
-          }
-
+    createNewCredential(application, environmentName).flatMap {
+        case Right(application) => ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, application, idmsConnector, currentScopes)))
         case Left(e) => Future.successful(Left(e))
     }
   }
 
-  private def masterCredentialFor(application: Application, environmentName: EnvironmentName): Credential = {
-    environmentName match {
-      case Primary => application.getPrimaryMasterCredential
-      case Secondary => application.getSecondaryMasterCredential
-    }
-  }
 
-//  private def addSecondaryCredential(application: Application): Future[Either[ApplicationsException, Credential]] = {
-//    Future.successful(Left(ApplicationNotFoundException.forApplication(application)))
-//  }
 
 }

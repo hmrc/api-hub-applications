@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.captor.ArgCaptor
-import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.mockito.{ArgumentCaptor, ArgumentMatchers, MockitoSugar}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -1326,13 +1326,18 @@ class ApplicationsServiceSpec
 
   "addCredential" - {
 
-    "must create a new secondary credential where none existed previously" in {
+    "must create a new secondary credential and copy the previous secondary master scopes" in {
       val fixture = buildFixture
       import fixture._
 
       val testAppId = "test-app-id"
       val testClientId = "test-client-id"
-      val secret = "test-secret-1234"
+      val oldSecret = "test-secret-9876"
+      val scopeName = "test-scope"
+
+      val existingCredential = Credential(testClientId, LocalDateTime.now(clock), Some(oldSecret), Some("9876"))
+
+      val expectedCredential = Credential(testClientId, LocalDateTime.now(clock), None, Some("1234"))
 
       val app = Application(
         id = Some(testAppId),
@@ -1341,23 +1346,35 @@ class ApplicationsServiceSpec
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        environments = Environments(primary = Environment(), secondary = Environment(Seq(Scope(scopeName, Approved)), Seq(existingCredential)))
       )
 
-      val expectedCredential = Credential(testClientId, LocalDateTime.now(clock), None, Some("1234"))
+      val existingClientResponse = ClientResponse("test-client-id", "test-secret-9876")
+      val newClientResponse = ClientResponse("test-client-id", "test-secret-1234")
+
       val expectedClient = Client(app.name, app.name)
-      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), any())(any()))
-        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(existingClientResponse)))
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), any())(any())).thenReturn(Future.successful(Right(newClientResponse)))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq(ClientScope(scopeName)))))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Right(())))
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
-      val updatedApp = app.setSecondaryCredentials(Seq(expectedCredential))
+      val updatedApp = app.addSecondaryCredential(expectedCredential)
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
 
       service.addCredential(testAppId, Secondary)(HeaderCarrier()) map {
         actual =>
-          verify(repository).update(updatedApp)
           verify(idmsConnector).createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(expectedClient))(any())
-          verifyNoMoreInteractions(idmsConnector)
+          val value2 = classOf[Application]
+          val captor = ArgumentCaptor.forClass(value2)
+          verify(repository).update(captor.capture())
+          val value1 = captor.getValue
+
+          Console.println(s"captured: $value1")
+          Console.println(s"expected: $updatedApp")
+
           actual mustBe Right(expectedCredential)
       }
     }

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.models.application
 
 import uk.gov.hmrc.apihubapplications.models.Lens
+import uk.gov.hmrc.apihubapplications.models.idms.Secret
 
 object ApplicationLenses {
 
@@ -138,6 +139,26 @@ object ApplicationLenses {
         application,
         applicationSecondaryScopes.get(application) :+ scope
       )
+
+    def getMasterCredentialFor(environmentName: EnvironmentName): Credential = {
+      environmentName match {
+        case Primary => getPrimaryMasterCredential
+        case Secondary => getSecondaryMasterCredential
+      }
+    }
+
+    def getScopesFor(environmentName: EnvironmentName): Seq[Scope] = {
+      environmentName match {
+        case Primary => getPrimaryScopes
+        case Secondary => getSecondaryScopes
+      }
+    }
+
+    def setPrimaryMasterCredentialSecretFragment(secret: Secret) = {
+      val primaryMasterCredential = getPrimaryMasterCredential
+      removePrimaryCredential(primaryMasterCredential.clientId)
+      addPrimaryCredential(primaryMasterCredential.setSecretFragment(secret.secret))
+    }
 
     def getSecondaryMasterCredential: Credential =
       applicationSecondaryCredentials.get(application)

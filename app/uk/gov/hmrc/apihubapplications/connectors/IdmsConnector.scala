@@ -35,8 +35,6 @@ trait IdmsConnector {
 
   def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]]
 
-  def addClientScopes(environmentName: EnvironmentName, clientId: String, scopes: Seq[ClientScope])(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]]
-
   def fetchClientScopes(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]]
 
 }
