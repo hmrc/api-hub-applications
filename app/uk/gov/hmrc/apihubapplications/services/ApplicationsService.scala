@@ -260,16 +260,20 @@ class ApplicationsService @Inject()(
 
   def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     findById(applicationId, true).flatMap {
-      case Right(application) => environmentName match {
-        case Primary => addPrimaryCredential(application)
-        case Secondary => addSecondaryCredential(application)
+      case Right(application) =>
+        Console.println(s"addCredential: ${application}")
+
+        environmentName match {
+        case Primary => {
+          addPrimaryCredential(application)
+        }
+        case Secondary => {
+          addSecondaryCredential(application)
+        }
       }
       case Left(_) => Future.successful(Left(ApplicationNotFoundException.forId(applicationId)))
     }.flatMap {
       case Right(application) =>
-        Console.println(s"application: $application")
-        Console.println(s"secondary creds: ${application.getSecondaryCredentials}")
-        Console.println(s"secondary master: ${application.getSecondaryMasterCredential}")
         repository.update(application).map {
           case Right(()) => Right(application.getMasterCredentialFor(environmentName))
           case Left(e) => Left(e)
@@ -300,9 +304,12 @@ class ApplicationsService @Inject()(
   }
 
   private def updateOrCreatePrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
+    Console.println(s"${application.getPrimaryMasterCredential}")
     if (application.getPrimaryMasterCredential.isHidden) {
+      Console.println("HIDDEN")
       updateExistingPrimaryMasterCredential(application)
     } else {
+      Console.println("NOT HIDDEN")
       createNewCredentialAndCopyScopesFromPrevious(application, Primary)
     }
   }
@@ -321,10 +328,15 @@ class ApplicationsService @Inject()(
   }
 
   private def createNewCredentialAndCopyScopesFromPrevious(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
+    Console.println("WTF")
+
     val currentScopes = application.getScopesFor(environmentName).filter(scope => scope.status == Approved)
 
     createNewCredential(application, environmentName).flatMap {
-        case Right(application) => ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, application, idmsConnector, currentScopes)))
+        case Right(application) => {
+          Console.println(s"Primary creds: ${application.getPrimaryCredentials}")
+          ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, application, idmsConnector, currentScopes)))
+        }
         case Left(e) => Future.successful(Left(e))
     }
   }
