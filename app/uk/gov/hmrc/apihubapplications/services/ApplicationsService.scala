@@ -47,6 +47,7 @@ class ApplicationsService @Inject()(
           .copy(lastUpdated = LocalDateTime.now(clock), apis = application.apis ++ Seq(Api(newApi.id, newApi.endpoints)))
       )
     }
+
     this.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
         val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
@@ -262,24 +263,24 @@ class ApplicationsService @Inject()(
     findById(applicationId, true).flatMap {
       case Right(application) =>
         environmentName match {
-        case Primary => {
-          addPrimaryCredential(application)
+          case Primary => addPrimaryCredential(application)
+          case Secondary => addSecondaryCredential(application)
         }
-        case Secondary => {
-          addSecondaryCredential(application)
-        }
-      }
       case Left(_) => Future.successful(Left(ApplicationNotFoundException.forId(applicationId)))
     }.flatMap {
       case Right(application) =>
         repository.update(application).map {
-
           case Right(()) => Right(application.getMasterCredentialFor(environmentName))
           case Left(e) => Left(e)
         }
       case Left(e) => Future.successful(Left(e))
+    }.flatMap {
+      case Right(masterCredential) => idmsConnector.fetchClient(environmentName, masterCredential.clientId).flatMap {
+        case Right(clientResponse) => Future.successful(Right(Credential(masterCredential.clientId, masterCredential.created, Some(clientResponse.secret), None).setSecretFragment(clientResponse.secret)))
+        case Left(e) => Future.successful(Left(e))
+      }
+      case Left(e) => Future.successful(Left(e))
     }
-
   }
 
   private def addPrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
@@ -302,7 +303,7 @@ class ApplicationsService @Inject()(
 
   }
 
-  private def updateOrCreatePrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
+  private def updateOrCreatePrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     if (application.getPrimaryMasterCredential.isHidden) {
       updateExistingPrimaryMasterCredential(application)
     } else {
@@ -318,20 +319,19 @@ class ApplicationsService @Inject()(
     }
   }
 
-  private def createNewCredential(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
+  private def createNewCredential(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     ApplicationEnrichers
       .process(application, Seq(ApplicationEnrichers.credentialCreatingApplicationEnricher(environmentName, application, idmsConnector, clock)))
   }
 
-  private def createNewCredentialAndCopyScopesFromPrevious(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
+  private def createNewCredentialAndCopyScopesFromPrevious(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     val currentScopes = application.getScopesFor(environmentName).filter(scope => scope.status == Approved)
 
     createNewCredential(application, environmentName).flatMap {
-        case Right(application) => ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, application, idmsConnector, currentScopes)))
-        case Left(e) => Future.successful(Left(e))
+      case Right(application) => ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, application, idmsConnector, currentScopes)))
+      case Left(e) => Future.successful(Left(e))
     }
   }
-
 
 
 }

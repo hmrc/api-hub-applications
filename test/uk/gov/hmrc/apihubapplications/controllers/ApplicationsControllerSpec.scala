@@ -795,7 +795,7 @@ class ApplicationsControllerSpec
   }
 
   "add credential" - {
-    "must return 200 and a credential" in {
+    "must return 201 and a credential" in {
       val id = "app-id-1"
       val fixture = buildFixture()
       val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"))
@@ -806,7 +806,7 @@ class ApplicationsControllerSpec
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
         val result = route(fixture.application, request).value
-        status(result) mustBe Status.OK
+        status(result) mustBe Status.CREATED
         contentAsJson(result) mustBe Json.toJson(credential)
       }
     }

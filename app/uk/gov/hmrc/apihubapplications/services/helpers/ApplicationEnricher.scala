@@ -187,7 +187,8 @@ object ApplicationEnrichers {
     environmentName: EnvironmentName,
     original: Application,
     idmsConnector: IdmsConnector,
-    clock: Clock
+    clock: Clock,
+
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     idmsConnector.createClient(environmentName, Client(original)).map {
       case Right(clientResponse) =>

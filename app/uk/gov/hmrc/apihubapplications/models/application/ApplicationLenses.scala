@@ -17,7 +17,6 @@
 package uk.gov.hmrc.apihubapplications.models.application
 
 import uk.gov.hmrc.apihubapplications.models.Lens
-import uk.gov.hmrc.apihubapplications.models.idms.Secret
 
 object ApplicationLenses {
 
