@@ -540,8 +540,6 @@ class ApplicationsIntegrationSpec
           val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
 
           val id = application.id.get
-
-          Console.println(s"id: $id")
           val response =
             wsClient
               .url(s"$baseUrl/api-hub-applications/applications/$id/apis")

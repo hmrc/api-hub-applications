@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.{ApplicationLensOps, applicationPrimaryCredentials}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception._
@@ -261,8 +261,6 @@ class ApplicationsService @Inject()(
   def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     findById(applicationId, true).flatMap {
       case Right(application) =>
-        Console.println(s"addCredential: ${application}")
-
         environmentName match {
         case Primary => {
           addPrimaryCredential(application)
@@ -275,6 +273,7 @@ class ApplicationsService @Inject()(
     }.flatMap {
       case Right(application) =>
         repository.update(application).map {
+
           case Right(()) => Right(application.getMasterCredentialFor(environmentName))
           case Left(e) => Left(e)
         }
@@ -304,12 +303,9 @@ class ApplicationsService @Inject()(
   }
 
   private def updateOrCreatePrimaryCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
-    Console.println(s"${application.getPrimaryMasterCredential}")
     if (application.getPrimaryMasterCredential.isHidden) {
-      Console.println("HIDDEN")
       updateExistingPrimaryMasterCredential(application)
     } else {
-      Console.println("NOT HIDDEN")
       createNewCredentialAndCopyScopesFromPrevious(application, Primary)
     }
   }
@@ -317,7 +313,7 @@ class ApplicationsService @Inject()(
   private def updateExistingPrimaryMasterCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     val masterCredential = application.getPrimaryMasterCredential
     idmsConnector.newSecret(Primary, masterCredential.clientId).map {
-      case Right(secret) => Right(application.setPrimaryMasterCredentialSecretFragment(secret))
+      case Right(secret) => Right(application.addPrimaryCredential(masterCredential.setSecretFragment(secret.secret).copy(created = LocalDateTime.now(clock))))
       case Left(e) => Left(e)
     }
   }
@@ -328,15 +324,10 @@ class ApplicationsService @Inject()(
   }
 
   private def createNewCredentialAndCopyScopesFromPrevious(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]  = {
-    Console.println("WTF")
-
     val currentScopes = application.getScopesFor(environmentName).filter(scope => scope.status == Approved)
 
     createNewCredential(application, environmentName).flatMap {
-        case Right(application) => {
-          Console.println(s"Primary creds: ${application.getPrimaryCredentials}")
-          ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, application, idmsConnector, currentScopes)))
-        }
+        case Right(application) => ApplicationEnrichers.process(application, Seq(ApplicationEnrichers.scopesSettingApplicationEnricher(environmentName, application, idmsConnector, currentScopes)))
         case Left(e) => Future.successful(Left(e))
     }
   }
