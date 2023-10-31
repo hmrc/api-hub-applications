@@ -196,7 +196,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
   def addCredential(applicationId: String, environmentName: EnvironmentName): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
       applicationsService.addCredential(applicationId, environmentName).map {
-        case Right(_) => Ok
+        case Right(credential) => Ok(Json.toJson(credential))
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: IdmsException) => BadGateway
         case Left(_) => InternalServerError
