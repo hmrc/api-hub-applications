@@ -569,7 +569,7 @@ class ApplicationsIntegrationSpec
       }
     }
 
-    "POST to add credential to an application" should {
+    "POST to add primary credential to an application" should {
       "respond with a 200 with a credential" in {
         forAll { (application: Application) =>
           deleteAll().futureValue
@@ -588,11 +588,14 @@ class ApplicationsIntegrationSpec
               .post(EmptyBody)
               .futureValue
 
-          response.status shouldBe 200
-          response.json.validate[Credential] match {
-            case JsSuccess(credential, _) => credential.secretFragment;
+          response.status shouldBe 201
+          val newCredential = response.json.validate[Credential] match {
+            case JsSuccess(credential, _) => credential;
             case _ => fail("No credential returned")
           }
+
+          newCredential.clientSecret mustNot be(empty)
+          newCredential.secretFragment mustNot be(empty)
 
         }
       }

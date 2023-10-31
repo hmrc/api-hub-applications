@@ -154,12 +154,6 @@ object ApplicationLenses {
       }
     }
 
-    def setPrimaryMasterCredentialSecretFragment(secret: Secret) = {
-      val primaryMasterCredential = getPrimaryMasterCredential
-      removePrimaryCredential(primaryMasterCredential.clientId)
-      addPrimaryCredential(primaryMasterCredential.setSecretFragment(secret.secret))
-    }
-
     def getSecondaryMasterCredential: Credential =
       applicationSecondaryCredentials.get(application)
         .sortWith((a, b) => a.created.isAfter(b.created))

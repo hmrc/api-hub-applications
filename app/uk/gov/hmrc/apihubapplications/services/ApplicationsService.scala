@@ -313,7 +313,7 @@ class ApplicationsService @Inject()(
   private def updateExistingPrimaryMasterCredential(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     val masterCredential = application.getPrimaryMasterCredential
     idmsConnector.newSecret(Primary, masterCredential.clientId).map {
-      case Right(secret) => Right(application.addPrimaryCredential(masterCredential.setSecretFragment(secret.secret).copy(created = LocalDateTime.now(clock))))
+      case Right(secret) => Right(application.addPrimaryCredential(masterCredential.setSecretFragment(secret.secret).copy(created = LocalDateTime.now(clock), clientSecret = Some(secret.secret))))
       case Left(e) => Left(e)
     }
   }
