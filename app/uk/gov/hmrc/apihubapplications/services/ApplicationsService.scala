@@ -269,6 +269,7 @@ class ApplicationsService @Inject()(
       case Right(application) =>
         Console.println(s"application: $application")
         Console.println(s"secondary creds: ${application.getSecondaryCredentials}")
+        Console.println(s"secondary master: ${application.getSecondaryMasterCredential}")
         repository.update(application).map {
           case Right(()) => Right(application.getMasterCredentialFor(environmentName))
           case Left(e) => Left(e)
