@@ -26,7 +26,6 @@ case object InvalidPrimaryCredentials extends WithName("Invalid primary credenti
 case object InvalidSecondaryCredentials extends WithName("Invalid secondary credentials") with DataIssue
 case object InvalidPrimaryScope extends WithName("Invalid primary scope") with DataIssue
 
-case object NoCredentialsFound extends WithName("No Credentials found") with DataIssue
 case class ApplicationDataIssueException(
   applicationId: String,
   dataIssue: DataIssue

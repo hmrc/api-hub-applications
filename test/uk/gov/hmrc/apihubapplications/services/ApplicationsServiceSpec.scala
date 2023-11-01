@@ -1337,9 +1337,7 @@ class ApplicationsServiceSpec
       val newSecret = "test-secret-1234"
       val scopeName = "test-scope"
       val existingCredential = Credential(oldTestClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), Some(oldSecret), Some("9876"))
-      val expectedCredential = Credential(newTestClientId, LocalDateTime.now(clock), None, Some("1234"))
-      val expectedReturnedCredential = Credential(newTestClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"))
-
+      val expectedCredential = Credential(newTestClientId, LocalDateTime.now(clock), Some("test-secret-1234"), Some("1234"))
 
       val app = Application(
         id = Some(testAppId),
@@ -1364,14 +1362,14 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
       val updatedApp = app.addSecondaryCredential(expectedCredential)
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
 
       service.addCredential(testAppId, Secondary)(HeaderCarrier()) map {
         newCredential =>
           verify(idmsConnector).createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(expectedClient))(any())
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(newTestClientId), ArgumentMatchers.eq(scopeName))(any())
           verify(repository).update(updatedApp)
-          newCredential mustBe Right(expectedReturnedCredential)
+          newCredential mustBe Right(expectedCredential)
       }
     }
 
@@ -1382,13 +1380,10 @@ class ApplicationsServiceSpec
       val testAppId = "test-app-id"
       val oldTestClientId = "test-client-id"
       val newTestClientId = "new-test-client-id"
-      val oldSecret = "test-secret-9876"
       val newSecret = "test-secret-1234"
       val scopeName = "test-scope"
-      val existingCredential = Credential(oldTestClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), Some(oldSecret), Some("9876"))
-      val expectedHiddenCredential = Credential(newTestClientId, LocalDateTime.now(clock), None, None)
-      val expectedResponseCredential = Credential(newTestClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"))
-
+      val existingCredential = Credential(oldTestClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), None, Some("9876"))
+      val expectedCredential = Credential(newTestClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"))
 
       val app = Application(
         id = Some(testAppId),
@@ -1410,15 +1405,15 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
-      val updatedApp = app.addPrimaryCredential(expectedHiddenCredential)
-      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
+      val updatedApp = app.addPrimaryCredential(expectedCredential)
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
 
       service.addCredential(testAppId, Primary)(HeaderCarrier()) map {
         newCredential =>
           verify(idmsConnector).createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(expectedClient))(any())
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(newTestClientId), ArgumentMatchers.eq(scopeName))(any())
           verify(repository).update(updatedApp)
-          newCredential mustBe Right(expectedResponseCredential)
+          newCredential mustBe Right(expectedCredential)
       }
     }
 
@@ -1433,8 +1428,7 @@ class ApplicationsServiceSpec
       val existingHiddenCredential = Credential(testClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), None, None)
       val newSecret = "test-secret-1234"
 
-      val expectedCredential = Credential(testClientId, LocalDateTime.now(clock), None, Some("1234"))
-      val expectedReturnedCredential = Credential(testClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"))
+      val expectedCredential = Credential(testClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"))
       val clientResponse = ClientResponse(testClientId, newSecret)
 
       val app = Application(
@@ -1453,7 +1447,7 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
-      val updatedApp = app.addPrimaryCredential(expectedReturnedCredential)
+      val updatedApp = app.setPrimaryCredentials(Seq(expectedCredential))
       when(repository.update(any())).thenReturn(Future.successful(Right(())))
 
       service.addCredential(testAppId, Primary)(HeaderCarrier()) map {
@@ -1461,10 +1455,11 @@ class ApplicationsServiceSpec
           verify(idmsConnector, Mockito.times(0)).createClient(ArgumentMatchers.eq(Primary), any())(any())
           verify(idmsConnector, Mockito.times(0)).addClientScope(ArgumentMatchers.eq(Primary), any(), any())(any())
           verify(repository).update(updatedApp)
-          newCredential mustBe Right(expectedReturnedCredential)
+          newCredential mustBe Right(expectedCredential)
       }
     }
   }
+
   private case class Fixture(
                               clock: Clock,
                               repository: ApplicationsRepository,

@@ -136,7 +136,16 @@ class ApplicationsIntegrationSpec
             newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
           }
 
-        val expectedApplication = storedApplication.makePublic()
+        // This test is becoming a bit tricky as the stored and returned responses deviate
+        //  -we don't return hidden primary credentials
+        //  -we do return the client secret for secondary credentials
+        val expectedApplication = storedApplication
+          .makePublic()
+          .setSecondaryCredentials(
+            storedApplication
+              .getSecondaryCredentials
+              .map(credential => credential.copy(clientSecret = Some(FakeIdmsConnector.fakeSecret)))
+          )
 
         responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name
@@ -590,13 +599,12 @@ class ApplicationsIntegrationSpec
 
           response.status shouldBe 201
           val newCredential = response.json.validate[Credential] match {
-            case JsSuccess(credential, _) => credential;
+            case JsSuccess(credential, _) => credential
             case _ => fail("No credential returned")
           }
 
           newCredential.clientSecret mustNot be(empty)
           newCredential.secretFragment mustNot be(empty)
-
         }
       }
 

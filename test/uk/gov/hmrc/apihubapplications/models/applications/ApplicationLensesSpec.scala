@@ -253,7 +253,7 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
         val application = testApplication
           .setPrimaryCredentials(Seq(credential1, master, credential2))
 
-        application.getPrimaryMasterCredential mustBe master
+        application.getPrimaryMasterCredential mustBe Some(master)
       }
     }
 
@@ -329,7 +329,7 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
         val application = testApplication
           .setSecondaryCredentials(Seq(credential1, master, credential2))
 
-        application.getSecondaryMasterCredential mustBe master
+        application.getSecondaryMasterCredential mustBe Some(master)
       }
     }
 

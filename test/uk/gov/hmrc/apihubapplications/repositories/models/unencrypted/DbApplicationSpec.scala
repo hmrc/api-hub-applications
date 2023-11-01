@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.repositories.models.unencrypted
 
+import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Environments, Pending, Scope, TeamMember}
@@ -23,7 +24,7 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 
 import java.time.LocalDateTime
 
-class DbApplicationSpec extends AnyFreeSpec with Matchers {
+class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
   import DbApplicationSpec._
 
@@ -65,8 +66,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers {
           )
 
         DbApplication(application) mustBe expected
-        DbApplication(application).toModel.getPrimaryMasterCredential.clientSecret mustBe None
-        DbApplication(application).toModel.getSecondaryMasterCredential.clientSecret mustBe None
+        DbApplication(application).toModel.getPrimaryMasterCredential.value.clientSecret mustBe None
+        DbApplication(application).toModel.getSecondaryMasterCredential.value.clientSecret mustBe None
       }
     }
 
