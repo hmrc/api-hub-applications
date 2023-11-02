@@ -523,33 +523,6 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
           actual mustBe Left(IdmsException.unexpectedResponse(500))
       }
     }
-
-    "must add the scope to the master credential only when requested to do so" in {
-      val clientId1 = "test-client-id-1"
-      val clientId2 = "test-client-id-2"
-
-      val application = testApplication.setPrimaryCredentials(
-        Seq(
-          Credential(clientId1, LocalDateTime.now(clock).minusDays(1), None, None),
-          Credential(clientId2, LocalDateTime.now(clock), None, None)
-        )
-      )
-
-      val scope = "test-scope"
-      val idmsConnector = mock[IdmsConnector]
-
-      when(idmsConnector.addClientScope(any(), any(), any())(any()))
-        .thenReturn(Future.successful(Right(())))
-
-      ApplicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope, masterCredentialOnly = true).map {
-        case Right(enricher) =>
-          enricher.enrich(application) mustBe application.addPrimaryScope(Scope(scope, Approved))
-          verify(idmsConnector, never).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1), ArgumentMatchers.eq(scope))(any())
-          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId2), ArgumentMatchers.eq(scope))(any())
-          succeed
-        case Left(e) => fail("Unexpected Left response", e)
-      }
-    }
   }
 
 }

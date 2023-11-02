@@ -1361,7 +1361,10 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
-      val updatedApp = app.addSecondaryCredential(expectedCredential)
+      val updatedApp = app
+        .addSecondaryCredential(expectedCredential)
+        .copy(lastUpdated = LocalDateTime.now(clock))
+
       when(repository.update(any())).thenReturn(Future.successful(Right(())))
 
       service.addCredential(testAppId, Secondary)(HeaderCarrier()) map {
@@ -1405,7 +1408,10 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
 
-      val updatedApp = app.addPrimaryCredential(expectedCredential)
+      val updatedApp = app
+        .addPrimaryCredential(expectedCredential)
+        .copy(lastUpdated = LocalDateTime.now(clock))
+
       when(repository.update(any())).thenReturn(Future.successful(Right(())))
 
       service.addCredential(testAppId, Primary)(HeaderCarrier()) map {
@@ -1458,15 +1464,42 @@ class ApplicationsServiceSpec
           newCredential mustBe Right(expectedCredential)
       }
     }
+
+    "must return ApplicationCredentialLimitException if there are already 5 credentials" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).setPrimaryCredentials(
+        (1 to 5).map(i => Credential(s"test-client-$i", LocalDateTime.now(clock), None, None))
+      )
+
+      when(idmsConnector.fetchClientScopes(any(), any())(any())).thenReturn(Future.successful(Right(Seq.empty)))
+      when(repository.findById(any())).thenReturn(Future.successful(Right(application)))
+
+      service.addCredential(applicationId, Primary)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApplicationCredentialLimitException.forApplication(application, Primary))
+      }
+    }
   }
 
   private case class Fixture(
-                              clock: Clock,
-                              repository: ApplicationsRepository,
-                              idmsConnector: IdmsConnector,
-                              emailConnector: EmailConnector,
-                              service: ApplicationsService
-                            )
+    clock: Clock,
+    repository: ApplicationsRepository,
+    idmsConnector: IdmsConnector,
+    emailConnector: EmailConnector,
+    service: ApplicationsService
+  )
 
   private def buildFixture: Fixture = {
     val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())

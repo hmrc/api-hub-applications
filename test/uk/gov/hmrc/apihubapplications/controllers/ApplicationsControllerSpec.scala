@@ -838,6 +838,20 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.INTERNAL_SERVER_ERROR
       }
     }
+
+    "must return 409 Conflict when the application already has 5 credentials" in {
+      val id = "id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.CONFLICT
+      }
+    }
   }
 }
 

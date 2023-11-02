@@ -228,13 +228,11 @@ object ApplicationEnrichers {
     environmentName: EnvironmentName,
     original: Application,
     idmsConnector: IdmsConnector,
-    scopeName: String,
-    masterCredentialOnly: Boolean = false
+    scopeName: String
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     Future.sequence(
       original
         .getCredentialsFor(environmentName)
-        .filter(credential => !masterCredentialOnly || original.getMasterCredentialFor(environmentName).contains(credential))
         .map(
           credential =>
             idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)

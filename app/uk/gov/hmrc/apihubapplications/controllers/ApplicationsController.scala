@@ -24,7 +24,7 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
@@ -198,8 +198,10 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       applicationsService.addCredential(applicationId, environmentName).map {
         case Right(credential) => Created(Json.toJson(credential))
         case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: ApplicationCredentialLimitException) => Conflict
         case Left(_: IdmsException) => BadGateway
         case Left(_) => InternalServerError
       }
   }
+
 }
