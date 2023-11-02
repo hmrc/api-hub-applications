@@ -293,6 +293,35 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       }
     }
 
+    "replacePrimaryCredential" - {
+      "must replace the correct credential" in {
+        val credential1 = randomCredential()
+        val credential2 = randomCredential()
+        val credential3 = randomCredential()
+
+        val application = testApplication.setPrimaryCredentials(Seq(credential1, credential2, credential3))
+
+        val credential = application.getPrimaryCredentials(1)
+
+        val updatedCredential = credential.copy(
+          created = credential.created.plusDays(1),
+          clientSecret = Some("updated-secret")
+        )
+
+        val expected = application.setPrimaryCredentials(Seq(credential1, updatedCredential, credential3))
+        val actual = application.replacePrimaryCredential(updatedCredential)
+
+        actual mustBe expected
+      }
+
+      "must throw IllegalArgumentException if the credential does not exist" in {
+        val credential = randomCredential()
+        val application = testApplication
+
+        an[IllegalArgumentException] mustBe thrownBy (application.replacePrimaryCredential(credential))
+      }
+    }
+
     "getSecondaryScopes" - {
       "must" - {
         behave like applicationScopesGetterFunction(
@@ -390,6 +419,35 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
         an [IllegalArgumentException] mustBe thrownBy(
           testApplication.updateSecondaryCredential("test-client-id", "test-secret")
         )
+      }
+    }
+
+    "replaceSecondaryCredential" - {
+      "must replace the correct credential" in {
+        val credential1 = randomCredential()
+        val credential2 = randomCredential()
+        val credential3 = randomCredential()
+
+        val application = testApplication.setSecondaryCredentials(Seq(credential1, credential2, credential3))
+
+        val credential = application.getSecondaryCredentials(1)
+
+        val updatedCredential = credential.copy(
+          created = credential.created.plusDays(1),
+          clientSecret = Some("updated-secret")
+        )
+
+        val expected = application.setSecondaryCredentials(Seq(credential1, updatedCredential, credential3))
+        val actual = application.replaceSecondaryCredential(updatedCredential)
+
+        actual mustBe expected
+      }
+
+      "must throw IllegalArgumentException if the credential does not exist" in {
+        val credential = randomCredential()
+        val application = testApplication
+
+        an[IllegalArgumentException] mustBe thrownBy (application.replaceSecondaryCredential(credential))
       }
     }
 
