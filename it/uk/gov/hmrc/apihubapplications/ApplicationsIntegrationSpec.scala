@@ -26,7 +26,7 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
+import play.api.libs.json.{JsSuccess, Json}
 import play.api.libs.ws.{EmptyBody, WSClient}
 import play.api.test.Helpers.CONTENT_TYPE
 import play.api.{Application => GuideApplication}
@@ -136,7 +136,16 @@ class ApplicationsIntegrationSpec
             newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
           }
 
-        val expectedApplication = storedApplication.makePublic()
+        // This test is becoming a bit tricky as the stored and returned responses deviate
+        //  -we don't return hidden primary credentials
+        //  -we do return the client secret for secondary credentials
+        val expectedApplication = storedApplication
+          .makePublic()
+          .setSecondaryCredentials(
+            storedApplication
+              .getSecondaryCredentials
+              .map(credential => credential.copy(clientSecret = Some(FakeIdmsConnector.fakeSecret)))
+          )
 
         responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name
@@ -540,8 +549,6 @@ class ApplicationsIntegrationSpec
           val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
 
           val id = application.id.get
-
-          Console.println(s"id: $id")
           val response =
             wsClient
               .url(s"$baseUrl/api-hub-applications/applications/$id/apis")
@@ -564,6 +571,52 @@ class ApplicationsIntegrationSpec
               .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/apis")
               .addHttpHeaders(("Content", "application/json"))
               .post(Json.toJson(api))
+              .futureValue
+
+          response.status shouldBe 404
+        }
+      }
+    }
+
+    "POST to add primary credential to an application" should {
+      "respond with a 200 with a credential" in {
+        forAll { (application: Application) =>
+          deleteAll().futureValue
+
+          val appWithPendingPrimaryScope = application.withPrimaryCredentialClientIdOnly
+
+          insert(appWithPendingPrimaryScope).futureValue
+
+          val id = application.id.get
+          val environmentName = Primary
+
+          val response =
+            wsClient
+              .url(s"$baseUrl/api-hub-applications/applications/$id/environments/$environmentName/credentials")
+              .addHttpHeaders(("Content", "application/json"))
+              .post(EmptyBody)
+              .futureValue
+
+          response.status shouldBe 201
+          val newCredential = response.json.validate[Credential] match {
+            case JsSuccess(credential, _) => credential
+            case _ => fail("No credential returned")
+          }
+
+          newCredential.clientSecret mustNot be(empty)
+          newCredential.secretFragment mustNot be(empty)
+        }
+      }
+
+      "respond with a 404 NotFound if the application does not exist" in {
+        forAll { (application: Application) =>
+          deleteAll().futureValue
+
+          val response =
+            wsClient
+              .url(s"$baseUrl/api-hub-applications/applications/1234/environments/primary/credentials")
+              .addHttpHeaders(("Content", "application/json"))
+              .post(EmptyBody)
               .futureValue
 
           response.status shouldBe 404

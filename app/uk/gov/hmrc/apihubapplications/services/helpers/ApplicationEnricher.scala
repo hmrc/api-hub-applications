@@ -134,17 +134,16 @@ object ApplicationEnrichers {
       }
     }
 
-    if (original.getSecondaryCredentials.nonEmpty) {
-      idmsConnector
-        .fetchClientScopes(Secondary, original.getSecondaryMasterCredential.clientId)
-        .map {
-          case Right(clientScopes) => Right(buildEnricher(clientScopes))
-          case Left(e @ IdmsException(_, _, ClientNotFound)) if !failOnError => Right(buildIssuesEnricher(e))
-          case Left(e) => Left(e)
-        }
-    }
-    else {
-      Future.successful(Right(noOpApplicationEnricher))
+    original.getSecondaryMasterCredential match {
+      case Some(credential) =>
+        idmsConnector
+          .fetchClientScopes(Secondary, credential.clientId)
+          .map {
+            case Right(clientScopes) => Right(buildEnricher(clientScopes))
+            case Left(e @ IdmsException(_, _, ClientNotFound)) if !failOnError => Right(buildIssuesEnricher(e))
+            case Left(e) => Left(e)
+          }
+      case None => Future.successful(Right(noOpApplicationEnricher))
     }
   }
 
@@ -169,17 +168,16 @@ object ApplicationEnrichers {
       }
     }
 
-    if (original.getPrimaryCredentials.nonEmpty) {
-      idmsConnector
-        .fetchClientScopes(Primary, original.getPrimaryMasterCredential.clientId)
-        .map {
-          case Right(clientScopes) => Right(buildEnricher(clientScopes))
-          case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
-          case Left(e) => Left(e)
-        }
-    }
-    else {
-      Future.successful(Right(noOpApplicationEnricher))
+    original.getPrimaryMasterCredential match {
+      case Some(credential) =>
+        idmsConnector
+          .fetchClientScopes(Primary, credential.clientId)
+          .map {
+            case Right(clientScopes) => Right(buildEnricher(clientScopes))
+            case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
+            case Left(e) => Left(e)
+          }
+      case None => Future.successful(Right(noOpApplicationEnricher))
     }
   }
 
@@ -187,14 +185,16 @@ object ApplicationEnrichers {
     environmentName: EnvironmentName,
     original: Application,
     idmsConnector: IdmsConnector,
-    clock: Clock
+    clock: Clock,
+    hiddenPrimary: Boolean = true
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     idmsConnector.createClient(environmentName, Client(original)).map {
       case Right(clientResponse) =>
         Right(
           (application: Application) => {
             environmentName match {
-              case Primary => application.addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
+              case Primary if hiddenPrimary => application.addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
+              case Primary => application.addPrimaryCredential(clientResponse.asNewCredential(clock))
               case Secondary => application.addSecondaryCredential(clientResponse.asNewCredential(clock))
             }
           }
@@ -231,13 +231,12 @@ object ApplicationEnrichers {
     scopeName: String
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     Future.sequence(
-      (environmentName match {
-        case Primary => original.getPrimaryCredentials
-        case Secondary => original.getSecondaryCredentials
-      }).map(
-        credential =>
-          idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
-      )
+      original
+        .getCredentialsFor(environmentName)
+        .map(
+          credential =>
+            idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
+        )
     )
       .map(useFirstException)
       .map {

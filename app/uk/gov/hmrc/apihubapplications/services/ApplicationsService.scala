@@ -23,10 +23,11 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception._
-import uk.gov.hmrc.apihubapplications.models.idms.Secret
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, Secret}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
@@ -34,11 +35,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsService @Inject()(
-                                     repository: ApplicationsRepository,
-                                     clock: Clock,
-                                     idmsConnector: IdmsConnector,
-                                     emailConnector: EmailConnector
-                                   )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+  repository: ApplicationsRepository,
+  clock: Clock,
+  idmsConnector: IdmsConnector,
+  emailConnector: EmailConnector
+)(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
     def doRepositoryUpdate(application: Application, newApi: AddApiRequest): Future[Either[ApplicationsException, Unit]] = {
@@ -47,6 +49,7 @@ class ApplicationsService @Inject()(
           .copy(lastUpdated = LocalDateTime.now(clock), apis = application.apis ++ Seq(Api(newApi.id, newApi.endpoints)))
       )
     }
+
     this.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
         val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
@@ -220,7 +223,12 @@ class ApplicationsService @Inject()(
 
     def idmsApprovePrimaryScope(application: Application, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
       if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
-        idmsConnector.addClientScope(Primary, application.getPrimaryMasterCredential.clientId, scopeName)
+        application.getPrimaryMasterCredential match {
+          case Some(credential) =>
+            idmsConnector.addClientScope(Primary, credential.clientId, scopeName)
+          case None =>
+            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
+        }
       } else {
         Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryScope)))
       }
@@ -238,23 +246,108 @@ class ApplicationsService @Inject()(
   def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
     repository.findById(applicationId).flatMap {
       case Right(application) =>
-        if (application.getPrimaryMasterCredential.isHidden) {
-          idmsConnector.newSecret(Primary, application.getPrimaryMasterCredential.clientId).flatMap {
-            case Right(secret) =>
-              val updatedApplication = application
-                .setPrimaryCredentials(Seq(application.getPrimaryMasterCredential.setSecretFragment(secret.secret)))
-                .copy(lastUpdated = LocalDateTime.now(clock))
+        application.getPrimaryMasterCredential match {
+          case Some(credential) if credential.isHidden =>
+            idmsConnector.newSecret(Primary, credential.clientId).flatMap {
+              case Right(secret) =>
+                val updatedApplication = application
+                  .setPrimaryCredentials(Seq(credential.setSecretFragment(secret.secret)))
+                  .copy(lastUpdated = LocalDateTime.now(clock))
 
-              repository.update(updatedApplication).map(
-                _ => Right(secret)
-              )
-            case Left(e) => Future.successful(Left(e))
-          }
-        }
-        else {
-          Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
+                repository.update(updatedApplication).map(
+                  _ => Right(secret)
+                )
+              case Left(e) => Future.successful(Left(e))
+            }
+          case _ =>
+            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
         }
       case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+  private case class NewCredential(application: Application, credential: Credential, wasHidden: Boolean)
+
+  def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+    findById(applicationId, enrich = true).map {
+      case Right(application) => addCredentialValidation(application, environmentName)
+      case Left(e) => Left(e)
+    } flatMap {
+      case Right(application) => updateOrAddCredential(application, environmentName)
+      case Left(e) => Future.successful(Left(e))
+    } flatMap {
+      case Right(newCredential: NewCredential) => updateRepository(newCredential)
+      case Left(e) => Future.successful(Left(e))
+    } flatMap {
+      case Right(newCredential: NewCredential) => copyScopes(newCredential, environmentName)
+      case Left(e) => Future.successful(Left(e))
+    } map {
+      case Right(newCredential) => Right(newCredential.credential)
+      case Left(e) => Left(e)
+    }
+  }
+
+  private def addCredentialValidation(application: Application, environmentName: EnvironmentName): Either[ApplicationsException, Application] = {
+    if (application.getCredentialsFor(environmentName).size < 5) {
+      Right(application)
+    }
+    else {
+      Left(ApplicationCredentialLimitException.forApplication(application, environmentName))
+    }
+  }
+
+  private def updateOrAddCredential(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
+    (environmentName, application.getMasterCredentialFor(environmentName)) match {
+      case (Primary, Some(credential)) if credential.isHidden =>
+        idmsConnector.newSecret(environmentName, credential.clientId).map {
+          case Right(secret) =>
+            val newCredential = Credential(
+              clientId = credential.clientId,
+              created = LocalDateTime.now(clock),
+              clientSecret = Some(secret.secret),
+              secretFragment = Some(secret.secret.takeRight(4))
+            )
+
+            Right(NewCredential(application.replacePrimaryCredential(newCredential), newCredential, wasHidden = true))
+          case Left(e) => Left(e)
+        }
+      case _ =>
+        idmsConnector.createClient(environmentName, Client(application)).map {
+          case Right(clientResponse) =>
+            val newCredential = clientResponse.asNewCredential(clock)
+            Right(NewCredential(application.addCredential(newCredential, environmentName), newCredential, wasHidden = false))
+          case Left(e) => Left(e)
+        }
+    }
+  }
+
+  private def updateRepository(newCredential: NewCredential): Future[Either[ApplicationsException, NewCredential]] = {
+    val updated = newCredential.application.copy(lastUpdated = LocalDateTime.now(clock))
+    repository.update(updated).map {
+      case Right(()) => Right(newCredential.copy(application = updated))
+      case Left(e) => Left(e)
+    }
+  }
+
+  private def copyScopes(newCredential: NewCredential, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
+    if (!newCredential.wasHidden) {
+      Future.sequence(
+        newCredential.application
+          .getScopesFor(environmentName)
+          .filter(_.status == Approved)
+          .map(
+            scope =>
+              idmsConnector.addClientScope(environmentName, newCredential.credential.clientId, scope.name)
+          )
+      )
+        .map(useFirstException)
+        .map {
+          case Right(_) => Right(newCredential)
+          case Left(e) => Left(e)
+        }
+    }
+    else {
+      Future.successful(Right(newCredential))
     }
   }
 

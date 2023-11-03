@@ -793,6 +793,66 @@ class ApplicationsControllerSpec
       }
     }
   }
+
+  "add credential" - {
+    "must return 201 and a credential" in {
+      val id = "app-id-1"
+      val fixture = buildFixture()
+      val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"))
+
+      running(fixture.application) {
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Right(credential)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.CREATED
+        contentAsJson(result) mustBe Json.toJson(credential)
+      }
+    }
+
+   "must return 404 Not Found when adding credential but the application does not exist in the repository" in {
+      val id = "id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.NOT_FOUND
+      }
+    }
+
+    "must return 500 Internal Server Error for unexpected application exceptions" in {
+      val id = "id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.INTERNAL_SERVER_ERROR
+      }
+    }
+
+    "must return 409 Conflict when the application already has 5 credentials" in {
+      val id = "id"
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
+
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.CONFLICT
+      }
+    }
+  }
 }
 
 object ApplicationsControllerSpec {

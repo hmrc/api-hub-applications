@@ -104,10 +104,10 @@ object ApplicationLenses {
       applicationPrimaryScopes.get(application)
         .exists(scope => scope.status == Pending)
 
-    def getPrimaryMasterCredential: Credential =
+    def getPrimaryMasterCredential: Option[Credential] =
       applicationPrimaryCredentials.get(application)
         .sortWith((a, b) => a.created.isAfter(b.created))
-        .head
+        .headOption
 
     def getPrimaryCredentials: Seq[Credential] =
       applicationPrimaryCredentials.get(application)
@@ -127,6 +127,19 @@ object ApplicationLenses {
         application.getPrimaryCredentials.filterNot(_.clientId == clientId)
       )
 
+    def replacePrimaryCredential(credential: Credential): Application = {
+      val index = application.getPrimaryCredentials.indexWhere(_.clientId == credential.clientId)
+      if (index < 0 ) {
+        throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
+        )
+      }
+
+      application.setPrimaryCredentials(
+        application.getPrimaryCredentials.updated(index, credential)
+      )
+    }
+
     def getSecondaryScopes: Seq[Scope] =
       applicationSecondaryScopes.get(application)
 
@@ -139,10 +152,10 @@ object ApplicationLenses {
         applicationSecondaryScopes.get(application) :+ scope
       )
 
-    def getSecondaryMasterCredential: Credential =
+    def getSecondaryMasterCredential: Option[Credential] =
       applicationSecondaryCredentials.get(application)
         .sortWith((a, b) => a.created.isAfter(b.created))
-        .head
+        .headOption
 
     def getSecondaryCredentials: Seq[Credential] =
       applicationSecondaryCredentials.get(application)
@@ -179,6 +192,54 @@ object ApplicationLenses {
             case credential => credential
           }
         )
+    }
+
+    def replaceSecondaryCredential(credential: Credential): Application = {
+      val index = application.getSecondaryCredentials.indexWhere(_.clientId == credential.clientId)
+      if (index < 0 ) {
+        throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
+        )
+      }
+
+      application.setSecondaryCredentials(
+        application.getSecondaryCredentials.updated(index, credential)
+      )
+    }
+
+    def getMasterCredentialFor(environmentName: EnvironmentName): Option[Credential] = {
+      environmentName match {
+        case Primary => getPrimaryMasterCredential
+        case Secondary => getSecondaryMasterCredential
+      }
+    }
+
+    def getCredentialsFor(environmentName: EnvironmentName): Seq[Credential] = {
+      environmentName match {
+        case Primary => application.getPrimaryCredentials
+        case Secondary => application.getSecondaryCredentials
+      }
+    }
+
+    def getScopesFor(environmentName: EnvironmentName): Seq[Scope] = {
+      environmentName match {
+        case Primary => getPrimaryScopes
+        case Secondary => getSecondaryScopes
+      }
+    }
+
+    def addCredential(credential: Credential, environmentName: EnvironmentName): Application = {
+      environmentName match {
+        case Primary => application.addPrimaryCredential(credential)
+        case Secondary => application.addSecondaryCredential(credential)
+      }
+    }
+
+    def replaceCredential(credential: Credential, environmentName: EnvironmentName): Application = {
+      environmentName match {
+        case Primary => application.replacePrimaryCredential(credential)
+        case Secondary => application.replaceSecondaryCredential(credential)
+      }
     }
 
     def hasTeamMember(email: String): Boolean =

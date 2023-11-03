@@ -27,7 +27,6 @@ import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.SensitiveApp
 import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.DbApplication
 
 import java.time.LocalDateTime
-import scala.Console
 
 class ApplicationsRepositorySpec
   extends AnyFreeSpec
@@ -98,7 +97,6 @@ class ApplicationsRepositorySpec
                  |""".stripMargin)
 
       val result = json.validate(SensitiveApplication.formatSensitiveApplication(NoCrypto))
-      Console.println(s"result: $result")
       result mustBe a[JsSuccess[_]]
 
       val anEndpoint = Endpoint("GET", "/foo/bar")
@@ -113,9 +111,6 @@ class ApplicationsRepositorySpec
         Seq(TeamMember("test2@test.com")),
         Environments()
       ).copy(apis = Seq(anApi))
-
-      Console.println(s"expected: $expected")
-      Console.println(s"expected as json: ${Json.toJson(expected)}")
 
       result.get.decryptedValue.toModel mustBe expected
     }

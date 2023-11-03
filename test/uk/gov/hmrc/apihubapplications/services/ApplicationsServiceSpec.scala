@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.captor.ArgCaptor
-import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.mockito.{ArgumentMatchers, Mockito, MockitoSugar}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -36,7 +36,7 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.{Clock, Instant, LocalDateTime, ZoneId}
+import java.time._
 import java.util.UUID
 import scala.concurrent.Future
 
@@ -1202,7 +1202,7 @@ class ApplicationsServiceSpec
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
 
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1","test-scope-2")))(HeaderCarrier()).map {
+      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
         actual =>
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-1"))(any())
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq("test-scope-2"))(any())
@@ -1322,16 +1322,184 @@ class ApplicationsServiceSpec
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
     }
+  }
 
+  "addCredential" - {
+
+    "must create a new secondary credential and copy the previous secondary master scopes" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val testAppId = "test-app-id"
+      val oldTestClientId = "test-client-id"
+      val newTestClientId = "new-test-client-id"
+      val oldSecret = "test-secret-9876"
+      val newSecret = "test-secret-1234"
+      val scopeName = "test-scope"
+      val existingCredential = Credential(oldTestClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), Some(oldSecret), Some("9876"))
+      val expectedCredential = Credential(newTestClientId, LocalDateTime.now(clock), Some("test-secret-1234"), Some("1234"))
+
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments(primary = Environment(), secondary = Environment(Seq(Scope(scopeName, Approved)), Seq(existingCredential)))
+      )
+
+      val existingClientResponse = ClientResponse(oldTestClientId, oldSecret)
+      val newClientResponse = ClientResponse(newTestClientId, newSecret)
+
+      val expectedClient = Client(app.name, app.name)
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(oldTestClientId))(any())).thenReturn(Future.successful(Right(existingClientResponse)))
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), any())(any())).thenReturn(Future.successful(Right(newClientResponse)))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(oldTestClientId))(any())).thenReturn(Future.successful(Right(Seq(ClientScope(scopeName)))))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(newTestClientId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(newTestClientId))(any())).thenReturn(Future.successful(Right(newClientResponse)))
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+
+      val updatedApp = app
+        .addSecondaryCredential(expectedCredential)
+        .copy(lastUpdated = LocalDateTime.now(clock))
+
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
+      service.addCredential(testAppId, Secondary)(HeaderCarrier()) map {
+        newCredential =>
+          verify(idmsConnector).createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(expectedClient))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(newTestClientId), ArgumentMatchers.eq(scopeName))(any())
+          verify(repository).update(updatedApp)
+          newCredential mustBe Right(expectedCredential)
+      }
+    }
+
+    "must create a new primary credential and copy the previous primary master scopes where the existing credential is not hidden" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val testAppId = "test-app-id"
+      val oldTestClientId = "test-client-id"
+      val newTestClientId = "new-test-client-id"
+      val newSecret = "test-secret-1234"
+      val scopeName = "test-scope"
+      val existingCredential = Credential(oldTestClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), None, Some("9876"))
+      val expectedCredential = Credential(newTestClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"))
+
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments(primary = Environment(Seq(Scope(scopeName, Approved)), Seq(existingCredential)), secondary = Environment())
+      )
+
+      val newClientResponse = ClientResponse(newTestClientId, newSecret)
+      val expectedClient = Client(app.name, app.name)
+
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), any())(any())).thenReturn(Future.successful(Right(newClientResponse)))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(oldTestClientId))(any())).thenReturn(Future.successful(Right(Seq(ClientScope(scopeName)))))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(newTestClientId), ArgumentMatchers.eq(scopeName))(any())).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(newTestClientId))(any())).thenReturn(Future.successful(Right(newClientResponse)))
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+
+      val updatedApp = app
+        .addPrimaryCredential(expectedCredential)
+        .copy(lastUpdated = LocalDateTime.now(clock))
+
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
+      service.addCredential(testAppId, Primary)(HeaderCarrier()) map {
+        newCredential =>
+          verify(idmsConnector).createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(expectedClient))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(newTestClientId), ArgumentMatchers.eq(scopeName))(any())
+          verify(repository).update(updatedApp)
+          newCredential mustBe Right(expectedCredential)
+      }
+    }
+
+    "must update existing primary credential and set a secret fragment where the existing credential is hidden" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val testAppId = "test-app-id"
+      val testClientId = "test-client-id"
+      val scopeName = "test-scope"
+
+      val existingHiddenCredential = Credential(testClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), None, None)
+      val newSecret = "test-secret-1234"
+
+      val expectedCredential = Credential(testClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"))
+      val clientResponse = ClientResponse(testClientId, newSecret)
+
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments(primary = Environment(Seq(Scope(scopeName, Approved)), Seq(existingHiddenCredential)), secondary = Environment())
+      )
+
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq(ClientScope(scopeName)))))
+      when(idmsConnector.newSecret(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Secret(newSecret))))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(clientResponse)))
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+
+      val updatedApp = app.setPrimaryCredentials(Seq(expectedCredential))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
+      service.addCredential(testAppId, Primary)(HeaderCarrier()) map {
+        newCredential =>
+          verify(idmsConnector, Mockito.times(0)).createClient(ArgumentMatchers.eq(Primary), any())(any())
+          verify(idmsConnector, Mockito.times(0)).addClientScope(ArgumentMatchers.eq(Primary), any(), any())(any())
+          verify(repository).update(updatedApp)
+          newCredential mustBe Right(expectedCredential)
+      }
+    }
+
+    "must return ApplicationCredentialLimitException if there are already 5 credentials" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).setPrimaryCredentials(
+        (1 to 5).map(i => Credential(s"test-client-$i", LocalDateTime.now(clock), None, None))
+      )
+
+      when(idmsConnector.fetchClientScopes(any(), any())(any())).thenReturn(Future.successful(Right(Seq.empty)))
+      when(repository.findById(any())).thenReturn(Future.successful(Right(application)))
+
+      service.addCredential(applicationId, Primary)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApplicationCredentialLimitException.forApplication(application, Primary))
+      }
+    }
   }
 
   private case class Fixture(
-                              clock: Clock,
-                              repository: ApplicationsRepository,
-                              idmsConnector: IdmsConnector,
-                              emailConnector: EmailConnector,
-                              service: ApplicationsService
-                            )
+    clock: Clock,
+    repository: ApplicationsRepository,
+    idmsConnector: IdmsConnector,
+    emailConnector: EmailConnector,
+    service: ApplicationsService
+  )
 
   private def buildFixture: Fixture = {
     val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
@@ -1343,3 +1511,4 @@ class ApplicationsServiceSpec
   }
 
 }
+
