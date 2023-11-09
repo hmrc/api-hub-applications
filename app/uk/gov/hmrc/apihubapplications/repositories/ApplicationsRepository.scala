@@ -17,18 +17,15 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
-import org.bson.types.ObjectId
 import org.mongodb.scala.bson.{BsonDocument, Document}
 import org.mongodb.scala.model._
 import play.api.Logging
-import play.api.libs.json.Format
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Pending, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{sensitiveStringFormat, stringToObjectId}
-import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.DbApplication
-import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.{SensitiveApplication, SensitiveTeamMember}
-import uk.gov.hmrc.crypto.Sensitive.SensitiveString
-import uk.gov.hmrc.crypto.json.JsonEncryption
+import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
+import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
+import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
+import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
@@ -40,11 +37,11 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ApplicationsRepository @Inject()(
   mongoComponent: MongoComponent,
-  @Named("aes") crypto: Encrypter with Decrypter
+  @Named("aes") implicit val crypto: Encrypter with Decrypter
 )(implicit ec: ExecutionContext)
   extends PlayMongoRepository[SensitiveApplication](
     collectionName = "applications",
-    domainFormat = SensitiveApplication.formatSensitiveApplication(crypto),
+    domainFormat = formatDataWithMongoIdentifier[SensitiveApplication],
     mongoComponent = mongoComponent,
     indexes = Seq(
       IndexModel(Indexes.ascending("teamMembers.email")),
@@ -63,8 +60,6 @@ class ApplicationsRepository @Inject()(
   )
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
-
-  implicit val theCrypto: Encrypter with Decrypter = crypto
 
   def findAll(): Future[Seq[Application]] = {
     Mdc.preservingMdc {
@@ -187,27 +182,5 @@ class ApplicationsRepository @Inject()(
   def listIndexes: Future[Seq[Document]] = {
     collection.listIndexes().toFuture()
   }
-
-}
-
-object ApplicationsRepository extends Logging {
-
-  def stringToObjectId(id: String): Option[ObjectId] = {
-    try {
-      Some(new ObjectId(id))
-    }
-    catch {
-      case _: IllegalArgumentException =>
-        logger.debug(s"Invalid ObjectId specified: $id")
-        None
-    }
-  }
-
-  def stringToObjectId(id: Option[String]): Option[ObjectId] = {
-    id.flatMap(stringToObjectId)
-  }
-
-  private def sensitiveStringFormat(implicit crypto: Encrypter with Decrypter): Format[SensitiveString] =
-    JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
 
 }

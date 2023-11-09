@@ -38,8 +38,8 @@ import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.idms.Secret
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.SensitiveApplication
-import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.DbApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}

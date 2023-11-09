@@ -27,10 +27,9 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
@@ -39,7 +38,8 @@ class ApplicationsRepositoryIntegrationSpec
   extends AnyFreeSpec
   with Matchers
   with DefaultPlayMongoRepositorySupport[SensitiveApplication]
-  with OptionValues {
+  with OptionValues
+  with MdcTesting {
 
   private lazy val playApplication = {
     new GuiceApplicationBuilder()
@@ -53,22 +53,6 @@ class ApplicationsRepositoryIntegrationSpec
 
   override protected lazy val repository: ApplicationsRepository = {
     playApplication.injector.instanceOf[ApplicationsRepository]
-  }
-
-  private val testMdcData = Map("X-Request-Id" -> "test-request-id")
-
-  private def setMdcData(): Unit = {
-    Mdc.putMdc(testMdcData)
-  }
-
-  private case class ResultWithMdcData[T](data: T, mdcData: Map[String, String])
-
-  private object ResultWithMdcData {
-
-    def apply[T](data: T): ResultWithMdcData[T] = {
-      ResultWithMdcData(data, Mdc.mdcData)
-    }
-
   }
 
   "insert" - {

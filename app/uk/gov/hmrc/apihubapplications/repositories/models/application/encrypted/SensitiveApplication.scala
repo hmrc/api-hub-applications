@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.repositories.models.encrypted
+package uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted
 
 import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.models.application.Api
-import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.{DbApplication, DbEnvironments}
+import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier
+import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.{DbApplication, DbEnvironments}
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 
 import java.time.LocalDateTime
@@ -32,7 +33,7 @@ case class SensitiveApplication(
   teamMembers: Seq[SensitiveTeamMember],
   environments: DbEnvironments,
   apis: Option[Seq[Api]]
-) extends Sensitive[DbApplication] {
+) extends Sensitive[DbApplication] with MongoIdentifier {
 
   override def decryptedValue: DbApplication = {
     DbApplication(
@@ -64,36 +65,8 @@ object SensitiveApplication {
     )
   }
 
-  private def defaultFormat(implicit crypto: Encrypter with Decrypter): Format[SensitiveApplication] = {
-    Json.format[SensitiveApplication]
-  }
-
-  private def writesSensitiveApplicationWithId(implicit crypto: Encrypter with Decrypter): Writes[SensitiveApplication] = {
-    SensitiveApplication.defaultFormat.transform(
-      json => json.transform(
-        JsPath.json.update((JsPath \ "_id" \ "$oid").json.copyFrom((JsPath \ "id").json.pick))
-          andThen (JsPath \ "id").json.prune
-      ).get
-    )
-  }
-
-  private def writesSensitiveApplication(implicit crypto: Encrypter with Decrypter): Writes[SensitiveApplication] = {
-    (application: SensitiveApplication) => {
-      application.id match {
-        case Some(_) => writesSensitiveApplicationWithId.writes(application)
-        case _ => SensitiveApplication.defaultFormat.writes(application)
-      }
-    }
-  }
-
-  private def readsSensitiveApplication(implicit crypto: Encrypter with Decrypter): Reads[SensitiveApplication] = {
-    JsPath.json.update((JsPath \ "id").json
-      .copyFrom((JsPath \ "_id" \ "$oid").json.pick))
-      .andThen(SensitiveApplication.defaultFormat)
-  }
-
   implicit def formatSensitiveApplication(implicit crypto: Encrypter with Decrypter): Format[SensitiveApplication] = {
-    Format(readsSensitiveApplication, writesSensitiveApplication)
+    Json.format[SensitiveApplication]
   }
 
 }

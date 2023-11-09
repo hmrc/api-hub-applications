@@ -23,14 +23,19 @@ import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
-import uk.gov.hmrc.apihubapplications.repositories.models.encrypted.SensitiveApplication
-import uk.gov.hmrc.apihubapplications.repositories.models.unencrypted.DbApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
+import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 
 import java.time.LocalDateTime
 
 class ApplicationsRepositorySpec
   extends AnyFreeSpec
     with Matchers {
+
+  private implicit val crypto: Encrypter with Decrypter = NoCrypto
+  private implicit val formatSensitiveApplication: Format[SensitiveApplication] = SensitiveApplication.formatSensitiveApplication
 
   "JSON serialisation and deserialisation" - {
     "must successfully deserialise JSON without apis to create an Application object" in {
@@ -51,7 +56,7 @@ class ApplicationsRepositorySpec
            |}
            |""".stripMargin)
 
-      val result = json.validate(SensitiveApplication.formatSensitiveApplication(NoCrypto))
+      val result = json.validate(formatDataWithMongoIdentifier[SensitiveApplication])
       result mustBe a[JsSuccess[_]]
 
       val expected = Application(
@@ -96,7 +101,7 @@ class ApplicationsRepositorySpec
                  |}
                  |""".stripMargin)
 
-      val result = json.validate(SensitiveApplication.formatSensitiveApplication(NoCrypto))
+      val result = json.validate(formatDataWithMongoIdentifier[SensitiveApplication])
       result mustBe a[JsSuccess[_]]
 
       val anEndpoint = Endpoint("GET", "/foo/bar")
@@ -119,7 +124,7 @@ class ApplicationsRepositorySpec
       val now = LocalDateTime.now()
       val application = SensitiveApplication(DbApplication(Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())))
 
-      val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
+      val result = Json.toJson(application)(formatDataWithMongoIdentifier[SensitiveApplication])
       (result \ "id") mustBe a[JsUndefined]
       (result \ "_id" \ "$oid") mustBe JsDefined(JsString("63bebf8bbbeccc26c12294e5"))
       (result \ "name") mustBe JsDefined(JsString("test-app-1"))
