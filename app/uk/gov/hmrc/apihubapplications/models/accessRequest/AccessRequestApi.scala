@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.repositories.models.unencrypted
+package uk.gov.hmrc.apihubapplications.models.accessRequest
 
-trait DbModel[T] {
+import play.api.libs.json.{Format, Json}
 
-  def toModel(dbApplication: DbApplication): T
+case class AccessRequestApi(
+  apiId: String,
+  apiName: String,
+  endpoints: Seq[AccessRequestEndpoint]
+)
+
+object AccessRequestApi {
+
+  implicit val formatAccessRequestApi: Format[AccessRequestApi] = Json.format[AccessRequestApi]
 
 }

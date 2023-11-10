@@ -14,29 +14,29 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.repositories.models.encrypted
+package uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application.Creator
+import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 import uk.gov.hmrc.crypto.json.JsonEncryption
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 
-case class SensitiveCreator(email: SensitiveString) extends Sensitive[Creator] {
+case class SensitiveTeamMember(email: SensitiveString) extends Sensitive[TeamMember] {
 
-  override def decryptedValue: Creator = Creator(email = email.decryptedValue)
+  override def decryptedValue: TeamMember = TeamMember(email = email.decryptedValue)
 
 }
 
-object SensitiveCreator {
+object SensitiveTeamMember {
 
-  def apply(creator: Creator): SensitiveCreator = {
-    SensitiveCreator(email = SensitiveString(creator.email))
+  def apply(teamMember: TeamMember): SensitiveTeamMember = {
+    SensitiveTeamMember(email = SensitiveString(teamMember.email))
   }
 
-  implicit def formatSensitiveCreator(implicit crypto: Encrypter with Decrypter): Format[SensitiveCreator] = {
+  implicit def formatSensitiveTeamMember(implicit crypto: Encrypter with Decrypter): Format[SensitiveTeamMember] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
-    Json.format[SensitiveCreator]
+    Json.format[SensitiveTeamMember]
   }
 
 }

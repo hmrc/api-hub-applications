@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.repositories.models.unencrypted
+package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted
 
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
