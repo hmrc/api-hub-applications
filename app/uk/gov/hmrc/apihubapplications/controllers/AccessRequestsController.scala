@@ -18,10 +18,10 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import play.api.libs.json.{JsError, JsSuccess, JsValue}
-import play.api.mvc.{Action, ControllerComponents, Request}
+import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestRequest
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestRequest, AccessRequestStatus}
 import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -43,6 +43,13 @@ class AccessRequestsController @Inject()(
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
+  }
+
+  def getAccessRequests(applicationId: Option[String], status: Option[AccessRequestStatus]): Action[AnyContent] = identify.compose(Action(parse.json)).async {
+    accessRequestsService.getAccessRequests(applicationId, status).map {
+      requests =>
+        Ok(Json.toJson(requests))
+    }
   }
 
 }

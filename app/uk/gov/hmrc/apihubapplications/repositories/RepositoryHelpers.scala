@@ -17,6 +17,8 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import org.bson.types.ObjectId
+import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.model.Filters
 import play.api.libs.json.Format
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 import uk.gov.hmrc.crypto.json.JsonEncryption
@@ -40,5 +42,12 @@ object RepositoryHelpers {
 
   def sensitiveStringFormat(implicit crypto: Encrypter with Decrypter): Format[SensitiveString] =
     JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
+
+  def buildAndFilter(filters: Option[Bson]*): Bson = {
+    filters.flatten match {
+      case filters if filters.nonEmpty => Filters.and(filters: _*)
+      case _ => Filters.empty()
+    }
+  }
 
 }

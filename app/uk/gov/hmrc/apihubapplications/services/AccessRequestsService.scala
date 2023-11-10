@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest, AccessRequestStatus}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 
 import java.time.Clock
@@ -31,6 +31,10 @@ class AccessRequestsService @Inject()(
 
   def createAccessRequest(request: AccessRequestRequest): Future[Seq[AccessRequest]] = {
     repository.insert(request.toAccessRequests(clock))
+  }
+
+  def getAccessRequests(applicationId: Option[String], status: Option[AccessRequestStatus]): Future[Seq[AccessRequest]] = {
+    repository.find(applicationId, status)
   }
 
 }

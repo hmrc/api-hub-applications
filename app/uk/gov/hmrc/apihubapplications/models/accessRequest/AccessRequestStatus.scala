@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models.accessRequest
 
+import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
 
 sealed trait AccessRequestStatus
@@ -31,5 +32,26 @@ object AccessRequestStatus extends Enumerable.Implicits {
 
   implicit val enumerable: Enumerable[AccessRequestStatus] =
     Enumerable(values.map(value => value.toString -> value): _*)
+
+  implicit val queryStringBindable: QueryStringBindable[AccessRequestStatus] = new QueryStringBindable[AccessRequestStatus] {
+
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, AccessRequestStatus]] = {
+      for {
+        statusName <- params
+          .find(_._1.toLowerCase == "status")
+          .flatMap(_._2.headOption)
+          .map(_.toUpperCase)
+        status <- enumerable.withName(statusName) match {
+            case Some(status) => Some(Right(status))
+            case None => Some(Left(s"Unknown access request status $statusName"))
+          }
+      } yield status
+    }
+
+    override def unbind(key: String, value: AccessRequestStatus): String = {
+      s"status=${value.toString}"
+    }
+
+  }
 
 }
