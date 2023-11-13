@@ -52,7 +52,7 @@ class AccessRequestStatusSpec extends AnyFreeSpec with Matchers with TableDriven
       actual mustBe Some(Left("Unknown access request status DECLINED"))
     }
 
-    "must return a message when the status name has no value" in {
+    "must return None when the status name has no value" in {
       val params = Map("status" -> Seq.empty)
       val actual = AccessRequestStatus.queryStringBindable.bind("test-key", params)
       actual mustBe None
