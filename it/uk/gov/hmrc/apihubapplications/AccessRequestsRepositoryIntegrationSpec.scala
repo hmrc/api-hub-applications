@@ -22,7 +22,7 @@ import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved, Pending}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.accessRequest.encrypted.SensitiveAccessRequest
 import uk.gov.hmrc.mongo.MongoComponent
@@ -105,6 +105,98 @@ class AccessRequestsRepositoryIntegrationSpec
           result.data must contain theSameElementsAs expected
           result.mdcData mustBe testMdcData
       }
+    }
+  }
+
+  "find" - {
+    val applicationId1 = "test-application-id-1"
+    val applicationId2 = "test-application-id-2"
+
+    // In these test access requests we'll use the Api IDs as a pseudo identifier
+    val accessRequest1 = AccessRequest(
+      applicationId = applicationId1,
+      apiId = "test-api-id-1",
+      apiName = "test-api-name",
+      status = Pending,
+      supportingInformation = "test-supporting-information",
+      requested = LocalDateTime.now(),
+      requestedBy = "test-requested-by"
+    )
+
+    val accessRequest2 = AccessRequest(
+      applicationId = applicationId1,
+      apiId = "test-api-id-2",
+      apiName = "test-api-name",
+      status = Approved,
+      supportingInformation = "test-supporting-information",
+      requested = LocalDateTime.now(),
+      requestedBy = "test-requested-by"
+    )
+
+    val accessRequest3 = AccessRequest(
+      applicationId = applicationId2,
+      apiId = "test-api-id-3",
+      apiName = "test-api-name",
+      status = Pending,
+      supportingInformation = "test-supporting-information",
+      requested = LocalDateTime.now(),
+      requestedBy = "test-requested-by"
+    )
+
+    "must return all access requests when no filters are applied" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2, accessRequest3)).flatMap(
+        _ =>
+          repository.find(None, None).map(ResultWithMdcData(_)).map {
+            result =>
+              result.data.size mustBe 3
+              result.data.map(_.apiId) must contain theSameElementsAs Seq(accessRequest1.apiId, accessRequest2.apiId, accessRequest3.apiId)
+              result.mdcData mustBe testMdcData
+          }
+      )
+    }
+
+    "must apply an application Id filter when specified (but not filter by status)" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2, accessRequest3)).flatMap(
+        _ =>
+          repository.find(Some(applicationId1), None).map(ResultWithMdcData(_)).map {
+            result =>
+              result.data.size mustBe 2
+              result.data.map(_.apiId) must contain theSameElementsAs Seq(accessRequest1.apiId, accessRequest2.apiId)
+              result.mdcData mustBe testMdcData
+          }
+      )
+    }
+
+    "must apply a status filter when specified (but not filter by application Id)" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2, accessRequest3)).flatMap(
+        _ =>
+          repository.find(None, Some(Pending)).map(ResultWithMdcData(_)).map {
+            result =>
+              result.data.size mustBe 2
+              result.data.map(_.apiId) must contain theSameElementsAs Seq(accessRequest1.apiId, accessRequest3.apiId)
+              result.mdcData mustBe testMdcData
+          }
+      )
+    }
+
+    "must apply both application Id and status filters when specified" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2, accessRequest3)).flatMap(
+        _ =>
+          repository.find(Some(applicationId1), Some(Pending)).map(ResultWithMdcData(_)).map {
+            result =>
+              result.data.size mustBe 1
+              result.data.map(_.apiId) must contain theSameElementsAs Seq(accessRequest1.apiId)
+              result.mdcData mustBe testMdcData
+          }
+      )
     }
   }
 

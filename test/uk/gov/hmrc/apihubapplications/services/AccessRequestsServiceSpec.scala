@@ -20,13 +20,15 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestStatus, Pending}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
 
 import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.Future
 
-class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator {
+class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator with TableDrivenPropertyChecks {
 
   "createAccessRequest" - {
     "must pass the correct requests to the repository" in {
@@ -41,6 +43,31 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         result =>
           verify(fixture.repository).insert(ArgumentMatchers.eq(request.toAccessRequests(fixture.clock)))
           result mustBe expected
+      }
+    }
+  }
+
+  "getAccessRequests" - {
+    "must request the correct access requests from the repository" in {
+      val filters = Table(
+        ("Application Id", "Status"),
+        (Some("test-application-id"), Some(Pending)),
+        (Some("test-application-id"), None),
+        (None, Some(Pending)),
+        (None, None)
+      )
+
+      val fixture = buildFixture()
+
+      forAll(filters) {(applicationIdFilter: Option[String], statusFilter: Option[AccessRequestStatus]) =>
+        val expected = sampleAccessRequests()
+        when(fixture.repository.find(any(), any())).thenReturn(Future.successful(expected))
+
+        fixture.accessRequestsService.getAccessRequests(applicationIdFilter, statusFilter).map {
+          actual =>
+            verify(fixture.repository).find(ArgumentMatchers.eq(applicationIdFilter), ArgumentMatchers.eq(statusFilter))
+            actual mustBe expected
+        }
       }
     }
   }

@@ -21,6 +21,7 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -30,7 +31,7 @@ import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
 import play.api.test.Helpers._
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestRequest
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestRequest, AccessRequestStatus, Pending}
 import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
 import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
 
@@ -42,7 +43,8 @@ class AccessRequestsControllerSpec
     with MockitoSugar
     with ScalaCheckDrivenPropertyChecks
     with AccessRequestGenerator
-    with OptionValues {
+    with OptionValues
+    with TableDrivenPropertyChecks {
 
   "createAccessRequest" - {
     "must pass the request on to the service layer and return 201 Created on success" in {
@@ -73,6 +75,34 @@ class AccessRequestsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST
+      }
+    }
+  }
+
+  "getAccessRequests" - {
+    "must request the correct access requests from the service layer" in {
+      val filters = Table(
+        ("Application Id", "Status"),
+        (Some("test-application-id"), Some(Pending)),
+        (Some("test-application-id"), None),
+        (None, Some(Pending)),
+        (None, None)
+      )
+
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        forAll(filters) { (applicationIdFilter: Option[String], statusFilter: Option[AccessRequestStatus]) =>
+          val expected = sampleAccessRequests()
+          when(fixture.accessRequestsService.getAccessRequests(any(), any())).thenReturn(Future.successful(expected))
+
+          val request = FakeRequest(GET, routes.AccessRequestsController.getAccessRequests(applicationIdFilter, statusFilter).url)
+          val result = route(fixture.application, request).value
+
+          status(result) mustBe OK
+          contentAsJson(result) mustBe Json.toJson(expected)
+          verify(fixture.accessRequestsService).getAccessRequests(ArgumentMatchers.eq(applicationIdFilter), ArgumentMatchers.eq(statusFilter))
+        }
       }
     }
   }
