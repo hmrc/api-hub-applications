@@ -15,7 +15,8 @@ lazy val microservice = Project("api-hub-applications", file("."))
       "play.http.router" -> "testOnlyDoNotUseInAppConf.Routes"
     ),
     RoutesKeys.routesImport ++= Seq(
-      "uk.gov.hmrc.apihubapplications.models.application.EnvironmentName"
+      "uk.gov.hmrc.apihubapplications.models.application.EnvironmentName",
+      "uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestStatus"
     )
   )
   .configs(IntegrationTest)

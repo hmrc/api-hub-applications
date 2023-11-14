@@ -17,8 +17,10 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
+import com.mongodb.client.model.IndexOptions
+import org.mongodb.scala.model.{Filters, IndexModel, Indexes}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
 import uk.gov.hmrc.apihubapplications.repositories.models.accessRequest.encrypted.SensitiveAccessRequest
@@ -39,7 +41,9 @@ class AccessRequestsRepository @Inject()(
     collectionName = "access-requests",
     domainFormat = formatDataWithMongoIdentifier[SensitiveAccessRequest],
     mongoComponent = mongoComponent,
-    indexes = Seq.empty,
+    indexes = Seq(
+      IndexModel(Indexes.ascending("applicationId", "status"), new IndexOptions().name("applicationId-status-index"))
+    ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
       Codecs.playFormatCodec(sensitiveStringFormat(crypto))
@@ -66,6 +70,19 @@ class AccessRequestsRepository @Inject()(
             accessRequest.setId(result.getInsertedIds.get(index).asObjectId().getValue.toString)
         }
     }
+  }
+
+  def find(applicationId: Option[String], status: Option[AccessRequestStatus]): Future[Seq[AccessRequest]] = {
+    Mdc.preservingMdc {
+      collection
+        .find(
+          buildAndFilter(
+            applicationId.map(id => Filters.equal("applicationId", id)),
+            status.map(status => Filters.equal("status", status.toString))
+          )
+        )
+        .toFuture()
+    } map {requests => requests.map(_.decryptedValue)}
   }
 
 }
