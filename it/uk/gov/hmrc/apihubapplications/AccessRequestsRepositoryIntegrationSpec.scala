@@ -200,4 +200,57 @@ class AccessRequestsRepositoryIntegrationSpec
     }
   }
 
+  "findById" - {
+    val accessRequest1 = AccessRequest(
+      applicationId = "test-application-id-1",
+      apiId = "test-api-id-1",
+      apiName = "test-api-name-1",
+      status = Pending,
+      supportingInformation = "test-supporting-information-1",
+      requested = LocalDateTime.now(),
+      requestedBy = "test-requested-by-1"
+    )
+
+    val accessRequest2 = AccessRequest(
+      applicationId = "test-application-id-2",
+      apiId = "test-api-id-2",
+      apiName = "test-api-name-2",
+      status = Pending,
+      supportingInformation = "test-supporting-information-2",
+      requested = LocalDateTime.now(),
+      requestedBy = "test-requested-by-2"
+    )
+
+    "must return the access request when it exists in the collection" in {
+      repository.insert(Seq(accessRequest1, accessRequest2)).flatMap{
+        inserted =>
+          val id = inserted.headOption.value.id.value
+          repository.findById(id).map(
+            result =>
+              result mustBe Some(accessRequest1.setId(id))
+          )
+      }
+    }
+
+    "must return None when the access request is not in the collection" in {
+      repository.insert(Seq(accessRequest1, accessRequest2)).flatMap{
+        _ =>
+          repository.findById("6553a3bfeb97d767cb72c5b2").map(
+            result =>
+              result mustBe None
+          )
+      }
+    }
+
+    "must return None when the Id is not a valid Mongo identifier" in {
+      repository.insert(Seq(accessRequest1, accessRequest2)).flatMap{
+        _ =>
+          repository.findById("not an Id").map(
+            result =>
+              result mustBe None
+          )
+      }
+    }
+  }
+
 }

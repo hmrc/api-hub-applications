@@ -37,4 +37,8 @@ class AccessRequestsService @Inject()(
     repository.find(applicationId, status)
   }
 
+  def getAccessRequest(id: String): Future[Option[AccessRequest]] = {
+    repository.findById(id)
+  }
+
 }

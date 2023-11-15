@@ -45,10 +45,17 @@ class AccessRequestsController @Inject()(
       }
   }
 
-  def getAccessRequests(applicationId: Option[String], status: Option[AccessRequestStatus]): Action[AnyContent] = identify.compose(Action(parse.json)).async {
+  def getAccessRequests(applicationId: Option[String], status: Option[AccessRequestStatus]): Action[AnyContent] = identify.async {
     accessRequestsService.getAccessRequests(applicationId, status).map {
       requests =>
         Ok(Json.toJson(requests))
+    }
+  }
+
+  def getAccessRequest(id: String): Action[AnyContent] = identify.async {
+    accessRequestsService.getAccessRequest(id).map {
+      case Some(accessRequest) => Ok(Json.toJson(accessRequest))
+      case _ => NotFound
     }
   }
 

@@ -21,7 +21,7 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestStatus, Pending}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus, Pending}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
 
@@ -67,6 +67,28 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
           actual =>
             verify(fixture.repository).find(ArgumentMatchers.eq(applicationIdFilter), ArgumentMatchers.eq(statusFilter))
             actual mustBe expected
+        }
+      }
+    }
+  }
+
+  "getAccessRequest" - {
+    "must request the correct access request from the repository" in {
+      val accessRequests = Table(
+        ("Id", "Access Request"),
+        ("test-id-1", Some(sampleAccessRequest())),
+        ("test-id-2", None)
+      )
+
+      val fixture = buildFixture()
+
+      forAll(accessRequests) {(id: String, accessRequest: Option[AccessRequest]) =>
+        when(fixture.repository.findById(any())).thenReturn(Future.successful(accessRequest))
+
+        fixture.accessRequestsService.getAccessRequest(id).map {
+          actual =>
+            verify(fixture.repository).findById(ArgumentMatchers.eq(id))
+            actual mustBe accessRequest
         }
       }
     }
