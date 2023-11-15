@@ -107,6 +107,37 @@ class AccessRequestsControllerSpec
     }
   }
 
+  "getAccessRequest" - {
+    "must return 200 Ok and the access request when it exists" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val accessRequest = sampleAccessRequest()
+        when(fixture.accessRequestsService.getAccessRequest(any())).thenReturn(Future.successful(Some(accessRequest)))
+
+        val request = FakeRequest(GET, routes.AccessRequestsController.getAccessRequest(accessRequest.id.value).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(accessRequest)
+        verify(fixture.accessRequestsService).getAccessRequest(ArgumentMatchers.eq(accessRequest.id.value))
+      }
+    }
+
+    "must return 4040 Not Found when the access request does not exist" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        when(fixture.accessRequestsService.getAccessRequest(any())).thenReturn(Future.successful(None))
+
+        val request = FakeRequest(GET, routes.AccessRequestsController.getAccessRequest("test-id").url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
   private case class Fixture(application: PlayApplication, accessRequestsService: AccessRequestsService)
 
   private def buildFixture(): Fixture = {

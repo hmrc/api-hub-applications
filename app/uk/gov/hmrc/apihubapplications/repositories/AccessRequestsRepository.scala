@@ -85,4 +85,16 @@ class AccessRequestsRepository @Inject()(
     } map {requests => requests.map(_.decryptedValue)}
   }
 
+  def findById(id: String): Future[Option[AccessRequest]] = {
+    stringToObjectId(id) match {
+      case Some(objectId) =>
+        Mdc.preservingMdc {
+          collection
+            .find(Filters.equal("_id", objectId))
+            .headOption()
+        } map (_.map(_.decryptedValue))
+      case _ => Future.successful(None)
+    }
+  }
+
 }
