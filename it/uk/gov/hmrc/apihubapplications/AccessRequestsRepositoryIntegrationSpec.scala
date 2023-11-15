@@ -222,33 +222,42 @@ class AccessRequestsRepositoryIntegrationSpec
     )
 
     "must return the access request when it exists in the collection" in {
+      setMdcData()
+
       repository.insert(Seq(accessRequest1, accessRequest2)).flatMap{
         inserted =>
           val id = inserted.headOption.value.id.value
-          repository.findById(id).map(
+          repository.findById(id).map(ResultWithMdcData(_)) .map {
             result =>
-              result mustBe Some(accessRequest1.setId(id))
-          )
+              result.data mustBe Some(accessRequest1.setId(id))
+              result.mdcData mustBe testMdcData
+          }
       }
     }
 
     "must return None when the access request is not in the collection" in {
+      setMdcData()
+
       repository.insert(Seq(accessRequest1, accessRequest2)).flatMap{
         _ =>
-          repository.findById("6553a3bfeb97d767cb72c5b2").map(
+          repository.findById("6553a3bfeb97d767cb72c5b2").map(ResultWithMdcData(_)).map {
             result =>
-              result mustBe None
-          )
+              result.data mustBe None
+              result.mdcData mustBe testMdcData
+          }
       }
     }
 
     "must return None when the Id is not a valid Mongo identifier" in {
+      setMdcData()
+
       repository.insert(Seq(accessRequest1, accessRequest2)).flatMap{
         _ =>
-          repository.findById("not an Id").map(
+          repository.findById("not an Id").map(ResultWithMdcData(_)).map{
             result =>
-              result mustBe None
-          )
+              result.data mustBe None
+              result.mdcData mustBe testMdcData
+          }
       }
     }
   }
