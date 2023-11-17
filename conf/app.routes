@@ -18,3 +18,4 @@ POST       /applications/:id/apis                                               
 POST       /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.createAccessRequest()
 GET        /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.getAccessRequests(applicationId: Option[String] ?= None, status: Option[AccessRequestStatus] ?= None)
 GET        /access-requests/:id                                                     uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.getAccessRequest(id: String)
+PUT        /access-requests/:id/approve                                             uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.approveAccessRequest(id: String)
