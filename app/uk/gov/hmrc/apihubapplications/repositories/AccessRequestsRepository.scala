@@ -18,9 +18,11 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.client.model.IndexOptions
-import org.mongodb.scala.model.{Filters, IndexModel, Indexes}
+import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
+import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
 import uk.gov.hmrc.apihubapplications.repositories.models.accessRequest.encrypted.SensitiveAccessRequest
@@ -48,7 +50,7 @@ class AccessRequestsRepository @Inject()(
       // Sensitive string codec so we can operate on individual string fields
       Codecs.playFormatCodec(sensitiveStringFormat(crypto))
     )
-  ) {
+  ) with Logging with ExceptionRaising {
 
   // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
   require(
@@ -94,6 +96,30 @@ class AccessRequestsRepository @Inject()(
             .headOption()
         } map (_.map(_.decryptedValue))
       case _ => Future.successful(None)
+    }
+  }
+
+  def update(accessRequest: AccessRequest): Future[Either[ApplicationsException, Unit]] = {
+    stringToObjectId(accessRequest.id) match {
+      case Some(id) =>
+        Mdc.preservingMdc {
+          collection
+            .replaceOne(
+              filter = Filters.equal("_id", id),
+              replacement = SensitiveAccessRequest(accessRequest),
+              options     = ReplaceOptions().upsert(false)
+            )
+            .toFuture()
+        } map {
+          result =>
+            if (result.getModifiedCount > 0) {
+              Right(())
+            }
+            else {
+              Left(raiseNotUpdatedException.forAccessRequest(accessRequest))
+            }
+        }
+      case _ => Future.successful(Left(raiseAccessRequestNotFoundException.forAccessRequest(accessRequest)))
     }
   }
 

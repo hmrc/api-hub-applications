@@ -17,23 +17,18 @@
 package uk.gov.hmrc.apihubapplications.models.exception
 
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
-import uk.gov.hmrc.apihubapplications.models.application.Application
 
-case class NotUpdatedException(message: String) extends ApplicationsException(message, null)
+case class AccessRequestNotFoundException(message: String) extends ApplicationsException(message, null)
 
-object NotUpdatedException {
+object AccessRequestNotFoundException {
 
-  def forId(id: String): NotUpdatedException = {
-    NotUpdatedException(s"There was no database update for application with id $id")
+  def forId(id: String): AccessRequestNotFoundException = {
+    AccessRequestNotFoundException(s"Cannot find access request with id $id")
   }
 
-  def forApplication(application: Application): NotUpdatedException = {
-    forId(application.id.getOrElse("<none>"))
-  }
-
-  def forAccessRequest(accessRequest: AccessRequest): NotUpdatedException = {
-    val id = accessRequest.id.getOrElse("<none>")
-    NotUpdatedException(s"There was no database update for access request with id $id")
+  def forAccessRequest(accessRequest: AccessRequest): AccessRequestNotFoundException = {
+    val id = accessRequest.id.getOrElse("<none")
+    AccessRequestNotFoundException(s"Cannot find access request with id $id")
   }
 
 }

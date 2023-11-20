@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.accessRequest
 
 import uk.gov.hmrc.apihubapplications.models.Lens
 
-import java.time.LocalDateTime
+import java.time.{Clock, LocalDateTime}
 
 object AccessRequestLenses {
 
@@ -85,6 +85,16 @@ object AccessRequestLenses {
 
     def setDecision(decided: LocalDateTime, decidedBy: String, rejectedReason: String): AccessRequest = {
       setDecision(AccessRequestDecision(decided, decidedBy, Some(rejectedReason)))
+    }
+
+    def setDecision(decisionRequest: AccessRequestDecisionRequest, clock: Clock): AccessRequest = {
+      setDecision(
+        AccessRequestDecision(
+          decided = LocalDateTime.now(clock),
+          decidedBy = decisionRequest.decidedBy,
+          rejectedReason = decisionRequest.rejectedReason
+        )
+      )
     }
 
     def setStatus(status: AccessRequestStatus): AccessRequest = {

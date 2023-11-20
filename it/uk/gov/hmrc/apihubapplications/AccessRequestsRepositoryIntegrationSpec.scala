@@ -23,6 +23,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved, Pending}
+import uk.gov.hmrc.apihubapplications.models.exception.AccessRequestNotFoundException
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.accessRequest.encrypted.SensitiveAccessRequest
 import uk.gov.hmrc.mongo.MongoComponent
@@ -37,6 +38,8 @@ class AccessRequestsRepositoryIntegrationSpec
   with DefaultPlayMongoRepositorySupport[SensitiveAccessRequest]
   with OptionValues
   with MdcTesting {
+
+  import AccessRequestsRepositoryIntegrationSpec._
 
   private lazy val playApplication = {
     new GuiceApplicationBuilder()
@@ -201,26 +204,6 @@ class AccessRequestsRepositoryIntegrationSpec
   }
 
   "findById" - {
-    val accessRequest1 = AccessRequest(
-      applicationId = "test-application-id-1",
-      apiId = "test-api-id-1",
-      apiName = "test-api-name-1",
-      status = Pending,
-      supportingInformation = "test-supporting-information-1",
-      requested = LocalDateTime.now(),
-      requestedBy = "test-requested-by-1"
-    )
-
-    val accessRequest2 = AccessRequest(
-      applicationId = "test-application-id-2",
-      apiId = "test-api-id-2",
-      apiName = "test-api-name-2",
-      status = Pending,
-      supportingInformation = "test-supporting-information-2",
-      requested = LocalDateTime.now(),
-      requestedBy = "test-requested-by-2"
-    )
-
     "must return the access request when it exists in the collection" in {
       setMdcData()
 
@@ -261,5 +244,76 @@ class AccessRequestsRepositoryIntegrationSpec
       }
     }
   }
+
+  "update" - {
+    "must update the correct access request" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2)).flatMap {
+        _ =>
+          val updated = accessRequest2.setStatus(Approved)
+          repository.update(updated).map(ResultWithMdcData(_)).flatMap {
+            result =>
+              repository.findById(updated.id.value).map {
+                actual =>
+                  actual mustBe Some(updated)
+                  result.mdcData mustBe testMdcData
+              }
+          }
+      }
+    }
+
+    "must return a not found exception when the access request does not exist" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2)).flatMap {
+        _ =>
+          val updated = accessRequest1.setId(Some("6553a3bfeb97d767cb72c5b2"))
+          repository.update(updated).map(ResultWithMdcData(_)).map {
+            result =>
+              result.data mustBe Left(AccessRequestNotFoundException.forAccessRequest(updated))
+              result.mdcData mustBe testMdcData
+          }
+      }
+    }
+
+    "must return a not found exception when the access request Id is not a valid Mongo identifier" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2)).flatMap {
+        _ =>
+          val updated = accessRequest1.setId(Some("not an Id"))
+          repository.update(updated).map(ResultWithMdcData(_)).map {
+            result =>
+              result.data mustBe Left(AccessRequestNotFoundException.forAccessRequest(updated))
+              result.mdcData mustBe testMdcData
+          }
+      }
+    }
+  }
+
+}
+
+object AccessRequestsRepositoryIntegrationSpec {
+
+  private val accessRequest1 = AccessRequest(
+    applicationId = "test-application-id-1",
+    apiId = "test-api-id-1",
+    apiName = "test-api-name-1",
+    status = Pending,
+    supportingInformation = "test-supporting-information-1",
+    requested = LocalDateTime.now(),
+    requestedBy = "test-requested-by-1"
+  )
+
+  private val accessRequest2 = AccessRequest(
+    applicationId = "test-application-id-2",
+    apiId = "test-api-id-2",
+    apiName = "test-api-name-2",
+    status = Pending,
+    supportingInformation = "test-supporting-information-2",
+    requested = LocalDateTime.now(),
+    requestedBy = "test-requested-by-2"
+  )
 
 }

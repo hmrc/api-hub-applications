@@ -16,5 +16,6 @@ GET        /test-connectivity                                                   
 POST       /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
 
 POST       /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.createAccessRequest()
+PUT        /access-requests/:id/approve                                             uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.approveAccessRequest(id: String)
 GET        /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.getAccessRequests(applicationId: Option[String] ?= None, status: Option[AccessRequestStatus] ?= None)
 GET        /access-requests/:id                                                     uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.getAccessRequest(id: String)

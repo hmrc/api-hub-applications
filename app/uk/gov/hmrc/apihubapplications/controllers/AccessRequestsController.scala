@@ -21,7 +21,8 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestRequest, AccessRequestStatus}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestDecisionRequest, AccessRequestRequest, AccessRequestStatus}
+import uk.gov.hmrc.apihubapplications.models.exception.{AccessRequestNotFoundException, AccessRequestStatusInvalidException, ApplicationNotFoundException}
 import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -57,6 +58,23 @@ class AccessRequestsController @Inject()(
       case Some(accessRequest) => Ok(Json.toJson(accessRequest))
       case _ => NotFound
     }
+  }
+
+  def approveAccessRequest(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
+    implicit request: Request[JsValue] =>
+      request.body.validate[AccessRequestDecisionRequest] match {
+        case JsSuccess(decisionRequest, _) =>
+          accessRequestsService.approveAccessRequest(id, decisionRequest).map {
+            case Right(_) => NoContent
+            case Left(_: AccessRequestNotFoundException) => NotFound
+            case Left(_: AccessRequestStatusInvalidException) => Conflict
+            case Left(_: ApplicationNotFoundException) => BadRequest
+            case Left(e) => throw e
+          }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
   }
 
 }

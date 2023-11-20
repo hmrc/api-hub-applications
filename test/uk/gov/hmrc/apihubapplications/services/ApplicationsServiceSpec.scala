@@ -26,6 +26,8 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.{Assertion, EitherValues, OptionValues}
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Rejected}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
@@ -1493,6 +1495,134 @@ class ApplicationsServiceSpec
     }
   }
 
+  "addPrimaryAccess" - {
+    "must add the new scopes to all primary credentials" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-application-id"
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      val scope1 = "test-scope-1"
+      val scope2 = "test-scope-2"
+      val scope3 = "test-scope-3"
+
+      val accessRequest = AccessRequest(
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Rejected,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(clock),
+        requestedBy = "test-requested-by"
+      )
+        .addEndpoint("test-method-1", "test-path-1", Seq(scope1, scope2))
+        .addEndpoint("test-method-2", "test-path-2", Seq(scope2, scope3))
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).setPrimaryCredentials(
+        Seq(
+          Credential(clientId1, LocalDateTime.now(clock), None, None),
+          Credential(clientId2, LocalDateTime.now(clock), None, None)
+        )
+      )
+
+      when(repository.findById(any())).thenReturn(Future.successful(Right(application)))
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      service.addPrimaryAccess(accessRequest)(HeaderCarrier()).map {
+        result =>
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1) ,ArgumentMatchers.eq(scope1))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1) ,ArgumentMatchers.eq(scope2))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1) ,ArgumentMatchers.eq(scope3))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId2) ,ArgumentMatchers.eq(scope1))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId2) ,ArgumentMatchers.eq(scope2))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId2) ,ArgumentMatchers.eq(scope3))(any())
+          verifyNoMoreInteractions(idmsConnector)
+          result mustBe Right(())
+      }
+    }
+
+    "must return an IdmsException if any IDMS call fails but others succeed" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+      val scope1 = "test-scope-1"
+      val scope2 = "test-scope-2"
+
+      val accessRequest = AccessRequest(
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Rejected,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(clock),
+        requestedBy = "test-requested-by"
+      )
+        .addEndpoint("test-method-1", "test-path-1", Seq(scope1, scope2))
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).setPrimaryCredentials(
+        Seq(
+          Credential(clientId, LocalDateTime.now(clock), None, None)
+        )
+      )
+
+      val exception = IdmsException("test-message", CallError)
+
+      when(repository.findById(any())).thenReturn(Future.successful(Right(application)))
+      when(idmsConnector.addClientScope(any(), any(), ArgumentMatchers.eq(scope1))(any())).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.addClientScope(any(), any(), ArgumentMatchers.eq(scope2))(any())).thenReturn(Future.successful(Left(exception)))
+
+      service.addPrimaryAccess(accessRequest)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(exception)
+      }
+    }
+
+    "must return application not found exception when it does not exist" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-application-id"
+
+      val accessRequest = AccessRequest(
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Rejected,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(clock),
+        requestedBy = "test-requested-by"
+      )
+
+      val exception = ApplicationNotFoundException.forId(applicationId)
+
+      when(repository.findById(any())).thenReturn(Future.successful(Left(exception)))
+
+      service.addPrimaryAccess(accessRequest)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(exception)
+      }
+    }
+  }
+
   private case class Fixture(
     clock: Clock,
     repository: ApplicationsRepository,
@@ -1511,4 +1641,3 @@ class ApplicationsServiceSpec
   }
 
 }
-

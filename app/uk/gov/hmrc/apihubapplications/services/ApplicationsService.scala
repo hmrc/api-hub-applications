@@ -19,6 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -348,6 +349,27 @@ class ApplicationsService @Inject()(
     }
     else {
       Future.successful(Right(newCredential))
+    }
+  }
+
+  def addPrimaryAccess(accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    findById(accessRequest.applicationId, enrich = false).flatMap {
+      case Right(application) =>
+        Future.sequence(
+          application.getPrimaryCredentials.flatMap(
+            credential =>
+              accessRequest.endpoints.flatMap(_.scopes).distinct.map(
+                scope =>
+                  idmsConnector.addClientScope(Primary, credential.clientId, scope)
+              )
+          )
+        )
+          .map(useFirstException)
+          .map {
+            case Right(_) => Right(())
+            case Left(e) => Left(e)
+          }
+      case Left(e) => Future.successful(Left(e))
     }
   }
 

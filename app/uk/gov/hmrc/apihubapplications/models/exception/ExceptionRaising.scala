@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.models.exception
 
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
@@ -82,6 +83,26 @@ trait ExceptionRaising {
 
     def forApplication(application: Application): NotUpdatedException = {
       log(NotUpdatedException.forApplication(application))
+    }
+
+    def forAccessRequest(accessRequest: AccessRequest): NotUpdatedException = {
+      log(NotUpdatedException.forAccessRequest(accessRequest))
+    }
+  }
+
+  object raiseAccessRequestNotFoundException {
+    def forId(id: String): AccessRequestNotFoundException = {
+      log(AccessRequestNotFoundException.forId(id))
+    }
+
+    def forAccessRequest(accessRequest: AccessRequest): AccessRequestNotFoundException = {
+      log(AccessRequestNotFoundException.forAccessRequest(accessRequest))
+    }
+  }
+
+  object raiseAccessRequestStatusInvalidException {
+    def forAccessRequest(accessRequest: AccessRequest): AccessRequestStatusInvalidException = {
+      log(AccessRequestStatusInvalidException.forAccessRequest(accessRequest))
     }
   }
 

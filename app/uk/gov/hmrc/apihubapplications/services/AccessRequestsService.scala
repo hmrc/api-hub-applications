@@ -17,17 +17,22 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest, AccessRequestStatus}
+import play.api.Logging
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
+import uk.gov.hmrc.apihubapplications.models.accessRequest._
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Clock
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AccessRequestsService @Inject()(
   repository: AccessRequestsRepository,
-  clock: Clock
-) {
+  clock: Clock,
+  applicationsService: ApplicationsService
+)(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def createAccessRequest(request: AccessRequestRequest): Future[Seq[AccessRequest]] = {
     repository.insert(request.toAccessRequests(clock))
@@ -39,6 +44,24 @@ class AccessRequestsService @Inject()(
 
   def getAccessRequest(id: String): Future[Option[AccessRequest]] = {
     repository.findById(id)
+  }
+
+  def approveAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    repository.findById(id).flatMap {
+      case Some(accessRequest) if accessRequest.status == Pending =>
+        applicationsService.addPrimaryAccess(accessRequest).flatMap(
+          _ =>
+            repository.update(
+              accessRequest
+                .setStatus(Approved)
+                .setDecision(decisionRequest.copy(rejectedReason = None), clock)
+            )
+        )
+      case Some(accessRequest) =>
+        Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
+      case _ =>
+        Future.successful(Left(raiseAccessRequestNotFoundException.forId(id)))
+    }
   }
 
 }
