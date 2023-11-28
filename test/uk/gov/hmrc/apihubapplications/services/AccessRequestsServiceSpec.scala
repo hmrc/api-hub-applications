@@ -18,10 +18,11 @@ package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.scalatest.OptionValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestDecisionRequest, AccessRequestStatus, Approved, Pending}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestDecisionRequest, AccessRequestStatus, Approved, Pending, Rejected}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.{AccessRequestNotFoundException, AccessRequestStatusInvalidException}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
@@ -31,7 +32,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator with TableDrivenPropertyChecks {
+class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator with TableDrivenPropertyChecks with OptionValues {
 
   "createAccessRequest" - {
     "must pass the correct requests to the repository" in {
@@ -167,6 +168,80 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.repository.findById(any())).thenReturn(Future.successful(None))
 
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(AccessRequestNotFoundException.forId(id))
+      }
+    }
+  }
+
+  "rejectAccessRequest" - {
+    "must update the access request to Rejected" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = "test-application-id",
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val updated = accessRequest
+        .setStatus(Rejected)
+        .setDecision(LocalDateTime.now(fixture.clock), decisionRequest.decidedBy, decisionRequest.rejectedReason.value)
+
+      when(fixture.repository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.repository.update(any())).thenReturn(Future.successful(Right(())))
+
+      fixture.accessRequestsService.rejectAccessRequest(id, decisionRequest).map {
+        result =>
+          verify(fixture.repository).findById(ArgumentMatchers.eq(id))
+          verify(fixture.repository).update(ArgumentMatchers.eq(updated))
+          result mustBe Right(())
+      }
+    }
+
+    "must return AccessRequestStatusInvalidException if the access request's status in not Pending" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = "test-application-id",
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Approved,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      when(fixture.repository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+
+      fixture.accessRequestsService.rejectAccessRequest(id, decisionRequest).map {
+        result =>
+          result mustBe Left(AccessRequestStatusInvalidException.forAccessRequest(accessRequest))
+      }
+    }
+
+    "must return AccessRequestNotFoundException if the access request does not exist" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
+
+      when(fixture.repository.findById(any())).thenReturn(Future.successful(None))
+
+      fixture.accessRequestsService.rejectAccessRequest(id, decisionRequest).map {
         result =>
           result mustBe Left(AccessRequestNotFoundException.forId(id))
       }
