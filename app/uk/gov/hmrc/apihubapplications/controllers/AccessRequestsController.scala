@@ -77,4 +77,23 @@ class AccessRequestsController @Inject()(
       }
   }
 
+  def rejectAccessRequest(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
+    implicit request: Request[JsValue] =>
+      request.body.validate[AccessRequestDecisionRequest] match {
+        case JsSuccess(decisionRequest, _) if decisionRequest.rejectedReason.isDefined =>
+          accessRequestsService.rejectAccessRequest(id, decisionRequest).map {
+            case Right(_) => NoContent
+            case Left(_: AccessRequestNotFoundException) => NotFound
+            case Left(_: AccessRequestStatusInvalidException) => Conflict
+            case Left(e) => throw e
+          }
+        case JsSuccess(decisionRequest, _) =>
+          logger.warn("No rejected reason")
+          Future.successful(BadRequest)
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+  }
+
 }

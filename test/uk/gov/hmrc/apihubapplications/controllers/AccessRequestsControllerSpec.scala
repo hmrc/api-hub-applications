@@ -223,6 +223,87 @@ class AccessRequestsControllerSpec
     }
   }
 
+  "rejectAccessRequest" - {
+    "must process a valid request and return No Content" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
+
+      when(fixture.accessRequestsService.rejectAccessRequest(any(), any()))
+        .thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(PUT, routes.AccessRequestsController.rejectAccessRequest(id).url)
+          .withJsonBody(Json.toJson(decisionRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.accessRequestsService).rejectAccessRequest(ArgumentMatchers.eq(id), ArgumentMatchers.eq(decisionRequest))
+      }
+    }
+
+    "must return 404 Not Found when the access request does not exist" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
+
+      when(fixture.accessRequestsService.rejectAccessRequest(any(), any()))
+        .thenReturn(Future.successful(Left(AccessRequestNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(PUT, routes.AccessRequestsController.rejectAccessRequest(id).url)
+          .withJsonBody(Json.toJson(decisionRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 409 Conflict when the access request's status is not pending" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
+
+      when(fixture.accessRequestsService.rejectAccessRequest(any(), any()))
+        .thenReturn(Future.successful(Left(AccessRequestStatusInvalidException("test-message"))))
+
+      running(fixture.application) {
+        val request = FakeRequest(PUT, routes.AccessRequestsController.rejectAccessRequest(id).url)
+          .withJsonBody(Json.toJson(decisionRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
+      }
+    }
+
+    "must return 400 Bad Request when the request body is not valid" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+
+      running(fixture.application) {
+        val request = FakeRequest(PUT, routes.AccessRequestsController.rejectAccessRequest(id).url)
+          .withJsonBody(Json.obj())
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+
+    "must return 400 Bad Request when the request has no rejected reason" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", None)
+
+      running(fixture.application) {
+        val request = FakeRequest(PUT, routes.AccessRequestsController.rejectAccessRequest(id).url)
+          .withJsonBody(Json.toJson(decisionRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+  }
+
   private case class Fixture(application: PlayApplication, accessRequestsService: AccessRequestsService)
 
   private def buildFixture(): Fixture = {

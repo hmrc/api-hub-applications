@@ -64,4 +64,19 @@ class AccessRequestsService @Inject()(
     }
   }
 
+  def rejectAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest): Future[Either[ApplicationsException, Unit]] = {
+    repository.findById(id).flatMap {
+      case Some(accessRequest) if accessRequest.status == Pending =>
+        repository.update(
+          accessRequest
+            .setStatus(Rejected)
+            .setDecision(decisionRequest, clock)
+        )
+      case Some(accessRequest) =>
+        Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
+      case _ =>
+        Future.successful(Left(raiseAccessRequestNotFoundException.forId(id)))
+    }
+  }
+
 }
