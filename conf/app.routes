@@ -4,6 +4,7 @@ POST       /applications                                                        
 POST       /applications/:id/environments/scopes                                    uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addScopes(id: String)
 POST       /applications/:id/environments/primary/credentials/secret                uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.createPrimarySecret(id: String)
 POST       /applications/:id/environments/:environmentName/credentials              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addCredential(id: String, environmentName: EnvironmentName)
+DELETE     /applications/:id/environments/:environmentName/credentials/:clientId    uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteCredential(id: String, environmentName: EnvironmentName, clientId: String)
 
 PUT        /applications/:id/environments/primary/scopes/:scopeName                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.updatePrimaryScopeStatus(id:String, scopeName:String)
 

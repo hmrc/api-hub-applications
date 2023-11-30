@@ -24,7 +24,7 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationDataIssueException, ApplicationNotFoundException, IdmsException, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationDataIssueException, ApplicationNotFoundException, CredentialNotFoundException, IdmsException, InvalidPrimaryScope}
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
@@ -199,6 +199,17 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Right(credential) => Created(Json.toJson(credential))
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: ApplicationCredentialLimitException) => Conflict
+        case Left(_: IdmsException) => BadGateway
+        case Left(_) => InternalServerError
+      }
+  }
+
+  def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      applicationsService.deleteCredential(applicationId, environmentName, clientId).map {
+        case Right(_) => NoContent
+        case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: CredentialNotFoundException) => NotFound
         case Left(_: IdmsException) => BadGateway
         case Left(_) => InternalServerError
       }

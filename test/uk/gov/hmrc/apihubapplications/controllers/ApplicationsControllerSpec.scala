@@ -853,6 +853,85 @@ class ApplicationsControllerSpec
       }
     }
   }
+
+  "deleteCredential" - {
+    "must delete the credential and return 204 No Content when successful" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.applicationsService).deleteCredential(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any())
+      }
+    }
+
+    "must return 404 Not Found when the application does not exist" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 404 Not Found when the credential does not exist" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(CredentialNotFoundException.forClientId(clientId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 502 Bad Gateway when IDMS responds with an error" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+      running(fixture.application) {
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_GATEWAY
+      }
+    }
+
+    "must return 500 Internal Server Error for other error conditions" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+      running(fixture.application) {
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+  }
+
 }
 
 object ApplicationsControllerSpec {

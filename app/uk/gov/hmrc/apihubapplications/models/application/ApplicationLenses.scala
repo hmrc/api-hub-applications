@@ -242,6 +242,13 @@ object ApplicationLenses {
       }
     }
 
+    def removeCredential(clientId: String, environmentName: EnvironmentName): Application = {
+      environmentName match {
+        case Primary => application.removePrimaryCredential(clientId)
+        case Secondary => application.removeSecondaryCredential(clientId)
+      }
+    }
+
     def hasTeamMember(email: String): Boolean =
       applicationTeamMembers.get(application)
         .exists(teamMember => teamMember.email.equalsIgnoreCase(email))

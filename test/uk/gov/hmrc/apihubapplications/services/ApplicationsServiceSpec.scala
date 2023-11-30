@@ -23,6 +23,7 @@ import org.mockito.{ArgumentMatchers, Mockito, MockitoSugar}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{Assertion, EitherValues, OptionValues}
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
@@ -49,7 +50,8 @@ class ApplicationsServiceSpec
     with ApplicationGenerator
     with ScalaFutures
     with OptionValues
-    with EitherValues {
+    with EitherValues
+    with TableDrivenPropertyChecks {
 
   val currentUser = "me@test.com"
 
@@ -1491,6 +1493,171 @@ class ApplicationsServiceSpec
       service.addCredential(applicationId, Primary)(HeaderCarrier()).map {
         result =>
           result mustBe Left(ApplicationCredentialLimitException.forApplication(application, Primary))
+      }
+    }
+  }
+
+  "deleteCredential" - {
+    "must delete the correct credential from the correct environment" in {
+      val environmentNames = Table(
+        "Environment Name",
+        Primary,
+        Secondary
+      )
+
+      val applicationId = "test-id"
+      val clientId = "test-client-id"
+
+      forAll(environmentNames) {(environmentName: EnvironmentName) =>
+        val fixture = buildFixture
+        import fixture._
+
+        val application = Application(
+          id = Some(applicationId),
+          name = "test-name",
+          created = LocalDateTime.now(clock),
+          createdBy = Creator("test-email"),
+          lastUpdated = LocalDateTime.now(clock),
+          teamMembers = Seq(TeamMember(email = "test-email")),
+          environments = Environments()
+        ).addCredential(Credential(clientId, LocalDateTime.now(clock), None, None), environmentName)
+
+        when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+        when(idmsConnector.deleteClient(any(), any())(any())).thenReturn(Future.successful(Right(())))
+        when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
+        service.deleteCredential(applicationId, environmentName, clientId)(HeaderCarrier()).map {
+          result =>
+            verify(idmsConnector).deleteClient(ArgumentMatchers.eq(environmentName), ArgumentMatchers.eq(clientId))(any())
+            result mustBe Right(())
+        }
+      }
+    }
+
+    "must update the application in the repository" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+      val clientId = "test-client-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock).minusDays(1),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock).minusDays(1),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      )
+        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+        .addPrimaryCredential(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None))
+        .addSecondaryCredential(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None))
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+      when(idmsConnector.deleteClient(any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
+      service.deleteCredential(applicationId, Primary, clientId)(HeaderCarrier()).map {
+        result =>
+          val updated = application
+            .copy(lastUpdated = LocalDateTime.now(clock))
+            .removePrimaryCredential(clientId)
+          verify(repository).update(ArgumentMatchers.eq(updated))
+          result mustBe Right(())
+      }
+    }
+
+    "must succeed when IDMS returns ClientNotFound" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+      val clientId = "test-client-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+      when(idmsConnector.deleteClient(any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.clientNotFound(clientId))))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
+      service.deleteCredential(applicationId, Primary, clientId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Right(())
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application does not exist" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+      val clientId = "test-client-id"
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      service.deleteCredential(applicationId, Primary, clientId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApplicationNotFoundException.forId(applicationId))
+      }
+    }
+
+    "must return CredentialNotFoundException when the credential does not exist in the application" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+      val clientId = "test-client-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock).minusDays(1),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock).minusDays(1),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      )
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+
+      service.deleteCredential(applicationId, Primary, clientId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(CredentialNotFoundException.forClientId(clientId))
+      }
+    }
+
+    "must return IdmsException when this is returned from IDMS" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+      val clientId = "test-client-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+      when(idmsConnector.deleteClient(any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+      service.deleteCredential(applicationId, Primary, clientId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(IdmsException.unexpectedResponse(500))
       }
     }
   }

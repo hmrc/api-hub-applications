@@ -106,6 +106,12 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseCredentialNotFoundException {
+    def forClientId(clientId: String): CredentialNotFoundException = {
+      log(CredentialNotFoundException.forClientId(clientId))
+    }
+  }
+
   private def log[T <: ApplicationsException](e: T): T = {
     e match {
       case emailException: EmailException => logger.error("Raised EmailException:", emailException)
