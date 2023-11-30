@@ -358,10 +358,15 @@ class ApplicationsService @Inject()(
       case Right(application) =>
         application.getCredentialsFor(environmentName).find(_.clientId == clientId) match {
           case Some(_) =>
-            idmsConnector.deleteClient(environmentName, clientId).flatMap {
-              case Right(_) => deleteCredential(application, environmentName, clientId)
-              case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, environmentName, clientId)
-              case Left(e) => Future.successful(Left(e))
+            if (application.getCredentialsFor(environmentName).size > 1) {
+              idmsConnector.deleteClient(environmentName, clientId).flatMap {
+                case Right(_) => deleteCredential(application, environmentName, clientId)
+                case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, environmentName, clientId)
+                case Left(e) => Future.successful(Left(e))
+              }
+            }
+            else {
+              Future.successful(Left(raiseApplicationCredentialLimitException.forApplication(application, environmentName)))
             }
           case _ => Future.successful(Left(raiseCredentialNotFoundException.forClientId(clientId)))
         }

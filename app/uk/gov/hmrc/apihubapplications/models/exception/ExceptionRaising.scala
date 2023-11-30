@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.exception
 
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 trait ExceptionRaising {
@@ -109,6 +109,12 @@ trait ExceptionRaising {
   object raiseCredentialNotFoundException {
     def forClientId(clientId: String): CredentialNotFoundException = {
       log(CredentialNotFoundException.forClientId(clientId))
+    }
+  }
+
+  object raiseApplicationCredentialLimitException {
+    def forApplication(application: Application, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
+      log(ApplicationCredentialLimitException.forApplication(application, environmentName))
     }
   }
 

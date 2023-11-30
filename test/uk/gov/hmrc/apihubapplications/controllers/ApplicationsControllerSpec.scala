@@ -916,6 +916,21 @@ class ApplicationsControllerSpec
       }
     }
 
+    "must return 409 Conflict when an attempt is made to delete the last credential" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, Primary))))
+
+      running(fixture.application) {
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
+      }
+    }
+
     "must return 500 Internal Server Error for other error conditions" in {
       val fixture = buildFixture()
       val applicationId = "test-application-id"

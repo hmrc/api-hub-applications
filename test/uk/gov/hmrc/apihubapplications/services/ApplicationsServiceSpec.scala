@@ -1520,7 +1520,9 @@ class ApplicationsServiceSpec
           lastUpdated = LocalDateTime.now(clock),
           teamMembers = Seq(TeamMember(email = "test-email")),
           environments = Environments()
-        ).addCredential(Credential(clientId, LocalDateTime.now(clock), None, None), environmentName)
+        )
+          .addCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None), environmentName)
+          .addCredential(Credential(clientId, LocalDateTime.now(clock), None, None), environmentName)
 
         when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
         when(idmsConnector.deleteClient(any(), any())(any())).thenReturn(Future.successful(Right(())))
@@ -1583,7 +1585,9 @@ class ApplicationsServiceSpec
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
-      ).addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+      )
+        .addPrimaryCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None))
+        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
 
       when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.clientNotFound(clientId))))
@@ -1626,6 +1630,7 @@ class ApplicationsServiceSpec
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       )
+        .addPrimaryCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None))
 
       when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
 
@@ -1650,7 +1655,9 @@ class ApplicationsServiceSpec
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
-      ).addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+      )
+        .addPrimaryCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None))
+        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
 
       when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
@@ -1658,6 +1665,32 @@ class ApplicationsServiceSpec
       service.deleteCredential(applicationId, Primary, clientId)(HeaderCarrier()).map {
         result =>
           result mustBe Left(IdmsException.unexpectedResponse(500))
+      }
+    }
+
+    "must return ApplicationCredentialLimitException when an attempt is made to delete the last credential" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+      val clientId = "test-client-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock).minusDays(1),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock).minusDays(1),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      )
+        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+
+      service.deleteCredential(applicationId, Primary, clientId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApplicationCredentialLimitException.forApplication(application, Primary))
       }
     }
   }

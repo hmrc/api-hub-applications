@@ -23,7 +23,11 @@ case class ApplicationCredentialLimitException(message: String) extends Applicat
 object ApplicationCredentialLimitException {
 
   def forApplication(application: Application, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
-    ApplicationCredentialLimitException(s"Application ${application.id.getOrElse("<none>")} has reached its $environmentName credential limit.")
+    forId(application.id.getOrElse("<none>"), environmentName)
+  }
+
+  def forId(id: String, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
+    ApplicationCredentialLimitException(s"Application $id has reached its $environmentName credential limit.")
   }
 
 }
