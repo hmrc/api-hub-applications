@@ -210,6 +210,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Right(_) => NoContent
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: CredentialNotFoundException) => NotFound
+        case Left(_: ApplicationCredentialLimitException) => Conflict
         case Left(_: IdmsException) => BadGateway
         case Left(_) => InternalServerError
       }
