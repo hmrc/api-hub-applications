@@ -23,6 +23,7 @@ import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, Secret}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
@@ -350,6 +351,35 @@ class ApplicationsService @Inject()(
     else {
       Future.successful(Right(newCredential))
     }
+  }
+
+  def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    findById(applicationId, enrich = false).flatMap {
+      case Right(application) =>
+        application.getCredentialsFor(environmentName).find(_.clientId == clientId) match {
+          case Some(_) =>
+            if (application.getCredentialsFor(environmentName).size > 1) {
+              idmsConnector.deleteClient(environmentName, clientId).flatMap {
+                case Right(_) => deleteCredential(application, environmentName, clientId)
+                case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, environmentName, clientId)
+                case Left(e) => Future.successful(Left(e))
+              }
+            }
+            else {
+              Future.successful(Left(raiseApplicationCredentialLimitException.forApplication(application, environmentName)))
+            }
+          case _ => Future.successful(Left(raiseCredentialNotFoundException.forClientId(clientId)))
+        }
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+  private def deleteCredential(application: Application, environmentName: EnvironmentName, clientId: String): Future[Either[ApplicationsException, Unit]] = {
+    repository.update(
+      application
+        .removeCredential(clientId, environmentName)
+        .copy(lastUpdated = LocalDateTime.now(clock))
+    )
   }
 
   def addPrimaryAccess(accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

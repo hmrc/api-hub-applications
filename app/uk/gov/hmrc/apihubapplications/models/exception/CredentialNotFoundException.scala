@@ -16,18 +16,12 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
-import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
+case class CredentialNotFoundException(message: String) extends ApplicationsException(message, null)
 
-case class ApplicationCredentialLimitException(message: String) extends ApplicationsException("message", null)
+object CredentialNotFoundException {
 
-object ApplicationCredentialLimitException {
-
-  def forApplication(application: Application, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
-    forId(application.id.getOrElse("<none>"), environmentName)
-  }
-
-  def forId(id: String, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
-    ApplicationCredentialLimitException(s"Application $id has reached its $environmentName credential limit.")
+  def forClientId(clientId: String): CredentialNotFoundException = {
+    CredentialNotFoundException(s"Cannot find credential with clientId $clientId")
   }
 
 }
