@@ -14,7 +14,7 @@ GET        /applications/:id                                                    
 POST       /applications/:id/delete                                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
 
 GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip
-POST       /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
+PUT        /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
 
 POST       /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.createAccessRequest()
 PUT        /access-requests/:id/approve                                             uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.approveAccessRequest(id: String)

@@ -540,7 +540,7 @@ class ApplicationsIntegrationSpec
       }
     }
 
-    "POST to add apis to an application" should {
+    "PUT to add apis to an application" should {
       "respond with a 204 No Content" in {
         forAll { (application: Application) =>
           deleteAll().futureValue
@@ -553,7 +553,7 @@ class ApplicationsIntegrationSpec
             wsClient
               .url(s"$baseUrl/api-hub-applications/applications/$id/apis")
               .addHttpHeaders(("Content", "application/json"))
-              .post(Json.toJson(api))
+              .put(Json.toJson(api))
               .futureValue
 
           response.status shouldBe 204
@@ -570,7 +570,7 @@ class ApplicationsIntegrationSpec
             wsClient
               .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/apis")
               .addHttpHeaders(("Content", "application/json"))
-              .post(Json.toJson(api))
+              .put(Json.toJson(api))
               .futureValue
 
           response.status shouldBe 404

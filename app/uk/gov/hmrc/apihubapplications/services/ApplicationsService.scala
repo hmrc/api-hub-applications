@@ -48,26 +48,28 @@ class ApplicationsService @Inject()(
     def doRepositoryUpdate(application: Application, newApi: AddApiRequest): Future[Either[ApplicationsException, Unit]] = {
       repository.update(
         application
-          .copy(lastUpdated = LocalDateTime.now(clock), apis = application.apis ++ Seq(Api(newApi.id, newApi.endpoints)))
+          .removeApi(newApi.id)
+          .addApi(Api(newApi.id, newApi.endpoints))
+          .updated(clock)
       )
     }
 
     this.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
-        val scopesRequired = newApi.scopes.toSet -- application.getSecondaryScopes.map(_.name).toSet
-
-        doRepositoryUpdate(application, newApi).flatMap {
-          case Right(_) => ApplicationEnrichers.process(
-            application,
-            scopesRequired.toSeq.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope))
-          ).flatMap {
-            case Right(_) => Future.successful(Right(()))
-            case Left(e) => Future.successful(Left(e))
+        val updated = application.removeApi(newApi.id)
+        ApplicationEnrichers.process(
+          updated,
+          newApi.scopes.distinct.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, updated, idmsConnector, scope))
+        ) flatMap {
+          case Right(_) => doRepositoryUpdate(application, newApi) map {
+            case Right(_) => Right(())
+            case Left(e) => Left(e)
           }
           case Left(e) => Future.successful(Left(e))
         }
       case Left(e) => Future.successful(Left(e))
     }
+
   }
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {

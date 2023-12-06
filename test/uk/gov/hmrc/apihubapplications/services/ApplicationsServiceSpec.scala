@@ -1150,12 +1150,24 @@ class ApplicationsServiceSpec
 
   "addApi" - {
 
+    "must return ApplicationNotFoundException if application not initially found" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val testAppId = "test-app-id"
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
+
+      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
+      }
+    }
+
     "must update the application with the new Api" in {
       val fixture = buildFixture
       import fixture._
 
       val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
 
       val app = Application(
         id = Some(testAppId),
@@ -1174,8 +1186,41 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
+
+      service.addApi(testAppId, api)(HeaderCarrier()) map {
+        actual =>
+          verify(repository).update(ArgumentMatchers.eq(updatedApp))
+          actual mustBe Right(())
+      }
+    }
+
+    "must update the application when it has already had the API added (add endpoints)" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+
+      val testAppId = "test-app-id"
+
+      val app = Application(
+        id = Some(testAppId),
+        name = "test-app-name",
+        created = LocalDateTime.now(clock),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).setApis(
+        Seq(
+          Api(api.id, Seq(Endpoint("GET", "/bar/foo")))
+        )
+      )
+
+      val updatedApp = app.setApis(Seq(Api(api.id, api.endpoints)))
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
@@ -1202,9 +1247,11 @@ class ApplicationsServiceSpec
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(any())).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any()))
+        .thenReturn(Future.successful(Right(ClientResponse(testClientId, "test-secret"))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any()))
+        .thenReturn(Future.successful(Right(Seq.empty)))
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
-      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
 
       service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
         actual =>
@@ -1215,12 +1262,12 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must not update idms with new secondary scope when additional scopes are already present" in {
+    "should update IDMS with new secondary scopes even when they are already present (self-healing)" in {
       val fixture = buildFixture
       import fixture._
 
-      val clientScope1 = ClientScope("test-scope-1")
-      val clientScope2 = ClientScope("test-scope-2")
+      val scope1 = "test-scope-1"
+      val scope2 = "test-scope-2"
 
       val testAppId = "test-app-id"
       val testClientId = "test-client-id"
@@ -1231,18 +1278,31 @@ class ApplicationsServiceSpec
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(clock), None, None))))
+        environments = Environments()
+      ).setSecondaryCredentials(
+        Seq(
+          Credential(testClientId, LocalDateTime.now(clock), None, None)
+        )
+      )
+
+      val newApi = AddApiRequest(
+        id = "api_id",
+        endpoints = Seq(Endpoint("GET", "/foo/bar")),
+        scopes = Seq(scope1, scope2)
       )
 
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(any())).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right({})))
-      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq(clientScope1, clientScope2))))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any()))
+        .thenReturn(Future.successful(Right(ClientResponse(testClientId, "test-secret"))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any()))
+        .thenReturn(Future.successful(Right(Seq(ClientScope("scope1"), ClientScope("scope2")))))
+      when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()) map {
+      service.addApi(testAppId, newApi)(HeaderCarrier()) map {
         actual =>
-          verify(idmsConnector, never).addClientScope(any(), any(), any())(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(scope1))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(scope2))(any())
           actual mustBe Right(())
       }
 
@@ -1266,16 +1326,19 @@ class ApplicationsServiceSpec
         environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(clock), None, None))))
       )
 
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
-      when(repository.update(any())).thenReturn(Future.successful(Right(())))
       val exception = IdmsException("Bad thing", CallError)
+
+      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any()))
+        .thenReturn(Future.successful(Right(ClientResponse(testClientId, "test-secret"))))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any()))
+        .thenReturn(Future.successful(Right(Seq.empty)))
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Left(exception)))
-      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
 
       service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
         actual =>
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId), ArgumentMatchers.eq(testScopeId))(any())
+          verify(repository, never).update(any())
           actual mustBe Left(exception)
       }
 
@@ -1286,7 +1349,6 @@ class ApplicationsServiceSpec
       import fixture._
 
       val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
 
       val app = Application(
         id = Some(testAppId),
@@ -1305,8 +1367,6 @@ class ApplicationsServiceSpec
       when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Right(app)))
       when(repository.update(ArgumentMatchers.eq(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
       when(idmsConnector.addClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(ClientResponse(testClientId, "Shhh!"))))
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId))(any())).thenReturn(Future.successful(Right(Seq.empty)))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
@@ -1314,18 +1374,6 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must return ApplicationNotFoundException if application not initially found" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val testAppId = "test-app-id"
-      when(repository.findById(ArgumentMatchers.eq(testAppId))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
-
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
-        actual =>
-          actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
-      }
-    }
   }
 
   "addCredential" - {
