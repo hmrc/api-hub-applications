@@ -29,7 +29,8 @@ case class Application (
   teamMembers: Seq[TeamMember],
   environments: Environments,
   issues: Seq[String] = Seq.empty,
-  apis: Seq[Api] = Seq.empty
+  apis: Seq[Api] = Seq.empty,
+  deleted: Option[Deleted] = None
 )
 
 object Application {

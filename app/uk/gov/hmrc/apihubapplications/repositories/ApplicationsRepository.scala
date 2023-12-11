@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.{BsonDocument, Document}
 import org.mongodb.scala.model._
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Pending, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, Pending, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
@@ -31,13 +31,15 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc
 
+import java.time.{Clock, LocalDateTime}
 import javax.inject.Named
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsRepository @Inject()(
   mongoComponent: MongoComponent,
-  @Named("aes") implicit val crypto: Encrypter with Decrypter
+  @Named("aes") implicit val crypto: Encrypter with Decrypter,
+  clock: Clock
 )(implicit ec: ExecutionContext)
   extends PlayMongoRepository[SensitiveApplication](
     collectionName = "applications",
@@ -64,7 +66,7 @@ class ApplicationsRepository @Inject()(
   def findAll(): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find()
+        .find(Filters.equal("deleted", None))
         .toFuture()
     } map (_.map(_.decryptedValue.toModel))
   }
@@ -72,7 +74,10 @@ class ApplicationsRepository @Inject()(
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
+        .find(Filters.and(
+          Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email),
+          Filters.equal("deleted", None)
+        ))
         .toFuture()
     } map (_.map(_.decryptedValue.toModel))
   }
@@ -82,7 +87,10 @@ class ApplicationsRepository @Inject()(
       case Some(objectId) =>
         Mdc.preservingMdc {
           collection
-            .find(Filters.equal("_id", objectId))
+            .find(Filters.and(
+              Filters.equal("_id", objectId),
+              Filters.equal("deleted", None)
+            ))
             .headOption()
         } map {
           case Some(application) => Right(application.decryptedValue.toModel)
@@ -130,7 +138,12 @@ class ApplicationsRepository @Inject()(
     }
   }
 
-  def delete(application: Application): Future[Either[ApplicationsException, Unit]] = {
+  def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
+    val softDeletedApplication = application.copy(deleted = Some(Deleted(currentUser, LocalDateTime.now(clock))))
+    update(softDeletedApplication)
+  }
+
+    def delete(application: Application): Future[Either[ApplicationsException, Unit]] = {
     stringToObjectId(application.id) match {
       case Some(id) =>
         Mdc.preservingMdc {

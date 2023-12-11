@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Deleted, TeamMember}
 
 import java.time.LocalDateTime
 
@@ -29,7 +29,8 @@ case class DbApplication(
   lastUpdated: LocalDateTime,
   teamMembers: Seq[TeamMember],
   environments: DbEnvironments,
-  apis: Option[Seq[Api]]
+  apis: Option[Seq[Api]],
+  deleted: Option[Deleted]
 ) {
 
   def toModel: Application =
@@ -42,7 +43,8 @@ case class DbApplication(
       teamMembers = teamMembers,
       environments = environments.toModel(this),
       issues = Seq.empty,
-      apis = apis.getOrElse(Seq.empty)
+      apis = apis.getOrElse(Seq.empty),
+      deleted = deleted
     )
 
 }
@@ -58,7 +60,8 @@ object DbApplication {
       lastUpdated = application.lastUpdated,
       teamMembers = application.teamMembers,
       environments = DbEnvironments(application.environments),
-      apis = Some(application.apis)
+      apis = Some(application.apis),
+      deleted = application.deleted
     )
 
   implicit val formatDbApplication: Format[DbApplication] = Json.format[DbApplication]

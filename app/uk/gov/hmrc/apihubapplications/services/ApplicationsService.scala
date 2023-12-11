@@ -40,7 +40,8 @@ class ApplicationsService @Inject()(
   repository: ApplicationsRepository,
   clock: Clock,
   idmsConnector: IdmsConnector,
-  emailConnector: EmailConnector
+  emailConnector: EmailConnector,
+  accessRequestsService : AccessRequestsService
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -151,13 +152,23 @@ class ApplicationsService @Inject()(
             )
         ).flatMap {
           case Right(_) => for {
-            deleteOperationResult <- repository.delete(application)
-            _ <- emailConnector.sendApplicationDeletedEmailToCurrentUser(application, currentUser)
-            _ <- emailConnector.sendApplicationDeletedEmailToTeam(application, currentUser)
+            _ <- idmsConnector.deleteAllClients(application)
+            _ <- accessRequestsService.cancelAccessRequests(applicationId)
+            deleteOperationResult <- repository.softDelete(application, currentUser)
+            _ <- sendApplicationDeletedEmails(application, currentUser)
           } yield deleteOperationResult
           case Left(e) => Future.successful(Left(e))
         }
       case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+  def sendApplicationDeletedEmails(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    val email1 = emailConnector.sendApplicationDeletedEmailToCurrentUser(application, currentUser)
+    val email2 = emailConnector.sendApplicationDeletedEmailToTeam(application, currentUser)
+    Future.sequence(Seq(email1, email2))
+      .map {
+      case _ => Right(())
     }
   }
 

@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
+import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
+
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
-
 trait IdmsConnector {
-
   def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]]
+
 
   def fetchClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]]
 
@@ -36,5 +36,7 @@ trait IdmsConnector {
   def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]]
 
   def fetchClientScopes(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]]
+
+  def deleteAllClients(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]]
 
 }

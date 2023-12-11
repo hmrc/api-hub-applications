@@ -16,12 +16,22 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, IdmsException}
 
 object Helpers {
 
   def useFirstException[T](sequence: Seq[Either[IdmsException, T]]): Either[IdmsException, Seq[T]] = {
     sequence.foldLeft[Either[IdmsException, Seq[T]]](Right(Seq.empty))(
+      (b, a) => (b, a) match {
+        case (Left(e), _) => Left(e)
+        case (_, Left(e)) => Left(e)
+        case (Right(ts), Right(t)) => Right(ts :+ t)
+      }
+    )
+  }
+
+  def useFirstApplicationsException[T](sequence: Seq[Either[ApplicationsException, T]]): Either[ApplicationsException, Seq[T]] = {
+    sequence.foldLeft[Either[ApplicationsException, Seq[T]]](Right(Seq.empty))(
       (b, a) => (b, a) match {
         case (Left(e), _) => Left(e)
         case (_, Left(e)) => Left(e)
