@@ -37,12 +37,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsService @Inject()(
-  repository: ApplicationsRepository,
-  clock: Clock,
-  idmsConnector: IdmsConnector,
-  emailConnector: EmailConnector,
-  accessRequestsService : AccessRequestsService
-)(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+                                     repository: ApplicationsRepository,
+                                     clock: Clock,
+                                     idmsConnector: IdmsConnector,
+                                     emailConnector: EmailConnector,
+                                     accessRequestsService: AccessRequestsService
+                                   )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
@@ -140,24 +140,16 @@ class ApplicationsService @Inject()(
   def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(applicationId).flatMap {
       case Right(application) =>
-        ApplicationEnrichers.process(
-          application,
-          application.getPrimaryCredentials.map(
-            credential =>
-              ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, credential.clientId, idmsConnector)
-          ) ++
-            application.getSecondaryCredentials.map(
-              credential =>
-                ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, credential.clientId, idmsConnector)
-            )
-        ).flatMap {
-          case Right(_) => for {
-            _ <- idmsConnector.deleteAllClients(application)
-            _ <- accessRequestsService.cancelAccessRequests(applicationId)
-            deleteOperationResult <- repository.softDelete(application, currentUser)
-            _ <- sendApplicationDeletedEmails(application, currentUser)
-          } yield deleteOperationResult
-          case Left(e) => Future.successful(Left(e))
+        for {
+          idmsResult <- idmsConnector.deleteAllClients(application)
+          accessRequestsResult <- accessRequestsService.cancelAccessRequests(applicationId)
+          deleteOperationResult <- repository.softDelete(application, currentUser)
+          _ <- sendApplicationDeletedEmails(application, currentUser)
+        } yield (idmsResult, accessRequestsResult, deleteOperationResult) match {
+          case (Right(_), Right(_), Right(_)) => Right(())
+          case (Left(e), _, _) => Left(e)
+          case (_, Left(e), _) => Left(e)
+          case (_, _, Left(e)) => Left(e)
         }
       case Left(e) => Future.successful(Left(e))
     }
@@ -168,8 +160,8 @@ class ApplicationsService @Inject()(
     val email2 = emailConnector.sendApplicationDeletedEmailToTeam(application, currentUser)
     Future.sequence(Seq(email1, email2))
       .map {
-      case _ => Right(())
-    }
+        case _ => Right(())
+      }
   }
 
   def addScopes(applicationId: String, newScopes: Seq[NewScope])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

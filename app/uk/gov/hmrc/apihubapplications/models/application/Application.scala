@@ -30,7 +30,8 @@ case class Application (
   environments: Environments,
   issues: Seq[String] = Seq.empty,
   apis: Seq[Api] = Seq.empty,
-  deleted: Option[Deleted] = None
+  deleted: Option[LocalDateTime],
+  deletedBy: Option[String]
 )
 
 object Application {
@@ -41,7 +42,7 @@ object Application {
 
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
-    Application(id, name, now, createdBy, now, teamMembers, Environments(), apis = Seq.empty)
+    Application(id, name, now, createdBy, now, teamMembers, Environments(), apis = Seq.empty, deleted = None, deletedBy = None)
   }
 
   def apply(newApplication: NewApplication): Application = {
@@ -53,11 +54,15 @@ object Application {
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
-    Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty)
+    Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty, deleted = None, deletedBy = None)
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments, deleted: Option[LocalDateTime], deletedBy: Option[String]): Application = {
+    Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty, deleted = deleted, deletedBy = deletedBy)
   }
 
   def apply(id: Option[String], name: String, created: LocalDateTime, createdBy: Creator, lastUpdated: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
-    Application(id, name, created, createdBy, lastUpdated, teamMembers, environments, apis = Seq.empty)
+    Application(id, name, created, createdBy, lastUpdated, teamMembers, environments, apis = Seq.empty, deleted = None, deletedBy = None)
   }
 
   implicit val applicationFormat: Format[Application] = Json.format[Application]

@@ -20,6 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.{BsonDocument, Document}
 import org.mongodb.scala.model._
 import play.api.Logging
+import play.api.libs.json.Format
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, Pending, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
@@ -47,7 +48,8 @@ class ApplicationsRepository @Inject()(
     mongoComponent = mongoComponent,
     indexes = Seq(
       IndexModel(Indexes.ascending("teamMembers.email")),
-      IndexModel(Indexes.ascending("environments.primary.scopes.status"))
+      IndexModel(Indexes.ascending("environments.primary.scopes.status")),
+      IndexModel(Indexes.ascending("deleted"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -66,7 +68,7 @@ class ApplicationsRepository @Inject()(
   def findAll(): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find(Filters.equal("deleted", None))
+        .find(Filters.not(Filters.exists("deleted")))
         .toFuture()
     } map (_.map(_.decryptedValue.toModel))
   }
@@ -76,7 +78,7 @@ class ApplicationsRepository @Inject()(
       collection
         .find(Filters.and(
           Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email),
-          Filters.equal("deleted", None)
+          Filters.not(Filters.exists("deleted"))
         ))
         .toFuture()
     } map (_.map(_.decryptedValue.toModel))
@@ -89,7 +91,7 @@ class ApplicationsRepository @Inject()(
           collection
             .find(Filters.and(
               Filters.equal("_id", objectId),
-              Filters.equal("deleted", None)
+              Filters.not(Filters.exists("deleted"))
             ))
             .headOption()
         } map {
@@ -139,7 +141,7 @@ class ApplicationsRepository @Inject()(
   }
 
   def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
-    val softDeletedApplication = application.copy(deleted = Some(Deleted(currentUser, LocalDateTime.now(clock))))
+    val softDeletedApplication = application.copy(deleted = Some(LocalDateTime.now(clock)), deletedBy = Some(currentUser))
     update(softDeletedApplication)
   }
 

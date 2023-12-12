@@ -45,7 +45,7 @@ import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEma
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import java.time.LocalDateTime
+import java.time.{Clock, LocalDateTime, ZoneId, Instant}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -73,7 +73,7 @@ class ApplicationsIntegrationSpec
       .build()
 
   override protected lazy val repository: ApplicationsRepository = {
-    new ApplicationsRepository(mongoComponent, NoCrypto)
+    new ApplicationsRepository(mongoComponent, NoCrypto, Clock.fixed(Instant.now(), ZoneId.systemDefault()))
   }
 
   "POST to register a new application" should {
@@ -182,10 +182,10 @@ class ApplicationsIntegrationSpec
       val myEmail = "member1@digital.hmrc.gov.uk"
       val myTeamMembers = Seq(TeamMember(myEmail), TeamMember("member2@digital.hmrc.gov.uk"))
 
-      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty)
+      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, deletedBy = None)
       val otherTeamMembers = Seq(TeamMember("member3@digital.hmrc.gov.uk"), TeamMember("member4@digital.hmrc.gov.uk"))
 
-      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty)
+      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, deletedBy = None)
       deleteAll().futureValue
       val crypto = fakeApplication().injector.instanceOf[ApplicationCrypto]
       insert(application1).futureValue

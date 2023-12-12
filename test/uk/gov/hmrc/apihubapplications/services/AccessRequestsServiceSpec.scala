@@ -125,7 +125,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.repository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.applicationsService.addPrimaryAccess(any())(any())).thenReturn(Future.successful(Right(())))
 
-      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest, fixture.applicationsService)(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).findById(ArgumentMatchers.eq(id))
           verify(fixture.repository).update(ArgumentMatchers.eq(updated))
@@ -154,7 +154,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
 
       when(fixture.repository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
 
-      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest, fixture.applicationsService)(HeaderCarrier()).map {
         result =>
           result mustBe Left(AccessRequestStatusInvalidException.forAccessRequest(accessRequest))
       }
@@ -167,7 +167,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
 
       when(fixture.repository.findById(any())).thenReturn(Future.successful(None))
 
-      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest, fixture.applicationsService)(HeaderCarrier()).map {
         result =>
           result mustBe Left(AccessRequestNotFoundException.forId(id))
       }
@@ -259,7 +259,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
     val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
     val repository = mock[AccessRequestsRepository]
     val applicationsService = mock[ApplicationsService]
-    val accessRequestsService = new AccessRequestsService(repository, clock, applicationsService)
+    val accessRequestsService = new AccessRequestsService(repository, clock)
     Fixture(clock, repository, applicationsService, accessRequestsService)
   }
 

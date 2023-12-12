@@ -22,7 +22,7 @@ import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
 import uk.gov.hmrc.apihubapplications.models.accessRequest._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{useFirstApplicationsException, useFirstException}
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Clock
@@ -31,8 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AccessRequestsService @Inject()(
                                        repository: AccessRequestsRepository,
-                                       clock: Clock,
-                                       applicationsService: ApplicationsService
+                                       clock: Clock
                                      )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def createAccessRequest(request: AccessRequestRequest): Future[Seq[AccessRequest]] = {
@@ -47,7 +46,9 @@ class AccessRequestsService @Inject()(
     repository.findById(id)
   }
 
-  def approveAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  def approveAccessRequest(id: String,
+                           decisionRequest: AccessRequestDecisionRequest,
+                           applicationsService: ApplicationsService )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
         applicationsService.addPrimaryAccess(accessRequest).flatMap(

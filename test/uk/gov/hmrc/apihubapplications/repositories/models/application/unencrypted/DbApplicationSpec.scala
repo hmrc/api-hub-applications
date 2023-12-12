@@ -107,7 +107,9 @@ object DbApplicationSpec {
     lastUpdated = now.minusDays(1),
     teamMembers = Seq(TeamMember("test-creator-email"), TeamMember("test-member-email")),
     environments = Environments(),
-    issues = Seq.empty
+    issues = Seq.empty,
+    deleted = None,
+    deletedBy = None
   )
 
   private val testDbApplication = DbApplication(testApplication)
