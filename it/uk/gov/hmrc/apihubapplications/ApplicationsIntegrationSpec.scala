@@ -45,7 +45,7 @@ import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEma
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import java.time.{Clock, LocalDateTime, ZoneId, Instant}
+import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -271,7 +271,7 @@ class ApplicationsIntegrationSpec
   }
 
   "Deleting an application" should {
-    "delete the application and respond with 204 No Content when successful" in {
+    "soft delete the application and respond with 204 No Content when successful" in {
       forAll { (application: Application) =>
         deleteAll().futureValue
         insert(application).futureValue
@@ -286,7 +286,10 @@ class ApplicationsIntegrationSpec
         response.status shouldBe NO_CONTENT
 
         val storedApplications = findAll().futureValue
-        storedApplications.size shouldBe 0
+        storedApplications.size shouldBe 1
+        val storedApplication = storedApplications.headOption
+        storedApplication.isDefined mustBe true
+        storedApplication.get.deletedBy mustBe Some("me@test.com")
       }
     }
 
