@@ -24,7 +24,7 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationDataIssueException, ApplicationNotFoundException, CredentialNotFoundException, IdmsException, InvalidPrimaryScope}
+import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}

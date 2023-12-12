@@ -727,7 +727,7 @@ class ApplicationsControllerSpec
       running(fixture.application) {
         when(fixture.applicationsService.addApi(ArgumentMatchers.eq(id), ArgumentMatchers.eq(api))(any())).thenReturn(Future.successful(Right(())))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addApi(id).url)
+        val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -743,9 +743,9 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(any(), any())(any())).thenReturn(Future.successful(Right(())))
+        when(fixture.applicationsService.addApi(any[String](), any())(any())).thenReturn(Future.successful(Right(())))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addApi(id).url)
+        val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -762,9 +762,9 @@ class ApplicationsControllerSpec
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.addApi(any[String](), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addApi(id).url)
+        val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -780,9 +780,9 @@ class ApplicationsControllerSpec
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.addApi(any[String](), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addApi("id").url)
+        val request = FakeRequest(PUT, routes.ApplicationsController.addApi("id").url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )

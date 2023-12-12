@@ -18,6 +18,8 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import uk.gov.hmrc.apihubapplications.models.Lens
 
+import java.time.{Clock, LocalDateTime}
+
 object ApplicationLenses {
 
   val applicationEnvironments: Lens[Application, Environments] =
@@ -78,6 +80,12 @@ object ApplicationLenses {
     Lens[Application, Seq[String]](
       get = _.issues,
       set = (application, issues) => application.copy(issues = issues)
+    )
+
+  val applicationApis: Lens[Application, Seq[Api]] =
+    Lens[Application, Seq[Api]](
+      get = _.apis,
+      set = (application, apis) => application.copy(apis = apis)
     )
 
   implicit class ApplicationLensOps(application: Application) {
@@ -283,6 +291,25 @@ object ApplicationLenses {
       application.setPrimaryCredentials(
         application.getPrimaryCredentials.filter(!_.isHidden)
       )
+    }
+
+    def setApis(apis: Seq[Api]): Application = {
+      applicationApis.set(
+        application,
+        apis
+      )
+    }
+
+    def addApi(api: Api): Application = {
+      application.setApis(application.apis :+ api)
+    }
+
+    def removeApi(id: String): Application = {
+      application.setApis(application.apis.filterNot(_.id == id))
+    }
+
+    def updated(clock: Clock): Application = {
+      application.copy(lastUpdated = LocalDateTime.now(clock))
     }
   }
 
