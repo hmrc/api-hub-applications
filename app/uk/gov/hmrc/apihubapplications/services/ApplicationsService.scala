@@ -140,16 +140,18 @@ class ApplicationsService @Inject()(
   def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(applicationId).flatMap {
       case Right(application) =>
-        for {
-          idmsResult <- idmsConnector.deleteAllClients(application)
-          accessRequestsResult <- accessRequestsService.cancelAccessRequests(applicationId)
-          deleteOperationResult <- repository.softDelete(application, currentUser)
-          _ <- sendApplicationDeletedEmails(application, currentUser)
-        } yield (idmsResult, accessRequestsResult, deleteOperationResult) match {
-          case (Right(_), Right(_), Right(_)) => Right(())
-          case (Left(e), _, _) => Left(e)
-          case (_, Left(e), _) => Left(e)
-          case (_, _, Left(e)) => Left(e)
+        idmsConnector.deleteAllClients(application) flatMap {
+          case Right(_) =>
+            accessRequestsService.cancelAccessRequests(applicationId) flatMap {
+              case Right(_) => repository.softDelete(application, currentUser) flatMap {
+                case Right(_) => sendApplicationDeletedEmails(application, currentUser) flatMap {
+                  case _ => Future.successful(Right(()))
+                }
+                case Left(e) => Future.successful(Left(e))
+              }
+              case Left(e) => Future.successful(Left(e))
+            }
+          case Left(e) => Future.successful(Left(e))
         }
       case Left(e) => Future.successful(Left(e))
     }

@@ -704,7 +704,34 @@ class ApplicationsServiceSpec
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(IdmsException.unexpectedResponse(500))
-          verify(repository, times(0)).delete(any())
+          verify(repository, times(0)).softDelete(any(), any())
+          succeed
+      }
+    }
+
+    "must return ApplicationsException when that is returned from any call to the access requests service" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None)))
+
+      when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
+      when(repository.softDelete(any(), ArgumentMatchers.eq(currentUser))).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.deleteAllClients(ArgumentMatchers.eq(application))(any())).thenReturn(Future.successful(Right(())))
+      val notUpdatedException = NotUpdatedException.forId(id)
+      when(accessRequestsService.cancelAccessRequests(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Left(notUpdatedException)))
+
+      service.delete(id, currentUser)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(notUpdatedException)
+          verify(repository, times(0)).softDelete(any(), any())
           succeed
       }
     }
