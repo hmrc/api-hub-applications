@@ -69,17 +69,16 @@ class ApplicationsRepository @Inject()(
         .find()
         .toFuture()
     } map (_.filter(_.deleted.isEmpty)
-      .map(y => y.decryptedValue.toModel))
+      .map(_.decryptedValue.toModel))
   }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find(Filters.and(
-          Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email)))
+        .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
         .toFuture()
     } map (_.filter(_.deleted.isEmpty)
-      .map(y => y.decryptedValue.toModel))
+      .map(_.decryptedValue.toModel))
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {
