@@ -47,8 +47,7 @@ class ApplicationsRepository @Inject()(
     mongoComponent = mongoComponent,
     indexes = Seq(
       IndexModel(Indexes.ascending("teamMembers.email")),
-      IndexModel(Indexes.ascending("environments.primary.scopes.status")),
-      IndexModel(Indexes.ascending("deleted"))
+      IndexModel(Indexes.ascending("environments.primary.scopes.status"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -67,20 +66,20 @@ class ApplicationsRepository @Inject()(
   def findAll(): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find(Filters.not(Filters.exists("deleted")))
+        .find()
         .toFuture()
-    } map (_.map(_.decryptedValue.toModel))
+    } map (_.filter(_.deleted.isEmpty)
+      .map(y => y.decryptedValue.toModel))
   }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
         .find(Filters.and(
-          Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email),
-          Filters.not(Filters.exists("deleted"))
-        ))
+          Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email)))
         .toFuture()
-    } map (_.map(_.decryptedValue.toModel))
+    } map (_.filter(_.deleted.isEmpty)
+      .map(y => y.decryptedValue.toModel))
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {
@@ -88,13 +87,10 @@ class ApplicationsRepository @Inject()(
       case Some(objectId) =>
         Mdc.preservingMdc {
           collection
-            .find(Filters.and(
-              Filters.equal("_id", objectId),
-              Filters.not(Filters.exists("deleted"))
-            ))
+            .find(Filters.equal("_id", objectId))
             .headOption()
         } map {
-          case Some(application) => Right(application.decryptedValue.toModel)
+          case Some(application) if application.deleted.isEmpty => Right(application.decryptedValue.toModel)
           case _ => Left(raiseApplicationNotFoundException.forId(id))
         }
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
