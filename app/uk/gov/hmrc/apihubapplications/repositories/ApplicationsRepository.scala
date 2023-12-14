@@ -20,8 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.{BsonDocument, Document}
 import org.mongodb.scala.model._
 import play.api.Logging
-import play.api.libs.json.Format
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, Pending, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Pending, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
@@ -141,7 +140,7 @@ class ApplicationsRepository @Inject()(
   }
 
   def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
-    val softDeletedApplication = application.copy(deleted = Some(LocalDateTime.now(clock)), deletedBy = Some(currentUser))
+    val softDeletedApplication = application.copy(deleted = Some(LocalDateTime.now(clock)), deletedBy = Some(TeamMember(currentUser)))
     update(softDeletedApplication)
   }
 

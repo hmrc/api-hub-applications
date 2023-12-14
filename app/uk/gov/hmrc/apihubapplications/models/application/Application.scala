@@ -31,7 +31,7 @@ case class Application (
   issues: Seq[String] = Seq.empty,
   apis: Seq[Api] = Seq.empty,
   deleted: Option[LocalDateTime],
-  deletedBy: Option[String]
+  deletedBy: Option[TeamMember]
 )
 
 object Application {
@@ -57,7 +57,7 @@ object Application {
     Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty, deleted = None, deletedBy = None)
   }
 
-  def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments, deleted: Option[LocalDateTime], deletedBy: Option[String]): Application = {
+  def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments, deleted: Option[LocalDateTime], deletedBy: Option[TeamMember]): Application = {
     Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty, deleted = deleted, deletedBy = deletedBy)
   }
 

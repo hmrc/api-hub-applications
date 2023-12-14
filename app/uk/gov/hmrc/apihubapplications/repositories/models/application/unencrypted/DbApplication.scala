@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Deleted, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, TeamMember}
 
 import java.time.LocalDateTime
 
@@ -31,7 +31,7 @@ case class DbApplication(
   environments: DbEnvironments,
   apis: Option[Seq[Api]],
   deleted: Option[LocalDateTime],
-  deletedBy: Option[String]
+  deletedBy: Option[TeamMember]
 ) {
 
   def toModel: Application =

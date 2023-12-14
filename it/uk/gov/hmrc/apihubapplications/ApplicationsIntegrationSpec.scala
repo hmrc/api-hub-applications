@@ -289,7 +289,8 @@ class ApplicationsIntegrationSpec
         storedApplications.size shouldBe 1
         val storedApplication = storedApplications.headOption
         storedApplication.isDefined mustBe true
-        storedApplication.get.deletedBy mustBe Some("me@test.com")
+        storedApplication.get.deletedBy.isDefined mustBe true
+        storedApplication.get.deletedBy.get.decryptedValue mustBe TeamMember("me@test.com")
       }
     }
 

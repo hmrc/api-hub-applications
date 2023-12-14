@@ -100,7 +100,7 @@ class IdmsConnectorImpl @Inject()(
 
   override def deleteAllClients(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val primaryFutures = application.environments.primary.credentials.map(credential => deleteClient(Primary, credential.clientId))
-    val secondaryFutures = application.environments.secondary.credentials.map(credential => deleteClient(Primary, credential.clientId))
+    val secondaryFutures = application.environments.secondary.credentials.map(credential => deleteClient(Secondary, credential.clientId))
     Future.sequence(primaryFutures ++ secondaryFutures)
       .map(useFirstException)
       .map {

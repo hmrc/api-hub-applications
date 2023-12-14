@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted
 
 import play.api.libs.json._
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Deleted}
+import uk.gov.hmrc.apihubapplications.models.application.Api
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.{DbApplication, DbEnvironments}
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
@@ -34,7 +34,7 @@ case class SensitiveApplication(
   environments: DbEnvironments,
   apis: Option[Seq[Api]],
   deleted: Option[LocalDateTime],
-  deletedBy : Option[String]
+  deletedBy : Option[SensitiveTeamMember]
 ) extends Sensitive[DbApplication] with MongoIdentifier {
 
   override def decryptedValue: DbApplication = {
@@ -48,7 +48,7 @@ case class SensitiveApplication(
       environments = environments,
       apis = apis,
       deleted = deleted,
-      deletedBy = deletedBy
+      deletedBy = deletedBy.map(deletedBy => deletedBy.decryptedValue)
     )
   }
 
@@ -67,7 +67,7 @@ object SensitiveApplication {
       environments = dbApplication.environments,
       apis = dbApplication.apis,
       deleted = dbApplication.deleted,
-      deletedBy = dbApplication.deletedBy
+      deletedBy = dbApplication.deletedBy.map(SensitiveTeamMember(_))
     )
   }
 
