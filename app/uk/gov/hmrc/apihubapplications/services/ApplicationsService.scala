@@ -137,13 +137,18 @@ class ApplicationsService @Inject()(
       .map(_.filter(_.hasPrimaryPendingScope))
   }
 
+  def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
+    val softDeletedApplication = application.copy(deleted = Some(LocalDateTime.now(clock)), deletedBy = Some(TeamMember(currentUser)))
+    repository.update(softDeletedApplication)
+  }
+
   def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(applicationId).flatMap {
       case Right(application) =>
         idmsConnector.deleteAllClients(application) flatMap {
           case Right(_) =>
             accessRequestsService.cancelAccessRequests(applicationId) flatMap {
-              case Right(_) => repository.softDelete(application, currentUser) flatMap {
+              case Right(_) => softDelete(application, currentUser) flatMap {
                 case Right(_) => sendApplicationDeletedEmails(application, currentUser) flatMap {
                   case _ => Future.successful(Right(()))
                 }

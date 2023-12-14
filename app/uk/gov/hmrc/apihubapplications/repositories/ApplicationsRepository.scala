@@ -31,7 +31,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc
 
-import java.time.{Clock, LocalDateTime}
+import java.time.Clock
 import javax.inject.Named
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -129,30 +129,6 @@ class ApplicationsRepository @Inject()(
         } map (
           result =>
             if (result.getModifiedCount > 0) {
-              Right(())
-            }
-            else {
-              Left(raiseNotUpdatedException.forApplication(application))
-            }
-        )
-      case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
-    }
-  }
-
-  def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
-    val softDeletedApplication = application.copy(deleted = Some(LocalDateTime.now(clock)), deletedBy = Some(TeamMember(currentUser)))
-    update(softDeletedApplication)
-  }
-
-    def delete(application: Application): Future[Either[ApplicationsException, Unit]] = {
-    stringToObjectId(application.id) match {
-      case Some(id) =>
-        Mdc.preservingMdc {
-          collection.deleteOne(Filters.equal("_id", id))
-            .toFuture()
-        } map (
-          result =>
-            if (result.getDeletedCount != 0) {
               Right(())
             }
             else {
