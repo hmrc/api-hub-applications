@@ -27,8 +27,8 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{Assertion, EitherValues, OptionValues}
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Rejected}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Rejected}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
@@ -537,8 +537,7 @@ class ApplicationsServiceSpec
           actual mustBe Right(())
           verify(repository).update(any())
           val captured = captor.getValue
-          captured.deletedBy mustBe Some(TeamMember(currentUser))
-          captured.deleted mustBe Some(LocalDateTime.now(clock))
+          captured.deleted mustBe Some(Deleted(LocalDateTime.now(clock), TeamMember(currentUser)))
           succeed
       }
     }

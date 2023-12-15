@@ -33,8 +33,7 @@ case class SensitiveApplication(
   teamMembers: Seq[SensitiveTeamMember],
   environments: DbEnvironments,
   apis: Option[Seq[Api]],
-  deleted: Option[LocalDateTime],
-  deletedBy : Option[SensitiveTeamMember]
+  deleted: Option[SensitiveDeleted],
 ) extends Sensitive[DbApplication] with MongoIdentifier {
 
   override def decryptedValue: DbApplication = {
@@ -47,8 +46,7 @@ case class SensitiveApplication(
       teamMembers = teamMembers.map(_.decryptedValue),
       environments = environments,
       apis = apis,
-      deleted = deleted,
-      deletedBy = deletedBy.map(deletedBy => deletedBy.decryptedValue)
+      deleted = deleted.map(_.decryptedValue)
     )
   }
 
@@ -66,8 +64,7 @@ object SensitiveApplication {
       teamMembers = dbApplication.teamMembers.map(SensitiveTeamMember(_)),
       environments = dbApplication.environments,
       apis = dbApplication.apis,
-      deleted = dbApplication.deleted,
-      deletedBy = dbApplication.deletedBy.map(SensitiveTeamMember(_))
+      deleted = dbApplication.deleted.map(SensitiveDeleted(_))
     )
   }
 

@@ -19,8 +19,8 @@ package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypt
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Environments, Pending, Scope, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application._
 
 import java.time.LocalDateTime
 
@@ -108,8 +108,7 @@ object DbApplicationSpec {
     teamMembers = Seq(TeamMember("test-creator-email"), TeamMember("test-member-email")),
     environments = Environments(),
     issues = Seq.empty,
-    deleted = None,
-    deletedBy = None
+    deleted = None
   )
 
   private val testDbApplication = DbApplication(testApplication)
