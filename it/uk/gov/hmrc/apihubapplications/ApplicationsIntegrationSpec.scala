@@ -60,7 +60,7 @@ class ApplicationsIntegrationSpec
 
   private val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl = s"http://localhost:$port"
-  private val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+  private lazy val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
   override def fakeApplication(): GuideApplication =
     GuiceApplicationBuilder()
       .overrides(
