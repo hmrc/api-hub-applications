@@ -23,7 +23,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestDecisionRequest, AccessRequestRequest, AccessRequestStatus}
 import uk.gov.hmrc.apihubapplications.models.exception.{AccessRequestNotFoundException, AccessRequestStatusInvalidException, ApplicationNotFoundException}
-import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
+import uk.gov.hmrc.apihubapplications.services.{AccessRequestsService, ApplicationsService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,7 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class AccessRequestsController @Inject()(
   identify: IdentifierAction,
   cc: ControllerComponents,
-  accessRequestsService: AccessRequestsService
+  accessRequestsService: AccessRequestsService,
+  applicationsService: ApplicationsService
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def createAccessRequest(): Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -64,7 +65,7 @@ class AccessRequestsController @Inject()(
     implicit request: Request[JsValue] =>
       request.body.validate[AccessRequestDecisionRequest] match {
         case JsSuccess(decisionRequest, _) =>
-          accessRequestsService.approveAccessRequest(id, decisionRequest).map {
+          accessRequestsService.approveAccessRequest(id, decisionRequest, applicationsService).map {
             case Right(_) => NoContent
             case Left(_: AccessRequestNotFoundException) => NotFound
             case Left(_: AccessRequestStatusInvalidException) => Conflict

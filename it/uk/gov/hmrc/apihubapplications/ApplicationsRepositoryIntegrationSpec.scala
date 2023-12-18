@@ -31,7 +31,7 @@ import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import java.time.LocalDateTime
+import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.ExecutionContext
 
 class ApplicationsRepositoryIntegrationSpec
@@ -43,7 +43,10 @@ class ApplicationsRepositoryIntegrationSpec
 
   private lazy val playApplication = {
     new GuiceApplicationBuilder()
-      .overrides(bind[MongoComponent].toInstance(mongoComponent))
+      .overrides(
+        bind[MongoComponent].toInstance(mongoComponent),
+        bind[Clock].toInstance(Clock.fixed(Instant.now(), ZoneId.systemDefault()))
+      )
       .build()
   }
 
@@ -53,6 +56,10 @@ class ApplicationsRepositoryIntegrationSpec
 
   override protected lazy val repository: ApplicationsRepository = {
     playApplication.injector.instanceOf[ApplicationsRepository]
+  }
+
+  private implicit lazy val clock: Clock = {
+    playApplication.injector.instanceOf[Clock]
   }
 
   "insert" - {
@@ -76,15 +83,19 @@ class ApplicationsRepositoryIntegrationSpec
   }
 
   "findAll" - {
-    "must retrieve all applications from MongoDb" in {
+    "must retrieve all applications that are not soft deleted from MongoDb" in {
       setMdcData()
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq.empty, Environments())
       val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val saved1 = repository.insert(application1).futureValue
       val saved2 = repository.insert(application2).futureValue
+      repository.insert(application3).futureValue
+      repository.insert(application4).futureValue
 
       val result = repository
         .findAll()
@@ -97,16 +108,19 @@ class ApplicationsRepositoryIntegrationSpec
   }
 
   "filter" - {
-    "must retrieve all applications from MongoDb belonging to named team member" in {
+    "must retrieve all applications that are not soft deleted from MongoDb belonging to named team member" in {
       setMdcData()
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
       val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val saved1 = repository.insert(application1).futureValue
       repository.insert(application2).futureValue
-
+      repository.insert(application3).futureValue
+      repository.insert(application4).futureValue
       val result = repository
         .filter("test1@test.com")
         .map(ResultWithMdcData(_))
@@ -132,6 +146,21 @@ class ApplicationsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe Right(expected)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return ApplicationNotFoundException when the application is soft deleted in MongoDb" in {
+      setMdcData()
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val expected = repository.insert(application).futureValue
+
+      val result = repository
+        .findById(expected.id.get)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(ApplicationNotFoundException.forId(expected.id.get))
       result.mdcData mustBe testMdcData
     }
 
@@ -198,56 +227,6 @@ class ApplicationsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe Left(NotUpdatedException.forId(id))
-      result.mdcData mustBe testMdcData
-    }
-  }
-
-  "delete" - {
-    "must delete the application from MongoDb" in {
-      setMdcData()
-
-      val application = Application(None, "test-app", Creator("test1@test.com"), Seq.empty)
-
-      val saved = repository.insert(application).futureValue
-
-      val result = repository
-        .delete(saved)
-        .map(ResultWithMdcData(_))
-        .futureValue
-
-      result.data mustBe Right(())
-      result.mdcData mustBe testMdcData
-
-      repository.findById(saved.id.value).futureValue mustBe Left(ApplicationNotFoundException.forApplication(saved))
-    }
-
-    "must return ApplicationNotFoundException when the application Id is invalid" in {
-      setMdcData()
-
-      val id = "invalid-id"
-      val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq.empty)
-
-      val result = repository
-        .delete(application)
-        .map(ResultWithMdcData(_))
-        .futureValue
-
-      result.data mustBe Left(ApplicationNotFoundException.forId(id))
-      result.mdcData mustBe testMdcData
-    }
-
-    "must return NotUpdatedException when the application does not exist in MongoDb" in {
-      setMdcData()
-
-      val id = List.fill(24)("0").mkString
-      val application = Application(Some(id), "test-app", Creator("test1@test.com"), Seq.empty)
-
-      val result = repository
-        .delete(application)
-        .map(ResultWithMdcData(_))
-        .futureValue
-
-      result.data mustBe Left(NotUpdatedException.forApplication(application))
       result.mdcData mustBe testMdcData
     }
   }

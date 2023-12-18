@@ -28,7 +28,8 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
-import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
@@ -36,6 +37,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 class IdmsConnectorSpec
@@ -465,6 +467,105 @@ class IdmsConnectorSpec
     }
   }
 
+  "IdmsConnector.deleteAllClients" - {
+    "must place the correct requests to IDMS and succeed" in {
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
+          .withHeader("Authorization", equalTo(authorizationHeaderFor(Primary)))
+          .withHeader("x-api-key", apiKeyHeaderPatternFor(Primary))
+          .willReturn(aResponse()))
+
+      stubFor(
+        delete(urlEqualTo(s"/$Secondary/identity/clients/$clientId2"))
+          .withHeader("Authorization", equalTo(authorizationHeaderFor(Secondary)))
+          .withHeader("x-api-key", apiKeyHeaderPatternFor(Secondary))
+          .willReturn(aResponse()))
+
+
+      val id = "test-id"
+      val application = buildApplication(clientId1, clientId2, id)
+
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+        actual =>
+          verify(deleteRequestedFor(urlEqualTo(s"/$Primary/identity/clients/$clientId1")))
+          verify(deleteRequestedFor(urlEqualTo(s"/$Secondary/identity/clients/$clientId2")))
+          actual mustBe Right(())
+      }
+    }
+
+    "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+
+      val id = "test-id"
+      val application = buildApplication(clientId1, clientId2, id)
+
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(IdmsException.clientNotFound(clientId1))
+      }
+    }
+
+    "must return IdmsException for any non-2xx or 404 response" in {
+      forAll(nonSuccessResponses) { status: Int =>
+        val clientId1 = "test-client-id-1"
+        val clientId2 = "test-client-id-2"
+        stubFor(
+          delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
+            .willReturn(
+              aResponse()
+                .withStatus(status)
+            )
+        )
+
+        val id = "test-id"
+        val application = buildApplication(clientId1, clientId2, id)
+
+        buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+          actual =>
+            actual mustBe Left(IdmsException.unexpectedResponse(status))
+        }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      val id = "test-id"
+      val application = buildApplication(clientId1, clientId2, id)
+
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+        actual =>
+          actual.left.value mustBe a[IdmsException]
+          actual.left.value.issue mustBe CallError
+      }
+    }
+  }
+
+  private def buildApplication(clientId1: String, clientId2: String, id: String) = {
+    Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+      .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
+      .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
+  }
 }
 
 object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {

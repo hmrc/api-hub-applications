@@ -22,6 +22,7 @@ import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
 import uk.gov.hmrc.apihubapplications.models.accessRequest._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Clock
@@ -29,10 +30,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AccessRequestsService @Inject()(
-  repository: AccessRequestsRepository,
-  clock: Clock,
-  applicationsService: ApplicationsService
-)(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+                                       repository: AccessRequestsRepository,
+                                       clock: Clock
+                                     )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def createAccessRequest(request: AccessRequestRequest): Future[Seq[AccessRequest]] = {
     repository.insert(request.toAccessRequests(clock))
@@ -46,7 +46,9 @@ class AccessRequestsService @Inject()(
     repository.findById(id)
   }
 
-  def approveAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  def approveAccessRequest(id: String,
+                           decisionRequest: AccessRequestDecisionRequest,
+                           applicationsService: ApplicationsService )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
         applicationsService.addPrimaryAccess(accessRequest).flatMap(
@@ -77,6 +79,19 @@ class AccessRequestsService @Inject()(
       case _ =>
         Future.successful(Left(raiseAccessRequestNotFoundException.forId(id)))
     }
+  }
+
+  def cancelAccessRequests(applicationId: String) = {
+    getAccessRequests(Some(applicationId), Some(Pending)).flatMap(
+      accessRequests => {
+        Future.sequence(accessRequests.map(pendingAccessRequest => repository.update(
+          pendingAccessRequest
+            .setStatus(Cancelled)
+        ))).map(useFirstApplicationsException).map {
+          case Right(_) => Right(())
+          case Left(e) => Left(e)
+        }
+      })
   }
 
 }

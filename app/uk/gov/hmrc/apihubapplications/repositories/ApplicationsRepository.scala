@@ -31,13 +31,15 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc
 
+import java.time.Clock
 import javax.inject.Named
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsRepository @Inject()(
   mongoComponent: MongoComponent,
-  @Named("aes") implicit val crypto: Encrypter with Decrypter
+  @Named("aes") implicit val crypto: Encrypter with Decrypter,
+  clock: Clock
 )(implicit ec: ExecutionContext)
   extends PlayMongoRepository[SensitiveApplication](
     collectionName = "applications",
@@ -66,7 +68,8 @@ class ApplicationsRepository @Inject()(
       collection
         .find()
         .toFuture()
-    } map (_.map(_.decryptedValue.toModel))
+    } map (_.filter(_.deleted.isEmpty)
+      .map(_.decryptedValue.toModel))
   }
 
   def filter(teamMemberEmail: String): Future[Seq[Application]] = {
@@ -74,7 +77,8 @@ class ApplicationsRepository @Inject()(
       collection
         .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
         .toFuture()
-    } map (_.map(_.decryptedValue.toModel))
+    } map (_.filter(_.deleted.isEmpty)
+      .map(_.decryptedValue.toModel))
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {
@@ -85,7 +89,7 @@ class ApplicationsRepository @Inject()(
             .find(Filters.equal("_id", objectId))
             .headOption()
         } map {
-          case Some(application) => Right(application.decryptedValue.toModel)
+          case Some(application) if application.deleted.isEmpty => Right(application.decryptedValue.toModel)
           case _ => Left(raiseApplicationNotFoundException.forId(id))
         }
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
@@ -120,25 +124,6 @@ class ApplicationsRepository @Inject()(
         } map (
           result =>
             if (result.getModifiedCount > 0) {
-              Right(())
-            }
-            else {
-              Left(raiseNotUpdatedException.forApplication(application))
-            }
-        )
-      case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
-    }
-  }
-
-  def delete(application: Application): Future[Either[ApplicationsException, Unit]] = {
-    stringToObjectId(application.id) match {
-      case Some(id) =>
-        Mdc.preservingMdc {
-          collection.deleteOne(Filters.equal("_id", id))
-            .toFuture()
-        } map (
-          result =>
-            if (result.getDeletedCount != 0) {
               Right(())
             }
             else {

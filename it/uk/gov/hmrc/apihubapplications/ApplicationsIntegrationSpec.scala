@@ -45,7 +45,7 @@ import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEma
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import java.time.LocalDateTime
+import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -60,20 +60,21 @@ class ApplicationsIntegrationSpec
 
   private val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl = s"http://localhost:$port"
-
+  private lazy val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
   override def fakeApplication(): GuideApplication =
     GuiceApplicationBuilder()
       .overrides(
         bind[ApplicationsRepository].toInstance(repository),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction]),
         bind[IdmsConnector].to(classOf[FakeIdmsConnector]),
-        bind[EmailConnector].to(classOf[FakeEmailConnector])
+        bind[EmailConnector].to(classOf[FakeEmailConnector]),
+        bind[Clock].toInstance(clock)
       )
       .configure("metrics.enabled" -> false)
       .build()
 
   override protected lazy val repository: ApplicationsRepository = {
-    new ApplicationsRepository(mongoComponent, NoCrypto)
+    new ApplicationsRepository(mongoComponent, NoCrypto, clock)
   }
 
   "POST to register a new application" should {
@@ -182,10 +183,10 @@ class ApplicationsIntegrationSpec
       val myEmail = "member1@digital.hmrc.gov.uk"
       val myTeamMembers = Seq(TeamMember(myEmail), TeamMember("member2@digital.hmrc.gov.uk"))
 
-      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty)
+      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None)
       val otherTeamMembers = Seq(TeamMember("member3@digital.hmrc.gov.uk"), TeamMember("member4@digital.hmrc.gov.uk"))
 
-      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty)
+      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None)
       deleteAll().futureValue
       val crypto = fakeApplication().injector.instanceOf[ApplicationCrypto]
       insert(application1).futureValue
@@ -271,7 +272,7 @@ class ApplicationsIntegrationSpec
   }
 
   "Deleting an application" should {
-    "delete the application and respond with 204 No Content when successful" in {
+    "soft delete the application and respond with 204 No Content when successful" in {
       forAll { (application: Application) =>
         deleteAll().futureValue
         insert(application).futureValue
@@ -286,7 +287,11 @@ class ApplicationsIntegrationSpec
         response.status shouldBe NO_CONTENT
 
         val storedApplications = findAll().futureValue
-        storedApplications.size shouldBe 0
+        storedApplications.size shouldBe 1
+        val storedApplication = storedApplications.headOption
+        storedApplication.isDefined mustBe true
+        storedApplication.get.deleted.isDefined mustBe true
+        storedApplication.get.deleted.get.decryptedValue mustBe Deleted(LocalDateTime.now(clock), "me@test.com")
       }
     }
 
