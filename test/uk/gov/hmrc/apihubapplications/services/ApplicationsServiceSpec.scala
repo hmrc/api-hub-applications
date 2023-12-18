@@ -537,7 +537,7 @@ class ApplicationsServiceSpec
           actual mustBe Right(())
           verify(repository).update(any())
           val captured = captor.getValue
-          captured.deleted mustBe Some(Deleted(LocalDateTime.now(clock), TeamMember(currentUser)))
+          captured.deleted mustBe Some(Deleted(LocalDateTime.now(clock), currentUser))
           succeed
       }
     }

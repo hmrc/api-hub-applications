@@ -291,7 +291,7 @@ class ApplicationsIntegrationSpec
         val storedApplication = storedApplications.headOption
         storedApplication.isDefined mustBe true
         storedApplication.get.deleted.isDefined mustBe true
-        storedApplication.get.deleted.get.decryptedValue mustBe Deleted(LocalDateTime.now(clock), TeamMember("me@test.com"))
+        storedApplication.get.deleted.get.decryptedValue mustBe Deleted(LocalDateTime.now(clock), "me@test.com")
       }
     }
 

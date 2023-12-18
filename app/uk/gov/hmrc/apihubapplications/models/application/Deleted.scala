@@ -21,7 +21,7 @@ import play.api.libs.json.{Format, Json}
 import java.time.LocalDateTime
 
 case class Deleted(deleted: LocalDateTime,
-                   deletedBy: TeamMember)
+                   deletedBy: String)
 
 
 object Deleted {

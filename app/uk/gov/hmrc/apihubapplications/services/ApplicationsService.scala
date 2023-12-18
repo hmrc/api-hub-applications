@@ -138,7 +138,7 @@ class ApplicationsService @Inject()(
   }
 
   def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
-    val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), TeamMember(currentUser))))
+    val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), currentUser)))
     repository.update(softDeletedApplication)
   }
 

@@ -18,11 +18,13 @@ package uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.Deleted
+import uk.gov.hmrc.crypto.Sensitive.SensitiveString
+import uk.gov.hmrc.crypto.json.JsonEncryption
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 
 import java.time.LocalDateTime
 
-case class SensitiveDeleted(deleted: LocalDateTime, deletedBy: SensitiveTeamMember) extends Sensitive[Deleted] {
+case class SensitiveDeleted(deleted: LocalDateTime, deletedBy: SensitiveString) extends Sensitive[Deleted] {
 
   override def decryptedValue: Deleted = Deleted(deleted = deleted, deletedBy = deletedBy.decryptedValue)
 
@@ -31,9 +33,12 @@ case class SensitiveDeleted(deleted: LocalDateTime, deletedBy: SensitiveTeamMemb
 object SensitiveDeleted {
 
   def apply(deleted: Deleted): SensitiveDeleted = {
-    SensitiveDeleted(deleted.deleted, SensitiveTeamMember(deleted.deletedBy))
+    SensitiveDeleted(deleted.deleted, SensitiveString(deleted.deletedBy))
   }
 
-  implicit def formatSensitiveDeleted(implicit crypto: Encrypter with Decrypter): Format[SensitiveDeleted] = Json.format[SensitiveDeleted]
+  implicit def formatSensitiveDeleted(implicit crypto: Encrypter with Decrypter): Format[SensitiveDeleted] = {
+    implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
+    Json.format[SensitiveDeleted]
+  }
 
 }
