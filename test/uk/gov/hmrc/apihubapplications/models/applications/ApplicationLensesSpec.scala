@@ -21,7 +21,7 @@ import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.Lens
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.{LensBehaviours, randomCredential, randomCredentials, randomEnvironment, randomEnvironments, randomIssues, randomScopes, randomString, randomTeamMembers, testApplication}
+import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec._
 
 import java.time.LocalDateTime
 import scala.util.Random
@@ -51,8 +51,8 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
       val primaryScopes = Seq("test-scope-primary-1", "test-scope-primary-2")
       val secondaryScopes = Seq("test-scope-secondary-1", "test-scope-secondary-2")
 
-      val expectedPrimaryScopes = primaryScopes.map(scopeName => Scope(scopeName,Pending))
-      val expectedSecondaryScopes = secondaryScopes.map(scopeName => Scope(scopeName,Approved))
+      val expectedPrimaryScopes = primaryScopes.map(scopeName => Scope(scopeName))
+      val expectedSecondaryScopes = secondaryScopes.map(scopeName => Scope(scopeName))
 
       val updatedApp = app.addScopes(Primary, primaryScopes).addScopes(Secondary, secondaryScopes)
 
@@ -225,22 +225,6 @@ class ApplicationLensesSpec extends AnyFreeSpec with Matchers with LensBehaviour
           applicationPrimaryScopes,
           (application, scope) => ApplicationLensOps(application).addPrimaryScope(scope)
         )
-      }
-    }
-
-    "hasPrimaryPendingScope" - {
-      "must return true when the application has a primary pending scope" in {
-        val application = testApplication.addPrimaryScope(Scope("test-scope", Pending))
-        application.hasPrimaryPendingScope mustBe true
-      }
-
-      "must return false when the application does not have a primary pending scope" in {
-        val application = testApplication
-          .addPrimaryScope(Scope(randomString(), Approved))
-          .addPrimaryScope(Scope(randomString(), Denied))
-          .addSecondaryScope(Scope(randomString(), Pending))
-
-        application.hasPrimaryPendingScope mustBe false
       }
     }
 
@@ -588,16 +572,8 @@ object ApplicationLensesSpec {
 
   private def randomScope(): Scope =
     Scope(
-      name = s"test-scope${randomString()}",
-      status = randomScopeStatus()
+      name = s"test-scope${randomString()}"
     )
-
-  private def randomScopeStatus(): ScopeStatus =
-    Random.nextInt(3) match {
-      case 0 => Pending
-      case 1 => Denied
-      case _ => Approved
-    }
 
   private def randomTeamMember(): TeamMember =
     TeamMember(email = randomString())

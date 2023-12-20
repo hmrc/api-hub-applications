@@ -292,6 +292,21 @@ class AccessRequestsRepositoryIntegrationSpec
     }
   }
 
+  "countOfPendingApprovals" - {
+    "must return the correct count of pending access requests" in {
+      setMdcData()
+
+      repository.insert(Seq(accessRequest1, accessRequest2, accessRequest3)).flatMap {
+        _ =>
+          repository.countOfPendingApprovals().map(ResultWithMdcData(_)).map {
+            result =>
+              result.data mustBe 2
+              result.mdcData mustBe testMdcData
+          }
+      }
+    }
+  }
+
 }
 
 object AccessRequestsRepositoryIntegrationSpec {
@@ -314,6 +329,16 @@ object AccessRequestsRepositoryIntegrationSpec {
     supportingInformation = "test-supporting-information-2",
     requested = LocalDateTime.now(),
     requestedBy = "test-requested-by-2"
+  )
+
+  private val accessRequest3 = AccessRequest(
+    applicationId = "test-application-id-3",
+    apiId = "test-api-id-3",
+    apiName = "test-api-name-3",
+    status = Approved,
+    supportingInformation = "test-supporting-information-3",
+    requested = LocalDateTime.now(),
+    requestedBy = "test-requested-by-3"
   )
 
 }

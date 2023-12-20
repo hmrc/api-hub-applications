@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.config
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.config.DatabaseStatisticsMetricOrchestratorProvider.DatabaseStatisticsMetricSource
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.repositories.{AccessRequestsRepository, ApplicationsRepository}
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.metrix.{MetricOrchestrator, MetricRepository, MetricSource}
 
@@ -33,7 +33,8 @@ class DatabaseStatisticsMetricOrchestratorProvider @Inject()(
   metricRepository: MetricRepository,
   metrics: Metrics,
   appConfig: AppConfig,
-  repository: ApplicationsRepository
+  applicationsRepository: ApplicationsRepository,
+  accessRequestsRepository: AccessRequestsRepository
 ) extends Provider[MetricOrchestrator] with Logging {
 
   override def get(): MetricOrchestrator = {
@@ -44,7 +45,7 @@ class DatabaseStatisticsMetricOrchestratorProvider @Inject()(
     )
 
     new MetricOrchestrator(
-      metricSources    = List(new DatabaseStatisticsMetricSource(repository)),
+      metricSources    = List(new DatabaseStatisticsMetricSource(applicationsRepository, accessRequestsRepository)),
       lockService      = lockService,
       metricRepository = metricRepository,
       metricRegistry   = metrics.defaultRegistry
@@ -55,17 +56,20 @@ class DatabaseStatisticsMetricOrchestratorProvider @Inject()(
 
 object DatabaseStatisticsMetricOrchestratorProvider {
 
-  class DatabaseStatisticsMetricSource(repository: ApplicationsRepository) extends MetricSource with Logging {
+  class DatabaseStatisticsMetricSource(
+    applicationsRepository: ApplicationsRepository,
+    accessRequestsRepository: AccessRequestsRepository
+  ) extends MetricSource with Logging {
 
     override def metrics(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
       (for {
-        countOfAllApplications <- repository.countOfAllApplications()
-        countOfPendingApprovals <- repository.countOfPendingApprovals()
+        countOfAllApplications <- applicationsRepository.countOfAllApplications()
+        countOfPendingApprovals <- accessRequestsRepository.countOfPendingApprovals()
       } yield {
         logger.info(s"Database metrics: countOfAllApplications=$countOfAllApplications countOfPendingApprovals=$countOfPendingApprovals")
         Map(
           "applications.total.count" -> countOfAllApplications.intValue,
-          "applications.pending-approval.count" -> countOfPendingApprovals
+          "applications.pending-approval.count" -> countOfPendingApprovals.intValue
         )
       }).recover {
         case NonFatal(e) =>

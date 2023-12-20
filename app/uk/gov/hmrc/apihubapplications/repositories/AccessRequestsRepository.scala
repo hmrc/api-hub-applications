@@ -21,7 +21,7 @@ import com.mongodb.client.model.IndexOptions
 import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus, Pending}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
@@ -120,6 +120,14 @@ class AccessRequestsRepository @Inject()(
             }
         }
       case _ => Future.successful(Left(raiseAccessRequestNotFoundException.forAccessRequest(accessRequest)))
+    }
+  }
+
+  def countOfPendingApprovals(): Future[Long] = {
+    Mdc.preservingMdc {
+      collection
+        .countDocuments(Filters.equal("status", Pending.toString))
+        .toFuture()
     }
   }
 

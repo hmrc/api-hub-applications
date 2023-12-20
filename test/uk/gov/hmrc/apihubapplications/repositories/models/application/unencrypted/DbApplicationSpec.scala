@@ -30,25 +30,6 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
   "DbApplication" - {
     "when translating from Application to DbApplication" - {
-      "must remove non-pending scopes" in {
-        val pendingScope = Scope("test-pending-scope", Pending)
-        val approvedScope = Scope("test-approved-scope", Approved)
-
-        val application = testApplication
-          .setPrimaryScopes(Seq(approvedScope, pendingScope))
-          .setSecondaryScopes(Seq(approvedScope))
-
-        val expected = testDbApplication
-          .copy(
-            environments = DbEnvironments(
-              primary = DbEnvironment(Seq(pendingScope), Seq.empty),
-              secondary = DbEnvironment(Seq.empty, Seq.empty)
-            )
-          )
-
-        DbApplication(application) mustBe expected
-      }
-
       "must remove client secrets" in {
         val credential = Credential("test-client-id", now, Some("test-secret"), Some("test-fragment"))
         val dbCredential = DbCredential(credential.clientId, Some(credential.created), credential.secretFragment)
@@ -60,8 +41,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val expected = testDbApplication
           .copy(
             environments = DbEnvironments(
-              primary = DbEnvironment(Seq.empty, Seq(dbCredential)),
-              secondary = DbEnvironment(Seq.empty, Seq(dbCredential))
+              primary = DbEnvironment(Seq(dbCredential)),
+              secondary = DbEnvironment(Seq(dbCredential))
             )
           )
 
@@ -78,8 +59,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val dbApplication = testDbApplication
           .copy(
             environments = DbEnvironments(
-              primary = DbEnvironment(Seq.empty, Seq(DbCredential(clientId, None, None))),
-              secondary = DbEnvironment(Seq.empty, Seq.empty)
+              primary = DbEnvironment(Seq(DbCredential(clientId, None, None))),
+              secondary = DbEnvironment(Seq.empty)
             )
           )
 

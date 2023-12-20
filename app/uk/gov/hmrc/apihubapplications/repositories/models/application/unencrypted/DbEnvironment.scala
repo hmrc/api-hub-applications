@@ -17,13 +17,13 @@
 package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application.{Environment, Pending, Scope}
+import uk.gov.hmrc.apihubapplications.models.application.Environment
 
-case class DbEnvironment(scopes: Seq[Scope], credentials: Seq[DbCredential]) extends DbModel[Environment] {
+case class DbEnvironment(credentials: Seq[DbCredential]) extends DbModel[Environment] {
 
   override def toModel(dbApplication: DbApplication): Environment =
     Environment(
-      scopes = scopes,
+      scopes = Seq.empty,
       credentials = credentials.map(_.toModel(dbApplication))
     )
 
@@ -33,7 +33,6 @@ object DbEnvironment {
 
   def apply(environment: Environment): DbEnvironment =
     DbEnvironment(
-      scopes = environment.scopes.filter(_.status == Pending),
       credentials = environment.credentials.map(DbCredential(_))
     )
 

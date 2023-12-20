@@ -92,8 +92,8 @@ object ApplicationLenses {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
-        case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_, Pending))).distinct)
-        case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_, Approved))).distinct)
+        case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_))).distinct)
+        case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_))).distinct)
       }
 
     def getPrimaryScopes: Seq[Scope] =
@@ -107,10 +107,6 @@ object ApplicationLenses {
         application,
         applicationPrimaryScopes.get(application) :+ scope
       )
-
-    def hasPrimaryPendingScope: Boolean =
-      applicationPrimaryScopes.get(application)
-        .exists(scope => scope.status == Pending)
 
     def getPrimaryMasterCredential: Option[Credential] =
       applicationPrimaryCredentials.get(application)

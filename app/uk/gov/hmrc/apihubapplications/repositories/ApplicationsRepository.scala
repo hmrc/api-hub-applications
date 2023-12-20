@@ -17,10 +17,10 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.bson.{BsonDocument, Document}
+import org.mongodb.scala.bson.Document
 import org.mongodb.scala.model._
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Pending, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
@@ -31,23 +31,20 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc
 
-import java.time.Clock
 import javax.inject.Named
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsRepository @Inject()(
   mongoComponent: MongoComponent,
-  @Named("aes") implicit val crypto: Encrypter with Decrypter,
-  clock: Clock
+  @Named("aes") implicit val crypto: Encrypter with Decrypter
 )(implicit ec: ExecutionContext)
   extends PlayMongoRepository[SensitiveApplication](
     collectionName = "applications",
     domainFormat = formatDataWithMongoIdentifier[SensitiveApplication],
     mongoComponent = mongoComponent,
     indexes = Seq(
-      IndexModel(Indexes.ascending("teamMembers.email")),
-      IndexModel(Indexes.ascending("environments.primary.scopes.status"))
+      IndexModel(Indexes.ascending("teamMembers.email"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -140,28 +137,6 @@ class ApplicationsRepository @Inject()(
         .countDocuments()
         .toFuture()
     }
-  }
-
-  def countOfPendingApprovals(): Future[Int] = {
-    Mdc.preservingMdc {
-      collection
-        .aggregate[BsonDocument](
-          Seq(
-            Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
-            Aggregates.unwind("$environments.primary.scopes"),
-            Aggregates.filter(Filters.equal("environments.primary.scopes.status", Pending.toString)),
-            Aggregates.count("pendingApprovals")
-          )
-        )
-        .toFuture()
-    }.map(_.headOption
-      .map(bsonDocument =>
-        bsonDocument.get("pendingApprovals")
-          .asInt32()
-          .getValue
-      )
-    )
-    .map(_.getOrElse(0))
   }
 
   def listIndexes: Future[Seq[Document]] = {

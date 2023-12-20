@@ -26,8 +26,8 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.{JsSuccess, Json}
-import play.api.libs.ws.{EmptyBody, WSClient}
+import play.api.libs.json.Json
+import play.api.libs.ws.WSClient
 import play.api.test.Helpers.CONTENT_TYPE
 import play.api.{Application => GuideApplication}
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
@@ -35,12 +35,10 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction,
 import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.idms.Secret
-import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
+import uk.gov.hmrc.apihubapplications.models.requests.UserEmail
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
-import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationTestLenses.ApplicationTestLensOps
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -74,7 +72,7 @@ class ApplicationsIntegrationSpec
       .build()
 
   override protected lazy val repository: ApplicationsRepository = {
-    new ApplicationsRepository(mongoComponent, NoCrypto, clock)
+    new ApplicationsRepository(mongoComponent, NoCrypto)
   }
 
   "POST to register a new application" should {
@@ -234,14 +232,14 @@ class ApplicationsIntegrationSpec
         )
         .setPrimaryScopes(
           Seq(
-            Scope(FakeIdmsConnector.fakeClientScopeId1, Approved),
-            Scope(FakeIdmsConnector.fakeClientScopeId2, Approved)
+            Scope(FakeIdmsConnector.fakeClientScopeId1),
+            Scope(FakeIdmsConnector.fakeClientScopeId2)
           )
         )
         .setSecondaryScopes(
           Seq(
-            Scope(FakeIdmsConnector.fakeClientScopeId1, Approved),
-            Scope(FakeIdmsConnector.fakeClientScopeId2, Approved)
+            Scope(FakeIdmsConnector.fakeClientScopeId1),
+            Scope(FakeIdmsConnector.fakeClientScopeId2)
           )
         )
         .makePublic()
@@ -316,316 +314,6 @@ class ApplicationsIntegrationSpec
             .post("{}")
             .futureValue
         response.status shouldBe BAD_REQUEST
-      }
-    }
-  }
-
-"POST to add scopes to environments of an application" should {
-  "respond with a 204 No Content" in {
-    forAll { (application: Application) =>
-
-      val applicationWithSecondaryCredentials = application.setSecondaryCredentials(Seq(Credential("client-id", LocalDateTime.now(), None, None)))
-      deleteAll().futureValue
-      insert(applicationWithSecondaryCredentials).futureValue
-
-      val response =
-        wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-          .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(Seq(NewScope("new scope", Seq(Primary)))))
-          .futureValue
-
-        response.status shouldBe 204
-      }
-    }
-
-  "respond with a 404 NotFound if the application does not exist" in {
-    forAll { (application: Application) =>
-      deleteAll().futureValue
-
-      val newScopes = Seq(NewScope("test-scope", Seq(Primary)))
-      val response =
-        wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-          .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(newScopes))
-          .futureValue
-
-        response.status shouldBe 404
-      }
-    }
-
-    "respond with a 400 BadRequest if the application exist but we try to add scopes to an environment that does not exist" in {
-      forAll { application: Application =>
-        deleteAll().futureValue
-        insert(application).futureValue
-
-        val invalidEnvironmentRequest = Json.parse(
-          s"""
-             |[
-             |  {
-             |    "name": "scope1",
-             |    "environments": ["env-does-not-exist"]
-             |  }
-             |]
-             |""".stripMargin)
-
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-            .addHttpHeaders(("Content", "application/json"))
-            .post(invalidEnvironmentRequest)
-            .futureValue
-
-        response.status shouldBe 400
-      }
-    }
-
-  "set status of scopes to PENDING in primary environment" in {
-    forAll { application: Application =>
-      val emptyScopesApp = application.withEmptyScopes
-
-        deleteAll().futureValue
-        insert(emptyScopesApp).futureValue
-
-        val newScopes = Seq(NewScope("scope1", Seq(Secondary, Primary)))
-        wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/scopes")
-          .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(newScopes))
-          .futureValue
-
-
-        val storedApplications = findAll().futureValue.filter(app => app.id == application.id)
-        storedApplications.size shouldBe 1
-        val storedApplication = storedApplications.head
-
-      storedApplication.environments.primary.scopes.map(_.status).toSet shouldBe Set(Pending)
-    }
-  }
-}
-
-  "GET pending scopes" should {
-    "respond with a 200 and a list applications that have at least one primary scope with status of pending" in {
-      forAll { (application1: Application, application2: Application) =>
-        val appWithPendingSecondaryScopes = application1.withEmptyScopes.withSecondaryPendingScopes
-        val appWithPendingPrimaryScopes = application2.withEmptyScopes.withPrimaryPendingScopes.withPrimaryApprovedScopes
-
-        deleteAll().futureValue
-        insert(appWithPendingSecondaryScopes).futureValue
-        insert(appWithPendingPrimaryScopes).futureValue
-
-        val response = wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/pending-primary-scopes")
-          .addHttpHeaders(("Accept", "application/json"))
-          .get()
-          .futureValue
-
-        // This expectation has to match what is stored and retrieved from MongoDb
-        // The translation from Application to DbApplication does the following:
-        //  1) Remove non-pending scopes
-        //  2) Sets all secrets to None
-        val expected = appWithPendingPrimaryScopes
-          .setPrimaryScopes(
-            appWithPendingPrimaryScopes
-              .getPrimaryScopes
-              .filter(_.status == Pending)
-          )
-          .setPrimaryCredentials(
-            appWithPendingPrimaryScopes
-              .getPrimaryCredentials
-              .map(_.copy(clientSecret = None))
-          )
-          .setSecondaryCredentials(
-            appWithPendingPrimaryScopes
-              .getSecondaryCredentials
-              .map(_.copy(clientSecret = None))
-          )
-
-        response.status shouldBe 200
-        response.json shouldBe Json.toJson(Seq(expected))
-      }
-    }
-  }
-
-  "PUT change scope status from PENDING to APPROVED on primary environment" should {
-    "respond with a 204 No Content when the status was set successfully" in {
-      forAll { (application: Application) =>
-        deleteAll().futureValue
-
-        val appWithPendingPrimaryScope = application.withEmptyScopes.withPrimaryPendingScopes.withPrimaryApprovedScopes.withPrimaryCredentialClientIdOnly
-        insert(appWithPendingPrimaryScope).futureValue
-
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/primary/scopes/${application.pendingScopeName}")
-            .addHttpHeaders(("Content-Type", "application/json"))
-            .put(Json.toJson(UpdateScopeStatus(Approved)))
-            .futureValue
-
-        response.status shouldBe 204
-      }
-    }
-
-    "must return 404 Not Found when trying to set scope on the application that does not exist" in {
-      forAll { (_: Application) =>
-        deleteAll().futureValue
-
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/non-existent-app-id/environments/primary/scopes/test-scope-name")
-            .addHttpHeaders(("Content-Type", "application/json"))
-            .put(Json.toJson(UpdateScopeStatus(Approved)))
-            .futureValue
-
-        response.status shouldBe 404
-      }
-    }
-
-    "must return 404 Not Found when trying to set scope status to APPROVED on an existing scope that is not PENDING" in {
-      forAll { (application: Application) =>
-        deleteAll().futureValue
-
-        val appWithPendingPrimaryScope = application.withEmptyScopes.withPrimaryApprovedScopes
-        insert(appWithPendingPrimaryScope).futureValue
-
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/environments/primary/scopes/${application.approvedScopeName}")
-            .addHttpHeaders(("Content-Type", "application/json"))
-            .put(Json.toJson(UpdateScopeStatus(Approved)))
-            .futureValue
-
-        response.status shouldBe 404
-      }
-    }
-
-    "must return 404 Not Found when trying to set scope status on an environment other than primary" in {
-      val response =
-        wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/my-app-id/environments/secondary/scopes/test-scope-name")
-          .addHttpHeaders(("Content-Type", "application/json"))
-          .put(Json.toJson(UpdateScopeStatus(Approved)))
-          .futureValue
-
-      response.status shouldBe 404
-    }
-
-    "must return 400 Bad Request when trying to set scope status to anything other than APPROVED" in {
-      val response =
-        wsClient
-          .url(s"$baseUrl/api-hub-applications/applications/my-app-id/environments/primary/scopes/test-scope-name")
-          .addHttpHeaders(("Content-Type", "application/json"))
-          .put(Json.toJson(UpdateScopeStatus(Pending)))
-          .futureValue
-
-      response.status shouldBe 400
-    }
-
-  }
-
-  "POST to request a new secret" should {
-    "respond with a 200 ok and body containing the secret and update the application with secret fragment" in {
-      forAll { app: Application =>
-        val appWithPrimaryClientId = app.withPrimaryCredentialClientIdOnly
-        deleteAll().futureValue
-        insert(appWithPrimaryClientId).futureValue
-        val applicationId = app.id.get
-        val response =
-          wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/$applicationId/environments/primary/credentials/secret")
-            .post(EmptyBody)
-            .futureValue
-
-        response.status shouldBe 200
-        noException should be thrownBy response.json.as[Secret]
-
-        val updatedApp = findAll().futureValue.head.decryptedValue
-        updatedApp.toModel.getPrimaryCredentials.head.secretFragment mustBe Some("1234")
-      }
-    }
-
-    "PUT to add apis to an application" should {
-      "respond with a 204 No Content" in {
-        forAll { (application: Application) =>
-          deleteAll().futureValue
-          insert(application).futureValue
-
-          val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-
-          val id = application.id.get
-          val response =
-            wsClient
-              .url(s"$baseUrl/api-hub-applications/applications/$id/apis")
-              .addHttpHeaders(("Content", "application/json"))
-              .put(Json.toJson(api))
-              .futureValue
-
-          response.status shouldBe 204
-        }
-      }
-
-      "respond with a 404 NotFound if the application does not exist" in {
-        forAll { (application: Application) =>
-          deleteAll().futureValue
-
-          val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-
-          val response =
-            wsClient
-              .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}/apis")
-              .addHttpHeaders(("Content", "application/json"))
-              .put(Json.toJson(api))
-              .futureValue
-
-          response.status shouldBe 404
-        }
-      }
-    }
-
-    "POST to add primary credential to an application" should {
-      "respond with a 200 with a credential" in {
-        forAll { (application: Application) =>
-          deleteAll().futureValue
-
-          val appWithPendingPrimaryScope = application.withPrimaryCredentialClientIdOnly
-
-          insert(appWithPendingPrimaryScope).futureValue
-
-          val id = application.id.get
-          val environmentName = Primary
-
-          val response =
-            wsClient
-              .url(s"$baseUrl/api-hub-applications/applications/$id/environments/$environmentName/credentials")
-              .addHttpHeaders(("Content", "application/json"))
-              .post(EmptyBody)
-              .futureValue
-
-          response.status shouldBe 201
-          val newCredential = response.json.validate[Credential] match {
-            case JsSuccess(credential, _) => credential
-            case _ => fail("No credential returned")
-          }
-
-          newCredential.clientSecret mustNot be(empty)
-          newCredential.secretFragment mustNot be(empty)
-        }
-      }
-
-      "respond with a 404 NotFound if the application does not exist" in {
-        forAll { (application: Application) =>
-          deleteAll().futureValue
-
-          val response =
-            wsClient
-              .url(s"$baseUrl/api-hub-applications/applications/1234/environments/primary/credentials")
-              .addHttpHeaders(("Content", "application/json"))
-              .post(EmptyBody)
-              .futureValue
-
-          response.status shouldBe 404
-        }
       }
     }
   }
