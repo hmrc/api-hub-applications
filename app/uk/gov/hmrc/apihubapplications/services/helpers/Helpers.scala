@@ -42,7 +42,7 @@ object Helpers {
   }
 
   def ignoreClientNotFound[T](sequence: Seq[Either[IdmsException, T]]): Seq[Either[IdmsException, T]] = {
-    sequence.filter(y => y match {
+    sequence.filter(either => either match {
       case Left(e: IdmsException) if e.issue == ClientNotFound => false
       case _ => true
       })
