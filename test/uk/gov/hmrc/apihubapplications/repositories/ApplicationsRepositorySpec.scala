@@ -22,7 +22,6 @@ import play.api.libs.json._
 import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.requests.UpdateScopeStatus
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
@@ -74,32 +73,32 @@ class ApplicationsRepositorySpec
 
     "must successfully deserialise JSON with apis to create an Application object" in {
       val now = LocalDateTime.now()
-            val json = Json.parse(
-              s"""
-                 |{
-                 |"lastUpdated":"${now.toString}",
-                 |"createdBy":{"email": "\\"test1@test.com\\""},
-                 |"environments":{
-                 |  "primary":{"scopes":[],"credentials":[]},
-                 |  "secondary":{"scopes":[],"credentials":[]}
-                 |},
-                 |"created":"${now.toString}",
-                 |"name":"test-app-1",
-                 |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},
-                 |"teamMembers":[{"email": "\\"test2@test.com\\""}],
-                 |"apis": [
-                 |    {
-                 |      "id": "63bebf8bbbeccc26c12294e6",
-                 |      "endpoints": [
-                 |        {
-                 |          "httpMethod": "GET",
-                 |          "path": "/foo/bar"
-                 |        }
-                 |      ]
-                 |    }
-                 |  ]
-                 |}
-                 |""".stripMargin)
+      val json = Json.parse(
+        s"""
+           |{
+           |"lastUpdated":"${now.toString}",
+           |"createdBy":{"email": "\\"test1@test.com\\""},
+           |"environments":{
+           |  "primary":{"scopes":[],"credentials":[]},
+           |  "secondary":{"scopes":[],"credentials":[]}
+           |},
+           |"created":"${now.toString}",
+           |"name":"test-app-1",
+           |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},
+           |"teamMembers":[{"email": "\\"test2@test.com\\""}],
+           |"apis": [
+           |    {
+           |      "id": "63bebf8bbbeccc26c12294e6",
+           |      "endpoints": [
+           |        {
+           |          "httpMethod": "GET",
+           |          "path": "/foo/bar"
+           |        }
+           |      ]
+           |    }
+           |  ]
+           |}
+           |""".stripMargin)
 
       val result = json.validate(formatDataWithMongoIdentifier[SensitiveApplication])
       result mustBe a[JsSuccess[_]]
@@ -153,34 +152,6 @@ class ApplicationsRepositorySpec
 
       val result = Json.toJson(application)(SensitiveApplication.formatSensitiveApplication(NoCrypto))
       (result \ "issues") mustBe a[JsUndefined]
-    }
-
-    "must successfully serialise a collection of new scopes" in {
-      val newScopes = Seq(NewScope("scope1", Seq(Primary, Secondary)), NewScope("scope2", Seq(Primary)))
-      val result = Json.toJson(newScopes)
-      (result \ 0 \ "name") mustBe JsDefined(JsString("scope1"))
-      (result \ 0 \ "environments" \ 0) mustBe JsDefined(JsString("primary"))
-      (result \ 0 \ "environments" \ 1) mustBe JsDefined(JsString("secondary"))
-      (result \ 1 \ "name") mustBe JsDefined(JsString("scope2"))
-      (result \ 1 \ "environments" \ 0) mustBe JsDefined(JsString("primary"))
-    }
-
-    "must successfully de-serialise a collection of new scopes" in {
-      val newScopeJson: JsValue = Json.parse(s"""[{"name":"scope1","environments":["primary","secondary"]},{"name":"scope2","environments":["primary"]}]""".stripMargin)
-      val result = newScopeJson.validate[Seq[NewScope]]
-      result mustBe a[JsSuccess[_]]
-    }
-
-    "must successfully serialise UpdateScopeStatus Request" in {
-      val request = UpdateScopeStatus(Approved)
-      val result = Json.toJson(request)
-      (result \ "status") mustBe JsDefined(JsString("APPROVED"))
-    }
-
-    "must successfully de-serialise UpdateScopeStatus Request" in {
-      val json = Json.parse(s"""{"status": "PENDING"}""".stripMargin)
-      val result = json.validate(UpdateScopeStatus.updateScopeStatusFormat)
-      result mustBe a[JsSuccess[_]]
     }
   }
 

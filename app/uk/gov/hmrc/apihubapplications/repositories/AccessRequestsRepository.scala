@@ -21,7 +21,7 @@ import com.mongodb.client.model.IndexOptions
 import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus, Pending}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
@@ -44,7 +44,8 @@ class AccessRequestsRepository @Inject()(
     domainFormat = formatDataWithMongoIdentifier[SensitiveAccessRequest],
     mongoComponent = mongoComponent,
     indexes = Seq(
-      IndexModel(Indexes.ascending("applicationId", "status"), new IndexOptions().name("applicationId-status-index"))
+      IndexModel(Indexes.ascending("applicationId", "status"), new IndexOptions().name("applicationId-status-index")),
+      IndexModel(Indexes.ascending("status"), new IndexOptions().name("status-index"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -120,6 +121,14 @@ class AccessRequestsRepository @Inject()(
             }
         }
       case _ => Future.successful(Left(raiseAccessRequestNotFoundException.forAccessRequest(accessRequest)))
+    }
+  }
+
+  def countOfPendingApprovals(): Future[Long] = {
+    Mdc.preservingMdc {
+      collection
+        .countDocuments(Filters.equal("status", Pending.toString))
+        .toFuture()
     }
   }
 

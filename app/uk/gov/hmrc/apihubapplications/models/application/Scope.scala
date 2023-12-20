@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import play.api.libs.json.{Format, Json}
 
-case class Scope(name: String, status: ScopeStatus)
+case class Scope(name: String)
 
 object Scope {
 

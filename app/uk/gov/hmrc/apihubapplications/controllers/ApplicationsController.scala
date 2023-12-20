@@ -22,10 +22,9 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception._
-import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UpdateScopeStatus, UserEmail}
+import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -103,73 +102,8 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
-  def addScopes(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
-    implicit request: Request[JsValue] => {
-      val jsReq = request.body
-      jsReq.validate[Seq[NewScope]] match {
-        case JsSuccess(scopes, _) =>
-          logger.info(s"Adding scopes ($scopes) to application ID: $id")
-          scopes match {
-            case s if s.hasPrimaryEnvironment && s.size > 1 => Future.successful(NotImplemented)
-            case s if s.isEmpty => Future.successful(BadRequest)
-            case _ => applicationsService.addScopes(id, scopes).map {
-              case Right(_) => NoContent
-              case Left(_: ApplicationNotFoundException) => NotFound
-              case Left(_: IdmsException) => BadGateway
-              case _ => InternalServerError
-            }
-          }
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
-    }
-  }
-
-  def pendingPrimaryScopes: Action[AnyContent] = identify.compose(Action).async {
-    applicationsService.getApplicationsWithPendingPrimaryScope.map(Json.toJson(_)).map(Ok(_))
-  }
-
-  def updatePrimaryScopeStatus(id: String, scopeName: String): Action[JsValue] =
-    identify.compose(Action(parse.json)).async {
-      implicit request: Request[JsValue] => {
-        val jsReq = request.body
-        jsReq.validate[UpdateScopeStatus] match {
-          case JsSuccess(UpdateScopeStatus(Approved), _) =>
-            logger.info(s"Setting scope $scopeName to ${Approved.toString} on application ID: $id")
-            applicationsService.approvePrimaryScope(id, scopeName).map {
-              case Right(_) => NoContent
-              case Left(_: ApplicationNotFoundException) => NotFound
-              case Left(ApplicationDataIssueException(_, InvalidPrimaryScope)) => NotFound
-              case Left(_: IdmsException) => BadGateway
-              case Left(_) => InternalServerError
-            }
-          case JsSuccess(updateStatus, _) =>
-            logger.warn(s"Unsupported status: ${updateStatus.status.toString}")
-            Future.successful(BadRequest)
-          case e: JsError =>
-            logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-            Future.successful(BadRequest)
-        }
-      }
-
-    }
-
   private def decrypt(encrypted: String): String = {
     crypto.QueryParameterCrypto.decrypt(Crypted(encrypted)).value
-  }
-
-  def createPrimarySecret(id: String): Action[AnyContent] = identify.compose(Action).async {
-    implicit request =>
-      logger.info(s"Creating primary secret for application ID: $id")
-      val eventualExceptionOrSecret = applicationsService.createPrimarySecret(id)
-      eventualExceptionOrSecret.map {
-        case Right(secret) => Ok(Json.toJson(secret))
-        case Left(_: IdmsException) => BadGateway
-        case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: ApplicationDataIssueException) => BadRequest
-        case Left(_) => InternalServerError
-      }
   }
 
   def addApi(id: String): Action[JsValue] = {

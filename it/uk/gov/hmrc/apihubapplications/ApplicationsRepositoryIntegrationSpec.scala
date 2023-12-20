@@ -23,7 +23,6 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
@@ -247,37 +246,6 @@ class ApplicationsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe count
-      result.mdcData mustBe testMdcData
-    }
-  }
-
-  "countOfPendingApprovals" - {
-    "must return the correct count of pending approvals" in {
-      setMdcData()
-
-      repository.insert(
-        Application(None, "test-app-1", Creator("test1@test.com"), Seq.empty)
-          .addPrimaryScope(Scope("scope-name", Pending))
-          .addPrimaryScope(Scope("scope-name", Denied))
-      ).futureValue
-
-      repository.insert(
-        Application(None, "test-app-2", Creator("test1@test.com"), Seq.empty)
-          .addPrimaryScope(Scope("scope-name", Pending))
-          .addPrimaryScope(Scope("scope-name", Pending))
-      ).futureValue
-
-      repository.insert(
-        Application(None, "test-app-3", Creator("test1@test.com"), Seq.empty)
-          .addPrimaryScope(Scope("scope-name", Denied))
-      ).futureValue
-
-      val result = repository
-        .countOfPendingApprovals()
-        .map(ResultWithMdcData(_))
-        .futureValue
-
-      result.data mustBe 3
       result.mdcData mustBe testMdcData
     }
   }

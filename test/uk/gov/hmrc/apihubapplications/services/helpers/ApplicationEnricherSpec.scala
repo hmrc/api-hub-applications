@@ -21,7 +21,7 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Approved, Creator, Credential, Issues, Pending, Primary, Scope, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, Issues, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
@@ -42,8 +42,8 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
 
   "process" - {
     "must correctly combine successful enrichers" in {
-      val scope1 = Scope("test-scope-1", Approved)
-      val scope2 = Scope("test-scope-2", Approved)
+      val scope1 = Scope("test-scope-1")
+      val scope2 = Scope("test-scope-2")
 
       ApplicationEnrichers.process(
         testApplication,
@@ -233,8 +233,8 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       val expected = application
         .setSecondaryScopes(
           Seq(
-            Scope(testClientScope1.clientScopeId, Approved),
-            Scope(testClientScope2.clientScopeId, Approved)
+            Scope(testClientScope1.clientScopeId),
+            Scope(testClientScope2.clientScopeId)
           )
         )
 
@@ -290,38 +290,6 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
   }
 
   "primaryScopeApplicationEnricher" - {
-    "must enrich an application with secondary scopes using the secondary master credential and still include pending scopes" in {
-      val masterCredential = testClientResponse1.asNewCredential(clock)
-      val oldCredential = Credential("test-older-client-id", LocalDateTime.now(clock).minusDays(1), None, None)
-
-      val pendingScope1 = Scope("test-pending-scope-1", Pending)
-      val pendingScope2 = Scope("test-pending-scope-2", Pending)
-      val approvedScope = Scope("test-approved-scope", Approved)
-
-      val application = testApplication
-        .setPrimaryCredentials(Seq(oldCredential, masterCredential))
-        .setPrimaryScopes(Seq(pendingScope1, pendingScope2, approvedScope))
-
-      val expected = application
-        .setPrimaryScopes(
-          Seq(
-            Scope(testClientScope1.clientScopeId, Approved),
-            Scope(testClientScope2.clientScopeId, Approved),
-            pendingScope1,
-            pendingScope2
-          )
-        )
-
-      val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
-        .thenReturn(Future.successful(Right(Seq(testClientScope1, testClientScope2))))
-
-      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
-        case Right(enricher) => enricher.enrich(application) mustBe expected
-        case Left(e) => fail("Unexpected Left response", e)
-      }
-    }
-
     "must not modify an application if there are zero primary credentials" in {
       ApplicationEnrichers.primaryScopeApplicationEnricher(testApplication, mock[IdmsConnector]).map {
         case Right(enricher) => enricher.enrich(testApplication) mustBe testApplication
@@ -346,10 +314,8 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     }
 
     "must add an application issue if the secondary credential cannot be found" in {
-      val pendingScope = Scope("test-pending-scope", Pending)
       val application = testApplication
         .setPrimaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
-        .setPrimaryScopes(Seq(pendingScope))
 
       val expected = application
         .addIssue(Issues.primaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
@@ -487,7 +453,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
 
       ApplicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope).map {
         case Right(enricher) =>
-          enricher.enrich(application) mustBe application.addPrimaryScope(Scope(scope, Approved))
+          enricher.enrich(application) mustBe application.addPrimaryScope(Scope(scope))
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1), ArgumentMatchers.eq(scope))(any())
           verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId2), ArgumentMatchers.eq(scope))(any())
           succeed
@@ -506,7 +472,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
 
       ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope).map {
         case Right(enricher) =>
-          enricher.enrich(application) mustBe application.addSecondaryScope(Scope(scope, Approved))
+          enricher.enrich(application) mustBe application.addSecondaryScope(Scope(scope))
         case Left(e) => fail("Unexpected Left response", e)
       }
     }

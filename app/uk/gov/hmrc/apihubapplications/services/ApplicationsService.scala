@@ -21,11 +21,10 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.NewScope.implicits._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.exception._
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
@@ -134,11 +133,6 @@ class ApplicationsService @Inject()(
     }
   }
 
-  def getApplicationsWithPendingPrimaryScope: Future[Seq[Application]] = {
-    findAll()
-      .map(_.filter(_.hasPrimaryPendingScope))
-  }
-
   def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
     val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), currentUser)))
     repository.update(softDeletedApplication)
@@ -152,7 +146,7 @@ class ApplicationsService @Inject()(
             accessRequestsService.cancelAccessRequests(applicationId) flatMap {
               case Right(_) => softDelete(application, currentUser) flatMap {
                 case Right(_) => sendApplicationDeletedEmails(application, currentUser) flatMap {
-                  case _ => Future.successful(Right(()))
+                   _ => Future.successful(Right(()))
                 }
                 case Left(e) => Future.successful(Left(e))
               }
@@ -169,115 +163,8 @@ class ApplicationsService @Inject()(
     val email2 = emailConnector.sendApplicationDeletedEmailToTeam(application, currentUser)
     Future.sequence(Seq(email1, email2))
       .map {
-        case _ => Right(())
+        _ => Right(())
       }
-  }
-
-  def addScopes(applicationId: String, newScopes: Seq[NewScope])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-
-    def doRepositoryUpdate(application: Application, newScopes: Seq[NewScope]): Future[Either[ApplicationsException, Unit]] = {
-      if (newScopes.hasPrimaryEnvironment) {
-        repository.update(
-          application
-            .addScopes(
-              Primary,
-              newScopes
-                .filter(_.hasPrimaryEnvironment)
-                .map(_.name)
-            )
-            .copy(lastUpdated = LocalDateTime.now(clock))
-        )
-      }
-      else {
-        Future.successful(Right(()))
-      }
-    }
-
-    def doIdmsUpdate(application: Application, newScopes: Seq[NewScope])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-      if (newScopes.hasSecondaryEnvironment) {
-        ApplicationEnrichers.process(
-          application,
-          newScopes
-            .filter(_.hasSecondaryEnvironment)
-            .map(
-              newScope =>
-                ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, newScope.name)
-            )
-        ).map(_.map(_ => ()))
-      }
-      else {
-        Future.successful(Right(()))
-      }
-    }
-
-    repository.findById(applicationId).flatMap {
-      case Right(application) =>
-        val repositoryUpdate = doRepositoryUpdate(application, newScopes)
-        val idmsUpdate = doIdmsUpdate(application, newScopes)
-
-        for {
-          repositoryUpdated <- repositoryUpdate
-          idmsUpdated <- idmsUpdate
-        } yield (repositoryUpdated, idmsUpdated) match {
-          case (Right(_), Right(_)) => Right(())
-          case (_, Left(e)) => Left(e)
-          case (Left(e), _) => Left(e)
-        }
-      case Left(e) => Future.successful(Left(e))
-    }
-  }
-
-  def approvePrimaryScope(applicationId: String, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-
-    def removePrimaryScope(application: Application, scopeId: String): Future[Either[ApplicationsException, Unit]] = {
-      val prunedScopes = application.getPrimaryScopes.filterNot(scope => scope.name == scopeId)
-      val prunedApplication = application.setPrimaryScopes(prunedScopes)
-      repository.update(prunedApplication)
-    }
-
-    def idmsApprovePrimaryScope(application: Application, scopeName: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-      if (application.getPrimaryScopes.exists(scope => scope.name == scopeName && scope.status == Pending)) {
-        application.getPrimaryMasterCredential match {
-          case Some(credential) =>
-            idmsConnector.addClientScope(Primary, credential.clientId, scopeName)
-          case None =>
-            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
-        }
-      } else {
-        Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryScope)))
-      }
-    }
-
-    repository.findById(applicationId).flatMap {
-      case Right(application) => idmsApprovePrimaryScope(application, scopeName).flatMap {
-        case Right(_) => removePrimaryScope(application, scopeName)
-        case Left(e) => Future.successful(Left(e))
-      }
-      case Left(e) => Future.successful(Left(e))
-    }
-  }
-
-  def createPrimarySecret(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Secret]] = {
-    repository.findById(applicationId).flatMap {
-      case Right(application) =>
-        application.getPrimaryMasterCredential match {
-          case Some(credential) if credential.isHidden =>
-            idmsConnector.newSecret(Primary, credential.clientId).flatMap {
-              case Right(secret) =>
-                val updatedApplication = application
-                  .setPrimaryCredentials(Seq(credential.setSecretFragment(secret.secret)))
-                  .copy(lastUpdated = LocalDateTime.now(clock))
-
-                repository.update(updatedApplication).map(
-                  _ => Right(secret)
-                )
-              case Left(e) => Future.successful(Left(e))
-            }
-          case _ =>
-            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, InvalidPrimaryCredentials)))
-        }
-      case Left(e) => Future.successful(Left(e))
-    }
   }
 
   private case class NewCredential(application: Application, credential: Credential, wasHidden: Boolean)
@@ -348,7 +235,6 @@ class ApplicationsService @Inject()(
       Future.sequence(
         newCredential.application
           .getScopesFor(environmentName)
-          .filter(_.status == Approved)
           .map(
             scope =>
               idmsConnector.addClientScope(environmentName, newCredential.credential.clientId, scope.name)

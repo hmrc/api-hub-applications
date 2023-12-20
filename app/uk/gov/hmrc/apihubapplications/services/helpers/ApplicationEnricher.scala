@@ -123,7 +123,7 @@ object ApplicationEnrichers {
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
         application.setSecondaryScopes(
-          clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
+          clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
     }
@@ -154,10 +154,8 @@ object ApplicationEnrichers {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
-        val approved = clientScopes.map(clientScope => Scope(clientScope.clientScopeId, Approved))
-        val pending = application.getPrimaryScopes.filter(scope => scope.status == Pending)
         application.setPrimaryScopes(
-          approved ++ pending
+          clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
     }
@@ -244,8 +242,8 @@ object ApplicationEnrichers {
           Right(
             (application: Application) => {
               environmentName match {
-                case Primary => application.addPrimaryScope(Scope(scopeName, Approved))
-                case Secondary => application.addSecondaryScope(Scope(scopeName, Approved))
+                case Primary => application.addPrimaryScope(Scope(scopeName))
+                case Secondary => application.addSecondaryScope(Scope(scopeName))
               }
             }
           )
