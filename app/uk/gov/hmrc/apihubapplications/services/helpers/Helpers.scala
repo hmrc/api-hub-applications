@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, IdmsException}
 
 object Helpers {
@@ -39,5 +40,13 @@ object Helpers {
       }
     )
   }
+
+  def ignoreClientNotFound[T](sequence: Seq[Either[IdmsException, T]]): Seq[Either[IdmsException, T]] = {
+    sequence.filter(y => y match {
+      case Left(e: IdmsException) if e.issue == ClientNotFound => false
+      case _ => true
+      })
+  }
+
 
 }

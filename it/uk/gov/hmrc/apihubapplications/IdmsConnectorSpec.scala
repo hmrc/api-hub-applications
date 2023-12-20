@@ -24,12 +24,12 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
-import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
@@ -507,13 +507,23 @@ class IdmsConnectorSpec
           )
       )
 
+      stubFor(
+        delete(urlEqualTo(s"/$Secondary/identity/clients/$clientId2"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
 
       val id = "test-id"
       val application = buildApplication(clientId1, clientId2, id)
 
       buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Right(())
+          verify(deleteRequestedFor(urlEqualTo(s"/$Primary/identity/clients/$clientId1")))
+          verify(deleteRequestedFor(urlEqualTo(s"/$Secondary/identity/clients/$clientId2")))
+          actual mustBe Left(IdmsException.unexpectedResponse(500))
       }
     }
 

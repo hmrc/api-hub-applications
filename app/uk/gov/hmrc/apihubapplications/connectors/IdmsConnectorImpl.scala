@@ -21,10 +21,9 @@ import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName, Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{ignoreClientNotFound, useFirstException}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
@@ -102,16 +101,20 @@ class IdmsConnectorImpl @Inject()(
   override def deleteAllClients(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val primaryFutures = application.environments.primary.credentials.map(credential => deleteClient(Primary, credential.clientId))
     val secondaryFutures = application.environments.secondary.credentials.map(credential => deleteClient(Secondary, credential.clientId))
-    Future.sequence(primaryFutures ++ secondaryFutures)
+    val allFutures = primaryFutures ++ secondaryFutures
+
+    Future.sequence(allFutures)
+      .map(ignoreClientNotFound)
       .map(useFirstException)
       .map {
         case Right(_) => Right(())
-        case Left(e) if e.issue == ClientNotFound => Right(())
         case Left(e) => Left(e)
       }
   }
 
-    private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
+
+
+  private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
     val baseUrl = servicesConfig.baseUrl(s"idms-$environmentName")
     val path = servicesConfig.getConfString(s"idms-$environmentName.path", "")
 
