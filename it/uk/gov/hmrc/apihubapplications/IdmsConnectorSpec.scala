@@ -517,7 +517,7 @@ class IdmsConnectorSpec
       }
     }
 
-    "must return IdmsException for any non-2xx or 400 series responses apart from 404" in {
+    "must return IdmsException for any non-success response apart from 404" in {
       forAll(nonSuccessResponses) { status: Int =>
         val clientId1 = "test-client-id-1"
         val clientId2 = "test-client-id-2"
