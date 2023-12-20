@@ -18,8 +18,8 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.{CallError, ClientNotFound, UnexpectedResponse}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, IdmsException}
 
 class HelpersSpec extends AnyFreeSpec with Matchers {
 
@@ -53,6 +53,53 @@ class HelpersSpec extends AnyFreeSpec with Matchers {
       val actual = Helpers.useFirstException(input)
 
       actual mustBe Left(expected)
+    }
+  }
+
+  "useFirstApplicationsException" - {
+    "must return a sequence of successes if the input is all successes" in {
+      val expected = Seq("test-1", "test-2")
+      val input: Seq[Either[ApplicationsException, String]] = expected.map(Right(_))
+
+      val actual = Helpers.useFirstApplicationsException(input)
+
+      actual mustBe Right(expected)
+    }
+
+    "must return an empty sequence if the input is empty" in {
+      val input: Seq[Either[ApplicationsException, String]] = Seq.empty
+
+      val actual = Helpers.useFirstApplicationsException(input)
+
+      actual mustBe Right(Seq.empty)
+    }
+
+    "must return an ApplicationsException given a mix sequence of success and failure" in {
+      val expected = ApplicationNotFoundException("test-message")
+      val input: Seq[Either[ApplicationsException, String]] =
+        Seq(
+          Right("test-1"),
+          Left(expected),
+          Right("test-2")
+        )
+
+      val actual = Helpers.useFirstApplicationsException(input)
+
+      actual mustBe Left(expected)
+    }
+  }
+
+  "ignoreClientNotFound" - {
+    "must filter out Left IdmsException values whose issue is client not found" in {
+
+      val unwanted = Left(IdmsException("client not found", null, ClientNotFound))
+      val wanted = Left(IdmsException("something else", null, UnexpectedResponse))
+
+      val input = Seq(Right("test-1"), unwanted, Right("test-2"), wanted)
+
+      val actual = Helpers.ignoreClientNotFound(input);
+      val expected = Seq(Right("test-1"), Right("test-2"), wanted)
+      actual mustBe expected
     }
   }
 
