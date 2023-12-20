@@ -44,7 +44,8 @@ class AccessRequestsRepository @Inject()(
     domainFormat = formatDataWithMongoIdentifier[SensitiveAccessRequest],
     mongoComponent = mongoComponent,
     indexes = Seq(
-      IndexModel(Indexes.ascending("applicationId", "status"), new IndexOptions().name("applicationId-status-index"))
+      IndexModel(Indexes.ascending("applicationId", "status"), new IndexOptions().name("applicationId-status-index")),
+      IndexModel(Indexes.ascending("status"), new IndexOptions().name("status-index"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
