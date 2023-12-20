@@ -496,7 +496,7 @@ class IdmsConnectorSpec
       }
     }
 
-    "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
+    "must ignore IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       stubFor(
@@ -513,11 +513,11 @@ class IdmsConnectorSpec
 
       buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(IdmsException.clientNotFound(clientId1))
+          actual mustBe Right(())
       }
     }
 
-    "must return IdmsException for any non-2xx or 404 response" in {
+    "must return IdmsException for any non-2xx or 400 series responses apart from 404" in {
       forAll(nonSuccessResponses) { status: Int =>
         val clientId1 = "test-client-id-1"
         val clientId2 = "test-client-id-2"

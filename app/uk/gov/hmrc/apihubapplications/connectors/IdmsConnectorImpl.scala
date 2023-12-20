@@ -21,6 +21,7 @@ import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
@@ -105,6 +106,7 @@ class IdmsConnectorImpl @Inject()(
       .map(useFirstException)
       .map {
         case Right(_) => Right(())
+        case Left(e) if e.issue == ClientNotFound => Right(())
         case Left(e) => Left(e)
       }
   }
