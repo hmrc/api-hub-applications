@@ -23,16 +23,18 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
-import play.api.http.Status.ACCEPTED
+import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Pending}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
-import uk.gov.hmrc.apihubapplications.models.exception.EmailException.CallError
+import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 class EmailConnectorSpec
@@ -230,6 +232,90 @@ class EmailConnectorSpec
       }
     }
   }
+
+  "EmailConnector.sendAccessApprovedEmailToTeam" - {
+    "must place the correct requests" in {
+      val accessRequest = AccessRequest(
+        id = Some("test-id"),
+        applicationId = application.id.get,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val request = SendEmailRequest(
+        application.teamMembers.map(teamMember => teamMember.email),
+        accessApprovedEmailToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendAccessApprovedEmailToTeam(application, accessRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      val accessRequest = AccessRequest(
+        id = Some("test-id"),
+        applicationId = application.id.get,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val request = SendEmailRequest(
+        application.teamMembers.map(teamMember => teamMember.email),
+        accessApprovedEmailToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendAccessApprovedEmailToTeam(application, accessRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
 }
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
 
@@ -237,6 +323,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val deleteApplicationEmailToUserTemplateId: String = "test-delete-application-to-user-template-id"
   val deleteApplicationEmailToTeamTemplateId: String = "test-delete-application-to-team-template-id"
   val applicationCreatedEmailToCreatorTemplateId: String = "test-application-created-to-creator-template-id"
+  val accessApprovedEmailToTeamTemplateId: String = "test-access-approved-to-team-template-id"
 
   val email1: String = "test-email1@test.com"
   val email2: String = "test-email2@test.com"
@@ -256,7 +343,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.addTeamMemberToApplicationTemplateId" -> addTeamMemberTemplateId,
         "microservice.services.email.deleteApplicationEmailToUserTemplateId" -> deleteApplicationEmailToUserTemplateId,
         "microservice.services.email.deleteApplicationEmailToTeamTemplateId" -> deleteApplicationEmailToTeamTemplateId,
-        "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId
+        "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
+        "microservice.services.email.accessApprovedEmailToTeamTemplateId" -> accessApprovedEmailToTeamTemplateId
       ))
     )
 
