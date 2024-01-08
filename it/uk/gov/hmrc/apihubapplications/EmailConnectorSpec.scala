@@ -23,13 +23,13 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
-import play.api.http.Status.ACCEPTED
+import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Pending}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
-import uk.gov.hmrc.apihubapplications.models.exception.EmailException.CallError
+import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -272,6 +272,47 @@ class EmailConnectorSpec
       buildConnector(this).sendAccessApprovedEmailToTeam(application, accessRequest)(new HeaderCarrier()) map {
         response =>
           response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      val accessRequest = AccessRequest(
+        id = Some("test-id"),
+        applicationId = application.id.get,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val request = SendEmailRequest(
+        application.teamMembers.map(teamMember => teamMember.email),
+        accessApprovedEmailToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendAccessApprovedEmailToTeam(application, accessRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
       }
     }
   }
