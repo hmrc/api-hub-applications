@@ -132,7 +132,7 @@ class EmailConnectorImpl @Inject()(
     }
   }
 
-  override def sendAccessApprovedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+  private def sendAccessEmailToTeam(application: Application, accessRequest: AccessRequest, templateId: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {0
     val to = application
       .teamMembers
       .map(_.email)
@@ -140,7 +140,7 @@ class EmailConnectorImpl @Inject()(
     if (to.nonEmpty) {
       val request = SendEmailRequest(
         to,
-        accessApprovedToTeamTemplateId,
+        templateId,
         Map(
           "applicationname" -> application.name,
           "apispecificationname" -> accessRequest.apiName
@@ -151,28 +151,15 @@ class EmailConnectorImpl @Inject()(
     else {
       Future.successful(Right(()))
     }
+  }
+  override def sendAccessApprovedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    sendAccessEmailToTeam(application, accessRequest, accessApprovedToTeamTemplateId)
   }
 
   override def sendAccessRejectedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
-    val to = application
-      .teamMembers
-      .map(_.email)
-
-    if (to.nonEmpty) {
-      val request = SendEmailRequest(
-        to,
-        accessRejectedToTeamTemplateId,
-        Map(
-          "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
-        )
-      )
-      doPost(request)
-    }
-    else {
-      Future.successful(Right(()))
-    }
+    sendAccessEmailToTeam(application, accessRequest, accessRejectedToTeamTemplateId)
   }
+
 }
 // Elided class from the email api
 // See https://github.com/hmrc/email/blob/main/app/uk/gov/hmrc/email/controllers/model/SendEmailRequest.scala
