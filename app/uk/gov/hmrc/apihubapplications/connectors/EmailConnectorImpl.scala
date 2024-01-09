@@ -49,6 +49,7 @@ class EmailConnectorImpl @Inject()(
   private val applicationDeletedToUserTemplateId = getAndValidate("email.deleteApplicationEmailToUserTemplateId")
   private val applicationDeletedToTeamTemplateId = getAndValidate("email.deleteApplicationEmailToTeamTemplateId")
   private val applicationCreatedToCreatorTemplateId = getAndValidate("email.applicationCreatedEmailToCreatorTemplateId")
+  private val accessApprovedToTeamTemplateId = getAndValidate("email.accessApprovedEmailToTeamTemplateId")
   private val accessRejectedToTeamTemplateId = getAndValidate("email.accessRejectedEmailToTeamTemplateId")
 
 
@@ -122,6 +123,27 @@ class EmailConnectorImpl @Inject()(
         applicationDeletedToTeamTemplateId,
         Map(
           "applicationname" -> application.name
+        )
+      )
+      doPost(request)
+    }
+    else {
+      Future.successful(Right(()))
+    }
+  }
+
+  override def sendAccessApprovedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val to = application
+      .teamMembers
+      .map(_.email)
+
+    if (to.nonEmpty) {
+      val request = SendEmailRequest(
+        to,
+        accessApprovedToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
         )
       )
       doPost(request)

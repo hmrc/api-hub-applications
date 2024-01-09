@@ -49,6 +49,13 @@ class AccessRequestsService @Inject()(
     accessRequestsRepository.findById(id)
   }
 
+  private def sendAccessApprovedEmails(accessRequest: AccessRequest)(implicit hc: HeaderCarrier) = {
+    applicationsRepository.findById(accessRequest.applicationId).flatMap {
+      case Right(application) => emailConnector.sendAccessApprovedEmailToTeam(application, accessRequest)
+      case Left(exception) => Future.successful(Left(exception))
+    }
+  }
+
   private def sendAccessRejectedEmails(accessRequest: AccessRequest)(implicit hc: HeaderCarrier) = {
     applicationsRepository.findById(accessRequest.applicationId).flatMap {
       case Right(application) => emailConnector.sendAccessRejectedEmailToTeam(application, accessRequest)
@@ -61,12 +68,20 @@ class AccessRequestsService @Inject()(
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
         applicationsService.addPrimaryAccess(accessRequest).flatMap(
-          _ =>
+          _ => {
             accessRequestsRepository.update(
               accessRequest
                 .setStatus(Approved)
                 .setDecision(decisionRequest.copy(rejectedReason = None), clock)
-            )
+            ) flatMap {
+              case Right(_) =>
+                sendAccessApprovedEmails(accessRequest).flatMap {
+                  _ => Future.successful(Right(()))
+                }
+              case Left(exception) => Future.successful(Left(exception))
+            }
+          }
+
         )
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
