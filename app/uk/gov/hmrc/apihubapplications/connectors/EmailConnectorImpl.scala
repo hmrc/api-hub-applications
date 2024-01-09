@@ -132,7 +132,7 @@ class EmailConnectorImpl @Inject()(
     }
   }
 
-  private def sendAccessEmailToTeam(application: Application, accessRequest: AccessRequest, templateId: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {0
+  private def sendAccessEmailToTeam(application: Application, accessRequest: AccessRequest, templateId: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val to = application
       .teamMembers
       .map(_.email)

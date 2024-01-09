@@ -39,10 +39,10 @@ import scala.concurrent.ExecutionContext
 
 class EmailConnectorSpec
   extends AsyncFreeSpec
-  with Matchers
-  with WireMockSupport
-  with TableDrivenPropertyChecks
-  with EitherValues {
+    with Matchers
+    with WireMockSupport
+    with TableDrivenPropertyChecks
+    with EitherValues {
 
   import EmailConnectorSpec._
 
@@ -401,6 +401,7 @@ class EmailConnectorSpec
     }
   }
 }
+
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
 
   val addTeamMemberTemplateId: String = "test-add-team-member-template-id"
@@ -429,8 +430,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.deleteApplicationEmailToUserTemplateId" -> deleteApplicationEmailToUserTemplateId,
         "microservice.services.email.deleteApplicationEmailToTeamTemplateId" -> deleteApplicationEmailToTeamTemplateId,
         "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
-        "microservice.services.email.accessApprovedEmailToTeamTemplateId" -> accessApprovedEmailToTeamTemplateId,
         "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
+        "microservice.services.email.accessApprovedEmailToTeamTemplateId" -> accessApprovedEmailToTeamTemplateId,
         "microservice.services.email.accessRejectedEmailToTeamTemplateId" -> accessRejectedEmailToTeamTemplateId
       ))
     )
