@@ -543,8 +543,6 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
           result mustBe Left(exception)
       }
     }
-
-
   }
 
   private case class Fixture(

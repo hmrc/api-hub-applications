@@ -358,6 +358,47 @@ class EmailConnectorSpec
           response mustBe Right(())
       }
     }
+
+    "must handle non-2xx responses" in {
+      val accessRequest = AccessRequest(
+        id = Some("test-id"),
+        applicationId = application.id.get,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val request = SendEmailRequest(
+        application.teamMembers.map(teamMember => teamMember.email),
+        accessRejectedEmailToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendAccessRejectedEmailToTeam(application, accessRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
   }
 }
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
@@ -388,7 +429,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.deleteApplicationEmailToUserTemplateId" -> deleteApplicationEmailToUserTemplateId,
         "microservice.services.email.deleteApplicationEmailToTeamTemplateId" -> deleteApplicationEmailToTeamTemplateId,
         "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
-        "microservice.services.email.accessApprovedEmailToTeamTemplateId" -> accessApprovedEmailToTeamTemplateId
+        "microservice.services.email.accessApprovedEmailToTeamTemplateId" -> accessApprovedEmailToTeamTemplateId,
         "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
         "microservice.services.email.accessRejectedEmailToTeamTemplateId" -> accessRejectedEmailToTeamTemplateId
       ))
