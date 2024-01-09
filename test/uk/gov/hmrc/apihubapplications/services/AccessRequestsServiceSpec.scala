@@ -51,6 +51,147 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
           result mustBe expected
       }
     }
+
+    "must send appropriate emails if access request repository updates successfully" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", None)
+      val applicationId = "test-application-id"
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val app = Application(
+        id = Some(applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        environments = Environments()
+      )
+
+      val updated = accessRequest
+        .setStatus(Approved)
+        .setDecision(LocalDateTime.now(fixture.clock), decisionRequest.decidedBy)
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsService.addPrimaryAccess(any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsRepository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(app)))
+
+      when(fixture.emailConnector.sendAccessApprovedEmailToTeam(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequest))(any())).thenReturn(Future.successful(Right(())))
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest, fixture.applicationsService)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.accessRequestsRepository).update(ArgumentMatchers.eq(updated))
+          verify(fixture.emailConnector).sendAccessApprovedEmailToTeam(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequest))(any())
+          result mustBe Right(())
+      }
+    }
+
+    "must tolerate email failure and treat as success" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", None)
+      val applicationId = "test-application-id"
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val app = Application(
+        id = Some(applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        environments = Environments()
+      )
+
+      val updated = accessRequest
+        .setStatus(Approved)
+        .setDecision(LocalDateTime.now(fixture.clock), decisionRequest.decidedBy)
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsService.addPrimaryAccess(any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsRepository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(app)))
+      when(fixture.emailConnector.sendAccessApprovedEmailToTeam(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequest))(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest, fixture.applicationsService)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.accessRequestsRepository).update(ArgumentMatchers.eq(updated))
+          verify(fixture.emailConnector).sendAccessApprovedEmailToTeam(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequest))(any())
+          result mustBe Right(())
+      }
+    }
+
+    "must not send emails if access request repository does not update successfully" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", None)
+      val applicationId = "test-application-id"
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val app = Application(
+        id = Some(applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        environments = Environments()
+      )
+
+      val updated = accessRequest
+        .setStatus(Approved)
+        .setDecision(LocalDateTime.now(fixture.clock), decisionRequest.decidedBy)
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      val exception = NotUpdatedException.forAccessRequest(accessRequest)
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Left(exception)))
+      when(fixture.applicationsService.addPrimaryAccess(any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsRepository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(app)))
+
+      when(fixture.emailConnector.sendAccessApprovedEmailToTeam(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequest))(any())).thenReturn(Future.successful(Right(())))
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest, fixture.applicationsService)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.accessRequestsRepository).update(ArgumentMatchers.eq(updated))
+          verifyZeroInteractions(fixture.emailConnector)
+          result mustBe Left(exception)
+      }
+    }
   }
 
   "getAccessRequests" - {

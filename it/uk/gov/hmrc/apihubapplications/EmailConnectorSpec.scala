@@ -26,7 +26,7 @@ import play.api.Configuration
 import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Pending}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest, Pending}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
@@ -246,6 +246,98 @@ class EmailConnectorSpec
         requested = LocalDateTime.now(),
         requestedBy = "test-requested-by",
         decision = None
+      )
+
+      val request = SendEmailRequest(
+        application.teamMembers.map(teamMember => teamMember.email),
+        accessApprovedEmailToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendAccessApprovedEmailToTeam(application, accessRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      val accessRequest = AccessRequest(
+        id = Some("test-id"),
+        applicationId = application.id.get,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val request = SendEmailRequest(
+        application.teamMembers.map(teamMember => teamMember.email),
+        accessApprovedEmailToTeamTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendAccessApprovedEmailToTeam(application, accessRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
+
+  "EmailConnector.sendAccessRequestSubmittedEmailToRequester" - {
+    "must place the correct request" in {
+      val accessRequest = AccessRequest(
+        id = Some("test-id"),
+        applicationId = application.id.get,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val accessRequestRequest = AccessRequestRequest(
+        applicationId = application.id.get,
+        supportingInformation = "",
+        requestedBy = "test-requested-by",
+        apis = Seq(accessRequest)
+
       )
 
       val request = SendEmailRequest(

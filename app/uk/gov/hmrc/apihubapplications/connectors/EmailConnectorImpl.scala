@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.connectors
 import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, ExceptionRaising}
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -50,7 +50,7 @@ class EmailConnectorImpl @Inject()(
   private val applicationDeletedToTeamTemplateId = getAndValidate("email.deleteApplicationEmailToTeamTemplateId")
   private val applicationCreatedToCreatorTemplateId = getAndValidate("email.applicationCreatedEmailToCreatorTemplateId")
   private val accessApprovedToTeamTemplateId = getAndValidate("email.accessApprovedEmailToTeamTemplateId")
-
+  private val accessRequestSubmittedToToRequesterTemplateId = getAndValidate("email.accessRequestSubmittedEmailToRequesterTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
@@ -150,6 +150,18 @@ class EmailConnectorImpl @Inject()(
     else {
       Future.successful(Right(()))
     }
+  }
+
+  override def sendAccessRequestSubmittedEmailToRequester(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val request = SendEmailRequest(
+      Seq(accessRequest.requestedBy),
+      accessRequestSubmittedToToRequesterTemplateId,
+      Map(
+        "applicationname" -> application.name,
+        "apispecificationname" -> accessRequest.apis.map(api => api.apiName).mkString(" and ")
+      )
+    )
+    doPost(request)
   }
 }
 // Elided class from the email api
