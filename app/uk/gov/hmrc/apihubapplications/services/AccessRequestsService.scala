@@ -37,8 +37,19 @@ class AccessRequestsService @Inject()(
                                        emailConnector: EmailConnector
                                      )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
-  def createAccessRequest(request: AccessRequestRequest): Future[Seq[AccessRequest]] = {
-    accessRequestsRepository.insert(request.toAccessRequests(clock))
+  def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
+    accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
+      requests => sendAccessRequestSubmittedEmail(request) map {
+        _ => requests
+      }
+    }
+  }
+
+  private def sendAccessRequestSubmittedEmail(accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier) = {
+    applicationsRepository.findById(accessRequest.applicationId).flatMap {
+      case Right(application) => emailConnector.sendAccessRequestSubmittedEmailToRequester(application, accessRequest)
+      case Left(exception) => Future.successful(Left(exception))
+    }
   }
 
   def getAccessRequests(applicationId: Option[String], status: Option[AccessRequestStatus]): Future[Seq[AccessRequest]] = {

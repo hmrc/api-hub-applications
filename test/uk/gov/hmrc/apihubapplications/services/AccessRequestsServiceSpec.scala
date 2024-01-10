@@ -40,15 +40,77 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
     "must pass the correct requests to the accessRequestsRepository" in {
       val fixture = buildFixture()
 
+      val app = Application(
+        id = Some("test-app-id"),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        environments = Environments()
+      )
+
       val request = sampleAccessRequestRequest()
       val expected = sampleAccessRequests()
 
       when(fixture.accessRequestsRepository.insert(any())).thenReturn(Future.successful(expected))
+      when(fixture.applicationsRepository.findById(any())).thenReturn(Future.successful(Right(app)))
+      when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(any(), any())(any())).thenReturn(Future.successful(Right(())))
 
-      fixture.accessRequestsService.createAccessRequest(request).map {
+      fixture.accessRequestsService.createAccessRequest(request)(HeaderCarrier()).map {
         result =>
           verify(fixture.accessRequestsRepository).insert(ArgumentMatchers.eq(request.toAccessRequests(fixture.clock)))
           result mustBe expected
+      }
+    }
+
+    "must send appropriate email if access request repository updates successfully" in {
+      val fixture = buildFixture()
+      val accessRequestRequest = sampleAccessRequestRequest()
+      val accessRequests = accessRequestRequest.toAccessRequests(fixture.clock)
+      val app = Application(
+        id = Some(accessRequestRequest.applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        environments = Environments()
+      )
+
+      when(fixture.accessRequestsRepository.insert(any())).thenReturn(Future.successful(accessRequests))
+      when(fixture.applicationsRepository.findById(ArgumentMatchers.eq(accessRequestRequest.applicationId))).thenReturn(Future.successful(Right(app)))
+
+      when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequestRequest))(any())).thenReturn(Future.successful(Right(())))
+      fixture.accessRequestsService.createAccessRequest(accessRequestRequest)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.emailConnector).sendAccessRequestSubmittedEmailToRequester(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequestRequest))(any())
+          result mustBe accessRequests
+      }
+    }
+
+    "must tolerate email failure and treat as success" in {
+      val fixture = buildFixture()
+      val accessRequestRequest = sampleAccessRequestRequest()
+      val accessRequests = accessRequestRequest.toAccessRequests(fixture.clock)
+      val app = Application(
+        id = Some(accessRequestRequest.applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        environments = Environments()
+      )
+
+      when(fixture.accessRequestsRepository.insert(any())).thenReturn(Future.successful(accessRequests))
+      when(fixture.applicationsRepository.findById(ArgumentMatchers.eq(accessRequestRequest.applicationId))).thenReturn(Future.successful(Right(app)))
+      when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequestRequest))(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+
+      fixture.accessRequestsService.createAccessRequest(accessRequestRequest)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.emailConnector).sendAccessRequestSubmittedEmailToRequester(ArgumentMatchers.eq(app), ArgumentMatchers.eq(accessRequestRequest))(any())
+          result mustBe accessRequests
       }
     }
   }

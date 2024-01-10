@@ -26,7 +26,7 @@ import play.api.Configuration
 import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Pending}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestApi, AccessRequestRequest, Pending}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
@@ -317,6 +317,78 @@ class EmailConnectorSpec
     }
   }
 
+  "EmailConnector.sendAccessRequestSubmittedEmailToRequester" - {
+    "must place the correct request" in {
+      val accessRequest = AccessRequestApi(
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        endpoints = Seq.empty
+      )
+
+      val accessRequestRequest = AccessRequestRequest(
+        applicationId = application.id.get,
+        supportingInformation = "",
+        requestedBy = "test-requested-by",
+        apis = Seq(accessRequest)
+      )
+
+      val request = SendEmailRequest(
+        Seq(accessRequestRequest.requestedBy),
+        accessRequestSubmittedEmailToRequesterTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendAccessRequestSubmittedEmailToRequester(application, accessRequestRequest)(HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      val accessRequest = AccessRequestApi(
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        endpoints = Seq.empty
+      )
+
+      val accessRequestRequest = AccessRequestRequest(
+        applicationId = application.id.get,
+        supportingInformation = "",
+        requestedBy = "test-requested-by",
+        apis = Seq(accessRequest)
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendAccessRequestSubmittedEmailToRequester(application, accessRequestRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
+
   "EmailConnector.sendAccessRejectedEmailToTeam" - {
     "must place the correct requests" in {
       val accessRequest = AccessRequest(
@@ -410,6 +482,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val applicationCreatedEmailToCreatorTemplateId: String = "test-application-created-to-creator-template-id"
   val accessApprovedEmailToTeamTemplateId: String = "test-access-approved-to-team-template-id"
   val accessRejectedEmailToTeamTemplateId: String = "test-access-rejected-to-team-template-id"
+  val accessRequestSubmittedEmailToRequesterTemplateId: String = "test-access-request-submitted-to-requester-template-id"
+
 
   val email1: String = "test-email1@test.com"
   val email2: String = "test-email2@test.com"
@@ -432,7 +506,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
         "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
         "microservice.services.email.accessApprovedEmailToTeamTemplateId" -> accessApprovedEmailToTeamTemplateId,
-        "microservice.services.email.accessRejectedEmailToTeamTemplateId" -> accessRejectedEmailToTeamTemplateId
+        "microservice.services.email.accessRejectedEmailToTeamTemplateId" -> accessRejectedEmailToTeamTemplateId,
+        "microservice.services.email.accessRequestSubmittedEmailToRequesterTemplateId" -> accessRequestSubmittedEmailToRequesterTemplateId
       ))
     )
 

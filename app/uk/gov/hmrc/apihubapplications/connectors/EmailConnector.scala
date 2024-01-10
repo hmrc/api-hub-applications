@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.http.HeaderCarrier
@@ -36,4 +36,5 @@ trait EmailConnector {
 
   def sendAccessRejectedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
+  def sendAccessRequestSubmittedEmailToRequester(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 }

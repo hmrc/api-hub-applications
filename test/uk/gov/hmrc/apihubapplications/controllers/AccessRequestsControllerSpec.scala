@@ -56,12 +56,12 @@ class AccessRequestsControllerSpec
           val request = FakeRequest(POST, routes.AccessRequestsController.createAccessRequest().url)
             .withJsonBody(Json.toJson(accessRequestRequest))
 
-          when(fixture.accessRequestsService.createAccessRequest(any())).thenReturn(Future.successful(Seq.empty))
+          when(fixture.accessRequestsService.createAccessRequest(any())(any())).thenReturn(Future.successful(Seq.empty))
 
           val result = route(fixture.application, request).value
 
           status(result) mustBe CREATED
-          verify(fixture.accessRequestsService).createAccessRequest(ArgumentMatchers.eq(accessRequestRequest))
+          verify(fixture.accessRequestsService).createAccessRequest(ArgumentMatchers.eq(accessRequestRequest))(any())
         }
       }
     }
