@@ -66,6 +66,13 @@ class AccessRequestsService @Inject()(
       case Left(exception) => Future.successful(Left(exception))
     }
   }
+
+  private def sendAccessRejectedEmails(accessRequest: AccessRequest)(implicit hc: HeaderCarrier) = {
+    applicationsRepository.findById(accessRequest.applicationId).flatMap {
+      case Right(application) => emailConnector.sendAccessRejectedEmailToTeam(application, accessRequest)
+      case Left(exception) => Future.successful(Left(exception))
+    }
+  }
   def approveAccessRequest(id: String,
                            decisionRequest: AccessRequestDecisionRequest,
                            applicationsService: ApplicationsService )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -94,14 +101,20 @@ class AccessRequestsService @Inject()(
     }
   }
 
-  def rejectAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest): Future[Either[ApplicationsException, Unit]] = {
+  def rejectAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
         accessRequestsRepository.update(
           accessRequest
             .setStatus(Rejected)
             .setDecision(decisionRequest, clock)
-        )
+        ) flatMap {
+          case Right(_) =>
+            sendAccessRejectedEmails(accessRequest).flatMap {
+              _ => Future.successful(Right(()))
+            }
+          case Left(exception) => Future.successful(Left(exception))
+        }
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
       case _ =>

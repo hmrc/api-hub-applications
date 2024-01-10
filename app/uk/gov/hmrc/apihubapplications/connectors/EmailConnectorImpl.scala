@@ -50,6 +50,8 @@ class EmailConnectorImpl @Inject()(
   private val applicationDeletedToTeamTemplateId = getAndValidate("email.deleteApplicationEmailToTeamTemplateId")
   private val applicationCreatedToCreatorTemplateId = getAndValidate("email.applicationCreatedEmailToCreatorTemplateId")
   private val accessApprovedToTeamTemplateId = getAndValidate("email.accessApprovedEmailToTeamTemplateId")
+  private val accessRejectedToTeamTemplateId = getAndValidate("email.accessRejectedEmailToTeamTemplateId")
+
   private val accessRequestSubmittedToToRequesterTemplateId = getAndValidate("email.accessRequestSubmittedEmailToRequesterTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
@@ -131,7 +133,7 @@ class EmailConnectorImpl @Inject()(
     }
   }
 
-  override def sendAccessApprovedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+  private def sendAccessEmailToTeam(application: Application, accessRequest: AccessRequest, templateId: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val to = application
       .teamMembers
       .map(_.email)
@@ -139,7 +141,7 @@ class EmailConnectorImpl @Inject()(
     if (to.nonEmpty) {
       val request = SendEmailRequest(
         to,
-        accessApprovedToTeamTemplateId,
+        templateId,
         Map(
           "applicationname" -> application.name,
           "apispecificationname" -> accessRequest.apiName
@@ -151,6 +153,14 @@ class EmailConnectorImpl @Inject()(
       Future.successful(Right(()))
     }
   }
+  override def sendAccessApprovedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    sendAccessEmailToTeam(application, accessRequest, accessApprovedToTeamTemplateId)
+  }
+
+  override def sendAccessRejectedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    sendAccessEmailToTeam(application, accessRequest, accessRejectedToTeamTemplateId)
+  }
+
 
   override def sendAccessRequestSubmittedEmailToRequester(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val request = SendEmailRequest(
