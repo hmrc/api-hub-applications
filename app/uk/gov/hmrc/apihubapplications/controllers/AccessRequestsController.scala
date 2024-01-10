@@ -39,8 +39,8 @@ class AccessRequestsController @Inject()(
   def createAccessRequest(): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request: Request[JsValue] =>
       request.body.validate[AccessRequestRequest] match {
-        case JsSuccess(request, _) =>
-          accessRequestsService.createAccessRequest(request).map(_ => Created)
+        case JsSuccess(accessRequestRequest, _) =>
+          accessRequestsService.createAccessRequest(accessRequestRequest).map(_ => Created)
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
