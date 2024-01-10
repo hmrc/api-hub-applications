@@ -27,9 +27,9 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
+import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
-import play.api.test.Helpers._
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestDecisionRequest, AccessRequestRequest, AccessRequestStatus, Pending}
 import uk.gov.hmrc.apihubapplications.models.exception.{AccessRequestNotFoundException, AccessRequestStatusInvalidException, ApplicationNotFoundException}
@@ -229,7 +229,7 @@ class AccessRequestsControllerSpec
       val id = "test-id"
       val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
 
-      when(fixture.accessRequestsService.rejectAccessRequest(any(), any()))
+      when(fixture.accessRequestsService.rejectAccessRequest(any(), any())(any()))
         .thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
@@ -238,7 +238,7 @@ class AccessRequestsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.accessRequestsService).rejectAccessRequest(ArgumentMatchers.eq(id), ArgumentMatchers.eq(decisionRequest))
+        verify(fixture.accessRequestsService).rejectAccessRequest(ArgumentMatchers.eq(id), ArgumentMatchers.eq(decisionRequest))(any())
       }
     }
 
@@ -247,7 +247,7 @@ class AccessRequestsControllerSpec
       val id = "test-id"
       val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
 
-      when(fixture.accessRequestsService.rejectAccessRequest(any(), any()))
+      when(fixture.accessRequestsService.rejectAccessRequest(any(), any())(any()))
         .thenReturn(Future.successful(Left(AccessRequestNotFoundException.forId(id))))
 
       running(fixture.application) {
@@ -264,7 +264,7 @@ class AccessRequestsControllerSpec
       val id = "test-id"
       val decisionRequest = AccessRequestDecisionRequest("test-decided-by", Some("test-rejected-reason"))
 
-      when(fixture.accessRequestsService.rejectAccessRequest(any(), any()))
+      when(fixture.accessRequestsService.rejectAccessRequest(any(), any())(any()))
         .thenReturn(Future.successful(Left(AccessRequestStatusInvalidException("test-message"))))
 
       running(fixture.application) {
