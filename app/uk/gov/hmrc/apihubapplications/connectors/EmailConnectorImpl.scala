@@ -184,7 +184,6 @@ class EmailConnectorImpl @Inject()(
       )
     )
 
-    Console.println(s"request: ${Json.toJson(request)}")
     doPost(request)
   }
 }
