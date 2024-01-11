@@ -39,15 +39,20 @@ class AccessRequestsService @Inject()(
 
   def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
     accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
-      requests => sendAccessRequestSubmittedEmail(request) map {
+      requests => sendAccessRequestSubmittedEmails(request) map {
         _ => requests
       }
     }
   }
 
-  private def sendAccessRequestSubmittedEmail(accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier) = {
+  private def sendAccessRequestSubmittedEmails(accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier) = {
     applicationsRepository.findById(accessRequest.applicationId).flatMap {
-      case Right(application) => emailConnector.sendAccessRequestSubmittedEmailToRequester(application, accessRequest)
+      case Right(application) => {
+        for {
+          _ <- emailConnector.sendAccessRequestSubmittedEmailToRequester(application, accessRequest)
+          _ <- emailConnector.sendNewAccessRequestEmailToApprovers(application, accessRequest)
+        } yield Future.successful(Right(()))
+      }
       case Left(exception) => Future.successful(Left(exception))
     }
   }

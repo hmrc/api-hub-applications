@@ -389,6 +389,78 @@ class EmailConnectorSpec
     }
   }
 
+  "EmailConnector.sendNewAccessRequestEmailToApprovers" - {
+    "must place the correct request" in {
+      val accessRequest = AccessRequestApi(
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        endpoints = Seq.empty
+      )
+
+      val accessRequestRequest = AccessRequestRequest(
+        applicationId = application.id.get,
+        supportingInformation = "",
+        requestedBy = "test-requested-by",
+        apis = Seq(accessRequest)
+      )
+
+      val request = SendEmailRequest(
+        Seq("dummy.test1@digital.hmrc.gov.uk", "dummy.test2@digital.hmrc.gov.uk"),
+        newAccessRequestEmailToApproversTemplateId,
+        Map(
+          "applicationname" -> application.name,
+          "apispecificationname" -> accessRequest.apiName
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendNewAccessRequestEmailToApprovers(application, accessRequestRequest)(HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      val accessRequest = AccessRequestApi(
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        endpoints = Seq.empty
+      )
+
+      val accessRequestRequest = AccessRequestRequest(
+        applicationId = application.id.get,
+        supportingInformation = "",
+        requestedBy = "test-requested-by",
+        apis = Seq(accessRequest)
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendNewAccessRequestEmailToApprovers(application, accessRequestRequest)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
+
   "EmailConnector.sendAccessRejectedEmailToTeam" - {
     "must place the correct requests" in {
       val accessRequest = AccessRequest(
@@ -483,6 +555,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val accessApprovedEmailToTeamTemplateId: String = "test-access-approved-to-team-template-id"
   val accessRejectedEmailToTeamTemplateId: String = "test-access-rejected-to-team-template-id"
   val accessRequestSubmittedEmailToRequesterTemplateId: String = "test-access-request-submitted-to-requester-template-id"
+  val newAccessRequestEmailToApproversTemplateId: String = "test-new-access-request-to-approvers-template-id"
 
 
   val email1: String = "test-email1@test.com"
@@ -507,7 +580,9 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.applicationCreatedEmailToCreatorTemplateId" -> applicationCreatedEmailToCreatorTemplateId,
         "microservice.services.email.accessApprovedEmailToTeamTemplateId" -> accessApprovedEmailToTeamTemplateId,
         "microservice.services.email.accessRejectedEmailToTeamTemplateId" -> accessRejectedEmailToTeamTemplateId,
-        "microservice.services.email.accessRequestSubmittedEmailToRequesterTemplateId" -> accessRequestSubmittedEmailToRequesterTemplateId
+        "microservice.services.email.accessRequestSubmittedEmailToRequesterTemplateId" -> accessRequestSubmittedEmailToRequesterTemplateId,
+        "microservice.services.email.newAccessRequestEmailToApproversTemplateId" -> newAccessRequestEmailToApproversTemplateId,
+        "microservice.services.email.approversTeamEmails" -> "dummy.test1@digital.hmrc.gov.uk,dummy.test2@digital.hmrc.gov.uk"
       ))
     )
 
