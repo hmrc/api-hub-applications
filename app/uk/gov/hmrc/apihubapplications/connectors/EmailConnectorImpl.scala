@@ -51,8 +51,8 @@ class EmailConnectorImpl @Inject()(
   private val applicationCreatedToCreatorTemplateId = getAndValidate("email.applicationCreatedEmailToCreatorTemplateId")
   private val accessApprovedToTeamTemplateId = getAndValidate("email.accessApprovedEmailToTeamTemplateId")
   private val accessRejectedToTeamTemplateId = getAndValidate("email.accessRejectedEmailToTeamTemplateId")
-
   private val accessRequestSubmittedToToRequesterTemplateId = getAndValidate("email.accessRequestSubmittedEmailToRequesterTemplateId")
+  private val newAccessRequestToApproversTemplateId = getAndValidate("email.newAccessRequestEmailToApproversTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
@@ -171,6 +171,20 @@ class EmailConnectorImpl @Inject()(
         "apispecificationname" -> accessRequest.apis.map(api => api.apiName).mkString(" and ")
       )
     )
+    doPost(request)
+  }
+
+  override def sendNewAccessRequestEmailToApprovers(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val request = SendEmailRequest(
+      servicesConfig.getString("microservice.services.email.approversTeamEmails").split(",").toIndexedSeq,
+      newAccessRequestToApproversTemplateId,
+      Map(
+        "applicationname" -> application.name,
+        "apispecificationname" -> accessRequest.apis.map(api => api.apiName).mkString(" and ")
+      )
+    )
+
+    Console.println(s"request: ${Json.toJson(request)}")
     doPost(request)
   }
 }
