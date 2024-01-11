@@ -454,7 +454,7 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendAccessRequestSubmittedEmailToRequester(application, accessRequestRequest)(new HeaderCarrier()) map {
+      buildConnector(this).sendNewAccessRequestEmailToApprovers(application, accessRequestRequest)(new HeaderCarrier()) map {
         response =>
           response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
       }
