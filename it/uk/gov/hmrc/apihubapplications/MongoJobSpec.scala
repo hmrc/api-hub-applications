@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.{verifyNoInteractions, when}
 import org.mockito.MockitoSugar

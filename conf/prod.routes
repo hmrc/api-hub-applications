@@ -2,5 +2,3 @@
 ->         /api-hub-applications              app.Routes
 ->         /api-hub                           external.Routes
 ->         /                          health.Routes
-
-GET        /admin/metrics             com.kenshoo.play.metrics.MetricsController.metrics

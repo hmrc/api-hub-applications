@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.config
 
-import com.kenshoo.play.metrics.Metrics
+import com.codahale.metrics.MetricRegistry
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.config.DatabaseStatisticsMetricOrchestratorProvider.DatabaseStatisticsMetricSource
 import uk.gov.hmrc.apihubapplications.repositories.{AccessRequestsRepository, ApplicationsRepository}
@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 class DatabaseStatisticsMetricOrchestratorProvider @Inject()(
   lockRepository: MongoLockRepository,
   metricRepository: MetricRepository,
-  metrics: Metrics,
+  metricRegistry: MetricRegistry,
   appConfig: AppConfig,
   applicationsRepository: ApplicationsRepository,
   accessRequestsRepository: AccessRequestsRepository
@@ -48,7 +48,7 @@ class DatabaseStatisticsMetricOrchestratorProvider @Inject()(
       metricSources    = List(new DatabaseStatisticsMetricSource(applicationsRepository, accessRequestsRepository)),
       lockService      = lockService,
       metricRepository = metricRepository,
-      metricRegistry   = metrics.defaultRegistry
+      metricRegistry   = metricRegistry
     )
   }
 
