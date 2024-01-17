@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.tasks
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
