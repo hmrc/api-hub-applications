@@ -7,12 +7,13 @@ DELETE     /applications/:id/environments/:environmentName/credentials/:clientId
 GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None, enrich: Boolean ?= false)
 GET        /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String, enrich: Boolean ?= false)
 POST       /applications/:id/delete                                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
-
-GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip
 PUT        /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
+POST       /applications/:id/team-members                                           uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addTeamMember(id: String)
 
 POST       /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.createAccessRequest()
 PUT        /access-requests/:id/approve                                             uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.approveAccessRequest(id: String)
 PUT        /access-requests/:id/reject                                              uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.rejectAccessRequest(id: String)
 GET        /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.getAccessRequests(applicationId: Option[String] ?= None, status: Option[AccessRequestStatus] ?= None)
 GET        /access-requests/:id                                                     uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.getAccessRequest(id: String)
+
+GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip

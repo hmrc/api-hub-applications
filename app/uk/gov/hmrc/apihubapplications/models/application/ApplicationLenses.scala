@@ -257,11 +257,17 @@ object ApplicationLenses {
       applicationTeamMembers.get(application)
         .exists(teamMember => teamMember.email.equalsIgnoreCase(email))
 
-    def addTeamMember(email: String): Application =
+    def hasTeamMember(teamMember: TeamMember): Boolean =
+      hasTeamMember(teamMember.email)
+
+    def addTeamMember(teamMember: TeamMember): Application =
       applicationTeamMembers.set(
         application,
-        applicationTeamMembers.get(application) :+ TeamMember(email)
+        applicationTeamMembers.get(application) :+ teamMember
       )
+
+    def addTeamMember(email: String): Application =
+      addTeamMember(TeamMember(email))
 
     def assertTeamMember(email: String): Application = {
       if (application.hasTeamMember(email)) {
