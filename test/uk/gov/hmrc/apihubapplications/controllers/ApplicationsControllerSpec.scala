@@ -39,7 +39,7 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.Appli
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.exception._
-import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UserEmail}
+import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
@@ -633,6 +633,106 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+  }
+
+  "addTeamMember" - {
+    "must pass on a valid request to the service layer and return success" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamMemberRequest = TeamMemberRequest("test-email")
+
+      when(fixture.applicationsService.addTeamMember(any(), any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.addTeamMember(applicationId))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.applicationsService).addTeamMember(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(teamMemberRequest.toTeamMember))(any())
+      }
+    }
+
+    "must return 404 Not Found when the application does not exist" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamMemberRequest = TeamMemberRequest("test-email")
+
+      when(fixture.applicationsService.addTeamMember(any(), any())(any()))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.addTeamMember(applicationId))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 400 Bad Request when the team member already exists in the application" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamMemberRequest = TeamMemberRequest("test-email")
+
+      when(fixture.applicationsService.addTeamMember(any(), any())(any()))
+        .thenReturn(Future.successful(Left(TeamMemberExistsException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.addTeamMember(applicationId))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+
+    "must return 500 Internal Server Error when an exception is returned by the service layer" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamMemberRequest = TeamMemberRequest("test-email")
+
+      when(fixture.applicationsService.addTeamMember(any(), any())(any()))
+        .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.addTeamMember(applicationId))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+
+    "must return 400 Bad Request when an invalid request body is submitted" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.addTeamMember(applicationId))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.obj())
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+        verifyZeroInteractions(fixture.applicationsService)
       }
     }
   }

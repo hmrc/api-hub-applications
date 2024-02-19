@@ -1435,6 +1435,81 @@ class ApplicationsServiceSpec
     }
   }
 
+  "addTeamMember" - {
+    "must add the team member to the application and pass it to the repository" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock).minusDays(1),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock).minusDays(1),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).addTeamMember(TeamMember("test-existing-team-member-email"))
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+
+      val teamMember = TeamMember("test-team-member-email")
+
+      service.addTeamMember(applicationId, teamMember)(HeaderCarrier()).map {
+        result =>
+          val updated = application.addTeamMember(teamMember).updated(clock)
+          verify(repository).update(ArgumentMatchers.eq(updated))
+          result mustBe Right(())
+      }
+    }
+
+    "must return TeamMemberExistsException if the team member already exists in the application" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+
+      val application = Application(
+        id = Some(applicationId),
+        name = "test-name",
+        created = LocalDateTime.now(clock).minusDays(1),
+        createdBy = Creator("test-email"),
+        lastUpdated = LocalDateTime.now(clock).minusDays(1),
+        teamMembers = Seq(TeamMember(email = "test-email")),
+        environments = Environments()
+      ).addTeamMember(TeamMember("test-existing-team-member-email"))
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+
+      val teamMember = TeamMember("test-existing-team-member-email")
+
+      service.addTeamMember(applicationId, teamMember)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(TeamMemberExistsException.forId(applicationId))
+      }
+    }
+
+    "must return any exception returned by the repository" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val applicationId = "test-id"
+      val expected = ApplicationNotFoundException.forId(applicationId)
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId)))
+        .thenReturn(Future.successful(Left(expected)))
+
+      val teamMember = TeamMember("test-team-member-email")
+
+      service.addTeamMember(applicationId, teamMember)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(expected)
+      }
+    }
+  }
+
   private case class Fixture(
     clock: Clock,
     repository: ApplicationsRepository,

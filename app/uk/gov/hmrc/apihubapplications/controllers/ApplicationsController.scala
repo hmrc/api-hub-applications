@@ -24,7 +24,7 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception._
-import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, UserEmail}
+import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -147,6 +147,23 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Left(_: ApplicationCredentialLimitException) => Conflict
         case Left(_: IdmsException) => BadGateway
         case Left(_) => InternalServerError
+      }
+  }
+
+  def addTeamMember(applicationId: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
+    implicit request: Request[JsValue] =>
+      logger.info(s"Adding team member to application $applicationId")
+      request.body.validate[TeamMemberRequest] match {
+        case JsSuccess(teamMemberRequest, _) =>
+          applicationsService.addTeamMember(applicationId, teamMemberRequest.toTeamMember).map {
+            case Right(_) => NoContent
+            case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(_: TeamMemberExistsException) => BadRequest
+            case Left(_) => InternalServerError
+          }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
       }
   }
 

@@ -301,4 +301,21 @@ class ApplicationsService @Inject()(
     }
   }
 
+  def addTeamMember(
+    applicationId: String,
+    teamMember: TeamMember
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    findById(applicationId, enrich = false).flatMap {
+      case Right(application) if !application.hasTeamMember(teamMember) =>
+        repository.update(
+          application
+            .addTeamMember(teamMember)
+            .updated(clock)
+        )
+      case Right(application) =>
+        Future.successful(Left(raiseTeamMemberExistsException.forApplication(application)))
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
 }

@@ -118,6 +118,16 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseTeamMemberExistsException {
+    def forId(id: String): TeamMemberExistsException = {
+      log(TeamMemberExistsException.forId(id))
+    }
+
+    def forApplication(application: Application): TeamMemberExistsException = {
+      log(TeamMemberExistsException.forApplication(application))
+    }
+  }
+
   private def log[T <: ApplicationsException](e: T): T = {
     e match {
       case emailException: EmailException => logger.error("Raised EmailException:", emailException)
