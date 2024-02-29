@@ -17,8 +17,10 @@
 package uk.gov.hmrc.apihubapplications.models.exception
 
 import play.api.Logging
+import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.ValidationFailuresResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 trait ExceptionRaising {
@@ -125,6 +127,20 @@ trait ExceptionRaising {
 
     def forApplication(application: Application): TeamMemberExistsException = {
       log(TeamMemberExistsException.forApplication(application))
+    }
+  }
+
+  object raiseSimpleApiDeploymentException {
+    def invalidOasDocument(response: ValidationFailuresResponse): SimpleApiDeploymentException = {
+      log(SimpleApiDeploymentException.invalidOasDocument(response))
+    }
+
+    def unexpectedResponse(statusCode: Int): SimpleApiDeploymentException = {
+      log(SimpleApiDeploymentException.unexpectedResponse(statusCode))
+    }
+
+    def invalidResponse(errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]): SimpleApiDeploymentException = {
+      log(SimpleApiDeploymentException.invalidResponse(errors))
     }
   }
 
