@@ -18,19 +18,18 @@ package uk.gov.hmrc.apihubapplications.models.simpleapideployment
 
 import play.api.libs.json.{Format, Json}
 
-case class GenerateMetadata(lineOfBusiness: String, name: String, description: String, egress: String)
+sealed trait ValidateResponse
 
-object GenerateMetadata {
+case object SuccessfulValidateResponse extends ValidateResponse
 
-  def apply(request: GenerateRequest): GenerateMetadata = {
-    GenerateMetadata(
-      lineOfBusiness = request.lineOfBusiness,
-      name = request.name,
-      description = request.description,
-      egress = request.egress
-    )
-  }
+sealed trait GenerateResponse
 
-  implicit val formatGenerateMetadata: Format[GenerateMetadata] = Json.format[GenerateMetadata]
+case class SuccessfulGenerateResponse(projectId: Int, lineOfBusiness: String, branchName: String, mergeRequestIid: Int) extends GenerateResponse
+
+object SuccessfulGenerateResponse {
+
+  implicit val formatSuccessfulGenerateResponse: Format[SuccessfulGenerateResponse] = Json.format[SuccessfulGenerateResponse]
 
 }
+
+case class InvalidOasResponse(failures: Seq[ValidationFailure]) extends ValidateResponse with GenerateResponse

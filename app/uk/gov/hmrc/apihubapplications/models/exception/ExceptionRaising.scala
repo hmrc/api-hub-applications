@@ -20,7 +20,6 @@ import play.api.Logging
 import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.ValidationFailuresResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 trait ExceptionRaising {
@@ -131,10 +130,6 @@ trait ExceptionRaising {
   }
 
   object raiseSimpleApiDeploymentException {
-    def invalidOasDocument(response: ValidationFailuresResponse): SimpleApiDeploymentException = {
-      log(SimpleApiDeploymentException.invalidOasDocument(response))
-    }
-
     def unexpectedResponse(statusCode: Int): SimpleApiDeploymentException = {
       log(SimpleApiDeploymentException.unexpectedResponse(statusCode))
     }

@@ -16,12 +16,4 @@
 
 package uk.gov.hmrc.apihubapplications.models.simpleapideployment
 
-import play.api.libs.json.{Format, Json}
-
-case class GenerateResponse(projectId: Int, lineOfBusiness: String, branchName: String, mergeRequestIid: Int)
-
-object GenerateResponse {
-
-  implicit val formatGenerateResponse: Format[GenerateResponse] = Json.format[GenerateResponse]
-
-}
+case class GenerateRequest(lineOfBusiness: String, name: String, description: String, egress: String, oas: String)

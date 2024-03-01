@@ -17,15 +17,15 @@
 package uk.gov.hmrc.apihubapplications.connectors
 
 import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateResponse}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, GenerateResponse, ValidateResponse}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 
 trait SimpleApiDeploymentConnector {
 
-  def validate(oas: String)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, Unit]]
+  def validate(oas: String)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, ValidateResponse]]
 
-  def generate(metadata: GenerateMetadata, oas: String)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, GenerateResponse]]
+  def generate(request: GenerateRequest)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, GenerateResponse]]
 
 }

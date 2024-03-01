@@ -18,7 +18,6 @@ package uk.gov.hmrc.apihubapplications.models.exception
 
 import play.api.libs.json.{JsError, JsPath, JsonValidationError}
 import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException.SimpleApiDeploymentIssue
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.ValidationFailuresResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 case class SimpleApiDeploymentException(message: String, cause: Throwable, issue: SimpleApiDeploymentIssue) extends ApplicationsException(message, cause)
@@ -27,19 +26,11 @@ object SimpleApiDeploymentException {
 
   sealed trait SimpleApiDeploymentIssue
 
-  case object InvalidOasDocument extends SimpleApiDeploymentIssue
   case object UnexpectedResponse extends SimpleApiDeploymentIssue
   case object InvalidResponse extends SimpleApiDeploymentIssue
 
   def apply(message: String, issue: SimpleApiDeploymentIssue): SimpleApiDeploymentException = {
     SimpleApiDeploymentException(message, null, issue)
-  }
-
-  def invalidOasDocument(response: ValidationFailuresResponse): SimpleApiDeploymentException = {
-    SimpleApiDeploymentException(
-      ("Invalid OAS document" +: response.failures.map(failure => s"${failure.`type`}: ${failure.message}")).mkString(System.lineSeparator()),
-      InvalidOasDocument
-    )
   }
 
   def unexpectedResponse(statusCode: Int): SimpleApiDeploymentException = {

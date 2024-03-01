@@ -22,7 +22,7 @@ import play.api.http.Status._
 import play.api.libs.json.{JsPath, Json, JsonValidationError}
 import play.api.mvc.MultipartFormData.DataPart
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, SimpleApiDeploymentException}
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateResponse, ValidationFailuresResponse}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment._
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps}
@@ -56,7 +56,7 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
     }
   }
 
-  override def validate(oas: String)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, Unit]] = {
+  override def validate(oas: String)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, ValidateResponse]] = {
     httpClient.post(url"$serviceUrl/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationToken)
       .setHeader("Content-Type" -> "application/yaml")
@@ -65,10 +65,12 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
       .map (
         response =>
           if (is2xx(response.status)) {
-            Right(())
+            Right(SuccessfulValidateResponse)
           }
           else if (response.status.intValue == BAD_REQUEST) {
-            Left(handleBadRequest(response))
+            handleBadRequest(response)
+              .map(Right(_))
+              .getOrElse(Left(raiseSimpleApiDeploymentException.unexpectedResponse(BAD_REQUEST)))
           }
           else {
             Left(raiseSimpleApiDeploymentException.unexpectedResponse(response.status.intValue))
@@ -76,15 +78,15 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
       )
   }
 
-  override def generate(metadata: GenerateMetadata, oas: String)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, GenerateResponse]] = {
+  override def generate(request: GenerateRequest)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, GenerateResponse]] = {
     httpClient.post(url"$serviceUrl/v1/simple-api-deployment/generate")
       .setHeader("Authorization" -> authorizationToken)
-      .setHeader("Content-Type" -> "multipart/form-data")
+      .setHeader("Accept" -> "application/json")
       .withBody(
         Source(
           Seq(
-            DataPart("metadata", Json.toJson(metadata).toString()),
-            DataPart("openapi", oas)
+            DataPart("metadata", Json.toJson(GenerateMetadata(request)).toString()),
+            DataPart("openapi", request.oas)
           )
         )
       )
@@ -92,13 +94,15 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
       .map (
         response =>
           if (is2xx(response.status)) {
-            response.json.validate[GenerateResponse].fold(
+            response.json.validate[SuccessfulGenerateResponse].fold(
               (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseSimpleApiDeploymentException.invalidResponse(errors)),
               generateResponse => Right(generateResponse)
             )
           }
           else if (response.status.intValue == BAD_REQUEST) {
-            Left(handleBadRequest(response))
+            handleBadRequest(response)
+              .map(Right(_))
+              .getOrElse(Left(raiseSimpleApiDeploymentException.unexpectedResponse(BAD_REQUEST)))
           }
           else {
             Left(raiseSimpleApiDeploymentException.unexpectedResponse(response.status.intValue))
@@ -106,11 +110,16 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
       )
   }
 
-  private def handleBadRequest(response: HttpResponse): SimpleApiDeploymentException = {
-    response.json.validate[ValidationFailuresResponse].fold(
-      _ => raiseSimpleApiDeploymentException.unexpectedResponse(BAD_REQUEST),
-      validationFailureResponse => raiseSimpleApiDeploymentException.invalidOasDocument(validationFailureResponse)
-    )
+  private def handleBadRequest(response: HttpResponse): Option[InvalidOasResponse] = {
+    if (response.body.isEmpty) {
+      None
+    }
+    else {
+      response.json.validate[ValidationFailuresResponse].fold(
+        _ => None,
+        validationFailureResponse => Some(InvalidOasResponse(validationFailureResponse.failures))
+      )
+    }
   }
 
 }
