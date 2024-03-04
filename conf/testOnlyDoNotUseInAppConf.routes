@@ -11,5 +11,3 @@
 
 # Add all the application routes to the prod.routes file
 ->         /                                        prod.Routes
-POST       /v1/simple-api-deployment/validate       uk.gov.hmrc.apihubapplications.controllers.testonly.TestIntegrationCatalogueConnectivityController.validate()
-POST       /v1/simple-api-deployment/generate       uk.gov.hmrc.apihubapplications.controllers.testonly.TestIntegrationCatalogueConnectivityController.generate()
