@@ -17,3 +17,5 @@ GET        /access-requests                                                     
 GET        /access-requests/:id                                                     uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.getAccessRequest(id: String)
 
 GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip
+
+POST       /deployments/generate                                                    uk.gov.hmrc.apihubapplications.controllers.DeployApiController.generate()
