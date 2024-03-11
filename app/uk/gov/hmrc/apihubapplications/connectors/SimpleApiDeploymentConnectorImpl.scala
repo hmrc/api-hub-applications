@@ -116,8 +116,12 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
     }
     else {
       response.json.validate[ValidationFailuresResponse].fold(
-        _ => None,
-        validationFailureResponse => Some(InvalidOasResponse(validationFailureResponse.failures))
+        _ => {
+          logger.warn(s"Unknown response body from Simple OAS Deployment service:${System.lineSeparator()}${response.body}")
+          None
+        },
+        validationFailureResponse =>
+          Some(InvalidOasResponse(validationFailureResponse.failures))
       )
     }
   }
