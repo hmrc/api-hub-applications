@@ -35,9 +35,8 @@ import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, SimpleApiDeploymentConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.DeployApiControllerSpec.buildFixture
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, SimpleApiDeploymentException}
-import uk.gov.hmrc.apihubapplications.models.requests.UserEmail
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, ValidationFailure, ValidationFailuresResponse}
+import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, ValidationFailure}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
 import scala.concurrent.Future
@@ -48,9 +47,6 @@ class DeployApiControllerSpec
     with MockitoSugar
     with OptionValues
     with CryptoUtils {
-
-  private val userEmail = "me@test.com"
-  private val userEmailRequestBody = Json.toJson(UserEmail(userEmail)).toString()
 
   "registerApplication" - {
     "must return Accepted for a valid request with a success response from downstream" in {
@@ -77,11 +73,40 @@ class DeployApiControllerSpec
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
-        status(result) mustBe Status.ACCEPTED
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(deployResponse)
       }
 
     }
 
+    "must return 400 Bad Request and an Invalid OAS spec when returned from downstream" in {
+      val fixture = DeployApiControllerSpec.buildFixture()
+      running(fixture.application) {
+        val deployRequest = GenerateRequest(
+          "lineOfBusiness",
+          "name",
+          "description",
+          "egress",
+          "oas"
+        )
+
+        val deployResponse = InvalidOasResponse(Seq(ValidationFailure("test-type", "test-message")))
+        val json = Json.toJson(deployRequest)
+
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+          .thenReturn(Future.successful(Right(deployResponse)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+        contentAsJson(result) mustBe Json.toJson(deployResponse)
+      }
+    }
 
     "must return 400 Bad Request when the JSON is not a valid application" in {
       val fixture = buildFixture()
@@ -181,9 +206,8 @@ object DeployApiControllerSpec {
       )
       .build()
 
-    case object BadThingException extends ApplicationsException("unexpected-message", null)
-
     Fixture(application, simpleApiDeploymentConnector)
 
   }
+
 }
