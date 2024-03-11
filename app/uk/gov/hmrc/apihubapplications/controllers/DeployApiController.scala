@@ -18,13 +18,13 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import play.api.libs.json.{JsError, JsSuccess, JsValue}
+import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.connectors.SimpleApiDeploymentConnectorImpl
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
 import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException.InvalidResponse
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, InvalidOasResponse}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,8 +40,8 @@ class DeployApiController @Inject()(identify: IdentifierAction,
       val jsReq = request.body
       jsReq.validate[GenerateRequest] match {
         case JsSuccess(generateRequest, _) => simpleApiDeploymentConnector.generate(generateRequest) map {
-          case Right(InvalidOasResponse(_)) => BadRequest
-          case Right(_) => Accepted
+          case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
+          case Right(response: SuccessfulGenerateResponse) => Ok(Json.toJson(response))
           case Left(e: SimpleApiDeploymentException) if e.issue equals InvalidResponse => BadRequest
           case Left(_) => InternalServerError
         }

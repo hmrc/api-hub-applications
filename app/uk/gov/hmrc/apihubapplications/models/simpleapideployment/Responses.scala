@@ -33,3 +33,9 @@ object SuccessfulGenerateResponse {
 }
 
 case class InvalidOasResponse(failures: Seq[ValidationFailure]) extends ValidateResponse with GenerateResponse
+
+object InvalidOasResponse {
+
+  implicit val formatInvalidOasResponse: Format[InvalidOasResponse] = Json.format[InvalidOasResponse]
+
+}
