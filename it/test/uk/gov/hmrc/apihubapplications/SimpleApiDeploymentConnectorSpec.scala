@@ -24,7 +24,7 @@ import play.api.Configuration
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, SimpleApiDeploymentConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, SuccessfulValidateResponse, ValidationFailure, ValidationFailuresResponse}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, SuccessfulValidateResponse, ValidationFailure}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -80,14 +80,12 @@ class SimpleApiDeploymentConnectorSpec
         ValidationFailure("test-type-2", "test-message-2")
       )
 
-      val response = ValidationFailuresResponse(failures)
-
       stubFor(
         post(urlEqualTo(s"/$path/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(400)
-              .withBody(Json.toJson(response).toString())
+              .withBody(Json.toJson(failures).toString())
           )
       )
 
@@ -185,14 +183,12 @@ class SimpleApiDeploymentConnectorSpec
         ValidationFailure("test-type-2", "test-message-2")
       )
 
-      val response = ValidationFailuresResponse(failures)
-
       stubFor(
         post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
           .willReturn(
             aResponse()
               .withStatus(400)
-              .withBody(Json.toJson(response).toString())
+              .withBody(Json.toJson(failures).toString())
           )
       )
 
