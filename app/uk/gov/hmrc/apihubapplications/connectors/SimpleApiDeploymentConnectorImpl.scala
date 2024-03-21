@@ -90,6 +90,7 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
           )
         )
       )
+      .withProxy
       .execute[HttpResponse]
       .map (
         response =>
