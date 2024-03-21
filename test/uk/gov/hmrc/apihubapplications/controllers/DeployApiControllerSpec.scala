@@ -36,7 +36,7 @@ import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, 
 import uk.gov.hmrc.apihubapplications.controllers.DeployApiControllerSpec.buildFixture
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, ValidationFailure}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse, ValidationFailure}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
 import scala.concurrent.Future
@@ -52,7 +52,7 @@ class DeployApiControllerSpec
     "must return Accepted for a valid request with a success response from downstream" in {
       val fixture = DeployApiControllerSpec.buildFixture()
       running(fixture.application) {
-        val deployRequest = GenerateRequest(
+        val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
           "name",
           "description",
@@ -60,7 +60,7 @@ class DeployApiControllerSpec
           "oas"
         )
 
-        val deployResponse = SuccessfulGenerateResponse(999, "lineOfBusiness", "branchName", 666)
+        val deployResponse = SuccessfulDeploymentsResponse(999, "lineOfBusiness", "branchName", 666)
         val json = Json.toJson(deployRequest)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
@@ -69,7 +69,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.deployments(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -82,7 +82,7 @@ class DeployApiControllerSpec
     "must return 400 Bad Request and an Invalid OAS spec when returned from downstream" in {
       val fixture = DeployApiControllerSpec.buildFixture()
       running(fixture.application) {
-        val deployRequest = GenerateRequest(
+        val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
           "name",
           "description",
@@ -99,7 +99,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.deployments(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -125,7 +125,7 @@ class DeployApiControllerSpec
     "must return Bad request if the downstream service responds with validation errors" in {
       val fixture = DeployApiControllerSpec.buildFixture()
       running(fixture.application) {
-        val deployRequest = GenerateRequest(
+        val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
           "name",
           "description",
@@ -148,7 +148,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.deployments(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(response))
 
         val result = route(fixture.application, request).value
@@ -160,7 +160,7 @@ class DeployApiControllerSpec
 
     "must return 500 Internal Server Error for unexpected exceptions" in {
       val fixture = buildFixture()
-      val deployRequest = GenerateRequest(
+      val deployRequest = DeploymentsRequest(
         "lineOfBusiness",
         "name",
         "description",
@@ -169,7 +169,7 @@ class DeployApiControllerSpec
       )
       val json = Json.toJson(deployRequest)
 
-      when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+      when(fixture.simpleApiDeploymentConnector.deployments(ArgumentMatchers.eq(deployRequest))(any()))
         .thenReturn(Future.successful(Left(SimpleApiDeploymentException.unexpectedResponse(500))))
 
       running(fixture.application) {

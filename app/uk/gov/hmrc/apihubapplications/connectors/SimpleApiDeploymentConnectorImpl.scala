@@ -78,14 +78,14 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
       )
   }
 
-  override def generate(request: GenerateRequest)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, GenerateResponse]] = {
-    httpClient.post(url"$serviceUrl/v1/simple-api-deployment/generate")
+  override def deployments(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, DeploymentsResponse]] = {
+    httpClient.post(url"$serviceUrl/v1/simple-api-deployment/deployments")
       .setHeader("Authorization" -> authorizationToken)
       .setHeader("Accept" -> "application/json")
       .withBody(
         Source(
           Seq(
-            DataPart("metadata", Json.toJson(GenerateMetadata(request)).toString()),
+            DataPart("metadata", Json.toJson(DeploymentsMetadata(request)).toString()),
             DataPart("openapi", request.oas)
           )
         )
@@ -95,9 +95,9 @@ class SimpleApiDeploymentConnectorImpl @Inject()(
       .map (
         response =>
           if (is2xx(response.status)) {
-            response.json.validate[SuccessfulGenerateResponse].fold(
+            response.json.validate[SuccessfulDeploymentsResponse].fold(
               (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseSimpleApiDeploymentException.invalidResponse(errors)),
-              generateResponse => Right(generateResponse)
+              deploymentsResponse => Right(deploymentsResponse)
             )
           }
           else if (response.status.intValue == BAD_REQUEST) {

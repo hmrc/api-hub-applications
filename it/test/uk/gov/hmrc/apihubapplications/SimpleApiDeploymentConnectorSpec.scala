@@ -24,7 +24,7 @@ import play.api.Configuration
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, SimpleApiDeploymentConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, SuccessfulValidateResponse, ValidationFailure}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentsRequest, DeploymentsMetadata, InvalidOasResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, ValidationFailure}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -48,7 +48,7 @@ class SimpleApiDeploymentConnectorSpec
     s"Basic $endcoded"
   }
 
-  private val generateRequest = GenerateRequest(
+  private val deploymentsRequest = DeploymentsRequest(
     lineOfBusiness = "test-line-of-business",
     name = "test-name",
     description = "test-description",
@@ -126,24 +126,24 @@ class SimpleApiDeploymentConnectorSpec
     }
   }
 
-  "SimpleApiDeploymentConnector.generate" - {
+  "SimpleApiDeploymentConnector.deployments" - {
     "must place the correct request to the Simple API Deployment service and return the response" in {
-      val response = SuccessfulGenerateResponse(
+      val response = SuccessfulDeploymentsResponse(
         projectId = 101,
-        lineOfBusiness = generateRequest.lineOfBusiness,
+        lineOfBusiness = deploymentsRequest.lineOfBusiness,
         branchName = "test-branch-name",
         mergeRequestIid = 201
       )
 
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$path/v1/simple-api-deployment/deployments"))
           .withHeader("Content-Type", containing("multipart/form-data"))
           .withHeader("Authorization", equalTo(authorizationToken))
           .withHeader("Accept", equalTo("application/json"))
           .withMultipartRequestBody(
             aMultipart()
               .withName("metadata")
-              .withBody(equalToJson(Json.toJson(GenerateMetadata(generateRequest)).toString()))
+              .withBody(equalToJson(Json.toJson(DeploymentsMetadata(deploymentsRequest)).toString()))
           )
           .withMultipartRequestBody(
             aMultipart()
@@ -156,7 +156,7 @@ class SimpleApiDeploymentConnectorSpec
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deployments(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(response)
       }
@@ -164,14 +164,14 @@ class SimpleApiDeploymentConnectorSpec
 
     "must return invalid response when the Simple API Deployment service's response cannot be parsed'" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$path/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withBody("{}")
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deployments(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual.left.value.issue mustBe SimpleApiDeploymentException.InvalidResponse
       }
@@ -184,7 +184,7 @@ class SimpleApiDeploymentConnectorSpec
       )
 
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$path/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -192,7 +192,7 @@ class SimpleApiDeploymentConnectorSpec
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deployments(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failures))
       }
@@ -200,14 +200,14 @@ class SimpleApiDeploymentConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$path/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(400)
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deployments(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(SimpleApiDeploymentException.unexpectedResponse(400))
       }
@@ -215,14 +215,14 @@ class SimpleApiDeploymentConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns one" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$path/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(500)
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deployments(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(SimpleApiDeploymentException.unexpectedResponse(500))
       }
