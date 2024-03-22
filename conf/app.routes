@@ -21,3 +21,4 @@ GET        /test-connectivity                                                   
 POST       /deployments/generate                                                    uk.gov.hmrc.apihubapplications.controllers.DeployApiController.generate()
 
 POST       /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.create()
+GET        /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.findAll(teamMember: Option[String] ?= None)

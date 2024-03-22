@@ -83,11 +83,28 @@ class TeamsRepositoryIntegrationSpec
       val saved2 = repository.insert(team2).futureValue
 
       val result = repository
-        .findAll()
+        .findAll(None)
         .map(ResultWithMdcData(_))
         .futureValue
 
       result.data must contain theSameElementsAs Set(saved1, saved2)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must retrieve only teams with a specified member when requested" in {
+      setMdcData()
+
+      repository.insert(team2).futureValue
+
+      val saved1 = repository.insert(team1).futureValue
+      val saved3 = repository.insert(team3).futureValue
+
+      val result = repository
+        .findAll(Some(teamMember1.email))
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Set(saved1, saved3)
       result.mdcData mustBe testMdcData
     }
   }
@@ -103,5 +120,6 @@ object TeamsRepositoryIntegrationSpec {
 
   val team1: Team = Team("test-team-1", LocalDateTime.now(), Seq(teamMember1, teamMember2))
   val team2: Team = Team("test-team-2", LocalDateTime.now(), Seq(teamMember3, teamMember4))
+  val team3: Team = Team("test-team-3", LocalDateTime.now(), Seq(teamMember1))
 
 }

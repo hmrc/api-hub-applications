@@ -29,11 +29,13 @@ import play.api.test.Helpers._
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.team.NewTeam
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.services.TeamsService
+import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
+import uk.gov.hmrc.crypto.ApplicationCrypto
 
-import java.time.Clock
+import java.time.{Clock, LocalDateTime}
 import scala.concurrent.Future
 
 class TeamsControllerSpec
@@ -41,7 +43,8 @@ class TeamsControllerSpec
   with Matchers
   with MockitoSugar
   with ArgumentMatchersSugar
-  with OptionValues {
+  with OptionValues
+  with CryptoUtils {
 
   import TeamsControllerSpec._
 
@@ -86,6 +89,37 @@ class TeamsControllerSpec
     }
   }
 
+  "findAll" - {
+    "must return 200 Ok and all teams returned by the service when no teamMember is specified" in {
+      val fixture = buildFixture()
+
+      when(fixture.teamsService.findAll(eqTo(None))).thenReturn(Future.successful(Seq(team1, team2, team3)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.findAll(None))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(Seq(team1, team2, team3))
+      }
+    }
+
+    "must return 200 Ok and all teams returned by the service when a teamMember is specified" in {
+      val fixture = buildFixture()
+
+      when(fixture.teamsService.findAll(eqTo(Some(teamMember1.email)))).thenReturn(Future.successful(Seq(team1, team3)))
+
+      running(fixture.application) {
+        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+        val request = FakeRequest(routes.TeamsController.findAll(Some(encrypt(crypto, teamMember1.email))))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(Seq(team1, team3))
+      }
+    }
+  }
+
   private case class Fixture(application: PlayApplication, teamsService: TeamsService)
 
   private def buildFixture(): Fixture = {
@@ -108,5 +142,11 @@ object TeamsControllerSpec {
 
   val teamMember1: TeamMember = TeamMember("test-team-member-1")
   val teamMember2: TeamMember = TeamMember("test-team-member-2")
+  val teamMember3: TeamMember = TeamMember("test-team-member-3")
+  val teamMember4: TeamMember = TeamMember("test-team-member-4")
+
+  val team1: Team = Team("test-team-1", LocalDateTime.now(), Seq(teamMember1, teamMember2))
+  val team2: Team = Team("test-team-2", LocalDateTime.now(), Seq(teamMember3, teamMember4))
+  val team3: Team = Team("test-team-3", LocalDateTime.now(), Seq(teamMember1))
 
 }

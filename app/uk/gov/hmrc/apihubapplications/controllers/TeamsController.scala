@@ -19,10 +19,11 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.team.NewTeam
 import uk.gov.hmrc.apihubapplications.services.TeamsService
+import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,7 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class TeamsController @Inject()(
   cc: ControllerComponents,
   identify: IdentifierAction,
-  teamsService: TeamsService
+  teamsService: TeamsService,
+  crypto: ApplicationCrypto
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def create(): Action[JsValue] = identify(parse.json).async {
@@ -45,6 +47,16 @@ class TeamsController @Inject()(
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
       }
+  }
+
+  def findAll(teamMember: Option[String]): Action[AnyContent] = identify.async {
+    teamsService.findAll(teamMember.map(decrypt)).map(
+      teams => Ok(Json.toJson(teams))
+    )
+  }
+
+  private def decrypt(encrypted: String): String = {
+    crypto.QueryParameterCrypto.decrypt(Crypted(encrypted)).value
   }
 
 }

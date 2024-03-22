@@ -18,11 +18,13 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.model.{IndexModel, Indexes}
+import org.mongodb.scala.model.{Filters, IndexModel, Indexes}
+import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.sensitiveStringFormat
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.formatDataWithMongoIdentifier
+import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveTeamMember
 import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -70,10 +72,14 @@ class TeamsRepository @Inject()(
     )
   }
 
-  def findAll(): Future[Seq[Team]] = {
+  def findAll(teamMember: Option[String]): Future[Seq[Team]] = {
     Mdc.preservingMdc {
       collection
-        .find()
+        .find(
+          teamMember
+            .map(email => Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email))
+            .getOrElse(Filters.empty())
+        )
         .toFuture()
     } map (_.map(_.decryptedValue))
   }
