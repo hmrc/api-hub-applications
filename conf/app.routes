@@ -19,3 +19,5 @@ GET        /access-requests/:id                                                 
 GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip
 
 POST       /deployments/generate                                                    uk.gov.hmrc.apihubapplications.controllers.DeployApiController.generate()
+
+POST       /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.create()

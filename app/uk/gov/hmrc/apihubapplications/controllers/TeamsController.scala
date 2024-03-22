@@ -17,16 +17,34 @@
 package uk.gov.hmrc.apihubapplications.controllers
 
 import com.google.inject.{Inject, Singleton}
-import play.api.mvc.ControllerComponents
+import play.api.Logging
+import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
+import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
+import uk.gov.hmrc.apihubapplications.models.team.NewTeam
 import uk.gov.hmrc.apihubapplications.services.TeamsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TeamsController @Inject()(
   cc: ControllerComponents,
   identify: IdentifierAction,
   teamsService: TeamsService
-) extends BackendController(cc) {
+)(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
+
+  def create(): Action[JsValue] = identify.compose(Action(parse.json)).async {
+    implicit request =>
+      request.body.validate[NewTeam] match {
+        case JsSuccess(newTeam, _) =>
+          teamsService.create(newTeam).map(
+            team => Created(Json.toJson(team))
+          )
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+  }
 
 }

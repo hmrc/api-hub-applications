@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.services
+package uk.gov.hmrc.apihubapplications.models.team
 
-import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
-import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
+import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 
 import java.time.Clock
-import scala.concurrent.Future
 
-@Singleton
-class TeamsService @Inject()(
-  repository: TeamsRepository,
-  clock: Clock
-) {
+case class NewTeam(name: String, teamMembers: Seq[TeamMember]) {
 
-  def create(newTeam: NewTeam): Future[Team] = {
-    repository.insert(newTeam.toTeam(clock))
+  def toTeam(clock: Clock): Team = {
+    Team(name, teamMembers, clock)
   }
+
+}
+
+object NewTeam {
+
+  implicit val formatNewTeam: Format[NewTeam] = Json.format[NewTeam]
 
 }
