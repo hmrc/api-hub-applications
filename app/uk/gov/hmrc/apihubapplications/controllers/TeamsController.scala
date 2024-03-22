@@ -34,7 +34,7 @@ class TeamsController @Inject()(
   teamsService: TeamsService
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
-  def create(): Action[JsValue] = identify.compose(Action(parse.json)).async {
+  def create(): Action[JsValue] = identify(parse.json).async {
     implicit request =>
       request.body.validate[NewTeam] match {
         case JsSuccess(newTeam, _) =>
