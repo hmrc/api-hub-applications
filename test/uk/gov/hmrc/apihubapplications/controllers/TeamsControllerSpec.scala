@@ -27,7 +27,6 @@ import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.{Application => PlayApplication}
-import uk.gov.hmrc.apihubapplications.controllers.TeamsControllerSpec.{teamMember1, teamMember2}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.team.NewTeam
@@ -43,6 +42,8 @@ class TeamsControllerSpec
   with MockitoSugar
   with ArgumentMatchersSugar
   with OptionValues {
+
+  import TeamsControllerSpec._
 
   "create" - {
     "must create the team via the service and return 201 Created and the saved team as JSON" in {

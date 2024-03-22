@@ -23,7 +23,6 @@ import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.team.NewTeam
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
-import uk.gov.hmrc.apihubapplications.services.TeamsServiceSpec.{teamMember1, teamMember2}
 
 import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.Future
@@ -33,6 +32,8 @@ class TeamsServiceSpec
   with Matchers
   with MockitoSugar
   with ArgumentMatchersSugar {
+
+  import TeamsServiceSpec._
 
   "create" - {
     "must transform NewTeam to Team, pass it to the repository, and return the saved result" in {
