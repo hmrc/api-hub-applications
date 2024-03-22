@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models.team
 
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 
 import java.time.{Clock, LocalDateTime}
@@ -36,5 +37,7 @@ object Team {
   def apply(name: String, teamMembers: Seq[TeamMember], clock: Clock): Team = {
     Team(None, name, LocalDateTime.now(clock), teamMembers)
   }
+
+  implicit val formatTeam: Format[Team] = Json.format[Team]
 
 }
