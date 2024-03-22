@@ -33,4 +33,8 @@ class TeamsService @Inject()(
     repository.insert(newTeam.toTeam(clock))
   }
 
+  def findAll(teamMember: Option[String]): Future[Seq[Team]] = {
+    repository.findAll(teamMember)
+  }
+
 }
