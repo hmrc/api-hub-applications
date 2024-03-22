@@ -129,10 +129,10 @@ class SimpleApiDeploymentConnectorSpec
   "SimpleApiDeploymentConnector.deployments" - {
     "must place the correct request to the Simple API Deployment service and return the response" in {
       val response = SuccessfulDeploymentsResponse(
-        projectId = 101,
-        lineOfBusiness = deploymentsRequest.lineOfBusiness,
-        branchName = "test-branch-name",
-        mergeRequestIid = 201
+        id = "test-id",
+        version = "v1.2.3",
+        mergeRequestIid = 201,
+        uri = "test-uri"
       )
 
       stubFor(

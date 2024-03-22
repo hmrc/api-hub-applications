@@ -60,7 +60,7 @@ class DeployApiControllerSpec
           "oas"
         )
 
-        val deployResponse = SuccessfulDeploymentsResponse(999, "lineOfBusiness", "branchName", 666)
+        val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
         val json = Json.toJson(deployRequest)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)

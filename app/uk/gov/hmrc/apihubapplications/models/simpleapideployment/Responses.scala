@@ -24,7 +24,7 @@ case object SuccessfulValidateResponse extends ValidateResponse
 
 sealed trait DeploymentsResponse
 
-case class SuccessfulDeploymentsResponse(projectId: Int, lineOfBusiness: String, branchName: String, mergeRequestIid: Int) extends DeploymentsResponse
+case class SuccessfulDeploymentsResponse(id: String, version: String, mergeRequestIid: Int, uri: String) extends DeploymentsResponse
 
 object SuccessfulDeploymentsResponse {
 
