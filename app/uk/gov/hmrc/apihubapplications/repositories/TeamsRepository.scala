@@ -19,10 +19,12 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.model.{Filters, IndexModel, Indexes}
+import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
-import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.sensitiveStringFormat
+import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.{sensitiveStringFormat, stringToObjectId}
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.formatDataWithMongoIdentifier
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveTeamMember
 import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
@@ -49,7 +51,7 @@ class TeamsRepository @Inject()(
       // Sensitive string codec so we can operate on individual string fields
       Codecs.playFormatCodec(sensitiveStringFormat(crypto))
     )
-  ) {
+  ) with Logging with ExceptionRaising {
 
   // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
   require(
@@ -82,6 +84,21 @@ class TeamsRepository @Inject()(
         )
         .toFuture()
     } map (_.map(_.decryptedValue))
+  }
+
+  def findById(id: String): Future[Either[ApplicationsException, Team]] = {
+    stringToObjectId(id) match {
+      case Some(objectId) =>
+        Mdc.preservingMdc {
+          collection
+            .find(Filters.equal("_id", objectId))
+            .headOption()
+        } map {
+          case Some(team) => Right(team.decryptedValue)
+          case None => Left(raiseTeamNotFoundException.forId(id))
+        }
+      case None => Future.successful(Left(raiseTeamNotFoundException.forId(id)))
+    }
   }
 
 }

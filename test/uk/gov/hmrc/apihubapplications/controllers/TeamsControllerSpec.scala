@@ -29,6 +29,7 @@ import play.api.test.Helpers._
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
+import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.services.TeamsService
@@ -116,6 +117,38 @@ class TeamsControllerSpec
 
         status(result) mustBe OK
         contentAsJson(result) mustBe Json.toJson(Seq(team1, team3))
+      }
+    }
+  }
+
+  "findById" - {
+    "must return 200 Ok and the Team when it exists" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.teamsService.findById(id)).thenReturn(Future.successful(Right(team)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.findById(id))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(team)
+      }
+    }
+
+    "must return 404 Not Found when the Team does not exist" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+
+      when(fixture.teamsService.findById(eqTo(id))).thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.findById(id))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
       }
     }
   }

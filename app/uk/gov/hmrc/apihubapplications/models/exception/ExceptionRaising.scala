@@ -20,6 +20,7 @@ import play.api.Logging
 import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 trait ExceptionRaising {
@@ -136,6 +137,16 @@ trait ExceptionRaising {
 
     def invalidResponse(errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]): SimpleApiDeploymentException = {
       log(SimpleApiDeploymentException.invalidResponse(errors))
+    }
+  }
+
+  object raiseTeamNotFoundException {
+    def forId(id: String): TeamNotFoundException = {
+      log(TeamNotFoundException.forId(id))
+    }
+
+    def forTeam(team: Team): TeamNotFoundException = {
+      log(TeamNotFoundException.forTeam(team))
     }
   }
 
