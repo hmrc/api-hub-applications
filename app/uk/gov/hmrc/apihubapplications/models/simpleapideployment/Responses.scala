@@ -22,17 +22,17 @@ sealed trait ValidateResponse
 
 case object SuccessfulValidateResponse extends ValidateResponse
 
-sealed trait GenerateResponse
+sealed trait DeploymentsResponse
 
-case class SuccessfulGenerateResponse(projectId: Int, lineOfBusiness: String, branchName: String, mergeRequestIid: Int) extends GenerateResponse
+case class SuccessfulDeploymentsResponse(id: String, version: String, mergeRequestIid: Int, uri: String) extends DeploymentsResponse
 
-object SuccessfulGenerateResponse {
+object SuccessfulDeploymentsResponse {
 
-  implicit val formatSuccessfulGenerateResponse: Format[SuccessfulGenerateResponse] = Json.format[SuccessfulGenerateResponse]
+  implicit val formatSuccessfulDeploymentsResponse: Format[SuccessfulDeploymentsResponse] = Json.format[SuccessfulDeploymentsResponse]
 
 }
 
-case class InvalidOasResponse(failures: Seq[ValidationFailure]) extends ValidateResponse with GenerateResponse
+case class InvalidOasResponse(failures: Seq[ValidationFailure]) extends ValidateResponse with DeploymentsResponse
 
 object InvalidOasResponse {
 
