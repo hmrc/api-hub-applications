@@ -108,7 +108,7 @@ class APIMConnectorImpl @Inject()(
     }
   }
 
-  override def status(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
+  override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
     httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/oas-discovery/oas/${publisherReference}")
       .setHeader(headersForEnvironment(environment): _*)
       .withProxy
