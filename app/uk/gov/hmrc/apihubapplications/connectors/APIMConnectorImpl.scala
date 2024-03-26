@@ -59,7 +59,7 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  override def deploymentsSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, DeploymentsResponse]] = {
+  override def deploymentsSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
       .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
       .setHeader("Accept" -> "application/json")
@@ -77,7 +77,7 @@ class APIMConnectorImpl @Inject()(
         response =>
           if (is2xx(response.status)) {
             response.json.validate[SuccessfulDeploymentsResponse].fold(
-              (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseSimpleApiDeploymentException.invalidResponse(errors)),
+              (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseApimException.invalidResponse(errors)),
               deploymentsResponse => Right(deploymentsResponse)
             )
           }
