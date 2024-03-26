@@ -109,14 +109,14 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
-    httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/oas-discovery/oas/${publisherReference}")
+    httpClient.get(url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/${publisherReference}")
       .setHeader(headersForEnvironment(environment): _*)
       .withProxy
       .execute[HttpResponse]
       .map(
         response =>
           if (is2xx(response.status)) {
-            response.json.validate[DeploymentResponse].fold(
+            response.json.validate[SuccessfulDeploymentResponse].fold(
               (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseApimException.invalidResponse(errors)),
               generateResponse => Right(Some(generateResponse))
             )

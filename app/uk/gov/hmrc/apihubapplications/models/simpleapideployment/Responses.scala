@@ -42,10 +42,12 @@ object InvalidOasResponse {
 
 }
 
-case class DeploymentResponse(id: String, deploymentTimestamp: LocalDateTime)
+sealed trait DeploymentResponse
 
-object DeploymentResponse {
+case class SuccessfulDeploymentResponse(id: String, deploymentTimestamp: LocalDateTime) extends DeploymentResponse
 
-  implicit val formatDeploymentResponse: Format[DeploymentResponse] = Json.format[DeploymentResponse]
+object SuccessfulDeploymentResponse {
+
+  implicit val formatDeploymentResponse: Format[SuccessfulDeploymentResponse] = Json.format[SuccessfulDeploymentResponse]
 
 }

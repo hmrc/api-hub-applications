@@ -17,21 +17,21 @@
 package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.Configuration
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
+import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, SuccessfulValidateResponse, ValidationFailure}
-import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, SimpleApiDeploymentConnectorImpl}
-import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentsRequest, DeploymentsMetadata, InvalidOasResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, ValidationFailure}
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.time.LocalDateTime
 import java.util.Base64
 
 class APIMConnectorSpec
@@ -139,11 +139,11 @@ class APIMConnectorSpec
 
   "APIMConnector.deploymentsSecondary" - {
     "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
-      val response = SuccessfulGenerateResponse(
-        projectId = 101,
-        lineOfBusiness = generateRequest.lineOfBusiness,
-        branchName = "test-branch-name",
-        mergeRequestIid = 201
+      val response = SuccessfulDeploymentsResponse(
+        id = "test-id",
+        version = "v1.2.3",
+        mergeRequestIid = 201,
+        uri = "test-uri"
       )
 
       stubFor(
@@ -237,6 +237,94 @@ class APIMConnectorSpec
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500))
       }
+    }
+
+    "APIMConnector.getDeployment" - {
+      "must place the correct request to the APIM in primary" in {
+        stubFor(
+          get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+            .withHeader("Content-Type", equalTo("application/yaml"))
+            .withHeader("Authorization", equalTo(authorizationTokenPrimary))
+            .willReturn(
+              aResponse()
+                .withBody(Json.toJson(SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)).toString())
+                .withStatus(200)
+            )
+        )
+
+        buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
+          actual =>
+            actual mustBe Right(Some(SuccessfulDeploymentResponse))
+        }
+      }
+
+      "must place the correct request to the APIM in secondary" in {
+        stubFor(
+          get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
+            .withHeader("Content-Type", equalTo("application/yaml"))
+            .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+            .willReturn(
+              aResponse()
+                .withBody(Json.toJson(SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)).toString())
+                .withStatus(200)
+            )
+        )
+
+        buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
+          actual =>
+            actual mustBe Right(Some(SuccessfulDeploymentResponse))
+        }
+      }
+
+      "must handle 404 in primary" in {
+        stubFor(
+          get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+            .withHeader("Content-Type", equalTo("application/yaml"))
+            .withHeader("Authorization", equalTo(authorizationTokenPrimary))
+            .willReturn(
+              aResponse()
+                .withStatus(404)
+            )
+        )
+
+        buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
+          actual =>
+            actual mustBe Right(None)
+        }
+      }
+
+      "must handle 404 in secondary" in {
+        stubFor(
+          get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
+            .withHeader("Content-Type", equalTo("application/yaml"))
+            .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+            .willReturn(
+              aResponse()
+                .withStatus(404)
+            )
+        )
+
+        buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
+          actual =>
+            actual mustBe Right(None)
+        }
+      }
+
+      "must return unexpected response when APIM returns one" in {
+        stubFor(
+          post(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+            .willReturn(
+              aResponse()
+                .withStatus(500)
+            )
+        )
+
+        buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
+          actual =>
+            actual mustBe Left(ApimException.unexpectedResponse(500))
+        }
+      }
+
     }
   }
 
