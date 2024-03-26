@@ -79,7 +79,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
+      buildConnector().validateInPrimary(oas)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(SuccessfulValidateResponse)
       }
@@ -100,7 +100,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
+      buildConnector().validateInPrimary(oas)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failures))
       }
@@ -115,7 +115,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
+      buildConnector().validateInPrimary(oas)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
       }
@@ -130,7 +130,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
+      buildConnector().validateInPrimary(oas)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500))
       }
@@ -167,7 +167,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      buildConnector().deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(response)
       }
@@ -182,7 +182,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      buildConnector().deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual.left.value.issue mustBe ApimException.InvalidResponse
       }
@@ -203,7 +203,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      buildConnector().deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failures))
       }
@@ -218,7 +218,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      buildConnector().deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
       }
@@ -233,7 +233,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      buildConnector().deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500))
       }

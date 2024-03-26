@@ -69,7 +69,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.deploymentsSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -99,7 +99,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.deploymentsSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -148,7 +148,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.deploymentsSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(response))
 
         val result = route(fixture.application, request).value
@@ -169,7 +169,7 @@ class DeployApiControllerSpec
       )
       val json = Json.toJson(deployRequest)
 
-      when(fixture.simpleApiDeploymentConnector.deploymentsSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+      when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {

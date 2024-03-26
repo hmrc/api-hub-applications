@@ -37,7 +37,7 @@ class APIMConnectorImpl @Inject()(
   httpClient: HttpClientV2
 )(implicit ec: ExecutionContext) extends APIMConnector with Logging with ExceptionRaising with HttpErrorFunctions {
 
-  override def validatePrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
+  override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
     httpClient.post(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationForEnvironment(Primary))
       .setHeader("Content-Type" -> "application/yaml")
@@ -59,7 +59,7 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  override def deploymentsSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
+  override def deployToSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
       .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
       .setHeader("Accept" -> "application/json")

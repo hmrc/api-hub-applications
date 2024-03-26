@@ -39,7 +39,7 @@ class DeployApiController @Inject()(identify: IdentifierAction,
     implicit request =>
       val jsReq = request.body
       jsReq.validate[DeploymentsRequest] match {
-        case JsSuccess(deploymentsRequest, _) => simpleApiDeploymentConnector.deploymentsSecondary(deploymentsRequest) map {
+        case JsSuccess(deploymentsRequest, _) => simpleApiDeploymentConnector.deployToSecondary(deploymentsRequest) map {
           case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
           case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
           case Left(e: ApimException) if e.issue equals InvalidResponse => BadRequest

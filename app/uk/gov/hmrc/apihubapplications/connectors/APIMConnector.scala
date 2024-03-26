@@ -25,9 +25,9 @@ import scala.concurrent.Future
 
 trait APIMConnector {
 
-  def validatePrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]]
+  def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]]
 
-  def deploymentsSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
+  def deployToSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
   def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]]
 }
