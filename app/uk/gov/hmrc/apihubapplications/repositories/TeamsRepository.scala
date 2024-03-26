@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.model.{Filters, IndexModel, Indexes}
+import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
@@ -98,6 +98,30 @@ class TeamsRepository @Inject()(
           case None => Left(raiseTeamNotFoundException.forId(id))
         }
       case None => Future.successful(Left(raiseTeamNotFoundException.forId(id)))
+    }
+  }
+
+  def update(team: Team): Future[Either[ApplicationsException, Unit]] = {
+    stringToObjectId(team.id) match {
+      case Some(id) =>
+        Mdc.preservingMdc {
+          collection
+            .replaceOne(
+              filter = Filters.equal("_id", id),
+              replacement = SensitiveTeam(team),
+              options     = ReplaceOptions().upsert(false)
+            )
+            .toFuture()
+        } map (
+          result =>
+            if (result.getModifiedCount > 0) {
+              Right(())
+            }
+            else {
+              Left(raiseNotUpdatedException.forTeam(team))
+            }
+          )
+      case None => Future.successful(Left(raiseTeamNotFoundException.forTeam(team)))
     }
   }
 

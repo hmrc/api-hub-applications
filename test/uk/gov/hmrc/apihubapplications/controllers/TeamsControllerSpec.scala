@@ -29,7 +29,8 @@ import play.api.test.Helpers._
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
+import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.services.TeamsService
@@ -149,6 +150,89 @@ class TeamsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
+  "addTeamMember" - {
+    "must add the team member and return 204 No Content when the request is valid" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val teamMemberRequest = TeamMemberRequest(teamMember1.email)
+
+      when(fixture.teamsService.addTeamMember(any, any)).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.addTeamMember(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.teamsService).addTeamMember(eqTo(id), eqTo(teamMemberRequest))
+      }
+    }
+
+    "must return 404 Not Found when the service returns TeamNotFoundException" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val teamMemberRequest = TeamMemberRequest(teamMember1.email)
+
+      when(fixture.teamsService.addTeamMember(any, any))
+        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.addTeamMember(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 400 Bad Request when the team member already exists in the team" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val teamMemberRequest = TeamMemberRequest(teamMember1.email)
+
+      when(fixture.teamsService.addTeamMember(any, any))
+        .thenReturn(Future.successful(Left(TeamMemberExistsException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.addTeamMember(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+
+    "must return 400 BadRequest when the request body is not a valid TeamMemberRequest" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.addTeamMember(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.obj())
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+        verifyZeroInteractions(fixture.teamsService)
       }
     }
   }

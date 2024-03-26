@@ -24,8 +24,9 @@ import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
+import uk.gov.hmrc.apihubapplications.models.exception.{NotUpdatedException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
 import uk.gov.hmrc.mongo.MongoComponent
@@ -127,7 +128,7 @@ class TeamsRepositoryIntegrationSpec
       result.mdcData mustBe testMdcData
     }
 
-    "must return TeamNotFoundException then the Team does not exist" in {
+    "must return TeamNotFoundException when the Team does not exist" in {
       setMdcData()
 
       val id = "6601487f032b6f410121bef4"
@@ -156,6 +157,54 @@ class TeamsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe Left(TeamNotFoundException.forId(id))
+      result.mdcData mustBe testMdcData
+    }
+  }
+
+  "update" - {
+    "must update the team when it exists" in {
+      setMdcData()
+
+      val saved = repository.insert(team1).futureValue
+      val updated = saved.addTeamMember("new-team-member")
+
+      val result = repository
+        .update(updated)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Right(())
+      result.mdcData mustBe testMdcData
+      repository.findById(saved.id.value).futureValue mustBe Right(updated)
+    }
+
+    "must return NotUpdatedException when the team does not exist in the database" in {
+      setMdcData()
+
+      val id = "6601487f032b6f410121bef4"
+      val team = team1.setId(id)
+
+      val result = repository
+        .update(team)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(NotUpdatedException.forTeam(team))
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return TeamNotFoundException when the id is not valid MongoDb object id" in {
+      setMdcData()
+
+      val id = "not-a-valid-mongodb-object-id"
+      val team = team1.setId(id)
+
+      val result = repository
+        .update(team)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(TeamNotFoundException.forTeam(team))
       result.mdcData mustBe testMdcData
     }
   }

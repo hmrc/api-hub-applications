@@ -90,6 +90,10 @@ trait ExceptionRaising {
     def forAccessRequest(accessRequest: AccessRequest): NotUpdatedException = {
       log(NotUpdatedException.forAccessRequest(accessRequest))
     }
+
+    def forTeam(team: Team): NotUpdatedException = {
+      log(NotUpdatedException.forTeam(team))
+    }
   }
 
   object raiseAccessRequestNotFoundException {
@@ -127,6 +131,10 @@ trait ExceptionRaising {
 
     def forApplication(application: Application): TeamMemberExistsException = {
       log(TeamMemberExistsException.forApplication(application))
+    }
+
+    def forTeam(team: Team): TeamMemberExistsException = {
+      log(TeamMemberExistsException.forTeam(team))
     }
   }
 

@@ -20,7 +20,8 @@ import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
+import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
@@ -102,6 +103,54 @@ class TeamsServiceSpec
       fixture.service.findById(id).map {
         result =>
           result mustBe Left(TeamNotFoundException.forId(id))
+      }
+    }
+  }
+
+  "addTeamMember" - {
+    "must add the new team member to the team" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email)).map {
+        result =>
+          verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
+          result mustBe Right(())
+      }
+    }
+
+    "must return TeamMemberExistsException if the team member already exists within the team" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember1.email)).map {
+        result =>
+          result mustBe Left(TeamMemberExistsException.forTeam(team))
+      }
+    }
+
+    "must return any exception returned by the repository" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+      val expected = TeamNotFoundException.forTeam(team)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
+
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email)).map {
+        result =>
+          result mustBe Left(expected)
       }
     }
   }

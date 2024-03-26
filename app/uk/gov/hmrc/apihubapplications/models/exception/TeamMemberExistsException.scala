@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.models.exception
 
 import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.team.Team
 
 case class TeamMemberExistsException(message: String) extends ApplicationsException(message, null)
 
@@ -28,6 +29,10 @@ object TeamMemberExistsException {
 
   def forApplication(application: Application): TeamMemberExistsException = {
     forId(application.id.getOrElse("<none>"))
+  }
+
+  def forTeam(team: Team): TeamMemberExistsException = {
+    TeamMemberExistsException(s"This team member already exists in team ${team.id.getOrElse("<none>")}")
   }
 
 }

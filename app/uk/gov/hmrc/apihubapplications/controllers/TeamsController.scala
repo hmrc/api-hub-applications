@@ -21,7 +21,8 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
+import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.NewTeam
 import uk.gov.hmrc.apihubapplications.services.TeamsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
@@ -62,6 +63,22 @@ class TeamsController @Inject()(
       case Left(_: TeamNotFoundException) => NotFound
       case Left(e) => throw e
     }
+  }
+
+  def addTeamMember(id: String): Action[JsValue] = identify(parse.json).async {
+    implicit request =>
+      request.body.validate[TeamMemberRequest] match {
+        case JsSuccess(request, _) =>
+          teamsService.addTeamMember(id, request).map {
+            case Right(_) => NoContent
+            case Left(_: TeamNotFoundException) => NotFound
+            case Left(_: TeamMemberExistsException) => BadRequest
+            case Left(e) => throw e
+          }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
   }
 
   private def decrypt(encrypted: String): String = {

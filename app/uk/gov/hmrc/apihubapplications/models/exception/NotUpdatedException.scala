@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.exception
 
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.team.Team
 
 case class NotUpdatedException(message: String) extends ApplicationsException(message, null)
 
@@ -34,6 +35,11 @@ object NotUpdatedException {
   def forAccessRequest(accessRequest: AccessRequest): NotUpdatedException = {
     val id = accessRequest.id.getOrElse("<none>")
     NotUpdatedException(s"There was no database update for access request with id $id")
+  }
+
+  def forTeam(team: Team): NotUpdatedException = {
+    val id = team.id.getOrElse("<none>")
+    NotUpdatedException(s"There was no database update for team with id $id")
   }
 
 }
