@@ -16,16 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, GenerateResponse, ValidateResponse}
+import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentResponse, GenerateRequest, GenerateResponse, ValidateResponse}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 
-trait SimpleApiDeploymentConnector {
+trait APIMConnector {
 
-  def validate(oas: String)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, ValidateResponse]]
+  def validatePrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]]
 
-  def generate(request: GenerateRequest)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, GenerateResponse]]
+  def generateSecondary(request: GenerateRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, GenerateResponse]]
 
+  def status(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]]
 }

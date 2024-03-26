@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aMultipart, _}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, SimpleApiDeploymentConnectorImpl}
-import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, SuccessfulValidateResponse, ValidationFailure}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
@@ -31,7 +31,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.util.Base64
 
-class SimpleApiDeploymentConnectorSpec
+class APIMConnectorSpec
   extends AsyncFreeSpec
   with Matchers
   with WireMockSupport
@@ -39,13 +39,21 @@ class SimpleApiDeploymentConnectorSpec
   with EitherValues {
 
   private val oas = "test-oas-document"
-  private val clientId = "test-client-id"
-  private val secret = "test-secret"
-  private val path = "test-path"
+  private val primaryClientId = "test-client-id-primary"
+  private val secondaryClientId = "test-client-id-secondary"
+  private val primarySecret = "test-secret-primary"
+  private val secondarySecret = "test-secret-secondary"
+  private val primaryPath = "test-path-primary"
+  private val secondaryPath = "test-path-secondary"
 
-  private val authorizationToken = {
-    val endcoded = Base64.getEncoder.encodeToString(s"$clientId:$secret".getBytes("UTF-8"))
-    s"Basic $endcoded"
+  private val authorizationTokenPrimary = {
+    val encoded = Base64.getEncoder.encodeToString(s"$primaryClientId:$primarySecret".getBytes("UTF-8"))
+    s"Basic $encoded"
+  }
+
+  private val authorizationTokenSecondary = {
+    val encoded = Base64.getEncoder.encodeToString(s"$secondaryClientId:$secondarySecret".getBytes("UTF-8"))
+    s"Basic $encoded"
   }
 
   private val generateRequest = GenerateRequest(
@@ -56,19 +64,19 @@ class SimpleApiDeploymentConnectorSpec
     oas = oas
   )
 
-  "SimpleApiDeploymentConnector.validate" - {
+  "APIMConnector.validatePrimary" - {
     "must place the correct request to the Simple API Deployment service" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
           .withHeader("Content-Type", equalTo("application/yaml"))
-          .withHeader("Authorization", equalTo(authorizationToken))
+          .withHeader("Authorization", equalTo(authorizationTokenPrimary))
           .withRequestBody(equalTo(oas))
           .willReturn(
             aResponse()
           )
       )
 
-      buildConnector().validate(oas)(HeaderCarrier()).map {
+      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(SuccessfulValidateResponse)
       }
@@ -81,7 +89,7 @@ class SimpleApiDeploymentConnectorSpec
       )
 
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -89,7 +97,7 @@ class SimpleApiDeploymentConnectorSpec
           )
       )
 
-      buildConnector().validate(oas)(HeaderCarrier()).map {
+      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failures))
       }
@@ -97,37 +105,37 @@ class SimpleApiDeploymentConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(400)
           )
       )
 
-      buildConnector().validate(oas)(HeaderCarrier()).map {
+      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Left(SimpleApiDeploymentException.unexpectedResponse(400))
+          actual mustBe Left(ApimException.unexpectedResponse(400))
       }
     }
 
     "must return unexpected response when the Simple API Deployment service returns one" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(500)
           )
       )
 
-      buildConnector().validate(oas)(HeaderCarrier()).map {
+      buildConnector().validatePrimary(oas)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Left(SimpleApiDeploymentException.unexpectedResponse(500))
+          actual mustBe Left(ApimException.unexpectedResponse(500))
       }
     }
   }
 
-  "SimpleApiDeploymentConnector.generate" - {
-    "must place the correct request to the Simple API Deployment service and return the response" in {
+  "APIMConnector.generateSecondary" - {
+    "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
       val response = SuccessfulGenerateResponse(
         projectId = 101,
         lineOfBusiness = generateRequest.lineOfBusiness,
@@ -136,9 +144,9 @@ class SimpleApiDeploymentConnectorSpec
       )
 
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
           .withHeader("Content-Type", containing("multipart/form-data"))
-          .withHeader("Authorization", equalTo(authorizationToken))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("Accept", equalTo("application/json"))
           .withMultipartRequestBody(
             aMultipart()
@@ -156,7 +164,7 @@ class SimpleApiDeploymentConnectorSpec
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(response)
       }
@@ -164,16 +172,16 @@ class SimpleApiDeploymentConnectorSpec
 
     "must return invalid response when the Simple API Deployment service's response cannot be parsed'" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
           .willReturn(
             aResponse()
               .withBody("{}")
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
         actual =>
-          actual.left.value.issue mustBe SimpleApiDeploymentException.InvalidResponse
+          actual.left.value.issue mustBe ApimException.InvalidResponse
       }
     }
 
@@ -184,7 +192,7 @@ class SimpleApiDeploymentConnectorSpec
       )
 
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -192,7 +200,7 @@ class SimpleApiDeploymentConnectorSpec
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failures))
       }
@@ -200,47 +208,52 @@ class SimpleApiDeploymentConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
           .willReturn(
             aResponse()
               .withStatus(400)
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Left(SimpleApiDeploymentException.unexpectedResponse(400))
+          actual mustBe Left(ApimException.unexpectedResponse(400))
       }
     }
 
     "must return unexpected response when the Simple API Deployment service returns one" in {
       stubFor(
-        post(urlEqualTo(s"/$path/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
           .willReturn(
             aResponse()
               .withStatus(500)
           )
       )
 
-      buildConnector().generate(generateRequest)(HeaderCarrier()).map {
+      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Left(SimpleApiDeploymentException.unexpectedResponse(500))
+          actual mustBe Left(ApimException.unexpectedResponse(500))
       }
     }
   }
 
-  private def buildConnector(): SimpleApiDeploymentConnector = {
+  private def buildConnector(): APIMConnector = {
     val servicesConfig = new ServicesConfig(
       Configuration.from(Map(
-        "microservice.services.simple-api-deployment.host" -> wireMockHost,
-        "microservice.services.simple-api-deployment.port" -> wireMockPort,
-        "microservice.services.simple-api-deployment.path" -> path,
-        "microservice.services.simple-api-deployment.clientId" -> clientId,
-        "microservice.services.simple-api-deployment.secret" -> secret
+        "microservice.services.apim-primary.host" -> wireMockHost,
+        "microservice.services.apim-primary.port" -> wireMockPort,
+        "microservice.services.apim-primary.path" -> primaryPath,
+        "microservice.services.apim-primary.clientid" -> primaryClientId,
+        "microservice.services.apim-primary.secret" -> primarySecret,
+        "microservice.services.apim-secondary.host" -> wireMockHost,
+        "microservice.services.apim-secondary.port" -> wireMockPort,
+        "microservice.services.apim-secondary.path" -> secondaryPath,
+        "microservice.services.apim-secondary.clientid" -> secondaryClientId,
+        "microservice.services.apim-secondary.secret" -> secondarySecret
       ))
     )
 
-    new SimpleApiDeploymentConnectorImpl(servicesConfig, httpClientV2)
+    new APIMConnectorImpl(servicesConfig, httpClientV2)
   }
 
 }

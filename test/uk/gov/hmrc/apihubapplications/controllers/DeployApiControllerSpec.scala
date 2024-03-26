@@ -32,10 +32,10 @@ import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
-import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, SimpleApiDeploymentConnectorImpl}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.DeployApiControllerSpec.buildFixture
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, ValidationFailure}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
@@ -69,7 +69,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.generateSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -99,7 +99,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.generateSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -148,7 +148,7 @@ class DeployApiControllerSpec
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.simpleApiDeploymentConnector.generateSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(response))
 
         val result = route(fixture.application, request).value
@@ -169,8 +169,8 @@ class DeployApiControllerSpec
       )
       val json = Json.toJson(deployRequest)
 
-      when(fixture.simpleApiDeploymentConnector.generate(ArgumentMatchers.eq(deployRequest))(any()))
-        .thenReturn(Future.successful(Left(SimpleApiDeploymentException.unexpectedResponse(500))))
+      when(fixture.simpleApiDeploymentConnector.generateSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {
         val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
@@ -192,16 +192,16 @@ object DeployApiControllerSpec {
 
   case class Fixture(
                       application: PlayApplication,
-                      simpleApiDeploymentConnector: SimpleApiDeploymentConnector
+                      simpleApiDeploymentConnector: APIMConnector
                     )
 
   def buildFixture(): Fixture = {
-    val simpleApiDeploymentConnector = mock[SimpleApiDeploymentConnectorImpl]
+    val simpleApiDeploymentConnector = mock[APIMConnectorImpl]
 
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
-        bind[SimpleApiDeploymentConnectorImpl].toInstance(simpleApiDeploymentConnector),
+        bind[APIMConnectorImpl].toInstance(simpleApiDeploymentConnector),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .build()

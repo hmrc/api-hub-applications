@@ -129,13 +129,13 @@ trait ExceptionRaising {
     }
   }
 
-  object raiseSimpleApiDeploymentException {
-    def unexpectedResponse(statusCode: Int): SimpleApiDeploymentException = {
-      log(SimpleApiDeploymentException.unexpectedResponse(statusCode))
+  object raiseApimException {
+    def unexpectedResponse(statusCode: Int): ApimException = {
+      log(ApimException.unexpectedResponse(statusCode))
     }
 
-    def invalidResponse(errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]): SimpleApiDeploymentException = {
-      log(SimpleApiDeploymentException.invalidResponse(errors))
+    def invalidResponse(errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]): ApimException = {
+      log(ApimException.invalidResponse(errors))
     }
   }
 

@@ -18,6 +18,8 @@ package uk.gov.hmrc.apihubapplications.models.simpleapideployment
 
 import play.api.libs.json.{Format, Json}
 
+import java.time.LocalDateTime
+
 sealed trait ValidateResponse
 
 case object SuccessfulValidateResponse extends ValidateResponse
@@ -37,5 +39,13 @@ case class InvalidOasResponse(failures: Seq[ValidationFailure]) extends Validate
 object InvalidOasResponse {
 
   implicit val formatInvalidOasResponse: Format[InvalidOasResponse] = Json.format[InvalidOasResponse]
+
+}
+
+case class DeploymentResponse(id: String, deploymentTimestamp: LocalDateTime)
+
+object DeploymentResponse {
+
+  implicit val formatDeploymentResponse: Format[DeploymentResponse] = Json.format[DeploymentResponse]
 
 }
