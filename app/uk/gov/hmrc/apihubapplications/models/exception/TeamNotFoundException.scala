@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.simpleapideployment
+package uk.gov.hmrc.apihubapplications.models.exception
 
-import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 
-case class GenerateRequest(lineOfBusiness: String, name: String, description: String, egress: String, oas: String)
+case class TeamNotFoundException(message: String) extends ApplicationsException(message, null)
 
-object GenerateRequest {
+object TeamNotFoundException {
 
-  implicit val formatGenerateRequest: Format[GenerateRequest] = Json.format[GenerateRequest]
+  def forId(id: String): TeamNotFoundException = {
+    TeamNotFoundException(s"Cannot find team with id $id")
+  }
+
+  def forTeam(team: Team): TeamNotFoundException = {
+    forId(team.id.getOrElse("<none>"))
+  }
 
 }

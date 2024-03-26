@@ -21,6 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
+import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
 import uk.gov.hmrc.apihubapplications.models.team.NewTeam
 import uk.gov.hmrc.apihubapplications.services.TeamsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
@@ -53,6 +54,14 @@ class TeamsController @Inject()(
     teamsService.findAll(teamMember.map(decrypt)).map(
       teams => Ok(Json.toJson(teams))
     )
+  }
+
+  def findById(id: String): Action[AnyContent] = identify.async {
+    teamsService.findById(id) map {
+      case Right(team) => Ok(Json.toJson(team))
+      case Left(_: TeamNotFoundException) => NotFound
+      case Left(e) => throw e
+    }
   }
 
   private def decrypt(encrypted: String): String = {

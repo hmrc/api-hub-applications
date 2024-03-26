@@ -59,14 +59,14 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  override def generateSecondary(request: GenerateRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, GenerateResponse]] = {
-    httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/generate")
+  override def deploymentsSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[SimpleApiDeploymentException, DeploymentsResponse]] = {
+    httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
       .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
       .setHeader("Accept" -> "application/json")
       .withBody(
         Source(
           Seq(
-            DataPart("metadata", Json.toJson(GenerateMetadata(request)).toString()),
+            DataPart("metadata", Json.toJson(DeploymentsMetadata(request)).toString()),
             DataPart("openapi", request.oas)
           )
         )
@@ -76,9 +76,9 @@ class APIMConnectorImpl @Inject()(
       .map (
         response =>
           if (is2xx(response.status)) {
-            response.json.validate[SuccessfulGenerateResponse].fold(
-              (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseApimException.invalidResponse(errors)),
-              generateResponse => Right(generateResponse)
+            response.json.validate[SuccessfulDeploymentsResponse].fold(
+              (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseSimpleApiDeploymentException.invalidResponse(errors)),
+              deploymentsResponse => Right(deploymentsResponse)
             )
           }
           else if (response.status.intValue == BAD_REQUEST) {

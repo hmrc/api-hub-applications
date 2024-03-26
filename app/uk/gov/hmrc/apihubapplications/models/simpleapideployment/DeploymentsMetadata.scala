@@ -18,12 +18,12 @@ package uk.gov.hmrc.apihubapplications.models.simpleapideployment
 
 import play.api.libs.json.{Format, Json}
 
-case class GenerateMetadata(lineOfBusiness: String, name: String, description: String, egress: String)
+case class DeploymentsMetadata(lineOfBusiness: String, name: String, description: String, egress: String)
 
-object GenerateMetadata {
+object DeploymentsMetadata {
 
-  def apply(request: GenerateRequest): GenerateMetadata = {
-    GenerateMetadata(
+  def apply(request: DeploymentsRequest): DeploymentsMetadata = {
+    DeploymentsMetadata(
       lineOfBusiness = request.lineOfBusiness,
       name = request.name,
       description = request.description,
@@ -31,6 +31,6 @@ object GenerateMetadata {
     )
   }
 
-  implicit val formatGenerateMetadata: Format[GenerateMetadata] = Json.format[GenerateMetadata]
+  implicit val formatDeploymentsMetadata: Format[DeploymentsMetadata] = Json.format[DeploymentsMetadata]
 
 }

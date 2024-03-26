@@ -24,6 +24,7 @@ import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
+import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
@@ -105,6 +106,56 @@ class TeamsRepositoryIntegrationSpec
         .futureValue
 
       result.data must contain theSameElementsAs Set(saved1, saved3)
+      result.mdcData mustBe testMdcData
+    }
+  }
+
+  "findById" - {
+    "must return the correct Team when it exists in the repository" in {
+      setMdcData()
+
+      repository.insert(team1).futureValue
+      repository.insert(team2).futureValue
+      val expected = repository.insert(team3).futureValue
+
+      val result = repository
+        .findById(expected.id.value)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Right(expected)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return TeamNotFoundException then the Team does not exist" in {
+      setMdcData()
+
+      val id = "6601487f032b6f410121bef4"
+
+      repository.insert(team1).futureValue
+      repository.insert(team2).futureValue
+      repository.insert(team3).futureValue
+
+      val result = repository
+        .findById(id)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(TeamNotFoundException.forId(id))
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return TeamNotFoundException when the id is not valid MongoDb object id" in {
+      setMdcData()
+
+      val id = "not-a-valid-mongodb-object-id"
+
+      val result = repository
+        .findById(id)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(TeamNotFoundException.forId(id))
       result.mdcData mustBe testMdcData
     }
   }

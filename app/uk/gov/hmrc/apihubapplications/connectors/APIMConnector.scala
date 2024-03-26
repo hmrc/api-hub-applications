@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
+import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentsRequest, DeploymentsResponse, ValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentResponse, GenerateRequest, GenerateResponse, ValidateResponse}
@@ -27,7 +29,7 @@ trait APIMConnector {
 
   def validatePrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]]
 
-  def generateSecondary(request: GenerateRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, GenerateResponse]]
+  def deploymentsSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
   def status(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]]
 }

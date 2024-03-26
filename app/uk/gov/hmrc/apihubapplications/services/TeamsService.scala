@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
+import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 
@@ -35,6 +36,10 @@ class TeamsService @Inject()(
 
   def findAll(teamMember: Option[String]): Future[Seq[Team]] = {
     repository.findAll(teamMember)
+  }
+
+  def findById(id: String): Future[Either[ApplicationsException, Team]] = {
+    repository.findById(id)
   }
 
 }

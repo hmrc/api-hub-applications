@@ -20,6 +20,7 @@ import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
+import uk.gov.hmrc.apihubapplications.models.exception.TeamNotFoundException
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
@@ -72,6 +73,35 @@ class TeamsServiceSpec
       fixture.service.findAll(Some(teamMember1.email)).map {
         result =>
           result mustBe Seq(team1, team3)
+      }
+    }
+  }
+
+  "findById" - {
+    "must return the correct Team when it exists in the repository" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+
+      fixture.service.findById(id).map {
+        result =>
+          result mustBe Right(team)
+      }
+    }
+
+    "must return TeamNotFoundException when the Team does not exist in the repository" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+
+      fixture.service.findById(id).map {
+        result =>
+          result mustBe Left(TeamNotFoundException.forId(id))
       }
     }
   }

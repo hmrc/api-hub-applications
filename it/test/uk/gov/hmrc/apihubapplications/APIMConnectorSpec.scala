@@ -25,6 +25,9 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{GenerateMetadata, GenerateRequest, InvalidOasResponse, SuccessfulGenerateResponse, SuccessfulValidateResponse, ValidationFailure}
+import uk.gov.hmrc.apihubapplications.connectors.{SimpleApiDeploymentConnector, SimpleApiDeploymentConnectorImpl}
+import uk.gov.hmrc.apihubapplications.models.exception.SimpleApiDeploymentException
+import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentsRequest, DeploymentsMetadata, InvalidOasResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, ValidationFailure}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -56,7 +59,7 @@ class APIMConnectorSpec
     s"Basic $encoded"
   }
 
-  private val generateRequest = GenerateRequest(
+  private val deploymentsRequest = DeploymentsRequest(
     lineOfBusiness = "test-line-of-business",
     name = "test-name",
     description = "test-description",
@@ -134,7 +137,7 @@ class APIMConnectorSpec
     }
   }
 
-  "APIMConnector.generateSecondary" - {
+  "APIMConnector.deploymentsSecondary" - {
     "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
       val response = SuccessfulGenerateResponse(
         projectId = 101,
@@ -144,14 +147,14 @@ class APIMConnectorSpec
       )
 
       stubFor(
-        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .withHeader("Content-Type", containing("multipart/form-data"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("Accept", equalTo("application/json"))
           .withMultipartRequestBody(
             aMultipart()
               .withName("metadata")
-              .withBody(equalToJson(Json.toJson(GenerateMetadata(generateRequest)).toString()))
+              .withBody(equalToJson(Json.toJson(DeploymentsMetadata(deploymentsRequest)).toString()))
           )
           .withMultipartRequestBody(
             aMultipart()
@@ -164,7 +167,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(response)
       }
@@ -172,14 +175,14 @@ class APIMConnectorSpec
 
     "must return invalid response when the Simple API Deployment service's response cannot be parsed'" in {
       stubFor(
-        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withBody("{}")
           )
       )
 
-      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual.left.value.issue mustBe ApimException.InvalidResponse
       }
@@ -192,7 +195,7 @@ class APIMConnectorSpec
       )
 
       stubFor(
-        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -200,7 +203,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failures))
       }
@@ -208,14 +211,14 @@ class APIMConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
       stubFor(
-        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(400)
           )
       )
 
-      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
       }
@@ -223,14 +226,14 @@ class APIMConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns one" in {
       stubFor(
-        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/generate"))
+        post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(500)
           )
       )
 
-      buildConnector().generateSecondary(generateRequest)(HeaderCarrier()).map {
+      buildConnector().deploymentsSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500))
       }
