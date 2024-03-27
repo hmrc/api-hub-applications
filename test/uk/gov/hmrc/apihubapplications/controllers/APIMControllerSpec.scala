@@ -24,6 +24,7 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor2, TableFor3}
 import play.api.http.Status
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -33,24 +34,28 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
-import uk.gov.hmrc.apihubapplications.controllers.DeployApiControllerSpec.buildFixture
+import uk.gov.hmrc.apihubapplications.controllers.APIMControllerSpec.{buildFixture, failResponses, successResponses}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.models.apim._
+import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse, ValidationFailure}
+import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
+import java.time.LocalDateTime
 import scala.concurrent.Future
 
-class DeployApiControllerSpec
+class APIMControllerSpec
   extends AnyFreeSpec
     with Matchers
     with MockitoSugar
     with OptionValues
-    with CryptoUtils {
+    with CryptoUtils
+    with TableDrivenPropertyChecks {
 
   "registerApplication" - {
     "must return Accepted for a valid request with a success response from downstream" in {
-      val fixture = DeployApiControllerSpec.buildFixture()
+      val fixture = APIMControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
@@ -63,13 +68,13 @@ class DeployApiControllerSpec
         val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
         val json = Json.toJson(deployRequest)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -80,7 +85,7 @@ class DeployApiControllerSpec
     }
 
     "must return 400 Bad Request and an Invalid OAS spec when returned from downstream" in {
-      val fixture = DeployApiControllerSpec.buildFixture()
+      val fixture = APIMControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
@@ -93,13 +98,13 @@ class DeployApiControllerSpec
         val deployResponse = InvalidOasResponse(Seq(ValidationFailure("test-type", "test-message")))
         val json = Json.toJson(deployRequest)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -111,7 +116,7 @@ class DeployApiControllerSpec
     "must return 400 Bad Request when the JSON is not a valid application" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -123,7 +128,7 @@ class DeployApiControllerSpec
     }
 
     "must return Bad request if the downstream service responds with validation errors" in {
-      val fixture = DeployApiControllerSpec.buildFixture()
+      val fixture = APIMControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
@@ -142,13 +147,13 @@ class DeployApiControllerSpec
 
         val json = Json.toJson(deployRequest)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
           .withBody(json)
 
-        when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(response))
 
         val result = route(fixture.application, request).value
@@ -169,11 +174,11 @@ class DeployApiControllerSpec
       )
       val json = Json.toJson(deployRequest)
 
-      when(fixture.simpleApiDeploymentConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+      when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.DeployApiController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -184,30 +189,93 @@ class DeployApiControllerSpec
       }
     }
   }
+
+  "getDeploymentStatus" - {
+    "must return Ok with correct response" in {
+      val fixture = APIMControllerSpec.buildFixture()
+      running(fixture.application) {
+
+        val publisherRef = "publisher_ref"
+
+        forAll(successResponses) { (primaryResponse, secondaryResponse, expected) =>
+
+          val request = FakeRequest(GET, routes.APIMController.getDeploymentStatus(publisherRef).url)
+
+          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
+            .thenReturn(Future.successful(Right(primaryResponse)))
+          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
+            .thenReturn(Future.successful(Right(secondaryResponse)))
+          val result = route(fixture.application, request).value
+
+          status(result) mustBe Status.OK
+          contentAsJson(result) mustBe Json.toJson(expected)
+        }
+      }
+
+    }
+
+    "must return Bad Gateway" in {
+      val fixture = APIMControllerSpec.buildFixture()
+      running(fixture.application) {
+
+        val publisherRef = "publisher_ref"
+
+        forAll(failResponses) { (primaryResponse, secondaryResponse) =>
+
+          val request = FakeRequest(GET, routes.APIMController.getDeploymentStatus(publisherRef).url)
+
+          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
+            .thenReturn(Future.successful(primaryResponse))
+          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
+            .thenReturn(Future.successful(secondaryResponse))
+          val result = route(fixture.application, request).value
+
+          status(result) mustBe Status.BAD_GATEWAY
+        }
+      }
+    }
+  }
 }
 
-object DeployApiControllerSpec {
+object APIMControllerSpec extends TableDrivenPropertyChecks {
 
   implicit val materializer: Materializer = Materializer(ActorSystem())
 
   case class Fixture(
                       application: PlayApplication,
-                      simpleApiDeploymentConnector: APIMConnector
+                      apimConnector: APIMConnector
                     )
 
   def buildFixture(): Fixture = {
-    val simpleApiDeploymentConnector = mock[APIMConnectorImpl]
+    val apimConnector = mock[APIMConnectorImpl]
 
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
-        bind[APIMConnectorImpl].toInstance(simpleApiDeploymentConnector),
+        bind[APIMConnectorImpl].toInstance(apimConnector),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .build()
 
-    Fixture(application, simpleApiDeploymentConnector)
+    Fixture(application, apimConnector)
 
   }
+  val deploymentResponse = SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)
+
+  val successResponses: TableFor3[Option[SuccessfulDeploymentResponse], Option[SuccessfulDeploymentResponse], DeploymentStatus] = Table(
+    ("primary", "secondary", "expected"),
+    (Some(deploymentResponse), Some(deploymentResponse), DeploymentStatus(true,true)),
+    (Some(deploymentResponse), None, DeploymentStatus(true,false)),
+    (None, Some(deploymentResponse), DeploymentStatus(false,true)),
+    (None, None, DeploymentStatus(false,false))
+  )
+
+  private val exception: ApimException = ApimException.unexpectedResponse(500)
+  val failResponses: TableFor2[Either[ApimException, Option[SuccessfulDeploymentResponse]], Either[ApimException, Option[SuccessfulDeploymentResponse]]] = Table(
+    ("primary", "secondary"),
+    (Right(Some(deploymentResponse)), Left(exception)),
+    (Left(exception), Right(Some(deploymentResponse))),
+    (Left(exception), Left(exception))
+  )
 
 }

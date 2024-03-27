@@ -19,20 +19,22 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidResponse
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DeployApiController @Inject()(identify: IdentifierAction,
-                                    cc: ControllerComponents,
-                                    apimConnector: APIMConnector)(implicit ec: ExecutionContext)
+class APIMController @Inject()(identify: IdentifierAction,
+                               cc: ControllerComponents,
+                               apimConnector: APIMConnector)(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -48,6 +50,17 @@ class DeployApiController @Inject()(identify: IdentifierAction,
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
+      }
+  }
+
+  def getDeploymentStatus(publisherRef: String): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      for {
+        secondaryStatus <- apimConnector.getDeployment(publisherRef, Secondary)
+        primaryStatus <- apimConnector.getDeployment(publisherRef, Primary)
+      } yield (primaryStatus, secondaryStatus) match {
+        case (Right(maybePrimaryStatus), Right(maybeSecondaryStatus)) => Ok(Json.toJson(DeploymentStatus(maybePrimaryStatus.isDefined, maybeSecondaryStatus.isDefined)))
+        case _ => BadGateway
       }
   }
 }
