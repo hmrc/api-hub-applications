@@ -20,11 +20,11 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.apihubapplications.connectors.APIMConnectorImpl
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidResponse
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,14 +32,14 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class DeployApiController @Inject()(identify: IdentifierAction,
                                     cc: ControllerComponents,
-                                    simpleApiDeploymentConnector: APIMConnectorImpl)(implicit ec: ExecutionContext)
+                                    apimConnector: APIMConnector)(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
       val jsReq = request.body
       jsReq.validate[DeploymentsRequest] match {
-        case JsSuccess(deploymentsRequest, _) => simpleApiDeploymentConnector.deployToSecondary(deploymentsRequest) map {
+        case JsSuccess(deploymentsRequest, _) => apimConnector.deployToSecondary(deploymentsRequest) map {
           case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
           case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
           case Left(e: ApimException) if e.issue equals InvalidResponse => BadRequest

@@ -25,7 +25,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment._
+import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig

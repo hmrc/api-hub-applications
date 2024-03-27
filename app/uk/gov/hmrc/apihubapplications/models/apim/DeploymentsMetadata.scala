@@ -14,14 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.simpleapideployment
+package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class ValidationFailure(`type`: String, message: String)
+case class DeploymentsMetadata(lineOfBusiness: String, name: String, description: String, egress: String)
 
-object ValidationFailure {
+object DeploymentsMetadata {
 
-  implicit val formatValidationFailure: Format[ValidationFailure] = Json.format[ValidationFailure]
+  def apply(request: DeploymentsRequest): DeploymentsMetadata = {
+    DeploymentsMetadata(
+      lineOfBusiness = request.lineOfBusiness,
+      name = request.name,
+      description = request.description,
+      egress = request.egress
+    )
+  }
+
+  implicit val formatDeploymentsMetadata: Format[DeploymentsMetadata] = Json.format[DeploymentsMetadata]
 
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.simpleapideployment
+package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 

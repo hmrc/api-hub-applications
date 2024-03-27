@@ -36,7 +36,7 @@ import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorIm
 import uk.gov.hmrc.apihubapplications.controllers.DeployApiControllerSpec.buildFixture
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse, ValidationFailure}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse, ValidationFailure}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
 import scala.concurrent.Future

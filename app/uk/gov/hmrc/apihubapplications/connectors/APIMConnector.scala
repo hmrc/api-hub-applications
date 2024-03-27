@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.connectors
 
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.simpleapideployment.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, ValidateResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, ValidateResponse}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future

@@ -36,11 +36,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class IdmsConnectorImpl @Inject()(
   servicesConfig: ServicesConfig,
   httpClient: HttpClientV2
-)(implicit ec: ExecutionContext) extends IdmsConnector with Logging with ExceptionRaising {
+)(implicit ec: ExecutionContext) extends IdmsConnector with Logging with ExceptionRaising with ProxySupport {
 
-  import IdmsConnectorImpl._
+  import ProxySupport._
 
-  override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
+    override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients"
 
     httpClient.post(url)
@@ -206,21 +206,6 @@ class IdmsConnectorImpl @Inject()(
         case throwable =>
           Left(raiseIdmsException.error(throwable))
       }
-  }
-
-}
-
-object IdmsConnectorImpl {
-
-  implicit class RequestBuilderOps(requestBuilder: RequestBuilder) {
-
-    def withProxyIfRequired(environmentName: EnvironmentName): RequestBuilder = {
-      environmentName match {
-        case Primary => requestBuilder
-        case Secondary => requestBuilder.withProxy
-      }
-    }
-
   }
 
 }
