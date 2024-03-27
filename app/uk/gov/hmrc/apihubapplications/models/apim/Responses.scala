@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.simpleapideployment
+package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
+
+import java.time.LocalDateTime
 
 sealed trait ValidateResponse
 
@@ -37,5 +39,15 @@ case class InvalidOasResponse(failures: Seq[ValidationFailure]) extends Validate
 object InvalidOasResponse {
 
   implicit val formatInvalidOasResponse: Format[InvalidOasResponse] = Json.format[InvalidOasResponse]
+
+}
+
+sealed trait DeploymentResponse
+
+case class SuccessfulDeploymentResponse(id: String, deploymentTimestamp: LocalDateTime) extends DeploymentResponse
+
+object SuccessfulDeploymentResponse {
+
+  implicit val formatDeploymentResponse: Format[SuccessfulDeploymentResponse] = Json.format[SuccessfulDeploymentResponse]
 
 }

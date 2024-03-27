@@ -14,14 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.simpleapideployment
+package uk.gov.hmrc.apihubapplications.connectors
 
-import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.http.client.RequestBuilder
 
-case class DeploymentsRequest(lineOfBusiness: String, name: String, description: String, egress: String, oas: String)
+trait ProxySupport {
+  object ProxySupport {
+    implicit class RequestBuilderOps(requestBuilder: RequestBuilder) {
 
-object DeploymentsRequest {
+      def withProxyIfRequired(environmentName: EnvironmentName): RequestBuilder = {
+        environmentName match {
+          case Primary => requestBuilder
+          case Secondary => requestBuilder.withProxy
+        }
+      }
 
-  implicit val formatDeploymentsRequest: Format[DeploymentsRequest] = Json.format[DeploymentsRequest]
-
+    }
+  }
 }
