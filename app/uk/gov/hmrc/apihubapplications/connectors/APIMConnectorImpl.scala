@@ -154,8 +154,6 @@ class APIMConnectorImpl @Inject()(
     val clientId = servicesConfig.getConfString(s"apim-$environmentName.clientId", "")
     val secret = servicesConfig.getConfString(s"apim-$environmentName.secret", "")
 
-    Console.println(s"Using client id ${clientId} and secret ${secret} for environment ${environmentName}")
-
     val encoded = Base64.getEncoder.encodeToString(s"$clientId:$secret".getBytes("UTF-8"))
     s"Basic $encoded"
   }
