@@ -17,7 +17,6 @@
 package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -241,45 +240,44 @@ class APIMConnectorSpec
 
     "APIMConnector.getDeployment" - {
       "must place the correct request to the APIM in primary" in {
+        val response = SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)
         stubFor(
           get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Content-Type", equalTo("application/yaml"))
             .withHeader("Authorization", equalTo(authorizationTokenPrimary))
             .willReturn(
               aResponse()
-                .withBody(Json.toJson(SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)).toString())
+                .withBody(Json.toJson(response).toString())
                 .withStatus(200)
             )
         )
 
         buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
           actual =>
-            actual mustBe Right(Some(SuccessfulDeploymentResponse))
+            actual mustBe Right(Some(response))
         }
       }
 
       "must place the correct request to the APIM in secondary" in {
+        val response = SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)
         stubFor(
           get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Content-Type", equalTo("application/yaml"))
             .withHeader("Authorization", equalTo(authorizationTokenSecondary))
             .willReturn(
               aResponse()
-                .withBody(Json.toJson(SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)).toString())
+                .withBody(Json.toJson(response).toString())
                 .withStatus(200)
             )
         )
 
         buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
           actual =>
-            actual mustBe Right(Some(SuccessfulDeploymentResponse))
+            actual mustBe Right(Some(response))
         }
       }
 
       "must handle 404 in primary" in {
         stubFor(
           get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Content-Type", equalTo("application/yaml"))
             .withHeader("Authorization", equalTo(authorizationTokenPrimary))
             .willReturn(
               aResponse()
@@ -296,7 +294,6 @@ class APIMConnectorSpec
       "must handle 404 in secondary" in {
         stubFor(
           get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Content-Type", equalTo("application/yaml"))
             .withHeader("Authorization", equalTo(authorizationTokenSecondary))
             .willReturn(
               aResponse()
@@ -312,14 +309,14 @@ class APIMConnectorSpec
 
       "must return unexpected response when APIM returns one" in {
         stubFor(
-          post(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+          get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
             .willReturn(
               aResponse()
                 .withStatus(500)
             )
         )
 
-        buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
+        buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
           actual =>
             actual mustBe Left(ApimException.unexpectedResponse(500))
         }
@@ -334,12 +331,12 @@ class APIMConnectorSpec
         "microservice.services.apim-primary.host" -> wireMockHost,
         "microservice.services.apim-primary.port" -> wireMockPort,
         "microservice.services.apim-primary.path" -> primaryPath,
-        "microservice.services.apim-primary.clientid" -> primaryClientId,
+        "microservice.services.apim-primary.clientId" -> primaryClientId,
         "microservice.services.apim-primary.secret" -> primarySecret,
         "microservice.services.apim-secondary.host" -> wireMockHost,
         "microservice.services.apim-secondary.port" -> wireMockPort,
         "microservice.services.apim-secondary.path" -> secondaryPath,
-        "microservice.services.apim-secondary.clientid" -> secondaryClientId,
+        "microservice.services.apim-secondary.clientId" -> secondaryClientId,
         "microservice.services.apim-secondary.secret" -> secondarySecret
       ))
     )
