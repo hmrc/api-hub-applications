@@ -17,18 +17,21 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
+import play.api.Logging
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
+import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 
 import java.time.Clock
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TeamsService @Inject()(
   repository: TeamsRepository,
   clock: Clock
-) {
+)(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def create(newTeam: NewTeam): Future[Team] = {
     repository.insert(newTeam.toTeam(clock))
@@ -40,6 +43,17 @@ class TeamsService @Inject()(
 
   def findById(id: String): Future[Either[ApplicationsException, Team]] = {
     repository.findById(id)
+  }
+
+  def addTeamMember(id: String, request: TeamMemberRequest): Future[Either[ApplicationsException, Unit]] = {
+    repository.findById(id).flatMap {
+      case Right(team) if !team.hasTeamMember(request.email) =>
+        repository.update(team.addTeamMember(request.toTeamMember))
+      case Right(team) =>
+        Future.successful(Left(raiseTeamMemberExistsException.forTeam(team)))
+      case Left(e) =>
+        Future.successful(Left(e))
+    }
   }
 
 }
