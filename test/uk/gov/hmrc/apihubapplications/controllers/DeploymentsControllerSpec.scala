@@ -34,7 +34,7 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
-import uk.gov.hmrc.apihubapplications.controllers.APIMControllerSpec.{buildFixture, failResponses, successResponses}
+import uk.gov.hmrc.apihubapplications.controllers.DeploymentsControllerSpec.{buildFixture, failResponses, successResponses}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
@@ -45,7 +45,7 @@ import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import java.time.LocalDateTime
 import scala.concurrent.Future
 
-class APIMControllerSpec
+class DeploymentsControllerSpec
   extends AnyFreeSpec
     with Matchers
     with MockitoSugar
@@ -55,7 +55,7 @@ class APIMControllerSpec
 
   "registerApplication" - {
     "must return Accepted for a valid request with a success response from downstream" in {
-      val fixture = APIMControllerSpec.buildFixture()
+      val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
@@ -85,7 +85,7 @@ class APIMControllerSpec
     }
 
     "must return 400 Bad Request and an Invalid OAS spec when returned from downstream" in {
-      val fixture = APIMControllerSpec.buildFixture()
+      val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
@@ -128,7 +128,7 @@ class APIMControllerSpec
     }
 
     "must return Bad request if the downstream service responds with validation errors" in {
-      val fixture = APIMControllerSpec.buildFixture()
+      val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
           "lineOfBusiness",
@@ -192,7 +192,7 @@ class APIMControllerSpec
 
   "getDeploymentStatus" - {
     "must return Ok with correct response" in {
-      val fixture = APIMControllerSpec.buildFixture()
+      val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
 
         val publisherRef = "publisher_ref"
@@ -215,7 +215,7 @@ class APIMControllerSpec
     }
 
     "must return Bad Gateway" in {
-      val fixture = APIMControllerSpec.buildFixture()
+      val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
 
         val publisherRef = "publisher_ref"
@@ -237,7 +237,7 @@ class APIMControllerSpec
   }
 }
 
-object APIMControllerSpec extends TableDrivenPropertyChecks {
+object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
 
   implicit val materializer: Materializer = Materializer(ActorSystem())
 

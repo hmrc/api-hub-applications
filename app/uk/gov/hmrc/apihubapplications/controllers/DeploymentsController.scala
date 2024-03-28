@@ -32,9 +32,9 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class APIMController @Inject()(identify: IdentifierAction,
-                               cc: ControllerComponents,
-                               apimConnector: APIMConnector)(implicit ec: ExecutionContext)
+class DeploymentsController @Inject()(identify: IdentifierAction,
+                                      cc: ControllerComponents,
+                                      apimConnector: APIMConnector)(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -55,9 +55,11 @@ class APIMController @Inject()(identify: IdentifierAction,
 
   def getDeploymentStatus(publisherRef: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
+      val eventualSecondary = apimConnector.getDeployment(publisherRef, Secondary)
+      val eventualPrimary = apimConnector.getDeployment(publisherRef, Primary)
       for {
-        secondaryStatus <- apimConnector.getDeployment(publisherRef, Secondary)
-        primaryStatus <- apimConnector.getDeployment(publisherRef, Primary)
+        secondaryStatus <- eventualSecondary
+        primaryStatus <- eventualPrimary
       } yield (primaryStatus, secondaryStatus) match {
         case (Right(maybePrimaryStatus), Right(maybeSecondaryStatus)) => Ok(Json.toJson(DeploymentStatus(maybePrimaryStatus.isDefined, maybeSecondaryStatus.isDefined)))
         case _ => BadGateway
