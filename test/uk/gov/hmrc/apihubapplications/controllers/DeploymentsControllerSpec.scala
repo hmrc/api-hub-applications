@@ -68,7 +68,7 @@ class DeploymentsControllerSpec
         val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
         val json = Json.toJson(deployRequest)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -98,7 +98,7 @@ class DeploymentsControllerSpec
         val deployResponse = InvalidOasResponse(Seq(ValidationFailure("test-type", "test-message")))
         val json = Json.toJson(deployRequest)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -116,7 +116,7 @@ class DeploymentsControllerSpec
     "must return 400 Bad Request when the JSON is not a valid application" in {
       val fixture = buildFixture()
       running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -147,7 +147,7 @@ class DeploymentsControllerSpec
 
         val json = Json.toJson(deployRequest)
 
-        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -178,7 +178,7 @@ class DeploymentsControllerSpec
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.APIMController.generate().url)
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
@@ -199,7 +199,7 @@ class DeploymentsControllerSpec
 
         forAll(successResponses) { (primaryResponse, secondaryResponse, expected) =>
 
-          val request = FakeRequest(GET, routes.APIMController.getDeploymentStatus(publisherRef).url)
+          val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
 
           when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
             .thenReturn(Future.successful(Right(primaryResponse)))
@@ -222,7 +222,7 @@ class DeploymentsControllerSpec
 
         forAll(failResponses) { (primaryResponse, secondaryResponse) =>
 
-          val request = FakeRequest(GET, routes.APIMController.getDeploymentStatus(publisherRef).url)
+          val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
 
           when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
             .thenReturn(Future.successful(primaryResponse))
