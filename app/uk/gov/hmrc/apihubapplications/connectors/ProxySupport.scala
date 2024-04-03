@@ -23,13 +23,13 @@ trait ProxySupport {
   object ProxySupport {
     implicit class RequestBuilderOps(requestBuilder: RequestBuilder) {
 
-      def withProxyIfRequired(environmentName: EnvironmentName): RequestBuilder = {
-        environmentName match {
-          case Primary => requestBuilder
-          case Secondary => requestBuilder.withProxy
+      def withProxyIfRequired(environmentName: EnvironmentName, useProxy: Boolean = true): RequestBuilder = {
+        (environmentName, useProxy) match {
+          case (Primary, _) => requestBuilder
+          case (Secondary, true) => requestBuilder.withProxy
+          case (Secondary, false) => requestBuilder
         }
       }
-
     }
   }
 }
