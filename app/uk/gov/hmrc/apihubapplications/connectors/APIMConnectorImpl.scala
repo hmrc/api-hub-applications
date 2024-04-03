@@ -110,9 +110,10 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
+    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
     httpClient.get(url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/${publisherReference}")
       .setHeader(headersForEnvironment(environment): _*)
-      .withProxyIfRequired(environment)
+      .withProxyIfRequired(environment, useProxyForSecondary)
       .execute[Either[UpstreamErrorResponse, SuccessfulDeploymentResponse]]
       .map {
         case Right(deployment) => Right(Some(deployment))
