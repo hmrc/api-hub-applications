@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.apihubapplications.connectors
+
 import com.google.inject.Inject
 import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
@@ -33,18 +34,19 @@ import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 class APIMConnectorImpl @Inject()(
-  servicesConfig: ServicesConfig,
-  httpClient: HttpClientV2
-)(implicit ec: ExecutionContext) extends APIMConnector with Logging with ExceptionRaising with HttpErrorFunctions with ProxySupport {
+                                   servicesConfig: ServicesConfig,
+                                   httpClient: HttpClientV2
+                                 )(implicit ec: ExecutionContext) extends APIMConnector with Logging with ExceptionRaising with HttpErrorFunctions with ProxySupport {
 
   import ProxySupport._
+
   override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
     httpClient.post(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationForEnvironment(Primary))
       .setHeader("Content-Type" -> "application/yaml")
       .withBody(oas)
       .execute[HttpResponse]
-      .map (
+      .map(
         response =>
           if (is2xx(response.status)) {
             Right(SuccessfulValidateResponse)
@@ -76,7 +78,7 @@ class APIMConnectorImpl @Inject()(
       )
       .withProxyIfRequired(Secondary, useProxyForSecondary)
       .execute[HttpResponse]
-      .map (
+      .map(
         response =>
           if (is2xx(response.status)) {
             response.json.validate[SuccessfulDeploymentsResponse].fold(
@@ -113,13 +115,17 @@ class APIMConnectorImpl @Inject()(
 
   override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
-    httpClient.get(url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/${publisherReference}")
+    val url = url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/${publisherReference}"
+    httpClient.get(url)
       .setHeader(headersForEnvironment(environment): _*)
       .withProxyIfRequired(environment, useProxyForSecondary)
       .execute[Either[UpstreamErrorResponse, SuccessfulDeploymentResponse]]
       .map {
         case Right(deployment) => Right(Some(deployment))
         case Left(e) if e.statusCode == 404 => Right(None)
+        case Left(e) if e.statusCode == 403 =>
+          logger.warn(s"Received 403 back from APIM ${environment.toString} whilst looking up publisher reference: $publisherReference and useProxyForSecondary: $useProxyForSecondary. Full url: ${url.toString}")
+          Right(None)
         case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode))
       }
   }
