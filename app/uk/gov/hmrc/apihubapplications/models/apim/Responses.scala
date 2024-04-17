@@ -18,8 +18,6 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-import java.time.LocalDateTime
-
 sealed trait ValidateResponse
 
 case object SuccessfulValidateResponse extends ValidateResponse
@@ -44,7 +42,7 @@ object InvalidOasResponse {
 
 sealed trait DeploymentResponse
 
-case class SuccessfulDeploymentResponse(id: String, deploymentTimestamp: LocalDateTime) extends DeploymentResponse
+case class SuccessfulDeploymentResponse(id: String) extends DeploymentResponse
 
 object SuccessfulDeploymentResponse {
 

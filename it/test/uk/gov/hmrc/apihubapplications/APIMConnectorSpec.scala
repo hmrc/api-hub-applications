@@ -23,14 +23,13 @@ import org.scalatest.matchers.must.Matchers
 import play.api.Configuration
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
+import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.time.LocalDateTime
 import java.util.Base64
 
 class APIMConnectorSpec
@@ -240,7 +239,7 @@ class APIMConnectorSpec
 
     "APIMConnector.getDeployment" - {
       "must place the correct request to the APIM in primary" in {
-        val response = SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)
+        val response = SuccessfulDeploymentResponse("publisher_ref")
         stubFor(
           get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
             .withHeader("Authorization", equalTo(authorizationTokenPrimary))
@@ -258,7 +257,7 @@ class APIMConnectorSpec
       }
 
       "must place the correct request to the APIM in secondary" in {
-        val response = SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)
+        val response = SuccessfulDeploymentResponse("publisher_ref")
         stubFor(
           get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
             .withHeader("Authorization", equalTo(authorizationTokenSecondary))
