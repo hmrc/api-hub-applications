@@ -42,7 +42,6 @@ import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
-import java.time.LocalDateTime
 import scala.concurrent.Future
 
 class DeploymentsControllerSpec
@@ -260,7 +259,7 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
     Fixture(application, apimConnector)
 
   }
-  val deploymentResponse = SuccessfulDeploymentResponse("publisher_ref", LocalDateTime.now)
+  val deploymentResponse = SuccessfulDeploymentResponse("publisher_ref")
 
   val successResponses: TableFor3[Option[SuccessfulDeploymentResponse], Option[SuccessfulDeploymentResponse], DeploymentStatus] = Table(
     ("primary", "secondary", "expected"),
