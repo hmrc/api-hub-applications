@@ -18,13 +18,16 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
+import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.{sensitiveStringFormat, stringToObjectId}
+import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.formatDataWithMongoIdentifier
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveTeamMember
 import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
@@ -45,12 +48,28 @@ class TeamsRepository @Inject()(
     domainFormat = formatDataWithMongoIdentifier[SensitiveTeam],
     mongoComponent = mongoComponent,
     indexes = Seq(
-      IndexModel(Indexes.ascending("teamMembers.email"))
+      IndexModel(
+        keys = Indexes.ascending("teamMembers.email"),
+        indexOptions = IndexOptions()
+          .collation(
+            caseInsensitiveCollation
+          )
+      ),
+      IndexModel(
+        keys = Indexes.ascending(fieldNames = "name"),
+        indexOptions = IndexOptions()
+          .name("uniqueCaseInsensitiveName")
+          .unique(true)
+          .collation(
+            caseInsensitiveCollation
+          )
+      )
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
       Codecs.playFormatCodec(sensitiveStringFormat(crypto))
-    )
+    ),
+    replaceIndexes = true
   ) with Logging with ExceptionRaising {
 
   // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
@@ -61,7 +80,7 @@ class TeamsRepository @Inject()(
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
-  def insert(team: Team): Future[Team] = {
+  def insert(team: Team): Future[Either[ApplicationsException, Team]] = {
     Mdc.preservingMdc {
       collection
         .insertOne(
@@ -70,18 +89,17 @@ class TeamsRepository @Inject()(
         .toFuture()
     } map (
       result =>
-        team.setId(result.getInsertedId.asObjectId().getValue.toString)
-    )
+        Right(team.setId(result.getInsertedId.asObjectId().getValue.toString))
+    ) recoverWith {
+      case e: MongoWriteException if e.getCode == 11000 => Future.successful(Left(raiseTeamNameNotUniqueException.forName(team.name)))
+    }
   }
 
-  def findAll(teamMember: Option[String]): Future[Seq[Team]] = {
+  def findAll(teamMember: Option[String], name: Option[String]): Future[Seq[Team]] = {
     Mdc.preservingMdc {
       collection
-        .find(
-          teamMember
-            .map(email => Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email))
-            .getOrElse(Filters.empty())
-        )
+        .find(buildFindFilter(teamMember, name))
+        .collation(caseInsensitiveCollation)
         .toFuture()
     } map (_.map(_.decryptedValue))
   }
@@ -122,6 +140,26 @@ class TeamsRepository @Inject()(
             }
           )
       case None => Future.successful(Left(raiseTeamNotFoundException.forTeam(team)))
+    }
+  }
+
+}
+
+object TeamsRepository {
+
+  val caseInsensitiveCollation: Collation = Collation.builder()
+    .locale("en")
+    .collationStrength(CollationStrength.PRIMARY)
+    .build()
+
+  def buildFindFilter(teamMember: Option[String], name: Option[String]): Bson = {
+    Seq(
+      teamMember.map(email => Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)),
+      name.map(teamName => Filters.equal("name", teamName))
+    ).flatten match {
+      case Nil => Filters.empty()
+      case filter :: Nil => filter
+      case filters => Filters.and(filters: _*)
     }
   }
 

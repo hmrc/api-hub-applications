@@ -57,7 +57,7 @@ class TeamsControllerSpec
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val saved = newTeam.toTeam(Clock.systemDefaultZone()).setId("test-id")
 
-      when(fixture.teamsService.create(eqTo(newTeam))).thenReturn(Future.successful(saved))
+      when(fixture.teamsService.create(eqTo(newTeam))).thenReturn(Future.successful(Right(saved)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.create())
@@ -95,7 +95,7 @@ class TeamsControllerSpec
     "must return 200 Ok and all teams returned by the service when no teamMember is specified" in {
       val fixture = buildFixture()
 
-      when(fixture.teamsService.findAll(eqTo(None))).thenReturn(Future.successful(Seq(team1, team2, team3)))
+      when(fixture.teamsService.findAll(eqTo(None), eqTo(None))).thenReturn(Future.successful(Seq(team1, team2, team3)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.findAll(None))
@@ -109,7 +109,7 @@ class TeamsControllerSpec
     "must return 200 Ok and all teams returned by the service when a teamMember is specified" in {
       val fixture = buildFixture()
 
-      when(fixture.teamsService.findAll(eqTo(Some(teamMember1.email)))).thenReturn(Future.successful(Seq(team1, team3)))
+      when(fixture.teamsService.findAll(eqTo(Some(teamMember1.email)), eqTo(None))).thenReturn(Future.successful(Seq(team1, team3)))
 
       running(fixture.application) {
         val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]

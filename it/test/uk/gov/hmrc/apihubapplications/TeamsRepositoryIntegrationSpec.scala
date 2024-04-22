@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications
 
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
-import org.scalatest.OptionValues
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
@@ -40,7 +40,8 @@ class TeamsRepositoryIntegrationSpec
     with Matchers
     with DefaultPlayMongoRepositorySupport[SensitiveTeam]
     with MdcTesting
-    with OptionValues {
+    with OptionValues
+    with EitherValues {
 
   import TeamsRepositoryIntegrationSpec._
 
@@ -69,11 +70,11 @@ class TeamsRepositoryIntegrationSpec
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data.id mustBe defined
+      result.data.value.id mustBe defined
       result.mdcData mustBe testMdcData
 
-      val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue
-      persisted mustEqual result.data
+      val persisted = find(Filters.equal("_id", new ObjectId(result.data.value.id.value))).futureValue.head.decryptedValue
+      persisted mustEqual result.data.value
     }
   }
 
@@ -81,11 +82,11 @@ class TeamsRepositoryIntegrationSpec
     "must retrieve all teams from MongoDb" in {
       setMdcData()
 
-      val saved1 = repository.insert(team1).futureValue
-      val saved2 = repository.insert(team2).futureValue
+      val saved1 = repository.insert(team1).futureValue.value
+      val saved2 = repository.insert(team2).futureValue.value
 
       val result = repository
-        .findAll(None)
+        .findAll(None, None)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -98,11 +99,11 @@ class TeamsRepositoryIntegrationSpec
 
       repository.insert(team2).futureValue
 
-      val saved1 = repository.insert(team1).futureValue
-      val saved3 = repository.insert(team3).futureValue
+      val saved1 = repository.insert(team1).futureValue.value
+      val saved3 = repository.insert(team3).futureValue.value
 
       val result = repository
-        .findAll(Some(teamMember1.email))
+        .findAll(Some(teamMember1.email), None)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -117,7 +118,7 @@ class TeamsRepositoryIntegrationSpec
 
       repository.insert(team1).futureValue
       repository.insert(team2).futureValue
-      val expected = repository.insert(team3).futureValue
+      val expected = repository.insert(team3).futureValue.value
 
       val result = repository
         .findById(expected.id.value)
@@ -165,7 +166,7 @@ class TeamsRepositoryIntegrationSpec
     "must update the team when it exists" in {
       setMdcData()
 
-      val saved = repository.insert(team1).futureValue
+      val saved = repository.insert(team1).futureValue.value
       val updated = saved.addTeamMember("new-team-member")
 
       val result = repository
