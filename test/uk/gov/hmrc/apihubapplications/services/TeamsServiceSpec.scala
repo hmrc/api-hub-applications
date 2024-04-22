@@ -45,11 +45,11 @@ class TeamsServiceSpec
       val team = newTeam.toTeam(fixture.clock)
       val saved = team.setId("test-id")
 
-      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(saved))
+      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(saved)))
 
       fixture.service.create(newTeam).map {
         result =>
-          result mustBe saved
+          result mustBe Right(saved)
       }
     }
   }
@@ -58,9 +58,9 @@ class TeamsServiceSpec
     "must return the teams returned by the repository when no teamMember is specified" in {
       val fixture = buildFixture()
 
-      when(fixture.repository.findAll(eqTo(None))).thenReturn(Future.successful(Seq(team1, team2, team3)))
+      when(fixture.repository.findAll(eqTo(None), eqTo(None))).thenReturn(Future.successful(Seq(team1, team2, team3)))
 
-      fixture.service.findAll(None).map {
+      fixture.service.findAll(None, None).map {
         result =>
           result mustBe Seq(team1, team2, team3)
       }
@@ -69,9 +69,9 @@ class TeamsServiceSpec
     "must return the teams returned by the repository when a teamMember is specified" in {
       val fixture = buildFixture()
 
-      when(fixture.repository.findAll(eqTo(Some(teamMember1.email)))).thenReturn(Future.successful(Seq(team1, team3)))
+      when(fixture.repository.findAll(eqTo(Some(teamMember1.email)), eqTo(None))).thenReturn(Future.successful(Seq(team1, team3)))
 
-      fixture.service.findAll(Some(teamMember1.email)).map {
+      fixture.service.findAll(Some(teamMember1.email), None).map {
         result =>
           result mustBe Seq(team1, team3)
       }

@@ -33,12 +33,12 @@ class TeamsService @Inject()(
   clock: Clock
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
-  def create(newTeam: NewTeam): Future[Team] = {
+  def create(newTeam: NewTeam): Future[Either[ApplicationsException, Team]] = {
     repository.insert(newTeam.toTeam(clock))
   }
 
-  def findAll(teamMember: Option[String]): Future[Seq[Team]] = {
-    repository.findAll(teamMember)
+  def findAll(teamMember: Option[String], name: Option[String]): Future[Seq[Team]] = {
+    repository.findAll(teamMember, name)
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Team]] = {
