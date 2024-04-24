@@ -46,6 +46,7 @@ class APIMConnectorSpec
   private val secondarySecret = "test-secret-secondary"
   private val primaryPath = "test-path-primary"
   private val secondaryPath = "test-path-secondary"
+  private val secondaryApiKey = "test-api-key-secondary"
 
   private val authorizationTokenPrimary = {
     val encoded = Base64.getEncoder.encodeToString(s"$primaryClientId:$primarySecret".getBytes("UTF-8"))
@@ -148,6 +149,7 @@ class APIMConnectorSpec
         post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .withHeader("Content-Type", containing("multipart/form-data"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
           .withMultipartRequestBody(
             aMultipart()
@@ -261,6 +263,7 @@ class APIMConnectorSpec
         stubFor(
           get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
             .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+            .withHeader("x-api-key", equalTo(secondaryApiKey))
             .willReturn(
               aResponse()
                 .withBody(Json.toJson(response).toString())
@@ -336,7 +339,8 @@ class APIMConnectorSpec
         "microservice.services.apim-secondary.port" -> wireMockPort,
         "microservice.services.apim-secondary.path" -> secondaryPath,
         "microservice.services.apim-secondary.clientId" -> secondaryClientId,
-        "microservice.services.apim-secondary.secret" -> secondarySecret
+        "microservice.services.apim-secondary.secret" -> secondarySecret,
+        "microservice.services.apim-secondary.apiKey" -> secondaryApiKey
       ))
     )
 

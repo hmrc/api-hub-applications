@@ -66,7 +66,8 @@ class APIMConnectorImpl @Inject()(
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
 
     httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
-      .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
+      .setHeader(headersForEnvironment(Secondary): _*)
+      .withProxyIfRequired(Secondary, useProxyForSecondary)
       .setHeader("Accept" -> "application/json")
       .withBody(
         Source(
@@ -76,7 +77,6 @@ class APIMConnectorImpl @Inject()(
           )
         )
       )
-      .withProxyIfRequired(Secondary, useProxyForSecondary)
       .execute[HttpResponse]
       .map(
         response =>
