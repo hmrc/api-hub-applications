@@ -63,6 +63,7 @@ class APIMConnectorSpec
     name = "test-name",
     description = "test-description",
     egress = "test-egress",
+    teamId = "test-team-id",
     oas = oas
   )
 

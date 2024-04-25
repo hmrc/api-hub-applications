@@ -18,7 +18,14 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class DeploymentsRequest(lineOfBusiness: String, name: String, description: String, egress: String, oas: String)
+case class DeploymentsRequest(
+  lineOfBusiness: String,
+  name: String,
+  description: String,
+  teamId: String,
+  egress: String,
+  oas: String
+)
 
 object DeploymentsRequest {
 

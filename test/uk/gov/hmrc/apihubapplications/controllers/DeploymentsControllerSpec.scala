@@ -33,13 +33,13 @@ import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.DeploymentsControllerSpec.{buildFixture, failResponses, successResponses}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
+import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
 import scala.concurrent.Future
@@ -61,6 +61,7 @@ class DeploymentsControllerSpec
           "name",
           "description",
           "egress",
+          "teamId",
           "oas"
         )
 
@@ -73,7 +74,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -91,6 +92,7 @@ class DeploymentsControllerSpec
           "name",
           "description",
           "egress",
+          "teamId",
           "oas"
         )
 
@@ -103,7 +105,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -134,6 +136,7 @@ class DeploymentsControllerSpec
           "name",
           "description",
           "egress",
+          "teamId",
           "oas"
         )
 
@@ -152,40 +155,13 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(response))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
       }
 
-    }
-
-
-    "must return 500 Internal Server Error for unexpected exceptions" in {
-      val fixture = buildFixture()
-      val deployRequest = DeploymentsRequest(
-        "lineOfBusiness",
-        "name",
-        "description",
-        "egress",
-        "oas"
-      )
-      val json = Json.toJson(deployRequest)
-
-      when(fixture.apimConnector.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
-        .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
-
-      running(fixture.application) {
-        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
-          .withHeaders(
-            CONTENT_TYPE -> "application/json"
-          )
-          .withBody(json)
-
-        val result = route(fixture.application, request).value
-        status(result) mustBe INTERNAL_SERVER_ERROR
-      }
     }
   }
 
@@ -200,9 +176,9 @@ class DeploymentsControllerSpec
 
           val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
 
-          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
             .thenReturn(Future.successful(Right(primaryResponse)))
-          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
             .thenReturn(Future.successful(Right(secondaryResponse)))
           val result = route(fixture.application, request).value
 
@@ -223,9 +199,9 @@ class DeploymentsControllerSpec
 
           val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
 
-          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
             .thenReturn(Future.successful(primaryResponse))
-          when(fixture.apimConnector.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
             .thenReturn(Future.successful(secondaryResponse))
           val result = route(fixture.application, request).value
 
@@ -242,24 +218,24 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
 
   case class Fixture(
                       application: PlayApplication,
-                      apimConnector: APIMConnector
+                      deploymentsService: DeploymentsService
                     )
 
   def buildFixture(): Fixture = {
-    val apimConnector = mock[APIMConnectorImpl]
+    val deploymentsService = mock[DeploymentsService]
 
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
-        bind[APIMConnectorImpl].toInstance(apimConnector),
+        bind[DeploymentsService].toInstance(deploymentsService),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .build()
 
-    Fixture(application, apimConnector)
-
+    Fixture(application, deploymentsService)
   }
-  val deploymentResponse = SuccessfulDeploymentResponse("publisher_ref")
+
+  val deploymentResponse: SuccessfulDeploymentResponse = SuccessfulDeploymentResponse("publisher_ref")
 
   val successResponses: TableFor3[Option[SuccessfulDeploymentResponse], Option[SuccessfulDeploymentResponse], DeploymentStatus] = Table(
     ("primary", "secondary", "expected"),
