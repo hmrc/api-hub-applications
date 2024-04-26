@@ -21,7 +21,7 @@ import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCata
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
 import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
-import uk.gov.hmrc.apihubapplications.models.exception.ApimException
+import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,21 +34,25 @@ class DeploymentsService @Inject()(
 
   def deployToSecondary(
     request: DeploymentsRequest
-  )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
     for {
       deploymentsResponse <- apimConnector.deployToSecondary(request)
-      _ <- linkApiToTeam(deploymentsResponse, request.teamId)
-    } yield deploymentsResponse
+      linkApiToTeamResponse <- linkApiToTeam(deploymentsResponse, request.teamId)
+    } yield linkApiToTeamResponse
   }
 
   private def linkApiToTeam(
     deploymentsResponse: Either[ApimException, DeploymentsResponse],
     teamId: String
-  )(implicit hc: HeaderCarrier): Future[Unit] = {
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
     deploymentsResponse match {
       case Right(response: SuccessfulDeploymentsResponse) =>
-        integrationCatalogueConnector.linkApiToTeam(ApiTeam(response.id, teamId))
-      case _ => Future.successful(())
+        integrationCatalogueConnector.linkApiToTeam(ApiTeam(response.id, teamId)).map {
+          case Right(_) => Right(response)
+          case Left(e) => Left(e)
+        }
+      case Right(response) => Future.successful(Right(response))
+      case Left(e) => Future.successful(Left(e))
     }
   }
 

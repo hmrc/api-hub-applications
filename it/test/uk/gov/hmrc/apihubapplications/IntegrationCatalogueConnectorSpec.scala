@@ -21,11 +21,12 @@ import org.mockito.MockitoSugar
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.Configuration
-import play.api.http.Status.NO_CONTENT
+import play.api.http.Status.{BAD_REQUEST, NO_CONTENT}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.apihubapplications.connectors.{IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
+import uk.gov.hmrc.apihubapplications.models.exception.IntegrationCatalogueException
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -41,8 +42,6 @@ class IntegrationCatalogueConnectorSpec
 
   "IntegrationCatalogueConnector.linkApiToTeam" - {
     "must place the correct request to Integration Catalogue and return success" in {
-      val apiTeam = ApiTeam("test-publisher-reference", "test-team-id")
-
       stubFor(
         post(urlEqualTo("/integration-catalogue/apis/team"))
           .withHeader("Content-Type", equalTo("application/json"))
@@ -56,7 +55,22 @@ class IntegrationCatalogueConnectorSpec
 
       buildConnector().linkApiToTeam(apiTeam)(HeaderCarrier()).map {
         result =>
-          result mustBe ()
+          result mustBe Right(())
+      }
+    }
+
+    "must fail when Integration Catalogue returns a non-success result" in {
+      stubFor(
+        post(urlEqualTo("/integration-catalogue/apis/team"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_REQUEST)
+          )
+      )
+
+      buildConnector().linkApiToTeam(apiTeam)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(IntegrationCatalogueException.unexpectedResponse(BAD_REQUEST))
       }
     }
   }
@@ -82,5 +96,6 @@ class IntegrationCatalogueConnectorSpec
 object IntegrationCatalogueConnectorSpec {
 
   val appAuthToken = "test-auth-token"
+  val apiTeam: ApiTeam = ApiTeam("test-publisher-reference", "test-team-id")
 
 }

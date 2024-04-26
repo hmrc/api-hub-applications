@@ -16,26 +16,38 @@
 
 package uk.gov.hmrc.apihubapplications.config
 
-import com.google.inject.AbstractModule
+import play.api.inject.{Binding, bind => bindz}
+import play.api.{Configuration, Environment}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl, IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.tasks.DatabaseStatisticMetricOrchestratorTask
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
 import java.time.Clock
+import scala.collection.immutable.Seq
 
-class Module extends AbstractModule {
+class Module extends play.api.inject.Module {
 
-  override def configure(): Unit = {
-    bind(classOf[AppConfig]).asEagerSingleton()
-    bind(classOf[Clock]).toInstance(Clock.systemUTC())
-    bind(classOf[IdentifierAction]).to(classOf[AuthenticatedIdentifierAction]).asEagerSingleton()
-    bind(classOf[IdmsConnector]).to(classOf[IdmsConnectorImpl]).asEagerSingleton()
-    bind(classOf[MetricOrchestrator]).toProvider(classOf[DatabaseStatisticsMetricOrchestratorProvider]).asEagerSingleton()
-    bind(classOf[DatabaseStatisticMetricOrchestratorTask]).asEagerSingleton()
-    bind(classOf[EmailConnector]).to(classOf[EmailConnectorImpl]).asEagerSingleton()
-    bind(classOf[APIMConnector]).to(classOf[APIMConnectorImpl]).asEagerSingleton()
-    bind(classOf[IntegrationCatalogueConnector]).to(classOf[IntegrationCatalogueConnectorImpl]).asEagerSingleton()
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = {
+    val bindings = Seq(
+      bindz(classOf[AppConfig]).toSelf.eagerly(),
+      bindz(classOf[Clock]).toInstance(Clock.systemUTC()),
+      bindz(classOf[IdentifierAction]).to(classOf[AuthenticatedIdentifierAction]).eagerly(),
+      bindz(classOf[IdmsConnector]).to(classOf[IdmsConnectorImpl]).eagerly(),
+      bindz(classOf[MetricOrchestrator]).toProvider(classOf[DatabaseStatisticsMetricOrchestratorProvider]).eagerly(),
+      bindz(classOf[DatabaseStatisticMetricOrchestratorTask]).toSelf.eagerly(),
+      bindz(classOf[EmailConnector]).to(classOf[EmailConnectorImpl]).eagerly(),
+      bindz(classOf[APIMConnector]).to(classOf[APIMConnectorImpl]).eagerly(),
+      bindz(classOf[IntegrationCatalogueConnector]).to(classOf[IntegrationCatalogueConnectorImpl]).eagerly()
+    )
+
+    val authTokenInitialiserBindings: Seq[Binding[_]] = if (configuration.get[Boolean]("create-internal-auth-token-on-start")) {
+      Seq(bindz(classOf[InternalAuthTokenInitialiser]).to(classOf[InternalAuthTokenInitialiserImpl]).eagerly())
+    } else {
+      Seq(bindz(classOf[InternalAuthTokenInitialiser]).to(classOf[NoOpInternalAuthTokenInitialiser]).eagerly())
+    }
+
+    bindings ++ authTokenInitialiserBindings
   }
 
 }

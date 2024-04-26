@@ -158,6 +158,12 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseIntegrationCatalogueException {
+    def unexpectedResponse(statusCode: Int): IntegrationCatalogueException = {
+      log(IntegrationCatalogueException.unexpectedResponse(statusCode))
+    }
+  }
+
   private def log[T <: ApplicationsException](e: T): T = {
     e match {
       case emailException: EmailException => logger.error("Raised EmailException:", emailException)

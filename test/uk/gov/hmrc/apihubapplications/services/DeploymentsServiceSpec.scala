@@ -19,10 +19,12 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
 import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.Primary
+import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, IntegrationCatalogueException}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -40,7 +42,7 @@ class DeploymentsServiceSpec
       val fixture = buildFixture()
 
       when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
-      when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(()))
+      when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         result =>
@@ -55,12 +57,35 @@ class DeploymentsServiceSpec
       val apiTeam = ApiTeam(deploymentsResponse.id, deploymentsRequest.teamId)
 
       when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
-      when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(()))
+      when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         _ =>
           verify(fixture.integrationCatalogueConnector).linkApiToTeam(eqTo(apiTeam))(any)
           succeed
+      }
+    }
+
+    "must return any failure from APIM" in {
+      val fixture = buildFixture()
+
+      when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Left(ApimException.unexpectedResponse(BAD_REQUEST))))
+
+      fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApimException.unexpectedResponse(BAD_REQUEST))
+      }
+    }
+
+    "must return any failure from Integration Catalogue" in {
+      val fixture = buildFixture()
+
+      when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
+      when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(Left(IntegrationCatalogueException.unexpectedResponse(BAD_REQUEST))))
+
+      fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(IntegrationCatalogueException.unexpectedResponse(BAD_REQUEST))
       }
     }
   }
