@@ -52,8 +52,8 @@ class DeploymentsControllerSpec
     with CryptoUtils
     with TableDrivenPropertyChecks {
 
-  "registerApplication" - {
-    "must return Accepted for a valid request with a success response from downstream" in {
+  "deployToSecondary" - {
+    "must return Ok for a valid request with a success response from downstream" in {
       val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(

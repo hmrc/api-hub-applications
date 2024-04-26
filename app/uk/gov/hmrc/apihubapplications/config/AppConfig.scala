@@ -30,4 +30,6 @@ class AppConfig @Inject()(config: Configuration) {
   val databaseStatisticsTaskInitialDelay: Duration = config.get[Duration]("tasks.databaseStatistics.initialDelay")
   val databaseStatisticsTaskInterval: Duration = config.get[Duration]("tasks.databaseStatistics.interval")
 
+  val appAuthToken: String = config.get[String]("internal-auth.token")
+
 }

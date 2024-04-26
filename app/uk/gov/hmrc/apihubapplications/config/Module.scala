@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.config
 
 import com.google.inject.AbstractModule
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl, IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.tasks.DatabaseStatisticMetricOrchestratorTask
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
@@ -35,6 +35,7 @@ class Module extends AbstractModule {
     bind(classOf[DatabaseStatisticMetricOrchestratorTask]).asEagerSingleton()
     bind(classOf[EmailConnector]).to(classOf[EmailConnectorImpl]).asEagerSingleton()
     bind(classOf[APIMConnector]).to(classOf[APIMConnectorImpl]).asEagerSingleton()
+    bind(classOf[IntegrationCatalogueConnector]).to(classOf[IntegrationCatalogueConnectorImpl]).asEagerSingleton()
   }
 
 }

@@ -17,21 +17,39 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
+import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DeploymentsService @Inject()(apimConnector: APIMConnector) {
+class DeploymentsService @Inject()(
+  apimConnector: APIMConnector,
+  integrationCatalogueConnector: IntegrationCatalogueConnector
+)(implicit ec: ExecutionContext) {
 
   def deployToSecondary(
     request: DeploymentsRequest
   )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    apimConnector.deployToSecondary(request)
+    for {
+      deploymentsResponse <- apimConnector.deployToSecondary(request)
+      _ <- linkApiToTeam(deploymentsResponse, request.teamId)
+    } yield deploymentsResponse
+  }
+
+  private def linkApiToTeam(
+    deploymentsResponse: Either[ApimException, DeploymentsResponse],
+    teamId: String
+  )(implicit hc: HeaderCarrier): Future[Unit] = {
+    deploymentsResponse match {
+      case Right(response: SuccessfulDeploymentsResponse) =>
+        integrationCatalogueConnector.linkApiToTeam(ApiTeam(response.id, teamId))
+      case _ => Future.successful(())
+    }
   }
 
   def getDeployment(
