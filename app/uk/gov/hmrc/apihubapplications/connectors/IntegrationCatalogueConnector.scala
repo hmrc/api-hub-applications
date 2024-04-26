@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.apim
+package uk.gov.hmrc.apihubapplications.connectors
 
-import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
+import uk.gov.hmrc.apihubapplications.models.exception.IntegrationCatalogueException
+import uk.gov.hmrc.http.HeaderCarrier
 
-case class DeploymentsRequest(
-  lineOfBusiness: String,
-  name: String,
-  description: String,
-  egress: String,
-  teamId: String,
-  oas: String
-)
+import scala.concurrent.Future
 
-object DeploymentsRequest {
+trait IntegrationCatalogueConnector {
 
-  implicit val formatDeploymentsRequest: Format[DeploymentsRequest] = Json.format[DeploymentsRequest]
+  def linkApiToTeam(apiTeam: ApiTeam)(implicit hc: HeaderCarrier): Future[Either[IntegrationCatalogueException, Unit]]
 
 }

@@ -14,21 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.apim
+package uk.gov.hmrc.apihubapplications.models.api
 
 import play.api.libs.json.{Format, Json}
 
-case class DeploymentsRequest(
-  lineOfBusiness: String,
-  name: String,
-  description: String,
-  egress: String,
-  teamId: String,
-  oas: String
-)
+case class ApiTeam(publisherReference: String, teamId: String)
 
-object DeploymentsRequest {
+object ApiTeam {
 
-  implicit val formatDeploymentsRequest: Format[DeploymentsRequest] = Json.format[DeploymentsRequest]
+  implicit val formatApiTeam: Format[ApiTeam] = Json.format[ApiTeam]
 
 }
