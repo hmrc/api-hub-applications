@@ -72,7 +72,7 @@ class APIMConnectorImpl @Inject()(
       .withBody(
         Source(
           Seq(
-            DataPart("metadata", Json.toJson(DeploymentsMetadata(request)).toString()),
+            DataPart("metadata", Json.toJson(CreateMetadata(request)).toString()),
             DataPart("openapi", request.oas)
           )
         )
@@ -115,7 +115,7 @@ class APIMConnectorImpl @Inject()(
 
   override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
-    val url = url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/${publisherReference}"
+    val url = url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/$publisherReference"
     httpClient.get(url)
       .setHeader(headersForEnvironment(environment): _*)
       .withProxyIfRequired(environment, useProxyForSecondary)

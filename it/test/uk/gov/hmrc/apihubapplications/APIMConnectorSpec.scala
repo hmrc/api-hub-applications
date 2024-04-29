@@ -64,7 +64,8 @@ class APIMConnectorSpec
     description = "test-description",
     egress = "test-egress",
     teamId = "test-team-id",
-    oas = oas
+    oas = oas,
+    true
   )
 
   "APIMConnector.validatePrimary" - {
@@ -155,7 +156,7 @@ class APIMConnectorSpec
           .withMultipartRequestBody(
             aMultipart()
               .withName("metadata")
-              .withBody(equalToJson(Json.toJson(DeploymentsMetadata(deploymentsRequest)).toString()))
+              .withBody(equalToJson(Json.toJson(CreateMetadata(deploymentsRequest)).toString()))
           )
           .withMultipartRequestBody(
             aMultipart()

@@ -18,19 +18,20 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class DeploymentsMetadata(lineOfBusiness: String, name: String, description: String, egress: String)
+case class CreateMetadata(lineOfBusiness: String, name: String, description: String, egress: String, passthrough: Boolean)
 
-object DeploymentsMetadata {
+object CreateMetadata {
 
-  def apply(request: DeploymentsRequest): DeploymentsMetadata = {
-    DeploymentsMetadata(
+  def apply(request: DeploymentsRequest): CreateMetadata = {
+    CreateMetadata(
       lineOfBusiness = request.lineOfBusiness,
       name = request.name,
       description = request.description,
-      egress = request.egress
+      egress = request.egress,
+      passthrough = request.passthrough
     )
   }
 
-  implicit val formatDeploymentsMetadata: Format[DeploymentsMetadata] = Json.format[DeploymentsMetadata]
+  implicit val formatCreateMetadata: Format[CreateMetadata] = Json.format[CreateMetadata]
 
 }
