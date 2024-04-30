@@ -65,7 +65,8 @@ class APIMConnectorSpec
     egress = "test-egress",
     teamId = "test-team-id",
     oas = oas,
-    true
+    true,
+    status = "a status"
   )
 
   "APIMConnector.validatePrimary" - {

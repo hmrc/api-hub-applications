@@ -63,7 +63,8 @@ class DeploymentsControllerSpec
           "egress",
           "teamId",
           "oas",
-          false
+          false,
+          "status"
         )
 
         val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
@@ -95,7 +96,8 @@ class DeploymentsControllerSpec
           "egress",
           "teamId",
           "oas",
-          false
+          false,
+          "status"
         )
 
         val deployResponse = InvalidOasResponse(Seq(ValidationFailure("test-type", "test-message")))
@@ -140,7 +142,8 @@ class DeploymentsControllerSpec
           "egress",
           "teamId",
           "oas",
-          false
+          false,
+          "status"
         )
 
         val failures = Seq(
