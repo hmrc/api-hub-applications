@@ -100,7 +100,7 @@ class DeploymentsControllerSpec
           "status"
         )
 
-        val errors = Seq(ValidationFailure("test-type", "test-message"))
+        val errors = Seq(DeploymentError("test-type", "test-message"))
         val deployResponse = InvalidOasResponse(Failure("failure_code","failure_reason",Some(errors)))
         val json = Json.toJson(deployRequest)
 

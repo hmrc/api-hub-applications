@@ -89,8 +89,8 @@ class APIMConnectorSpec
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
       val errors = Seq(
-        ValidationFailure("test-type-1", "test-message-1"),
-        ValidationFailure("test-type-2", "test-message-2")
+        DeploymentError("test-type-1", "test-message-1"),
+        DeploymentError("test-type-2", "test-message-2")
       )
 
       val failure = Failure("failure_code","failure_reason",Some(errors))
@@ -195,8 +195,8 @@ class APIMConnectorSpec
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
       val errors = Seq(
-        ValidationFailure("test-type-1", "test-message-1"),
-        ValidationFailure("test-type-2", "test-message-2")
+        DeploymentError("test-type-1", "test-message-1"),
+        DeploymentError("test-type-2", "test-message-2")
       )
 
       val failure = Failure("failure_code","failure_reason",Some(errors))

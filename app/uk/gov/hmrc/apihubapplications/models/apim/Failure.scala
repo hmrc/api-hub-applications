@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class Failure(code: String, reason: String, errors: Option[Seq[ValidationFailure]])
+case class Failure(code: String, reason: String, errors: Option[Seq[DeploymentError]])
 
 object Failure {
 

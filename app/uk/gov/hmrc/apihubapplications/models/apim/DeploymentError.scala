@@ -18,10 +18,10 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class ValidationFailure(`type`: String, message: String)
+case class DeploymentError(`type`: String, message: String)
 
-object ValidationFailure {
+object DeploymentError {
 
-  implicit val formatValidationFailure: Format[ValidationFailure] = Json.format[ValidationFailure]
+  implicit val formatValidationFailure: Format[DeploymentError] = Json.format[DeploymentError]
 
 }
