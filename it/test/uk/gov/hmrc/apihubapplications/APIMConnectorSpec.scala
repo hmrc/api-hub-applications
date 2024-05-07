@@ -93,7 +93,7 @@ class APIMConnectorSpec
         DeploymentError("test-type-2", "test-message-2")
       )
 
-      val failure = Failure("failure_code","failure_reason",Some(errors))
+      val failure = DeploymentFailure("failure_code","failure_reason",Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
@@ -199,7 +199,7 @@ class APIMConnectorSpec
         DeploymentError("test-type-2", "test-message-2")
       )
 
-      val failure = Failure("failure_code","failure_reason",Some(errors))
+      val failure = DeploymentFailure("failure_code","failure_reason",Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))

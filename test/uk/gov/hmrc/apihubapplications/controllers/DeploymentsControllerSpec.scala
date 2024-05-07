@@ -101,7 +101,7 @@ class DeploymentsControllerSpec
         )
 
         val errors = Seq(DeploymentError("test-type", "test-message"))
-        val deployResponse = InvalidOasResponse(Failure("failure_code","failure_reason",Some(errors)))
+        val deployResponse = InvalidOasResponse(DeploymentFailure("failure_code","failure_reason",Some(errors)))
         val json = Json.toJson(deployRequest)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
@@ -133,7 +133,7 @@ class DeploymentsControllerSpec
           "status"
         )
 
-        val deployResponse = InvalidOasResponse(Failure("failure_code","failure_reason",None))
+        val deployResponse = InvalidOasResponse(DeploymentFailure("failure_code","failure_reason",None))
         val json = Json.toJson(deployRequest)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
@@ -179,7 +179,7 @@ class DeploymentsControllerSpec
           "status"
         )
 
-        val response = Right(InvalidOasResponse(Failure("failure_code","failure_reason",None)))
+        val response = Right(InvalidOasResponse(DeploymentFailure("failure_code","failure_reason",None)))
 
         val json = Json.toJson(deployRequest)
 
