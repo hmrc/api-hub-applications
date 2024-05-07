@@ -88,23 +88,25 @@ class APIMConnectorSpec
     }
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
-      val failures = Seq(
+      val errors = Seq(
         ValidationFailure("test-type-1", "test-message-1"),
         ValidationFailure("test-type-2", "test-message-2")
       )
+
+      val failure = Failure("failure_code","failure_reason",Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(400)
-              .withBody(Json.toJson(failures).toString())
+              .withBody(Json.toJson(failure).toString())
           )
       )
 
       buildConnector().validateInPrimary(oas)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Right(InvalidOasResponse(failures))
+          actual mustBe Right(InvalidOasResponse(failure))
       }
     }
 
@@ -192,23 +194,25 @@ class APIMConnectorSpec
     }
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
-      val failures = Seq(
+      val errors = Seq(
         ValidationFailure("test-type-1", "test-message-1"),
         ValidationFailure("test-type-2", "test-message-2")
       )
+
+      val failure = Failure("failure_code","failure_reason",Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(400)
-              .withBody(Json.toJson(failures).toString())
+              .withBody(Json.toJson(failure).toString())
           )
       )
 
       buildConnector().deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Right(InvalidOasResponse(failures))
+          actual mustBe Right(InvalidOasResponse(failure))
       }
     }
 
