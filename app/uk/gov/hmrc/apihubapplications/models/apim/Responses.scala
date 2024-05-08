@@ -32,7 +32,7 @@ object SuccessfulDeploymentsResponse {
 
 }
 
-case class InvalidOasResponse(failure: DeploymentFailure) extends ValidateResponse with DeploymentsResponse
+case class InvalidOasResponse(failure: FailuresResponse) extends ValidateResponse with DeploymentsResponse
 
 object InvalidOasResponse {
 

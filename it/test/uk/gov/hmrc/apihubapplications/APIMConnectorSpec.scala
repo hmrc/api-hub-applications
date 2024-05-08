@@ -89,11 +89,11 @@ class APIMConnectorSpec
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
       val errors = Seq(
-        DeploymentError("test-type-1", "test-message-1"),
-        DeploymentError("test-type-2", "test-message-2")
+        Error("test-type-1", "test-message-1"),
+        Error("test-type-2", "test-message-2")
       )
 
-      val failure = DeploymentFailure("failure_code","failure_reason",Some(errors))
+      val failure = FailuresResponse("failure_code","failure_reason",Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
@@ -195,11 +195,11 @@ class APIMConnectorSpec
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
       val errors = Seq(
-        DeploymentError("test-type-1", "test-message-1"),
-        DeploymentError("test-type-2", "test-message-2")
+        Error("test-type-1", "test-message-1"),
+        Error("test-type-2", "test-message-2")
       )
 
-      val failure = DeploymentFailure("failure_code","failure_reason",Some(errors))
+      val failure = FailuresResponse("failure_code","failure_reason",Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))

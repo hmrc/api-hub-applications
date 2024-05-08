@@ -18,10 +18,10 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class DeploymentError(`type`: String, message: String)
+case class FailuresResponse(code: String, reason: String, errors: Option[Seq[Error]])
 
-object DeploymentError {
+object FailuresResponse {
 
-  implicit val formatValidationFailure: Format[DeploymentError] = Json.format[DeploymentError]
+  implicit val formatFailure: Format[FailuresResponse] = Json.format[FailuresResponse]
 
 }
