@@ -22,9 +22,9 @@ import play.api.Logging
 import play.api.http.Status._
 import play.api.libs.json.{JsPath, Json, JsonValidationError}
 import play.api.mvc.MultipartFormData.DataPart
+import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising}
-import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
@@ -102,13 +102,15 @@ class APIMConnectorImpl @Inject()(
       None
     }
     else {
-      response.json.validate[Seq[ValidationFailure]].fold(
+      response.json.validate[FailuresResponse].fold(
         _ => {
           logger.warn(s"Unknown response body from Simple OAS Deployment service:${System.lineSeparator()}${response.body}")
           None
         },
-        failures =>
-          Some(InvalidOasResponse(failures))
+        failure => {
+          logger.warn(s"Received failure response from Simple OAS Deployment service: $failure")
+          Some(InvalidOasResponse(failure))
+        }
       )
     }
   }

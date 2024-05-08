@@ -86,7 +86,7 @@ class DeploymentsControllerSpec
 
     }
 
-    "must return 400 Bad Request and an Invalid OAS spec when returned from downstream" in {
+    "must return 400 Bad Request and a Failure with Errors when returned from downstream" in {
       val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
@@ -100,7 +100,40 @@ class DeploymentsControllerSpec
           "status"
         )
 
-        val deployResponse = InvalidOasResponse(Seq(ValidationFailure("test-type", "test-message")))
+        val errors = Seq(Error("test-type", "test-message"))
+        val deployResponse = InvalidOasResponse(FailuresResponse("failure_code","failure_reason",Some(errors)))
+        val json = Json.toJson(deployRequest)
+
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(json)
+
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
+          .thenReturn(Future.successful(Right(deployResponse)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+        contentAsJson(result) mustBe Json.toJson(deployResponse)
+      }
+    }
+
+    "must return 400 Bad Request and a Failure without Errors when returned from downstream" in {
+      val fixture = DeploymentsControllerSpec.buildFixture()
+      running(fixture.application) {
+        val deployRequest = DeploymentsRequest(
+          "lineOfBusiness",
+          "name",
+          "description",
+          "egress",
+          "teamId",
+          "oas",
+          false,
+          "status"
+        )
+
+        val deployResponse = InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None))
         val json = Json.toJson(deployRequest)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
@@ -132,7 +165,7 @@ class DeploymentsControllerSpec
       }
     }
 
-    "must return Bad request if the downstream service responds with validation errors" in {
+    "must return Bad request if the downstream service responds with a failure" in {
       val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
         val deployRequest = DeploymentsRequest(
@@ -146,12 +179,7 @@ class DeploymentsControllerSpec
           "status"
         )
 
-        val failures = Seq(
-          ValidationFailure("test-type-1", "test-message-1"),
-          ValidationFailure("test-type-2", "test-message-2")
-        )
-
-        val response = Right(InvalidOasResponse(failures))
+        val response = Right(InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None)))
 
         val json = Json.toJson(deployRequest)
 
