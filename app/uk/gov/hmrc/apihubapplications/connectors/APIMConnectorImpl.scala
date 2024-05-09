@@ -108,7 +108,7 @@ class APIMConnectorImpl @Inject()(
           None
         },
         failure => {
-          logger.warn(s"Received failure response from Simple OAS Deployment service: $failure")
+          logger.warn(s"Received failure response from Simple OAS Deployment service: ${response.json}")
           Some(InvalidOasResponse(failure))
         }
       )
