@@ -164,6 +164,12 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseTeamNameNotUniqueException {
+    def forName(name: String): TeamNameNotUniqueException = {
+      log(TeamNameNotUniqueException.forName(name))
+    }
+  }
+
   private def log[T <: ApplicationsException](e: T): T = {
     e match {
       case emailException: EmailException => logger.error("Raised EmailException:", emailException)

@@ -18,13 +18,13 @@ package uk.gov.hmrc.apihubapplications
 
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
-import org.scalatest.OptionValues
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.{NotUpdatedException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception.{NotUpdatedException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
@@ -40,7 +40,8 @@ class TeamsRepositoryIntegrationSpec
     with Matchers
     with DefaultPlayMongoRepositorySupport[SensitiveTeam]
     with MdcTesting
-    with OptionValues {
+    with OptionValues
+    with EitherValues {
 
   import TeamsRepositoryIntegrationSpec._
 
@@ -69,11 +70,25 @@ class TeamsRepositoryIntegrationSpec
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data.id mustBe defined
+      result.data.value.id mustBe defined
       result.mdcData mustBe testMdcData
 
-      val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue
-      persisted mustEqual result.data
+      val persisted = find(Filters.equal("_id", new ObjectId(result.data.value.id.value))).futureValue.head.decryptedValue
+      persisted mustEqual result.data.value
+    }
+
+    "must return TeamNameNotUniqueException if the team name is already in use" in {
+      setMdcData()
+
+      repository.insert(team1).futureValue
+
+      val result = repository
+        .insert(team1.copy(name = team1.name.toUpperCase))
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data.left.value mustBe TeamNameNotUniqueException.forName(team1.name.toUpperCase)
+      result.mdcData mustBe testMdcData
     }
   }
 
@@ -81,8 +96,8 @@ class TeamsRepositoryIntegrationSpec
     "must retrieve all teams from MongoDb" in {
       setMdcData()
 
-      val saved1 = repository.insert(team1).futureValue
-      val saved2 = repository.insert(team2).futureValue
+      val saved1 = repository.insert(team1).futureValue.value
+      val saved2 = repository.insert(team2).futureValue.value
 
       val result = repository
         .findAll(None)
@@ -98,8 +113,8 @@ class TeamsRepositoryIntegrationSpec
 
       repository.insert(team2).futureValue
 
-      val saved1 = repository.insert(team1).futureValue
-      val saved3 = repository.insert(team3).futureValue
+      val saved1 = repository.insert(team1).futureValue.value
+      val saved3 = repository.insert(team3).futureValue.value
 
       val result = repository
         .findAll(Some(teamMember1.email))
@@ -117,7 +132,7 @@ class TeamsRepositoryIntegrationSpec
 
       repository.insert(team1).futureValue
       repository.insert(team2).futureValue
-      val expected = repository.insert(team3).futureValue
+      val expected = repository.insert(team3).futureValue.value
 
       val result = repository
         .findById(expected.id.value)
@@ -161,11 +176,39 @@ class TeamsRepositoryIntegrationSpec
     }
   }
 
+  "findByName" - {
+    "must return a team if it's name matches (case-insensitive)" in {
+      setMdcData()
+
+      val saved = repository.insert(team1).futureValue.value
+
+      val result = repository
+        .findByName(team1.name.toUpperCase)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data.value mustBe saved
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return None when no team can be found" in {
+      setMdcData()
+
+      val result = repository
+        .findByName(team1.name)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe None
+      result.mdcData mustBe testMdcData
+    }
+  }
+
   "update" - {
     "must update the team when it exists" in {
       setMdcData()
 
-      val saved = repository.insert(team1).futureValue
+      val saved = repository.insert(team1).futureValue.value
       val updated = saved.addTeamMember("new-team-member")
 
       val result = repository
@@ -205,6 +248,23 @@ class TeamsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe Left(TeamNotFoundException.forTeam(team))
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return TeamNameNotUniqueException if the updated team name is already in use" in {
+      setMdcData()
+
+      val saved = repository.insert(team1).futureValue.value
+      val updated = saved.copy(name = team2.name.toUpperCase)
+
+      repository.insert(team2).futureValue
+
+      val result = repository
+        .update(updated)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data.left.value mustBe TeamNameNotUniqueException.forName(team2.name.toUpperCase)
       result.mdcData mustBe testMdcData
     }
   }

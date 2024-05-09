@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.NewTeam
 import uk.gov.hmrc.apihubapplications.services.TeamsService
@@ -42,9 +42,11 @@ class TeamsController @Inject()(
     implicit request =>
       request.body.validate[NewTeam] match {
         case JsSuccess(newTeam, _) =>
-          teamsService.create(newTeam).map(
-            team => Created(Json.toJson(team))
-          )
+          teamsService.create(newTeam).map {
+            case Right(team) => Created(Json.toJson(team))
+            case Left(_: TeamNameNotUniqueException) => Conflict
+            case Left(e) => throw e
+          }
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
@@ -62,6 +64,13 @@ class TeamsController @Inject()(
       case Right(team) => Ok(Json.toJson(team))
       case Left(_: TeamNotFoundException) => NotFound
       case Left(e) => throw e
+    }
+  }
+
+  def findByName(name: String): Action[AnyContent] = identify.async {
+    teamsService.findByName(name) map {
+      case Some(team) => Ok(Json.toJson(team))
+      case None => NotFound
     }
   }
 
