@@ -547,12 +547,15 @@ class EmailConnectorSpec
   }
 
   "EmailConnector.sendTeamMemberAddedEmailToTeamMember" - {
+    val teamMemberEmail = "test@hmrc.digital.gov.uk"
+    val testTeamName = "test_team_name"
+
     "must place the correct request" in {
       val request = SendEmailRequest(
-        Seq("test@hmrc.digital.gov.uk"),
+        Seq(teamMemberEmail),
         teamMemberAddedToTeamTemplateId,
         Map(
-          "teamname" -> "test_team_name"
+          "teamname" -> testTeamName
         )
       )
 
@@ -568,7 +571,7 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendTeamMemberAddedEmailToTeamMember(TeamMember("test@hmrc.digital.gov.uk"), Team("test_team", LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
+      buildConnector(this).sendTeamMemberAddedEmailToTeamMember(TeamMember(teamMemberEmail), Team(testTeamName, LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
         response =>
           response mustBe Right(())
       }
@@ -584,7 +587,7 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendTeamMemberAddedEmailToTeamMember(TeamMember("test@hmrc.digital.gov.uk"), Team("test_team", LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
+      buildConnector(this).sendTeamMemberAddedEmailToTeamMember(TeamMember(teamMemberEmail), Team(testTeamName, LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
         response =>
           response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
       }

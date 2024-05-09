@@ -31,8 +31,8 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction,
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.services.TeamsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
@@ -160,7 +160,7 @@ class TeamsControllerSpec
       val id = "test-id"
       val teamMemberRequest = TeamMemberRequest(teamMember1.email)
 
-      when(fixture.teamsService.addTeamMember(any, any)).thenReturn(Future.successful(Right(())))
+      when(fixture.teamsService.addTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addTeamMember(id))
@@ -172,7 +172,7 @@ class TeamsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.teamsService).addTeamMember(eqTo(id), eqTo(teamMemberRequest))
+        verify(fixture.teamsService).addTeamMember(eqTo(id), eqTo(teamMemberRequest))(any)
       }
     }
 
@@ -181,7 +181,7 @@ class TeamsControllerSpec
       val id = "test-id"
       val teamMemberRequest = TeamMemberRequest(teamMember1.email)
 
-      when(fixture.teamsService.addTeamMember(any, any))
+      when(fixture.teamsService.addTeamMember(any, any)(any))
         .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
 
       running(fixture.application) {
@@ -202,7 +202,7 @@ class TeamsControllerSpec
       val id = "test-id"
       val teamMemberRequest = TeamMemberRequest(teamMember1.email)
 
-      when(fixture.teamsService.addTeamMember(any, any))
+      when(fixture.teamsService.addTeamMember(any, any)(any))
         .thenReturn(Future.successful(Left(TeamMemberExistsException.forId(id))))
 
       running(fixture.application) {

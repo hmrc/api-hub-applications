@@ -118,6 +118,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
         result =>
@@ -164,6 +165,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
         result =>
