@@ -68,8 +68,8 @@ class TeamsController @Inject()(
   def addTeamMember(id: String): Action[JsValue] = identify(parse.json).async {
     implicit request =>
       request.body.validate[TeamMemberRequest] match {
-        case JsSuccess(request, _) =>
-          teamsService.addTeamMember(id, request).map {
+        case JsSuccess(validRequest, _) =>
+          teamsService.addTeamMember(id, validRequest).map {
             case Right(_) => NoContent
             case Left(_: TeamNotFoundException) => NotFound
             case Left(_: TeamMemberExistsException) => BadRequest

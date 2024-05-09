@@ -20,8 +20,9 @@ import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
@@ -53,6 +54,7 @@ class EmailConnectorImpl @Inject()(
   private val accessRejectedToTeamTemplateId = getAndValidate("email.accessRejectedEmailToTeamTemplateId")
   private val accessRequestSubmittedToToRequesterTemplateId = getAndValidate("email.accessRequestSubmittedEmailToRequesterTemplateId")
   private val newAccessRequestToApproversTemplateId = getAndValidate("email.newAccessRequestEmailToApproversTemplateId")
+  private val teamMemberAddedToTeamTemplateId = getAndValidate("email.teamMemberAddedToTeamTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
@@ -184,6 +186,15 @@ class EmailConnectorImpl @Inject()(
       )
     )
 
+    doPost(request)
+  }
+
+  override def sendTeamMemberAddedEmailToTeamMember(teamMember: TeamMember, team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val request = SendEmailRequest(
+      Seq(teamMember.email),
+      teamMemberAddedToTeamTemplateId,
+      Map("teamname" -> team.name)
+    )
     doPost(request)
   }
 }
