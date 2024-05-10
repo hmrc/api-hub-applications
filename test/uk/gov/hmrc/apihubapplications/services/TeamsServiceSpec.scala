@@ -56,7 +56,7 @@ class TeamsServiceSpec
       }
     }
 
-    "must send appropriate email if repository inserts successfully" in {
+    "must send appropriate emails if repository inserts successfully" in {
       val fixture = buildFixture()
 
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
