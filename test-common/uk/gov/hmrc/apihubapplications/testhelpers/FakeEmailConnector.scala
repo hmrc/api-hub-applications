@@ -18,8 +18,9 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
-import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -43,4 +44,6 @@ class FakeEmailConnector extends EmailConnector {
   override def sendAccessRequestSubmittedEmailToRequester(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
 
   override def sendNewAccessRequestEmailToApprovers(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
+
+  override def sendTeamMemberAddedEmailToTeamMember(teamMember: TeamMember, team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
 }

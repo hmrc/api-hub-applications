@@ -18,11 +18,13 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class TeamsService @Inject()(
   repository: TeamsRepository,
-  clock: Clock
+  clock: Clock,
+  emailConnector: EmailConnector
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def create(newTeam: NewTeam): Future[Team] = {
@@ -45,12 +48,19 @@ class TeamsService @Inject()(
     repository.findById(id)
   }
 
-  def addTeamMember(id: String, request: TeamMemberRequest): Future[Either[ApplicationsException, Unit]] = {
+  def addTeamMember(id: String, request: TeamMemberRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Right(team) if !team.hasTeamMember(request.email) =>
-        repository.update(team.addTeamMember(request.toTeamMember))
+        repository.update(team.addTeamMember(request.toTeamMember)) flatMap {
+          case Right(_) =>
+            emailConnector.sendTeamMemberAddedEmailToTeamMember(request.toTeamMember, team).flatMap {
+              _ => Future.successful(Right(()))
+            }
+          case Left(exception) => Future.successful(Left(exception))
+        }
       case Right(team) =>
-        Future.successful(Left(raiseTeamMemberExistsException.forTeam(team)))
+        val future = Future.successful(Left(raiseTeamMemberExistsException.forTeam(team)))
+        future
       case Left(e) =>
         Future.successful(Left(e))
     }

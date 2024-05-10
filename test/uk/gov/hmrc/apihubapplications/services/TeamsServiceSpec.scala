@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.{ArgumentMatchers, ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, TeamMemberExistsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
@@ -116,8 +118,9 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email)).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
           result mustBe Right(())
@@ -132,7 +135,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember1.email)).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember1.email))(HeaderCarrier()).map {
         result =>
           result mustBe Left(TeamMemberExistsException.forTeam(team))
       }
@@ -148,9 +151,48 @@ class TeamsServiceSpec
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email)).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
+      }
+    }
+
+    "must send appropriate email if access request repository updates successfully" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
+        result =>
+          verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMember(ArgumentMatchers.eq(teamMember3), ArgumentMatchers.eq(team))(any)
+
+          result mustBe Right(())
+      }
+
+    }
+
+    "must tolerate email failure and treat as success" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMember(any, any)(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
+        result =>
+          verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMember(ArgumentMatchers.eq(teamMember3), ArgumentMatchers.eq(team))(any)
+
+          result mustBe Right(())
       }
     }
   }
@@ -158,15 +200,18 @@ class TeamsServiceSpec
   private case class Fixture(
     repository: TeamsRepository,
     clock: Clock,
-    service: TeamsService
+    service: TeamsService,
+    emailConnector: EmailConnector
   )
 
   private def buildFixture(): Fixture = {
     val repository = mock[TeamsRepository]
     val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-    val service = new TeamsService(repository, clock)
+    val emailConnector = mock[EmailConnector]
 
-    Fixture(repository, clock, service)
+    val service = new TeamsService(repository, clock, emailConnector)
+
+    Fixture(repository, clock, service, emailConnector)
   }
 
 }
