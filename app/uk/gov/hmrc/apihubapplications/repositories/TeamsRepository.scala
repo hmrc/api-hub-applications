@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Singleton}
+import com.mongodb.ErrorCategory
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.{Collation, CollationStrength, Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
 import play.api.Logging
@@ -26,7 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, E
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.{sensitiveStringFormat, stringToObjectId}
-import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository.caseInsensitiveCollation
+import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository.{caseInsensitiveCollation, isDuplicateKey}
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.formatDataWithMongoIdentifier
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveTeamMember
 import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
@@ -83,7 +84,7 @@ class TeamsRepository @Inject()(
       result =>
         Right(team.setId(result.getInsertedId.asObjectId().getValue.toString))
     ) recoverWith {
-      case e: MongoWriteException if e.getCode == 11000 =>
+      case e: MongoWriteException if isDuplicateKey(e) =>
         Future.successful(Left(raiseTeamNameNotUniqueException.forName(team.name)))
     }
   }
@@ -144,7 +145,7 @@ class TeamsRepository @Inject()(
               Left(raiseNotUpdatedException.forTeam(team))
             }
         ) recoverWith {
-          case e: MongoWriteException if e.getCode == 11000 =>
+          case e: MongoWriteException if isDuplicateKey(e) =>
             Future.successful(Left(raiseTeamNameNotUniqueException.forName(team.name)))
         }
       case None => Future.successful(Left(raiseTeamNotFoundException.forTeam(team)))
@@ -159,5 +160,9 @@ object TeamsRepository {
     .locale("en")
     .collationStrength(CollationStrength.PRIMARY)
     .build()
+
+  private def isDuplicateKey(e: MongoWriteException): Boolean = {
+    ErrorCategory.fromErrorCode(e.getCode) == ErrorCategory.DUPLICATE_KEY
+  }
 
 }
