@@ -571,7 +571,7 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendTeamMemberAddedEmailToTeamMember(TeamMember(teamMemberEmail), Team(testTeamName, LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
+      buildConnector(this).sendTeamMemberAddedEmailToTeamMembers(Seq(TeamMember(teamMemberEmail)), Team(testTeamName, LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
         response =>
           response mustBe Right(())
       }
@@ -587,7 +587,7 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendTeamMemberAddedEmailToTeamMember(TeamMember(teamMemberEmail), Team(testTeamName, LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
+      buildConnector(this).sendTeamMemberAddedEmailToTeamMembers(Seq(TeamMember(teamMemberEmail)), Team(testTeamName, LocalDateTime.now(), Seq.empty))(new HeaderCarrier()) map {
         response =>
           response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
       }
