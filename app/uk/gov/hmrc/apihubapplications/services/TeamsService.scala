@@ -36,8 +36,11 @@ class TeamsService @Inject()(
   emailConnector: EmailConnector
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
-  def create(newTeam: NewTeam): Future[Team] = {
-    repository.insert(newTeam.toTeam(clock))
+  def create(newTeam: NewTeam)(implicit hc: HeaderCarrier): Future[Team] = {
+    repository.insert(newTeam.toTeam(clock)).flatMap( team  =>
+        emailConnector.sendTeamMemberAddedEmailToTeamMembers(team.teamMembers, newTeam.toTeam(clock)) flatMap  {
+          _ => Future.successful(team)
+        })
   }
 
   def findAll(teamMember: Option[String]): Future[Seq[Team]] = {
@@ -53,7 +56,7 @@ class TeamsService @Inject()(
       case Right(team) if !team.hasTeamMember(request.email) =>
         repository.update(team.addTeamMember(request.toTeamMember)) flatMap {
           case Right(_) =>
-            emailConnector.sendTeamMemberAddedEmailToTeamMember(request.toTeamMember, team).flatMap {
+            emailConnector.sendTeamMemberAddedEmailToTeamMembers(Seq(request.toTeamMember), team).flatMap {
               _ => Future.successful(Right(()))
             }
           case Left(exception) => Future.successful(Left(exception))

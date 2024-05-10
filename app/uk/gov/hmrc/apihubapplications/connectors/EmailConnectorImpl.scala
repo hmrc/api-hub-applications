@@ -189,9 +189,9 @@ class EmailConnectorImpl @Inject()(
     doPost(request)
   }
 
-  override def sendTeamMemberAddedEmailToTeamMember(teamMember: TeamMember, team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+  override def sendTeamMemberAddedEmailToTeamMembers(teamMembers: Seq[TeamMember], team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val request = SendEmailRequest(
-      Seq(teamMember.email),
+      teamMembers.map(_.email),
       teamMemberAddedToTeamTemplateId,
       Map("teamname" -> team.name)
     )
