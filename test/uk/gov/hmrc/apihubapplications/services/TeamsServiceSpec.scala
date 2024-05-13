@@ -70,7 +70,7 @@ class TeamsServiceSpec
 
       fixture.service.create(newTeam)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(team))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(saved))(any)
 
           result.value mustBe saved
       }
@@ -88,7 +88,7 @@ class TeamsServiceSpec
 
       fixture.service.create(newTeam)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(team))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(saved))(any)
 
           result.value mustBe saved
       }

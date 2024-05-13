@@ -39,7 +39,7 @@ class TeamsService @Inject()(
   def create(newTeam: NewTeam)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Team]] = {
     repository.insert(newTeam.toTeam(clock)).flatMap {
       case Right(team) =>
-        emailConnector.sendTeamMemberAddedEmailToTeamMembers(team.teamMembers, newTeam.toTeam(clock)) flatMap {
+        emailConnector.sendTeamMemberAddedEmailToTeamMembers(team.teamMembers, team) flatMap {
           _ => Future.successful(Right(team))
         }
       case Left(e) => Future.successful(Left(e))
