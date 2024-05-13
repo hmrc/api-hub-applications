@@ -17,11 +17,12 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.{ArgumentMatchers, ArgumentMatchersSugar, MockitoSugar}
+import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, EmailException, TeamMemberExistsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
@@ -35,7 +36,8 @@ class TeamsServiceSpec
   extends AsyncFreeSpec
   with Matchers
   with MockitoSugar
-  with ArgumentMatchersSugar {
+  with ArgumentMatchersSugar
+  with EitherValues {
 
   import TeamsServiceSpec._
 
@@ -47,12 +49,12 @@ class TeamsServiceSpec
       val team = newTeam.toTeam(fixture.clock)
       val saved = team.setId("test-id")
 
-      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(saved))
+      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(saved)))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.service.create(newTeam)(any).map {
         result =>
-          result mustBe saved
+          result.value mustBe saved
       }
     }
 
@@ -63,14 +65,14 @@ class TeamsServiceSpec
       val team = newTeam.toTeam(fixture.clock)
       val saved = team.setId("test-id")
 
-      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(saved))
+      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(saved)))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.service.create(newTeam)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(team))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(saved))(any)
 
-          result mustBe saved
+          result.value mustBe saved
       }
     }
 
@@ -81,14 +83,27 @@ class TeamsServiceSpec
       val team = newTeam.toTeam(fixture.clock)
       val saved = team.setId("test-id")
 
-      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(saved))
+      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(saved)))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
 
       fixture.service.create(newTeam)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(team))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(saved))(any)
 
-          result mustBe saved
+          result.value mustBe saved
+      }
+    }
+
+    "must return an exception when returned by the repository" in {
+      val fixture = buildFixture()
+
+      val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
+
+      when(fixture.repository.insert(any)).thenReturn(Future.successful(Left(applicationException)))
+
+      fixture.service.create(newTeam)(any).map {
+        result =>
+          result.left.value mustBe applicationException
       }
     }
   }
@@ -142,6 +157,21 @@ class TeamsServiceSpec
       fixture.service.findById(id).map {
         result =>
           result mustBe Left(TeamNotFoundException.forId(id))
+      }
+    }
+  }
+
+  "findByName" - {
+    "must return the value from the repository" in {
+      val fixture = buildFixture()
+
+      when(fixture.repository.findByName(any)).thenReturn(Future.successful(Some(team1)))
+
+      fixture.service.findByName(team1.name).map {
+        result =>
+          result mustBe Some(team1)
+          verify(fixture.repository).findByName(eqTo(team1.name))
+          succeed
       }
     }
   }
@@ -263,5 +293,7 @@ object TeamsServiceSpec {
   val team1: Team = Team("test-team-1", LocalDateTime.now(), Seq(teamMember1, teamMember2))
   val team2: Team = Team("test-team-2", LocalDateTime.now(), Seq(teamMember3, teamMember4))
   val team3: Team = Team("test-team-3", LocalDateTime.now(), Seq(teamMember1))
+
+  val applicationException: ApplicationsException = new ApplicationsException("test-message", null) {}
 
 }

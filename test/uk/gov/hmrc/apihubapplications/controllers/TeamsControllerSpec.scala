@@ -29,7 +29,7 @@ import play.api.test.Helpers._
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
@@ -57,7 +57,7 @@ class TeamsControllerSpec
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val saved = newTeam.toTeam(Clock.systemDefaultZone()).setId("test-id")
 
-      when(fixture.teamsService.create(eqTo(newTeam))(any)).thenReturn(Future.successful(saved))
+      when(fixture.teamsService.create(eqTo(newTeam))(any)).thenReturn(Future.successful(Right(saved)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.create())
@@ -87,6 +87,27 @@ class TeamsControllerSpec
 
         status(result) mustBe BAD_REQUEST
         verifyZeroInteractions(fixture.teamsService)
+      }
+    }
+
+    "must return 409 Conflict when the team name is not unique" in {
+      val fixture = buildFixture()
+
+      val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
+      val exception = TeamNameNotUniqueException.forName(newTeam.name)
+
+      when(fixture.teamsService.create(any)(any)).thenReturn(Future.successful(Left(exception)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.create())
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(newTeam))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
       }
     }
   }
@@ -147,6 +168,36 @@ class TeamsControllerSpec
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.findById(id))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
+  "findByName" - {
+    "must return 200 OK and the team as JSON when it exists in the repository" in {
+      val fixture = buildFixture()
+
+      when(fixture.teamsService.findByName(any)).thenReturn(Future.successful(Some(team1)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.findByName(team1.name))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(team1)
+        verify(fixture.teamsService).findByName(eqTo(team1.name))
+      }
+    }
+
+    "must return 404 Not Found when a team cannot be found" in {
+      val fixture = buildFixture()
+
+      when(fixture.teamsService.findByName(any)).thenReturn(Future.successful(None))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.findByName(team1.name))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
