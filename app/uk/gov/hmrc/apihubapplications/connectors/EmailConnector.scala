@@ -41,5 +41,5 @@ trait EmailConnector {
 
   def sendNewAccessRequestEmailToApprovers(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
-  def sendTeamMemberAddedEmailToTeamMember(teamMember: TeamMember, team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+  def sendTeamMemberAddedEmailToTeamMembers(teamMembers: Seq[TeamMember], team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 }

@@ -57,7 +57,7 @@ class TeamsControllerSpec
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val saved = newTeam.toTeam(Clock.systemDefaultZone()).setId("test-id")
 
-      when(fixture.teamsService.create(eqTo(newTeam))).thenReturn(Future.successful(saved))
+      when(fixture.teamsService.create(eqTo(newTeam))(any)).thenReturn(Future.successful(saved))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.create())
