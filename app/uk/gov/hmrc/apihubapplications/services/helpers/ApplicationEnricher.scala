@@ -36,12 +36,12 @@ trait ApplicationEnricher {
 
 object ApplicationEnrichers {
 
-  type EnricherProvider = (Application, IdmsConnector, Boolean) => Future[Either[IdmsException, ApplicationEnricher]]
+  type EnricherProvider = (Application, IdmsConnector) => Future[Either[IdmsException, ApplicationEnricher]]
 
   def process(
-    application: Application,
-    enrichers: Seq[Future[Either[IdmsException, ApplicationEnricher]]]
-  )(implicit ec: ExecutionContext): Future[Either[IdmsException, Application]] = {
+               application: Application,
+               enrichers: Seq[Future[Either[IdmsException, ApplicationEnricher]]]
+             )(implicit ec: ExecutionContext): Future[Either[IdmsException, Application]] = {
     Future.sequence(enrichers)
       .map(useFirstException)
       .map {
@@ -52,15 +52,14 @@ object ApplicationEnrichers {
   }
 
   def processAll(
-    applications: Seq[Application],
-    enricherProvider: EnricherProvider,
-    idmsConnector: IdmsConnector,
-    failOnError: Boolean
-  )(implicit ec: ExecutionContext): Future[Either[IdmsException, Seq[Application]]] = {
+                  applications: Seq[Application],
+                  enricherProvider: EnricherProvider,
+                  idmsConnector: IdmsConnector
+                )(implicit ec: ExecutionContext): Future[Either[IdmsException, Seq[Application]]] = {
     Future.sequence(
       applications.map(
         application =>
-          enricherProvider(application, idmsConnector, failOnError).map {
+          enricherProvider(application, idmsConnector).map {
             case Right(enricher) => Right(enricher.enrich(application))
             case Left(error: IdmsException) => Left(error)
           }
@@ -75,15 +74,15 @@ object ApplicationEnrichers {
   }
 
   def secondaryCredentialApplicationEnricher(
-    original: Application,
-    idmsConnector: IdmsConnector
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+                                              original: Application,
+                                              idmsConnector: IdmsConnector
+                                            )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     type IssueOrClientResponse = Either[String, ClientResponse]
 
     def toIssuesOrClientResponses(results: Seq[Either[IdmsException, ClientResponse]]): Seq[Either[IdmsException, IssueOrClientResponse]] = {
       results.map {
         case Right(clientResponse) => Right(Right(clientResponse))
-        case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(Left(Issues.secondaryCredentialNotFound(e)))
+        case Left(e: IdmsException) => Right(Left(Issues.secondaryCredentialNotFound(e)))
         case Left(e) => Left(e)
       }
     }
@@ -101,11 +100,11 @@ object ApplicationEnrichers {
     }
 
     Future.sequence(
-      original.getSecondaryCredentials.map {
-        credential =>
-          idmsConnector.fetchClient(Secondary, credential.clientId)
-      }
-    )
+        original.getSecondaryCredentials.map {
+          credential =>
+            idmsConnector.fetchClient(Secondary, credential.clientId)
+        }
+      )
       .map(toIssuesOrClientResponses)
       .map(useFirstException)
       .map {
@@ -115,10 +114,9 @@ object ApplicationEnrichers {
   }
 
   def secondaryScopeApplicationEnricher(
-    original: Application,
-    idmsConnector: IdmsConnector,
-    failOnError: Boolean
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+                                         original: Application,
+                                         idmsConnector: IdmsConnector
+                                       )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
@@ -140,7 +138,7 @@ object ApplicationEnrichers {
           .fetchClientScopes(Secondary, credential.clientId)
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
-            case Left(e @ IdmsException(_, _, ClientNotFound)) if !failOnError => Right(buildIssuesEnricher(e))
+            case Left(e: IdmsException) => Right(buildIssuesEnricher(e))
             case Left(e) => Left(e)
           }
       case None => Future.successful(Right(noOpApplicationEnricher))
@@ -148,9 +146,9 @@ object ApplicationEnrichers {
   }
 
   def primaryScopeApplicationEnricher(
-    original: Application,
-    idmsConnector: IdmsConnector
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+                                       original: Application,
+                                       idmsConnector: IdmsConnector
+                                     )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
@@ -172,7 +170,7 @@ object ApplicationEnrichers {
           .fetchClientScopes(Primary, credential.clientId)
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
-            case Left(e @ IdmsException(_, _, ClientNotFound)) => Right(buildIssuesEnricher(e))
+            case Left(e: IdmsException) => Right(buildIssuesEnricher(e))
             case Left(e) => Left(e)
           }
       case None => Future.successful(Right(noOpApplicationEnricher))
@@ -180,12 +178,12 @@ object ApplicationEnrichers {
   }
 
   def credentialCreatingApplicationEnricher(
-    environmentName: EnvironmentName,
-    original: Application,
-    idmsConnector: IdmsConnector,
-    clock: Clock,
-    hiddenPrimary: Boolean = true
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+                                             environmentName: EnvironmentName,
+                                             original: Application,
+                                             idmsConnector: IdmsConnector,
+                                             clock: Clock,
+                                             hiddenPrimary: Boolean = true
+                                           )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     idmsConnector.createClient(environmentName, Client(original)).map {
       case Right(clientResponse) =>
         Right(
@@ -202,10 +200,10 @@ object ApplicationEnrichers {
   }
 
   def credentialDeletingApplicationEnricher(
-    environmentName: EnvironmentName,
-    clientId: String,
-    idmsConnector: IdmsConnector
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+                                             environmentName: EnvironmentName,
+                                             clientId: String,
+                                             idmsConnector: IdmsConnector
+                                           )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     def buildEnricher(): ApplicationEnricher = {
       (application: Application) => {
         environmentName match {
@@ -223,19 +221,19 @@ object ApplicationEnrichers {
   }
 
   def scopeAddingApplicationEnricher(
-    environmentName: EnvironmentName,
-    original: Application,
-    idmsConnector: IdmsConnector,
-    scopeName: String
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+                                      environmentName: EnvironmentName,
+                                      original: Application,
+                                      idmsConnector: IdmsConnector,
+                                      scopeName: String
+                                    )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     Future.sequence(
-      original
-        .getCredentialsFor(environmentName)
-        .map(
-          credential =>
-            idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
-        )
-    )
+        original
+          .getCredentialsFor(environmentName)
+          .map(
+            credential =>
+              idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
+          )
+      )
       .map(useFirstException)
       .map {
         case Right(_) =>
