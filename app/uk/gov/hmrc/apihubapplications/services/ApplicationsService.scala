@@ -93,24 +93,8 @@ class ApplicationsService @Inject()(
     }
   }
 
-  def findAll(): Future[Seq[Application]] = {
-    repository.findAll()
-  }
-
-  def filter(teamMemberEmail: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]] = {
-    repository.filter(teamMemberEmail).flatMap {
-      applications =>
-        if (enrich) {
-          ApplicationEnrichers.processAll(
-            applications,
-            ApplicationEnrichers.secondaryScopeApplicationEnricher _,
-            idmsConnector
-          )
-        }
-        else {
-          Future.successful(Right(applications))
-        }
-    }
+  def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
+    repository.findAll(teamMemberEmail, includeDeleted)
   }
 
   def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {

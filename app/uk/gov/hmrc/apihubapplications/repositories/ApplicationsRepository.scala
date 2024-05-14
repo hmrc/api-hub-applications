@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.Document
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
@@ -61,22 +62,29 @@ class ApplicationsRepository @Inject()(
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
-  def findAll(): Future[Seq[Application]] = {
+  def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find()
+        .find(emailFilter(teamMemberEmail))
         .toFuture()
-    } map (_.filter(_.deleted.isEmpty)
+    } map (_.filter(deletedFilter(includeDeleted))
       .map(_.decryptedValue.toModel))
   }
 
-  def filter(teamMemberEmail: String): Future[Seq[Application]] = {
-    Mdc.preservingMdc {
-      collection
-        .find(Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(teamMemberEmail)).email))
-        .toFuture()
-    } map (_.filter(_.deleted.isEmpty)
-      .map(_.decryptedValue.toModel))
+  private def deletedFilter(includeDeleted: Boolean)(application: SensitiveApplication): Boolean = {
+    if (includeDeleted) {
+      true
+    }
+    else {
+      application.deleted.isEmpty
+    }
+  }
+
+  private def emailFilter(teamMemberEmail: Option[String]): Bson = {
+    teamMemberEmail match {
+      case Some(email) => Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)
+      case None => Filters.empty()
+    }
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Application]] = {

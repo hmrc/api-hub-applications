@@ -159,6 +159,7 @@ class ApplicationsControllerSpec
     "must return 200 and a JSON array representing all applications in db in public form" in {
       val fixture = buildFixture()
       val now = LocalDateTime.now()
+
       running(fixture.application) {
         val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
         val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments())
@@ -174,11 +175,12 @@ class ApplicationsControllerSpec
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(None).url)
 
-        when(fixture.applicationsService.findAll()).thenReturn(Future.successful(expected_apps))
+        when(fixture.applicationsService.findAll(any(), any())).thenReturn(Future.successful(expected_apps))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
+        verify(fixture.applicationsService).findAll(ArgumentMatchers.eq(None), ArgumentMatchers.eq(false))
       }
     }
 
@@ -201,8 +203,8 @@ class ApplicationsControllerSpec
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
           Some(encrypt(crypto, teamMemberEmail))).url)
 
-        when(fixture.applicationsService.filter(ArgumentMatchers.eq(teamMemberEmail), ArgumentMatchers.eq(false))(any()))
-          .thenReturn(Future.successful(Right(expected_apps)))
+        when(fixture.applicationsService.findAll(ArgumentMatchers.eq(Some(teamMemberEmail)), ArgumentMatchers.eq(false)))
+          .thenReturn(Future.successful(expected_apps))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
@@ -210,45 +212,32 @@ class ApplicationsControllerSpec
       }
     }
 
-    "must enrich and return applications for a team member when requested" in {
+    "must return deleted applications in public form when requested" in {
       val fixture = buildFixture()
       val now = LocalDateTime.now()
+      val deleted = Deleted(now, "test-deleted-by")
+
       running(fixture.application) {
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).delete(deleted)
 
-        val teamMemberEmail = "jo.bloggs@hmrc.gov.uk"
-        val expected_apps = Seq(Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments()))
+        val expected_apps = Seq(application1, application2).zipWithIndex.map {
+          case (application, index) =>
+            application
+              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+        }
 
-        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
-        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
-          Some(encrypt(crypto, teamMemberEmail)),
-          enrich = true
-        ).url)
+        val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
 
-        when(fixture.applicationsService.filter(ArgumentMatchers.eq(teamMemberEmail), ArgumentMatchers.eq(true))(any()))
-          .thenReturn(Future.successful(Right(expected_apps)))
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(None, true).url)
+
+        when(fixture.applicationsService.findAll(any(), any())).thenReturn(Future.successful(expected_apps))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
-        contentAsJson(result) mustBe Json.toJson(expected_apps)
-      }
-    }
-
-    "must return Bad Gateway when an IdmsException is encountered" in {
-      val fixture = buildFixture()
-      running(fixture.application) {
-        val teamMemberEmail = "jo.bloggs@hmrc.gov.uk"
-
-        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
-        val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
-          Some(encrypt(crypto, teamMemberEmail)),
-          enrich = true
-        ).url)
-
-        when(fixture.applicationsService.filter(ArgumentMatchers.eq(teamMemberEmail), ArgumentMatchers.eq(true))(any()))
-          .thenReturn(Future.successful(Left(IdmsException.clientNotFound("test-client-id"))))
-
-        val result = route(fixture.application, request).value
-        status(result) mustBe Status.BAD_GATEWAY
+        contentAsJson(result) mustBe expected_json
+        verify(fixture.applicationsService).findAll(ArgumentMatchers.eq(None), ArgumentMatchers.eq(true))
       }
     }
   }

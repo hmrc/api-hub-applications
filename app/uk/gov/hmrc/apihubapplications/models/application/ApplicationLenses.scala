@@ -88,6 +88,12 @@ object ApplicationLenses {
       set = (application, apis) => application.copy(apis = apis)
     )
 
+  val applicationDeleted: Lens[Application, Option[Deleted]] =
+    Lens[Application, Option[Deleted]](
+      get = _.deleted,
+      set = (application, deleted) => application.copy(deleted = deleted)
+    )
+
   implicit class ApplicationLensOps(application: Application) {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
@@ -312,6 +318,10 @@ object ApplicationLenses {
 
     def updated(clock: Clock): Application = {
       application.copy(lastUpdated = LocalDateTime.now(clock))
+    }
+
+    def delete(deleted: Deleted): Application = {
+      applicationDeleted.set(application, Some(deleted))
     }
   }
 

@@ -296,19 +296,17 @@ class ApplicationsServiceSpec
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty)
       )
 
-      when(repository.findAll()).thenReturn(Future.successful(applications))
+      when(repository.findAll(any(), any())).thenReturn(Future.successful(applications))
 
-      service.findAll() map {
+      service.findAll(None, false) map {
         actual =>
           actual mustBe applications
-          verify(repository).findAll()
+          verify(repository).findAll(ArgumentMatchers.eq(None), ArgumentMatchers.eq(false))
           succeed
       }
     }
-  }
 
-  "filter" - {
-    "must return all applications from the repository for named team member without enrichment" in {
+    "must return all applications from the repository for named team member" in {
       val fixture = buildFixture
       import fixture._
 
@@ -317,84 +315,34 @@ class ApplicationsServiceSpec
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-1"), Seq(TeamMember("test-email-1")))
       )
 
-      when(repository.filter("test-email-1")).thenReturn(Future.successful(applications))
+      when(repository.findAll(any(), any())).thenReturn(Future.successful(applications))
 
-      service.filter("test-email-1", enrich = false)(HeaderCarrier()) map {
+      service.findAll(Some("test-email-1"), false) map {
         actual =>
-          actual mustBe Right(applications)
-          verify(repository).filter("test-email-1")
+          actual mustBe applications
+          verify(repository).findAll(ArgumentMatchers.eq(Some("test-email-1")), ArgumentMatchers.eq(false))
           succeed
       }
     }
 
-    "must return all applications from the repository for named team member with enrichment" in {
+    "must return deleted applications when requested" in {
       val fixture = buildFixture
       import fixture._
 
-      val email = "test-email"
-      val clientId1 = "test-client-id-1"
-      val clientId2 = "test-client-id-2"
-
-      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-creator-1"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None))
-      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-creator-2"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None))
-
-      val scopes1 = Seq("read:app1-scope1")
-      val scopes2 = Seq("read:app2-scope1", "read:app2-scope2")
+      val deleted = Deleted(LocalDateTime.now(clock), "test-deleted-by")
 
       val applications = Seq(
-        application1,
-        application2
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).delete(deleted),
+        Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty).delete(deleted)
       )
 
-      when(repository.filter(ArgumentMatchers.eq(email)))
-        .thenReturn(Future.successful(applications))
+      when(repository.findAll(any(), any())).thenReturn(Future.successful(applications))
 
-      when(fixture.idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId1))(any()))
-        .thenReturn(Future.successful(Right(scopes1.map(ClientScope(_)))))
-      when(fixture.idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId2))(any()))
-        .thenReturn(Future.successful(Right(scopes2.map(ClientScope(_)))))
-
-      service.filter(email, enrich = true)(HeaderCarrier()) map {
+      service.findAll(None, true) map {
         actual =>
-          actual mustBe Right(
-            Seq(
-              application1.setSecondaryScopes(scopes1.map(Scope(_))),
-              application2.setSecondaryScopes(scopes2.map(Scope(_)))
-            )
-          )
-      }
-    }
-
-    "must not return IdmsException when that is returned by the repository while enriching and return an issue instead" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val email = "test-email"
-      val clientId1 = "test-client-id-1"
-      val clientId2 = "test-client-id-2"
-      val idmsException = IdmsException.clientNotFound(clientId2)
-
-      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-creator-1"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None))
-      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-creator-2"), Seq(TeamMember(email))).addSecondaryCredential(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None))
-
-      val applications = Seq(
-        application1,
-        application2
-      )
-
-      val application2WithIssues = application2.copy(issues = Seq("Secondary scopes not found. Client not found: clientId=test-client-id-2"))
-
-      when(repository.filter(ArgumentMatchers.eq(email)))
-        .thenReturn(Future.successful(applications))
-
-      when(fixture.idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId1))(any()))
-        .thenReturn(Future.successful(Right(Seq.empty)))
-      when(fixture.idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId2))(any()))
-        .thenReturn(Future.successful(Left(idmsException)))
-
-      service.filter(email, enrich = true)(HeaderCarrier()) map {
-        actual =>
-          actual mustBe Right(Seq(application1, application2WithIssues))
+          actual mustBe applications
+          verify(repository).findAll(ArgumentMatchers.eq(None), ArgumentMatchers.eq(true))
+          succeed
       }
     }
   }
