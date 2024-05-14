@@ -104,8 +104,7 @@ class ApplicationsService @Inject()(
           ApplicationEnrichers.processAll(
             applications,
             ApplicationEnrichers.secondaryScopeApplicationEnricher _,
-            idmsConnector,
-            failOnError = true
+            idmsConnector
           )
         }
         else {
@@ -122,7 +121,7 @@ class ApplicationsService @Inject()(
             application,
             Seq(
               ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
-              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false),
+              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
               ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
             )
           )
@@ -146,7 +145,7 @@ class ApplicationsService @Inject()(
             accessRequestsService.cancelAccessRequests(applicationId) flatMap {
               case Right(_) => softDelete(application, currentUser) flatMap {
                 case Right(_) => sendApplicationDeletedEmails(application, currentUser) flatMap {
-                   _ => Future.successful(Right(()))
+                  _ => Future.successful(Right(()))
                 }
                 case Left(e) => Future.successful(Left(e))
               }
@@ -233,13 +232,13 @@ class ApplicationsService @Inject()(
   private def copyScopes(newCredential: NewCredential, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
     if (!newCredential.wasHidden) {
       Future.sequence(
-        newCredential.application
-          .getScopesFor(environmentName)
-          .map(
-            scope =>
-              idmsConnector.addClientScope(environmentName, newCredential.credential.clientId, scope.name)
-          )
-      )
+          newCredential.application
+            .getScopesFor(environmentName)
+            .map(
+              scope =>
+                idmsConnector.addClientScope(environmentName, newCredential.credential.clientId, scope.name)
+            )
+        )
         .map(useFirstException)
         .map {
           case Right(_) => Right(newCredential)
@@ -284,14 +283,14 @@ class ApplicationsService @Inject()(
     findById(accessRequest.applicationId, enrich = false).flatMap {
       case Right(application) =>
         Future.sequence(
-          application.getPrimaryCredentials.flatMap(
-            credential =>
-              accessRequest.endpoints.flatMap(_.scopes).distinct.map(
-                scope =>
-                  idmsConnector.addClientScope(Primary, credential.clientId, scope)
-              )
+            application.getPrimaryCredentials.flatMap(
+              credential =>
+                accessRequest.endpoints.flatMap(_.scopes).distinct.map(
+                  scope =>
+                    idmsConnector.addClientScope(Primary, credential.clientId, scope)
+                )
+            )
           )
-        )
           .map(useFirstException)
           .map {
             case Right(_) => Right(())
@@ -302,9 +301,9 @@ class ApplicationsService @Inject()(
   }
 
   def addTeamMember(
-    applicationId: String,
-    teamMember: TeamMember
-  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+                     applicationId: String,
+                     teamMember: TeamMember
+                   )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     findById(applicationId, enrich = false).flatMap {
       case Right(application) if !application.hasTeamMember(teamMember) =>
         repository.update(

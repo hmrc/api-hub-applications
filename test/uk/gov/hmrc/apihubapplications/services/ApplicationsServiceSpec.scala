@@ -365,7 +365,7 @@ class ApplicationsServiceSpec
       }
     }
 
-    "must return IdmsException when that is returned by the repository while enriching" in {
+    "must not return IdmsException when that is returned by the repository while enriching and return an issue instead" in {
       val fixture = buildFixture
       import fixture._
 
@@ -382,6 +382,8 @@ class ApplicationsServiceSpec
         application2
       )
 
+      val application2WithIssues = application2.copy(issues = Seq("Secondary scopes not found. Client not found: clientId=test-client-id-2"))
+
       when(repository.filter(ArgumentMatchers.eq(email)))
         .thenReturn(Future.successful(applications))
 
@@ -392,7 +394,7 @@ class ApplicationsServiceSpec
 
       service.filter(email, enrich = true)(HeaderCarrier()) map {
         actual =>
-          actual mustBe Left(idmsException)
+          actual mustBe Right(Seq(application1, application2WithIssues))
       }
     }
   }
@@ -451,7 +453,7 @@ class ApplicationsServiceSpec
       )
     }
 
-    "must return IdmsException when that is returned from the IDMS connector" in {
+    "must not return IdmsException when that is returned from the IDMS connector and return issues instead" in {
       val fixture = buildFixture
       import fixture._
 
@@ -460,6 +462,8 @@ class ApplicationsServiceSpec
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
         .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(fixture.clock), None, None)))
+
+      val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
 
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
@@ -470,8 +474,7 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(Seq.empty)))
 
       service.findById(id, enrich = true)(HeaderCarrier()).map {
-        result =>
-          result.left.value mustBe a[IdmsException]
+        result => result mustBe Right(application1WithIssues)
       }
     }
 

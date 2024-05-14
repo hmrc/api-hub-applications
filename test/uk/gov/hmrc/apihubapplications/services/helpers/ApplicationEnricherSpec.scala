@@ -21,8 +21,8 @@ import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, Issues, Primary, Scope, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
@@ -31,7 +31,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class ApplicationEnricherSpec   extends AsyncFreeSpec
+class ApplicationEnricherSpec extends AsyncFreeSpec
   with Matchers
   with MockitoSugar {
 
@@ -85,13 +85,12 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     "must successfully process multiple applications" in {
       ApplicationEnrichers.processAll(
         Seq(testApplication, testApplication2),
-        (application, _, _) =>
+        (application, _) =>
           successfulEnricher(
             _ => application.addTeamMember(s"team-member-${application.id}")
           )
         ,
-        mock[IdmsConnector],
-        failOnError = true
+        mock[IdmsConnector]
       ).map(
         actual =>
           actual mustBe Right(
@@ -108,7 +107,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
 
       ApplicationEnrichers.processAll(
         Seq(testApplication, testApplication2),
-        (application, _, _) =>
+        (application, _) =>
           if (application == testApplication) {
             Future.successful(Left(idmsException))
           }
@@ -116,8 +115,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
             successfulEnricher(identity)
           }
         ,
-        mock[IdmsConnector],
-        failOnError = true
+        mock[IdmsConnector]
       ).map(
         actual =>
           actual mustBe Left(idmsException)
@@ -127,9 +125,8 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
     "must handle an empty sequence of applications" in {
       ApplicationEnrichers.processAll(
         Seq.empty,
-        (_, _, _) => successfulEnricher(identity),
-        mock[IdmsConnector],
-        failOnError = true
+        (_, _) => successfulEnricher(identity),
+        mock[IdmsConnector]
       ).map(
         actual =>
           actual mustBe Right(Seq.empty)
@@ -171,7 +168,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       }
     }
 
-    "must return IdmsException if any call to IDMS fails" in {
+    "must not return IdmsException if any call to IDMS fails" in {
       val application = testApplication
         .setSecondaryCredentials(
           Seq(
@@ -180,19 +177,25 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
           )
         )
 
-      val expected = IdmsException("test-message", CallError)
+      val applicationWithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
+
+      val exception = IdmsException("test-message", CallError)
 
       val idmsConnector = mock[IdmsConnector]
 
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
       when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
-        .thenReturn(Future.successful(Left(expected)))
+        .thenReturn(Future.successful(Left(exception)))
 
-      ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
-        actual =>
-          actual mustBe Left(expected)
+      ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector) map {
+        case Right(enricher) =>
+          enricher.enrich(application) mustBe applicationWithIssues
+          verify(idmsConnector, times(2)).fetchClient(any(), any())(any())
+          succeed
+        case Left(e) => fail("Unexpected Left response", e)
       }
+
     }
 
     "must add an application issue if a credential cannot be found" in {
@@ -242,32 +245,37 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(Seq(testClientScope1, testClientScope2))))
 
-      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
 
     "must not modify an application if there are zero secondary credentials" in {
-      ApplicationEnrichers.secondaryScopeApplicationEnricher(testApplication, mock[IdmsConnector], failOnError = false).map {
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(testApplication, mock[IdmsConnector]).map {
         case Right(enricher) => enricher.enrich(testApplication) mustBe testApplication
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
 
-    "must return IdmsException if any call to IDMS fails" in {
+    "must not return IdmsException if any call to IDMS fails" in {
       val application = testApplication
         .setSecondaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
 
-      val expected = IdmsException("test-message", CallError)
+      val exception = IdmsException("test-message", CallError)
+
+      val applicationWithIssues = application.copy(issues = Seq("Secondary scopes not found. test-message"))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
-        .thenReturn(Future.successful(Left(expected)))
+        .thenReturn(Future.successful(Left(exception)))
 
-      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
-        actual =>
-          actual mustBe Left(expected)
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector) map {
+        case Right(enricher) =>
+          enricher.enrich(application) mustBe applicationWithIssues
+          verify(idmsConnector).fetchClientScopes(any(), any())(any())
+          succeed
+        case Left(e) => fail("Unexpected Left response", e)
       }
     }
 
@@ -282,7 +290,7 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
 
-      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, failOnError = false).map {
+      ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector).map {
         case Right(enricher) => enricher.enrich(application) mustBe expected
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -301,35 +309,40 @@ class ApplicationEnricherSpec   extends AsyncFreeSpec
       val application = testApplication
         .setPrimaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
 
-      val expected = IdmsException("test-message", CallError)
+      val exception = IdmsException("test-message", CallError)
+      val applicationWithIssues = application.copy(issues = Seq("Primary scopes not found. test-message"))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
-        .thenReturn(Future.successful(Left(expected)))
+        .thenReturn(Future.successful(Left(exception)))
 
-      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
-        actual =>
-          actual mustBe Left(expected)
-      }
-    }
-
-    "must add an application issue if the secondary credential cannot be found" in {
-      val application = testApplication
-        .setPrimaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
-
-      val expected = application
-        .addIssue(Issues.primaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
-
-      val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
-        .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
-
-      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
-        case Right(enricher) => enricher.enrich(application) mustBe expected
+      ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector) map {
+        case Right(enricher) =>
+          enricher.enrich(application) mustBe applicationWithIssues
+          verify(idmsConnector).fetchClientScopes(any(), any())(any())
+          succeed
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
   }
+
+  "must add an application issue if the secondary credential cannot be found" in {
+    val application = testApplication
+      .setPrimaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+
+    val expected = application
+      .addIssue(Issues.primaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
+
+    val idmsConnector = mock[IdmsConnector]
+    when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
+      .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
+
+    ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
+      case Right(enricher) => enricher.enrich(application) mustBe expected
+      case Left(e) => fail("Unexpected Left response", e)
+    }
+  }
+
 
   "credentialCreatingApplicationEnricher" - {
     "must create a credential in the primary environment and enrich the application with it" in {
