@@ -97,35 +97,80 @@ class ApplicationsRepositoryIntegrationSpec
       repository.insert(application4).futureValue
 
       val result = repository
-        .findAll()
+        .findAll(None, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
       result.data must contain theSameElementsAs Set(saved1, saved2)
       result.mdcData mustBe testMdcData
     }
-  }
 
-  "filter" - {
+    "must retrieve all applications including soft deleted from MongoDb" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+
+      val saved1 = repository.insert(application1).futureValue
+      val saved2 = repository.insert(application2).futureValue
+      val saved3 = repository.insert(application3).futureValue
+      val saved4 = repository.insert(application4).futureValue
+
+      val result = repository
+        .findAll(None, true)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Set(saved1, saved2, saved3, saved4)
+      result.mdcData mustBe testMdcData
+    }
+
     "must retrieve all applications that are not soft deleted from MongoDb belonging to named team member" in {
       setMdcData()
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
       val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
       val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val saved1 = repository.insert(application1).futureValue
       repository.insert(application2).futureValue
       repository.insert(application3).futureValue
       repository.insert(application4).futureValue
+
       val result = repository
-        .filter("test1@test.com")
+        .findAll(Some("test1@test.com"), false)
         .map(ResultWithMdcData(_))
         .futureValue
 
       result.data mustEqual Seq(saved1)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must retrieve all applications including soft deleted from MongoDb belonging to named team member" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+
+      val saved1 = repository.insert(application1).futureValue
+      repository.insert(application2).futureValue
+      val saved3 = repository.insert(application3).futureValue
+      repository.insert(application4).futureValue
+
+      val result = repository
+        .findAll(Some("test1@test.com"), true)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Seq(saved1, saved3)
       result.mdcData mustBe testMdcData
     }
   }

@@ -55,23 +55,11 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
-  def getApplications(teamMember: Option[String], enrich: Boolean): Action[AnyContent] = identify.compose(Action).async {
-    implicit request =>
-      teamMember match {
-        case None =>
-          applicationsService
-            .findAll()
-            .map(applications => Json.toJson(applications.map(_.makePublic())))
-            .map(Ok(_))
-        case Some(encryptedEmail) =>
-          applicationsService
-            .filter(decrypt(encryptedEmail), enrich)
-            .map {
-              case Right(applications) => Ok(Json.toJson(applications.map(_.makePublic())))
-              case Left(_: IdmsException) => BadGateway
-              case Left(error) => throw error
-            }
-      }
+  def getApplications(teamMember: Option[String], includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
+    applicationsService
+      .findAll(teamMember.map(decrypt), includeDeleted)
+      .map(applications => Json.toJson(applications.map(_.makePublic())))
+      .map(Ok(_))
   }
 
   def getApplication(id: String, enrich: Boolean): Action[AnyContent] = identify.compose(Action).async {

@@ -4,7 +4,7 @@ POST       /applications                                                        
 POST       /applications/:id/environments/:environmentName/credentials              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addCredential(id: String, environmentName: EnvironmentName)
 DELETE     /applications/:id/environments/:environmentName/credentials/:clientId    uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteCredential(id: String, environmentName: EnvironmentName, clientId: String)
 
-GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None, enrich: Boolean ?= false)
+GET        /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplications(teamMember: Option[String] ?= None, includeDeleted: Boolean ?= false)
 GET        /applications/:id                                                        uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplication(id: String, enrich: Boolean ?= false)
 POST       /applications/:id/delete                                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
 PUT        /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
