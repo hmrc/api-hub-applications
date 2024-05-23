@@ -18,7 +18,8 @@ GET        /access-requests/:id                                                 
 
 GET        /test-connectivity                                                       uk.gov.hmrc.apihubapplications.controllers.TestConnectivityController.connectToHip
 
-POST       /deployments/generate                                                    uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.generate()
+POST       /deployments                                                             uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.generate()
+PUT        /deployments/:publisherRef                                               uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.update(publisherRef: String)
 
 POST       /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.create()
 GET        /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.findAll(teamMember: Option[String] ?= None)

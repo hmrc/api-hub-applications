@@ -146,6 +146,10 @@ trait ExceptionRaising {
     def invalidResponse(errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]): ApimException = {
       log(ApimException.invalidResponse(errors))
     }
+
+    def serviceNotFound(serviceId: String): ApimException = {
+      log(ApimException.serviceNotFound(serviceId))
+    }
   }
 
   object raiseTeamNotFoundException {

@@ -53,8 +53,6 @@ class APIMConnectorImpl @Inject()(
           }
           else if (response.status.intValue == BAD_REQUEST) {
             handleBadRequest(response)
-              .map(Right(_))
-              .getOrElse(Left(raiseApimException.unexpectedResponse(BAD_REQUEST)))
           }
           else {
             Left(raiseApimException.unexpectedResponse(response.status.intValue))
@@ -81,16 +79,10 @@ class APIMConnectorImpl @Inject()(
       .map(
         response =>
           if (is2xx(response.status)) {
-            logger.info(s"APIM Response: ${Json.prettyPrint(Json.toJson(response.body))}")
-            response.json.validate[SuccessfulDeploymentsResponse].fold(
-              (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseApimException.invalidResponse(errors)),
-              deploymentsResponse => Right(deploymentsResponse)
-            )
+            handleSuccessfulRequest(response)
           }
           else if (response.status.intValue == BAD_REQUEST) {
             handleBadRequest(response)
-              .map(Right(_))
-              .getOrElse(Left(raiseApimException.unexpectedResponse(BAD_REQUEST)))
           }
           else {
             Left(raiseApimException.unexpectedResponse(response.status.intValue))
@@ -98,22 +90,68 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  private def handleBadRequest(response: HttpResponse): Option[InvalidOasResponse] = {
-    if (response.body.isEmpty) {
+  override def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
+    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
+
+    httpClient.put(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
+      .setHeader(headersForEnvironment(Secondary): _*)
+      .withProxyIfRequired(Secondary, useProxyForSecondary)
+      .setHeader("Accept" -> "application/json")
+      .withBody(
+        Source(
+          Seq(
+            DataPart("metadata", Json.toJson(UpdateMetadata(request)).toString()),
+            DataPart("openapi", request.oas)
+          )
+        )
+      )
+      .execute[HttpResponse]
+      .map(
+        response =>
+          if (is2xx(response.status)) {
+            handleSuccessfulRequest(response)
+          }
+          else if (response.status.intValue == BAD_REQUEST) {
+            handleBadRequest(response)
+          }
+          else if (response.status.intValue == NOT_FOUND) {
+            Left(raiseApimException.serviceNotFound(publisherReference))
+          }
+          else {
+            Left(raiseApimException.unexpectedResponse(response.status.intValue))
+          }
+      )
+  }
+
+  private def handleSuccessfulRequest(response: HttpResponse): Either[ApimException, SuccessfulDeploymentsResponse] = {
+    response.json.validate[SuccessfulDeploymentsResponse].fold(
+      (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseApimException.invalidResponse(errors)),
+      deploymentsResponse => {
+        logger.info(s"APIM Response: ${Json.prettyPrint(Json.toJson(deploymentsResponse))}")
+        Right(deploymentsResponse)
+      }
+    )
+  }
+
+  private def handleBadRequest(response: HttpResponse): Either[ApimException, InvalidOasResponse] = {
+    (if (response.body.isEmpty) {
       None
     }
     else {
-      response.json.validate[FailuresResponse].fold(
-        _ => {
-          logger.warn(s"Unknown response body from Simple OAS Deployment service:${System.lineSeparator()}${response.body}")
-          None
-        },
-        failure => {
-          logger.warn(s"Received failure response from Simple OAS Deployment service: ${response.json}")
-          Some(InvalidOasResponse(failure))
-        }
-      )
-    }
+      response.json.validate[FailuresResponse]
+        .fold(
+          _ => {
+            logger.warn(s"Unknown response body from Simple OAS Deployment service:${System.lineSeparator()}${response.body}")
+            None
+          },
+          failure => {
+            logger.warn(s"Received failure response from Simple OAS Deployment service: ${response.json}")
+            Some(InvalidOasResponse(failure))
+          }
+        )
+    })
+      .map(Right(_))
+      .getOrElse(Left(raiseApimException.unexpectedResponse(BAD_REQUEST)))
   }
 
   override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {

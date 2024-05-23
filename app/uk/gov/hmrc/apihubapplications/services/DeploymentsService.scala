@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, RedeploymentRequest, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -39,6 +39,13 @@ class DeploymentsService @Inject()(
       deploymentsResponse <- apimConnector.deployToSecondary(request)
       linkApiToTeamResponse <- linkApiToTeam(deploymentsResponse, request.teamId)
     } yield linkApiToTeamResponse
+  }
+
+  def redeployToSecondary(
+    publisherRef: String,
+    request: RedeploymentRequest
+  )(implicit hc: HeaderCarrier):  Future[Either[ApplicationsException, DeploymentsResponse]] = {
+    apimConnector.redeployToSecondary(publisherRef, request)
   }
 
   private def linkApiToTeam(

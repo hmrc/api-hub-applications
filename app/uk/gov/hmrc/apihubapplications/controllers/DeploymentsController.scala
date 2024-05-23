@@ -21,10 +21,10 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidResponse
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -45,7 +45,21 @@ class DeploymentsController @Inject()(
         case JsSuccess(deploymentsRequest, _) => deploymentsService.deployToSecondary(deploymentsRequest) map {
           case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
           case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
-          case Left(e: ApimException) if e.issue equals InvalidResponse => BadRequest
+          case Left(e) => throw e
+        }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+  }
+
+  def update(publisherRef: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
+    implicit request =>
+      request.body.validate[RedeploymentRequest] match {
+        case JsSuccess(redeploymentRequest, _) => deploymentsService.redeployToSecondary(publisherRef, redeploymentRequest) map {
+          case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
+          case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
+          case Left(e: ApimException) if e.issue == ServiceNotFound => NotFound
           case Left(e) => throw e
         }
         case e: JsError =>

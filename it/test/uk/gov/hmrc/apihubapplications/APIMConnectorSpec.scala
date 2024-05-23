@@ -65,7 +65,13 @@ class APIMConnectorSpec
     egress = "test-egress",
     teamId = "test-team-id",
     oas = oas,
-    true,
+    passthrough = true,
+    status = "a status"
+  )
+
+  private val redeploymentRequest = RedeploymentRequest(
+    description = "test-description",
+    oas = oas,
     status = "a status"
   )
 
@@ -93,7 +99,7 @@ class APIMConnectorSpec
         Error("test-type-2", "test-message-2")
       )
 
-      val failure = FailuresResponse("failure_code","failure_reason",Some(errors))
+      val failure = FailuresResponse("failure_code", "failure_reason", Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
@@ -141,7 +147,7 @@ class APIMConnectorSpec
     }
   }
 
-  "APIMConnector.deploymentsSecondary" - {
+  "APIMConnector.deployToSecondary" - {
     "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
       val response = SuccessfulDeploymentsResponse(
         id = "test-id",
@@ -199,7 +205,7 @@ class APIMConnectorSpec
         Error("test-type-2", "test-message-2")
       )
 
-      val failure = FailuresResponse("failure_code","failure_reason",Some(errors))
+      val failure = FailuresResponse("failure_code", "failure_reason", Some(errors))
 
       stubFor(
         post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
@@ -245,93 +251,226 @@ class APIMConnectorSpec
           actual mustBe Left(ApimException.unexpectedResponse(500))
       }
     }
+  }
 
-    "APIMConnector.getDeployment" - {
-      "must place the correct request to the APIM in primary" in {
-        val response = SuccessfulDeploymentResponse("publisher_ref")
-        stubFor(
-          get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Authorization", equalTo(authorizationTokenPrimary))
-            .willReturn(
-              aResponse()
-                .withBody(Json.toJson(response).toString())
-                .withStatus(200)
-            )
-        )
+  "APIMConnector.redeployToSecondary" - {
+    "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
+      val publisherRef = "test-publisher-ref"
 
-        buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
-          actual =>
-            actual mustBe Right(Some(response))
-        }
+      val response = SuccessfulDeploymentsResponse(
+        id = "test-id",
+        version = "v1.2.3",
+        mergeRequestIid = 201,
+        uri = "test-uri"
+      )
+
+      stubFor(
+        put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
+          .withHeader("Content-Type", containing("multipart/form-data"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
+          .withHeader("Accept", equalTo("application/json"))
+          .withMultipartRequestBody(
+            aMultipart()
+              .withName("metadata")
+              .withBody(equalToJson(Json.toJson(UpdateMetadata(redeploymentRequest)).toString()))
+          )
+          .withMultipartRequestBody(
+            aMultipart()
+              .withName("openapi")
+              .withBody(equalTo(oas))
+          )
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(response).toString())
+          )
+      )
+
+      buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(response)
       }
-
-      "must place the correct request to the APIM in secondary" in {
-        val response = SuccessfulDeploymentResponse("publisher_ref")
-        stubFor(
-          get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Authorization", equalTo(authorizationTokenSecondary))
-            .withHeader("x-api-key", equalTo(secondaryApiKey))
-            .willReturn(
-              aResponse()
-                .withBody(Json.toJson(response).toString())
-                .withStatus(200)
-            )
-        )
-
-        buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
-          actual =>
-            actual mustBe Right(Some(response))
-        }
-      }
-
-      "must handle 404 in primary" in {
-        stubFor(
-          get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Authorization", equalTo(authorizationTokenPrimary))
-            .willReturn(
-              aResponse()
-                .withStatus(404)
-            )
-        )
-
-        buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
-          actual =>
-            actual mustBe Right(None)
-        }
-      }
-
-      "must handle 404 in secondary" in {
-        stubFor(
-          get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
-            .withHeader("Authorization", equalTo(authorizationTokenSecondary))
-            .willReturn(
-              aResponse()
-                .withStatus(404)
-            )
-        )
-
-        buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
-          actual =>
-            actual mustBe Right(None)
-        }
-      }
-
-      "must return unexpected response when APIM returns one" in {
-        stubFor(
-          get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
-            .willReturn(
-              aResponse()
-                .withStatus(500)
-            )
-        )
-
-        buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
-          actual =>
-            actual mustBe Left(ApimException.unexpectedResponse(500))
-        }
-      }
-
     }
+
+    "must return invalid response when the Simple API Deployment service's response cannot be parsed'" in {
+      val publisherRef = "test-publisher-ref"
+
+      stubFor(
+        put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
+          .willReturn(
+            aResponse()
+              .withBody("{}")
+          )
+      )
+
+      buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        actual =>
+          actual.left.value.issue mustBe ApimException.InvalidResponse
+      }
+    }
+
+    "must return OAS validation failures when returned from the Simple API Deployment service" in {
+      val publisherRef = "test-publisher-ref"
+
+      val errors = Seq(
+        Error("test-type-1", "test-message-1"),
+        Error("test-type-2", "test-message-2")
+      )
+
+      val failure = FailuresResponse("failure_code", "failure_reason", Some(errors))
+
+      stubFor(
+        put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
+          .willReturn(
+            aResponse()
+              .withStatus(400)
+              .withBody(Json.toJson(failure).toString())
+          )
+      )
+
+      buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(InvalidOasResponse(failure))
+      }
+    }
+
+    "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
+      val publisherRef = "test-publisher-ref"
+
+      stubFor(
+        put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
+          .willReturn(
+            aResponse()
+              .withStatus(400)
+          )
+      )
+
+      buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(ApimException.unexpectedResponse(400))
+      }
+    }
+
+    "must return unexpected response when the Simple API Deployment service returns one" in {
+      val publisherRef = "test-publisher-ref"
+
+      stubFor(
+        put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
+          .willReturn(
+            aResponse()
+              .withStatus(500)
+          )
+      )
+
+      buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(ApimException.unexpectedResponse(500))
+      }
+    }
+
+    "must return ServiceNotFound when the Simple API Deployment service returns 404 Not Found" in {
+      val publisherRef = "test-publisher-ref"
+
+      stubFor(
+        put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(ApimException.serviceNotFound(publisherRef))
+      }
+    }
+  }
+
+  "APIMConnector.getDeployment" - {
+    "must place the correct request to the APIM in primary" in {
+      val response = SuccessfulDeploymentResponse("publisher_ref")
+      stubFor(
+        get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+          .withHeader("Authorization", equalTo(authorizationTokenPrimary))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(response).toString())
+              .withStatus(200)
+          )
+      )
+
+      buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(Some(response))
+      }
+    }
+
+    "must place the correct request to the APIM in secondary" in {
+      val response = SuccessfulDeploymentResponse("publisher_ref")
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(response).toString())
+              .withStatus(200)
+          )
+      )
+
+      buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(Some(response))
+      }
+    }
+
+    "must handle 404 in primary" in {
+      stubFor(
+        get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+          .withHeader("Authorization", equalTo(authorizationTokenPrimary))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(None)
+      }
+    }
+
+    "must handle 404 in secondary" in {
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector().getDeployment("publisher_ref", Secondary)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(None)
+      }
+    }
+
+    "must return unexpected response when APIM returns one" in {
+      stubFor(
+        get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+          .willReturn(
+            aResponse()
+              .withStatus(500)
+          )
+      )
+
+      buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(ApimException.unexpectedResponse(500))
+      }
+    }
+
   }
 
   private def buildConnector(): APIMConnector = {
