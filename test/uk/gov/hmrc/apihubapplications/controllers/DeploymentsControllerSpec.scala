@@ -33,7 +33,6 @@ import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
-import uk.gov.hmrc.apihubapplications.controllers.DeploymentsControllerSpec.{buildFixture, failResponses, successResponses}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
@@ -52,7 +51,9 @@ class DeploymentsControllerSpec
     with CryptoUtils
     with TableDrivenPropertyChecks {
 
-  "deployToSecondary" - {
+  import DeploymentsControllerSpec._
+
+  "generate" - {
     "must return Ok for a valid request with a success response from downstream" in {
       val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
@@ -195,6 +196,111 @@ class DeploymentsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
       }
+    }
+
+    "must throw ApimException when raised downstream" in {
+      val fixture = buildFixture()
+
+      val deployRequest = DeploymentsRequest(
+        "lineOfBusiness",
+        "name",
+        "description",
+        "egress",
+        "teamId",
+        "oas",
+        false,
+        "status"
+      )
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.generate())
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(deployRequest))
+
+        when(fixture.deploymentsService.deployToSecondary(any())(any()))
+          .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
+
+        val result = route(fixture.application, request).value
+        val e = the [ApimException] thrownBy status(result)
+        e mustBe ApimException.unexpectedResponse(500)
+      }
+
+    }
+  }
+
+  "update" - {
+    "must return Ok for a valid request with a success response from downstream" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(redeploymentRequest))
+
+        when(fixture.deploymentsService.redeployToSecondary(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(redeploymentRequest))(any()))
+          .thenReturn(Future.successful(Right(deploymentsResponse)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(deploymentsResponse)
+      }
+    }
+
+    "must return 400 Bad Request and a Failure with Errors when returned from downstream" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(redeploymentRequest))
+
+        when(fixture.deploymentsService.redeployToSecondary(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(redeploymentRequest))(any()))
+          .thenReturn(Future.successful(Right(invalidOasResponse)))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+        contentAsJson(result) mustBe Json.toJson(invalidOasResponse)
+      }
+    }
+
+    "must return 400 Bad Request when the JSON is not a valid application" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.obj())
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
+    }
+
+    "must throw ApimException when raised downstream" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(redeploymentRequest))
+
+        when(fixture.deploymentsService.redeployToSecondary(any(), any())(any()))
+          .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
+
+        val result = route(fixture.application, request).value
+        val e = the [ApimException] thrownBy status(result)
+        e mustBe ApimException.unexpectedResponse(500)
+      }
 
     }
   }
@@ -269,7 +375,29 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
     Fixture(application, deploymentsService)
   }
 
+  val publisherRef = "test-publisher-ref"
+
+  val redeploymentRequest: RedeploymentRequest = RedeploymentRequest(
+    description = "test-description",
+    oas = "test-oas",
+    status = "test-status"
+  )
+
+  val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
   val deploymentResponse: SuccessfulDeploymentResponse = SuccessfulDeploymentResponse("publisher_ref")
+
+  val invalidOasResponse: InvalidOasResponse = InvalidOasResponse(
+    failure = FailuresResponse(
+      code = "test-code",
+      reason = "test-reason",
+      errors = Some(Seq(
+        Error(
+          `type` = "test-type",
+          message = "test-message"
+        )
+      ))
+    )
+  )
 
   val successResponses: TableFor3[Option[SuccessfulDeploymentResponse], Option[SuccessfulDeploymentResponse], DeploymentStatus] = Table(
     ("primary", "secondary", "expected"),
@@ -280,6 +408,7 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
   )
 
   private val exception: ApimException = ApimException.unexpectedResponse(500)
+
   val failResponses: TableFor2[Either[ApimException, Option[SuccessfulDeploymentResponse]], Either[ApimException, Option[SuccessfulDeploymentResponse]]] = Table(
     ("primary", "secondary"),
     (Right(Some(deploymentResponse)), Left(exception)),

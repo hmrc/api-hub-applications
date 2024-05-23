@@ -22,7 +22,7 @@ import org.scalatest.matchers.must.Matchers
 import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, IntegrationCatalogueException}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -90,6 +90,32 @@ class DeploymentsServiceSpec
     }
   }
 
+  "redeployToSecondary" - {
+    "must pass the request to APIM and return the response" in {
+      val fixture = buildFixture()
+
+      when(fixture.apimConnector.redeployToSecondary(any, any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
+
+      fixture.deploymentsService.redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        result =>
+          result mustBe Right(deploymentsResponse)
+          verify(fixture.apimConnector).redeployToSecondary(eqTo(publisherRef), eqTo(redeploymentRequest))(any)
+          succeed
+      }
+    }
+
+    "must return any failure from APIM" in {
+      val fixture = buildFixture()
+
+      when(fixture.apimConnector.redeployToSecondary(any, any)(any)).thenReturn(Future.successful(Left(ApimException.unexpectedResponse(BAD_REQUEST))))
+
+      fixture.deploymentsService.redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApimException.unexpectedResponse(BAD_REQUEST))
+      }
+    }
+  }
+
   "getDeployment" - {
     "must pass the request to the APIM connector and return the response" in {
       val fixture = buildFixture()
@@ -127,5 +153,13 @@ object DeploymentsServiceSpec {
 
   val deploymentsRequest: DeploymentsRequest = DeploymentsRequest("test-line-of-business", "test-name", "test-description", "test-egress", "test-team-id", "test-oas", false, "a status")
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("test-id", "test-version", 42, "test-uri")
+
+  val publisherRef = "test-publisher-ref"
+
+  val redeploymentRequest: RedeploymentRequest = RedeploymentRequest(
+    description = "test-description",
+    oas = "test-oas",
+    status = "test-status"
+  )
 
 }
