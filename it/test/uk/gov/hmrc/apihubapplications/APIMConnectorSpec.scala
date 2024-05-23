@@ -368,7 +368,7 @@ class APIMConnectorSpec
       }
     }
 
-    "must return ServiceNotFound when the Simple API Deployment service returns 4040 Not Found" in {
+    "must return ServiceNotFound when the Simple API Deployment service returns 404 Not Found" in {
       val publisherRef = "test-publisher-ref"
 
       stubFor(

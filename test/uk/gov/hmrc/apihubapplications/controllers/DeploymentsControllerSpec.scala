@@ -303,7 +303,7 @@ class DeploymentsControllerSpec
       }
     }
 
-    "must return 4040 Not Found when the publisher ref does not identify a service known to APIM" in {
+    "must return 404 Not Found when the publisher ref does not identify a service known to APIM" in {
       val fixture = buildFixture()
 
       running(fixture.application) {
