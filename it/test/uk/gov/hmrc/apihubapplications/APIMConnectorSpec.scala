@@ -367,6 +367,23 @@ class APIMConnectorSpec
           actual mustBe Left(ApimException.unexpectedResponse(500))
       }
     }
+
+    "must return ServiceNotFound when the Simple API Deployment service returns 4040 Not Found" in {
+      val publisherRef = "test-publisher-ref"
+
+      stubFor(
+        put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Left(ApimException.serviceNotFound(publisherRef))
+      }
+    }
   }
 
   "APIMConnector.getDeployment" - {

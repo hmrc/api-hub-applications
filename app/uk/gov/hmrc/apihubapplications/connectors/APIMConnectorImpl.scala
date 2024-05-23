@@ -114,6 +114,9 @@ class APIMConnectorImpl @Inject()(
           else if (response.status.intValue == BAD_REQUEST) {
             handleBadRequest(response)
           }
+          else if (response.status.intValue == NOT_FOUND) {
+            Left(raiseApimException.serviceNotFound(publisherReference))
+          }
           else {
             Left(raiseApimException.unexpectedResponse(response.status.intValue))
           }

@@ -23,6 +23,8 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -57,6 +59,7 @@ class DeploymentsController @Inject()(
         case JsSuccess(redeploymentRequest, _) => deploymentsService.redeployToSecondary(publisherRef, redeploymentRequest) map {
           case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
           case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
+          case Left(e: ApimException) if e.issue == ServiceNotFound => NotFound
           case Left(e) => throw e
         }
         case e: JsError =>

@@ -301,7 +301,24 @@ class DeploymentsControllerSpec
         val e = the [ApimException] thrownBy status(result)
         e mustBe ApimException.unexpectedResponse(500)
       }
+    }
 
+    "must return 4040 Not Found when the publisher ref does not identify a service known to APIM" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(redeploymentRequest))
+
+        when(fixture.deploymentsService.redeployToSecondary(any(), any())(any()))
+          .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe NOT_FOUND
+      }
     }
   }
 
