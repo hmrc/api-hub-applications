@@ -81,6 +81,7 @@ class APIMConnectorImpl @Inject()(
       .map(
         response =>
           if (is2xx(response.status)) {
+            logger.info(s"APIM Response: ${Json.prettyPrint(Json.toJson(response.body))}")
             response.json.validate[SuccessfulDeploymentsResponse].fold(
               (errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]) => Left(raiseApimException.invalidResponse(errors)),
               deploymentsResponse => Right(deploymentsResponse)
