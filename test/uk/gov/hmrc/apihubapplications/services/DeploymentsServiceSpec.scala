@@ -19,10 +19,11 @@ package uk.gov.hmrc.apihubapplications.services
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, DeploymentsResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, IntegrationCatalogueException}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -33,7 +34,8 @@ class DeploymentsServiceSpec
   extends AsyncFreeSpec
     with Matchers
     with MockitoSugar
-    with ArgumentMatchersSugar {
+    with ArgumentMatchersSugar
+    with TableDrivenPropertyChecks {
 
   import DeploymentsServiceSpec._
 
@@ -129,6 +131,31 @@ class DeploymentsServiceSpec
           result mustBe Right(Some(deploymentResponse))
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
           succeed
+      }
+    }
+  }
+
+  "promoteToProduction" - {
+    "must pass the correct request to APIM and return the response" in {
+      val publisherRef = "test-publisher-ref"
+
+      val responses = Table(
+        "response",
+        Right(deploymentsResponse),
+        Left(ApimException.serviceNotFound(publisherRef))
+      )
+
+      forAll(responses) {(response: Either[ApimException, DeploymentsResponse]) =>
+        val fixture = buildFixture()
+
+        when(fixture.apimConnector.promoteToProduction(any)(any)).thenReturn(Future.successful(response))
+
+        fixture.deploymentsService.promoteToProduction(publisherRef)(HeaderCarrier()).map {
+          actual =>
+            actual mustBe response
+            verify(fixture.apimConnector).promoteToProduction(eqTo(publisherRef))(any)
+            succeed
+        }
       }
     }
   }

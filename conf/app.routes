@@ -20,6 +20,7 @@ GET        /test-connectivity                                                   
 
 POST       /deployments                                                             uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.generate()
 PUT        /deployments/:publisherRef                                               uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.update(publisherRef: String)
+PUT        /deployments/:publisherRef/promote                                       uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.promoteToProduction(publisherRef: String)
 
 POST       /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.create()
 GET        /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.findAll(teamMember: Option[String] ?= None)
