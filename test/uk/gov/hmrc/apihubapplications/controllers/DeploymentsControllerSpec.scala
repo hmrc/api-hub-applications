@@ -367,6 +367,70 @@ class DeploymentsControllerSpec
       }
     }
   }
+
+  "promoteToProduction" - {
+    "must return 200 Ok and a SuccessfulDeploymentsResponse when APIM returns success" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.promoteToProduction(any)(any))
+        .thenReturn(Future.successful(Right(deploymentsResponse)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(deploymentsResponse)
+
+        verify(fixture.deploymentsService).promoteToProduction(ArgumentMatchers.eq(publisherRef))(any)
+      }
+    }
+
+    "must return 400 Bad Request and an InvalidOasResponse when APIM returns failure" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.promoteToProduction(any)(any))
+        .thenReturn(Future.successful(Right(invalidOasResponse)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+        contentAsJson(result) mustBe Json.toJson(invalidOasResponse)
+      }
+    }
+
+    "must return 404 Not Found when APIM cannot find the service" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.promoteToProduction(any)(any))
+        .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must throw ApimException when raised downstream" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.promoteToProduction(any)(any))
+        .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val result = route(fixture.application, request).value
+
+        val e = the [ApimException] thrownBy status(result)
+        e mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR)
+      }
+    }
+  }
+
 }
 
 object DeploymentsControllerSpec extends TableDrivenPropertyChecks {

@@ -81,4 +81,14 @@ class DeploymentsController @Inject()(
       }
   }
 
+  def promoteToProduction(publisherRef: String): Action[AnyContent] = identify.async {
+    implicit request =>
+      deploymentsService.promoteToProduction(publisherRef).map {
+        case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
+        case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
+        case Left(e) if e.issue == ServiceNotFound => NotFound
+        case Left(e) => throw e
+      }
+  }
+
 }
