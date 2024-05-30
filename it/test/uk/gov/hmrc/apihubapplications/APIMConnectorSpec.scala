@@ -308,7 +308,6 @@ class APIMConnectorSpec
 
   "APIMConnector.getDeployment" - {
     "must place the correct request to the APIM in primary" in {
-      val response = SuccessfulDeploymentResponse("publisher_ref", "1")
       stubFor(
         get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
           .withHeader("Authorization", equalTo(authorizationTokenPrimary))
@@ -326,7 +325,6 @@ class APIMConnectorSpec
     }
 
     "must place the correct request to the APIM in secondary" in {
-      val response = SuccessfulDeploymentResponse("publisher_ref", "1")
       stubFor(
         get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments/publisher_ref"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
