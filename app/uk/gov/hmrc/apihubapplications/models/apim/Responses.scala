@@ -42,7 +42,7 @@ object InvalidOasResponse {
 
 sealed trait DeploymentResponse
 
-case class SuccessfulDeploymentResponse(id: String) extends DeploymentResponse
+case class SuccessfulDeploymentResponse(id: String, oasVersion: String) extends DeploymentResponse
 
 object SuccessfulDeploymentResponse {
 

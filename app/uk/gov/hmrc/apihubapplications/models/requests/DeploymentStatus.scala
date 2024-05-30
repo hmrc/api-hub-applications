@@ -18,7 +18,8 @@ package uk.gov.hmrc.apihubapplications.models.requests
 
 import play.api.libs.json.{Format, Json}
 
-case class DeploymentStatus(primary: Boolean, secondary: Boolean)
+case class DeploymentStatus(primaryVersion: Option[String], secondaryVersion: Option[String])
+
 object DeploymentStatus {
   implicit val formatDeploymentStatus: Format[DeploymentStatus] = Json.format[DeploymentStatus]
 }

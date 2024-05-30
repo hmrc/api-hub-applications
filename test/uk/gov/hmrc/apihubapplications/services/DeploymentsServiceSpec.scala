@@ -122,7 +122,7 @@ class DeploymentsServiceSpec
     "must pass the request to the APIM connector and return the response" in {
       val fixture = buildFixture()
       val publisherRef = "test-publisher-ref"
-      val deploymentResponse = SuccessfulDeploymentResponse("test-id")
+      val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
 
       when(fixture.apimConnector.getDeployment(any, any)(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
 
