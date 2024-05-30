@@ -171,6 +171,35 @@ class APIMConnectorImpl @Inject()(
       }
   }
 
+  override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
+    val deploymentFrom = DeploymentFrom(
+      env = "env/test",
+      serviceId = publisherReference
+    )
+
+    httpClient.put(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/deployment-from")
+      .setHeader("Authorization" -> authorizationForEnvironment(Primary))
+      .setHeader("Content-Type" -> "application/json")
+      .setHeader("Accept" -> "application/json")
+      .withBody(Json.toJson(deploymentFrom))
+      .execute[HttpResponse]
+      .map(
+        response =>
+          if (is2xx(response.status)) {
+            handleSuccessfulRequest(response)
+          }
+          else if (response.status.intValue == BAD_REQUEST) {
+            handleBadRequest(response)
+          }
+          else if (response.status.intValue == NOT_FOUND) {
+            Left(raiseApimException.serviceNotFound(publisherReference))
+          }
+          else {
+            Left(raiseApimException.unexpectedResponse(response.status.intValue))
+          }
+      )
+  }
+
   private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
     val baseUrl = servicesConfig.baseUrl(s"apim-$environmentName")
     val path = servicesConfig.getConfString(s"apim-$environmentName.path", "")
