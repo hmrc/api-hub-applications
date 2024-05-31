@@ -551,7 +551,7 @@ object APIMConnectorSpec {
     ))
   )
 
-  private val successfulDeploymentResponse = SuccessfulDeploymentResponse(publisherRef)
+  private val successfulDeploymentResponse = SuccessfulDeploymentResponse(publisherRef, "1")
 
   private val successfulDeploymentsResponse =
     SuccessfulDeploymentsResponse(

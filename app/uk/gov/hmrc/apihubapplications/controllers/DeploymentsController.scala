@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentsRequest, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse}
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
@@ -73,12 +73,18 @@ class DeploymentsController @Inject()(
       val eventualSecondary = deploymentsService.getDeployment(publisherRef, Secondary)
       val eventualPrimary = deploymentsService.getDeployment(publisherRef, Primary)
       for {
-        secondaryStatus <- eventualSecondary
-        primaryStatus <- eventualPrimary
-      } yield (primaryStatus, secondaryStatus) match {
-        case (Right(maybePrimaryStatus), Right(maybeSecondaryStatus)) => Ok(Json.toJson(DeploymentStatus(maybePrimaryStatus.isDefined, maybeSecondaryStatus.isDefined)))
+        secondaryDeployment <- eventualSecondary
+        primaryDeployment <- eventualPrimary
+      } yield (primaryDeployment, secondaryDeployment) match {
+        case (Right(maybePrimaryDeployment), Right(maybeSecondaryDeployment)) =>
+          Ok(Json.toJson(DeploymentStatus(getOasVersion(maybePrimaryDeployment), getOasVersion(maybeSecondaryDeployment))))
         case _ => BadGateway
       }
+  }
+
+  private def getOasVersion(response: Option[DeploymentResponse]): Option[String] = response match {
+    case Some(SuccessfulDeploymentResponse(_, oasVersion)) => Some(oasVersion)
+    case _ => None
   }
 
   def promoteToProduction(publisherRef: String): Action[AnyContent] = identify.async {

@@ -465,7 +465,7 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
   )
 
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
-  val deploymentResponse: SuccessfulDeploymentResponse = SuccessfulDeploymentResponse("publisher_ref")
+  val deploymentResponse: SuccessfulDeploymentResponse = SuccessfulDeploymentResponse("publisher_ref", "1")
 
   val invalidOasResponse: InvalidOasResponse = InvalidOasResponse(
     failure = FailuresResponse(
@@ -482,10 +482,10 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
 
   val successResponses: TableFor3[Option[SuccessfulDeploymentResponse], Option[SuccessfulDeploymentResponse], DeploymentStatus] = Table(
     ("primary", "secondary", "expected"),
-    (Some(deploymentResponse), Some(deploymentResponse), DeploymentStatus(true,true)),
-    (Some(deploymentResponse), None, DeploymentStatus(true,false)),
-    (None, Some(deploymentResponse), DeploymentStatus(false,true)),
-    (None, None, DeploymentStatus(false,false))
+    (Some(deploymentResponse), Some(deploymentResponse), DeploymentStatus(Some("1"), Some("1"))),
+    (Some(deploymentResponse), None, DeploymentStatus(Some("1"), None)),
+    (None, Some(deploymentResponse), DeploymentStatus(None, Some("1"))),
+    (None, None, DeploymentStatus(None,None))
   )
 
   private val exception: ApimException = ApimException.unexpectedResponse(500)
