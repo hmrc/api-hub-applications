@@ -42,6 +42,9 @@ class DeploymentsController @Inject()(
     implicit request =>
       val jsReq = request.body
       jsReq.validate[DeploymentsRequest] match {
+        case JsSuccess(deploymentsRequest, _) if deploymentsRequest.subdomain.isDefined && deploymentsRequest.domain.isEmpty =>
+          logger.warn(s"Subdomain specified but no domain")
+          Future.successful(BadRequest)
         case JsSuccess(deploymentsRequest, _) => deploymentsService.deployToSecondary(deploymentsRequest) map {
           case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
           case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))

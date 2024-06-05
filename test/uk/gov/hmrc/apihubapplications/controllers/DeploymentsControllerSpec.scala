@@ -65,7 +65,9 @@ class DeploymentsControllerSpec
           "teamId",
           "oas",
           false,
-          "status"
+          "status",
+          None,
+          None
         )
 
         val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
@@ -98,7 +100,9 @@ class DeploymentsControllerSpec
           "teamId",
           "oas",
           false,
-          "status"
+          "status",
+          None,
+          None
         )
 
         val errors = Seq(Error("test-type", "test-message"))
@@ -131,7 +135,9 @@ class DeploymentsControllerSpec
           "teamId",
           "oas",
           false,
-          "status"
+          "status",
+          None,
+          None
         )
 
         val deployResponse = InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None))
@@ -166,6 +172,33 @@ class DeploymentsControllerSpec
       }
     }
 
+    "must return 400 Bad Request when subdomain is present but domain is not" in {
+      val fixture = buildFixture()
+      running(fixture.application) {
+        val deployRequest = DeploymentsRequest(
+          "lineOfBusiness",
+          "name",
+          "description",
+          "egress",
+          "teamId",
+          "oas",
+          false,
+          "status",
+          None,
+          Some("a subdomain")
+        )
+
+        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(deployRequest))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.BAD_REQUEST
+      }
+    }
+
     "must return Bad request if the downstream service responds with a failure" in {
       val fixture = DeploymentsControllerSpec.buildFixture()
       running(fixture.application) {
@@ -177,7 +210,9 @@ class DeploymentsControllerSpec
           "teamId",
           "oas",
           false,
-          "status"
+          "status",
+          None,
+          None
         )
 
         val response = Right(InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None)))
@@ -209,7 +244,9 @@ class DeploymentsControllerSpec
         "teamId",
         "oas",
         false,
-        "status"
+        "status",
+        None,
+        None
       )
 
       running(fixture.application) {
