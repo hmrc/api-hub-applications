@@ -66,8 +66,8 @@ class DeploymentsControllerSpec
           "oas",
           false,
           "status",
-          None,
-          None
+          Some("a domain"),
+          Some("a subdomain")
         )
 
         val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
@@ -166,33 +166,6 @@ class DeploymentsControllerSpec
             CONTENT_TYPE -> "application/json"
           )
           .withBody(Json.obj())
-
-        val result = route(fixture.application, request).value
-        status(result) mustBe Status.BAD_REQUEST
-      }
-    }
-
-    "must return 400 Bad Request when subdomain is present but domain is not" in {
-      val fixture = buildFixture()
-      running(fixture.application) {
-        val deployRequest = DeploymentsRequest(
-          "lineOfBusiness",
-          "name",
-          "description",
-          "egress",
-          "teamId",
-          "oas",
-          false,
-          "status",
-          None,
-          Some("a subdomain")
-        )
-
-        val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
-          .withHeaders(
-            CONTENT_TYPE -> "application/json"
-          )
-          .withBody(Json.toJson(deployRequest))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.BAD_REQUEST
