@@ -66,8 +66,9 @@ class DeploymentsControllerSpec
           "oas",
           false,
           "status",
-          Some("a domain"),
-          Some("a subdomain")
+          "a domain",
+          "a subdomain",
+          Seq("a hod")
         )
 
         val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
@@ -101,8 +102,9 @@ class DeploymentsControllerSpec
           "oas",
           false,
           "status",
-          None,
-          None
+          "a domain",
+          "a subdomain",
+          Seq("a hod")
         )
 
         val errors = Seq(Error("test-type", "test-message"))
@@ -136,8 +138,9 @@ class DeploymentsControllerSpec
           "oas",
           false,
           "status",
-          None,
-          None
+          "a domain",
+          "a subdomain",
+          Seq("a hod")
         )
 
         val deployResponse = InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None))
@@ -184,8 +187,9 @@ class DeploymentsControllerSpec
           "oas",
           false,
           "status",
-          None,
-          None
+          "a domain",
+          "a subdomain",
+          Seq("a hod")
         )
 
         val response = Right(InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None)))
@@ -218,8 +222,9 @@ class DeploymentsControllerSpec
         "oas",
         false,
         "status",
-        None,
-        None
+        "a domain",
+        "a subdomain",
+        Seq("a hod")
       )
 
       running(fixture.application) {

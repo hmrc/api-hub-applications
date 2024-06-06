@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class CreateMetadata(lineOfBusiness: String, name: String, description: String, egress: String, passthrough: Boolean, status: Option[String], domain: Option[String], subdomain: Option[String])
+case class CreateMetadata(lineOfBusiness: String, name: String, description: String, egress: String, passthrough: Boolean, status: Option[String], domain: String, subdomain: String, hods: Seq[String])
 
 object CreateMetadata {
 
@@ -31,7 +31,8 @@ object CreateMetadata {
       passthrough = request.passthrough,
       status = Option.apply(request.status),
       domain = request.domain,
-      subdomain = request.subdomain
+      subdomain = request.subdomain,
+      hods = request.hods
     )
   }
 
