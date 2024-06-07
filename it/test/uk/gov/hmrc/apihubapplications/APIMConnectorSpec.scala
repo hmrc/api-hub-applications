@@ -530,7 +530,7 @@ object APIMConnectorSpec {
     passthrough = true,
     status = "a status",
     domain = "a domain",
-    subdomain = "a subdomain",
+    subDomain = "a subdomain",
     hods = Seq("a hod")
   )
 
