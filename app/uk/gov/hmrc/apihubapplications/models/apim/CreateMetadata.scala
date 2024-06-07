@@ -31,7 +31,7 @@ object CreateMetadata {
       passthrough = request.passthrough,
       status = Option.apply(request.status),
       domain = request.domain,
-      subdomain = request.subdomain,
+      subdomain = request.subDomain,
       backends = request.hods
     )
   }
