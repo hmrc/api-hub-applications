@@ -476,7 +476,10 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
   val redeploymentRequest: RedeploymentRequest = RedeploymentRequest(
     description = "test-description",
     oas = "test-oas",
-    status = "test-status"
+    status = "test-status",
+    domain = "a different domain",
+    subDomain = "a different subdomain",
+    hods = Seq("a different hod")
   )
 
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")

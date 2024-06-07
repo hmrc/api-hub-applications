@@ -18,14 +18,17 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class UpdateMetadata(description: String, status: String)
+case class UpdateMetadata(description: String, status: String, domain: String, subdomain: String, backends: Seq[String])
 
 object UpdateMetadata {
 
   def apply(request: RedeploymentRequest): UpdateMetadata = {
     UpdateMetadata(
       description = request.description,
-      status = request.status
+      status = request.status,
+      domain = request.domain,
+      subdomain = request.subDomain,
+      backends = request.hods
     )
   }
 

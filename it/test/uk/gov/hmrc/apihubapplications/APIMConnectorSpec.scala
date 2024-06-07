@@ -537,7 +537,10 @@ object APIMConnectorSpec {
   private val redeploymentRequest = RedeploymentRequest(
     description = "test-description",
     oas = oas,
-    status = "a status"
+    status = "a status",
+    domain = "a domain",
+    subDomain = "a subdomain",
+    hods = Seq("a hod")
   )
 
   private val deploymentFrom = DeploymentFrom(
