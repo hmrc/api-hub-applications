@@ -186,7 +186,10 @@ object DeploymentsServiceSpec {
   val redeploymentRequest: RedeploymentRequest = RedeploymentRequest(
     description = "test-description",
     oas = "test-oas",
-    status = "test-status"
+    status = "test-status",
+    domain = "a domain",
+    subDomain = "a subdomain",
+    hods = Seq("a hod")
   )
 
 }
