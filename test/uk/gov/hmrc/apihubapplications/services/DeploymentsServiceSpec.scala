@@ -178,7 +178,7 @@ class DeploymentsServiceSpec
 
 object DeploymentsServiceSpec {
 
-  val deploymentsRequest: DeploymentsRequest = DeploymentsRequest("test-line-of-business", "test-name", "test-description", "test-egress", "test-team-id", "test-oas", false, "a status")
+  val deploymentsRequest: DeploymentsRequest = DeploymentsRequest("test-line-of-business", "test-name", "test-description", "test-egress", "test-team-id", "test-oas", false, "a status", "a domain", "a subdomain", Seq("a hod"))
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("test-id", "test-version", 42, "test-uri")
 
   val publisherRef = "test-publisher-ref"

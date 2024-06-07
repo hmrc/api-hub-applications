@@ -528,7 +528,10 @@ object APIMConnectorSpec {
     teamId = "test-team-id",
     oas = oas,
     passthrough = true,
-    status = "a status"
+    status = "a status",
+    domain = "a domain",
+    subdomain = "a subdomain",
+    hods = Seq("a hod")
   )
 
   private val redeploymentRequest = RedeploymentRequest(
