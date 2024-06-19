@@ -82,17 +82,19 @@ class ApplicationsService @Inject()(
     }
   }
 
-  private def removeApi(application: Application, apiId: String)(implicit hc: HeaderCarrier): Future[Right[ApplicationsException, Unit]] = {
+  private def removeApi(application: Application, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     val updated = application
       .removeApi(apiId)
       .updated(clock)
 
-    for {
-      _ <- scopeChanger.minimiseScopes(updated)
-      _ <- accessRequestsService.cancelAccessRequests(application.safeId)
-      _ <- repository.update(updated)
-    } yield {
-      Right(())
+    scopeChanger.minimiseScopes(updated).flatMap {
+      case Right(_) =>
+        accessRequestsService.cancelAccessRequests(application.safeId).flatMap {
+          case Right(_) => repository.update(updated)
+          case Left(e) => Future.successful(Left(e))
+        }
+      case Left(e) =>
+        Future.successful(Left(e))
     }
   }
 

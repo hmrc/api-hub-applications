@@ -34,18 +34,18 @@ class ScopeChanger @Inject()(
   idmsConnector: IdmsConnector
 )(implicit ec: ExecutionContext) {
 
-  def minimiseScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    determineRequiredScopes(application).flatMap {
+  def minimiseScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    requiredScopes(application).flatMap {
       case Right(requiredScopes) =>
         minimiseScopesInEnvironment(application, requiredScopes, Primary).flatMap {
-          case Right(_) => minimiseScopesInEnvironment(application, requiredScopes, Primary)
+          case Right(application) => minimiseScopesInEnvironment(application, requiredScopes, Secondary)
           case Left(e) => Future.successful(Left(e))
         }
       case Left(e) => Future.successful(Left(e))
     }
   }
 
-  private def determineRequiredScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Set[String]]] = {
+  private def requiredScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Set[String]]] = {
     Future
       .sequence(
         application.apis.map(
@@ -57,30 +57,32 @@ class ScopeChanger @Inject()(
       .map(_.map(_.toSet.flatMap((x: ApiDetail) => x.getRequiredScopeNames)))
   }
 
-  private def determineScopesToRemove(application: Application, requiredScopes: Set[String], environmentName: EnvironmentName): Set[String] = {
-    val currentScopes = environmentName match {
-      case Primary => application.getPrimaryScopes.toSet
-      case Secondary => application.getSecondaryScopes.toSet
+  private def currentScopes(application: Application, environmentName: EnvironmentName): Set[String] = {
+    environmentName match {
+      case Primary => application.getPrimaryScopeNames
+      case Secondary => application.getSecondaryScopeNames
     }
+  }
 
-    currentScopes.map(_.name) -- requiredScopes
+  private def scopesToRemove(application: Application, requiredScopes: Set[String], environmentName: EnvironmentName): Set[String] = {
+    currentScopes(application, environmentName) -- requiredScopes
   }
 
   private def minimiseScopesInEnvironment(
     application: Application,
     requiredScopes: Set[String],
     environmentName: EnvironmentName
-  )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+  )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
 
     ApplicationEnrichers.process(
       application,
-      determineScopesToRemove(application, requiredScopes, environmentName)
+      scopesToRemove(application, requiredScopes, environmentName)
         .toSeq
         .map(
           scopeName =>
             ApplicationEnrichers.scopeRemovingApplicationEnricher(environmentName, application, idmsConnector, scopeName)
         )
-    ).map(_.map(_ => ()))
+    )
 
   }
 

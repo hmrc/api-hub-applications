@@ -204,7 +204,6 @@ class IdmsConnectorImpl @Inject()(
           Left(raiseIdmsException.error(throwable))
       }
 
-    // TODO : test this
   }
 
   override def fetchClientScopes(
