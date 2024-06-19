@@ -46,6 +46,16 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseApiNotFoundException {
+    def forId(apiId: String): ApiNotFoundException = {
+      log(ApiNotFoundException.forId(apiId))
+    }
+
+    def forApplication(applicationId: String, apiId: String): ApiNotFoundException = {
+      log(ApiNotFoundException.forApplication(applicationId, apiId))
+    }
+  }
+
   object raiseIdmsException {
     def clientNotFound(clientId: String): IdmsException = {
       log(IdmsException.clientNotFound(clientId))

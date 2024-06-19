@@ -27,7 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
+import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, ScopeChanger}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -36,12 +36,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsService @Inject()(
-                                     repository: ApplicationsRepository,
-                                     clock: Clock,
-                                     idmsConnector: IdmsConnector,
-                                     emailConnector: EmailConnector,
-                                     accessRequestsService: AccessRequestsService
-                                   )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+  repository: ApplicationsRepository,
+  clock: Clock,
+  idmsConnector: IdmsConnector,
+  emailConnector: EmailConnector,
+  accessRequestsService: AccessRequestsService,
+  scopeChanger: ScopeChanger
+)(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
@@ -70,6 +71,29 @@ class ApplicationsService @Inject()(
       case Left(e) => Future.successful(Left(e))
     }
 
+  }
+
+  def removeApi(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    this.findById(applicationId, enrich = true).flatMap {
+      case Right(application) if application.hasApi(apiId) => removeApi(application, apiId)
+      case Right(_) => Future.successful(Left(raiseApiNotFoundException.forApplication(applicationId, apiId)))
+      case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+  private def removeApi(application: Application, apiId: String)(implicit hc: HeaderCarrier): Future[Right[ApplicationsException, Unit]] = {
+    val updated = application
+      .removeApi(apiId)
+      .updated(clock)
+
+    for {
+      _ <- scopeChanger.minimiseScopes(updated)
+      _ <- accessRequestsService.cancelAccessRequests(application.safeId)
+      _ <- repository.update(updated)
+    } yield {
+      Right(())
+    }
   }
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {

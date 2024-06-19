@@ -249,4 +249,41 @@ object ApplicationEnrichers {
       }
   }
 
+  def scopeRemovingApplicationEnricher(
+    environmentName: EnvironmentName,
+    original: Application,
+    idmsConnector: IdmsConnector,
+    scopeName: String
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
+
+    Future
+      .sequence(
+        original
+          .getCredentialsFor(environmentName)
+          .map(
+            credential =>
+              idmsConnector
+                .deleteClientScope(environmentName, credential.clientId, scopeName)
+                .map {
+                  case Right(_) => Right(())
+                  case Left(e) if e.issue.equals(ClientNotFound) => Right(())
+                  case Left(e) => Left(e)
+                }
+          )
+      )
+      .map(useFirstException)
+      .map {
+        case Right(_) =>
+          Right(
+            (application: Application) => {
+              environmentName match {
+                case Primary => application.removePrimaryScope(scopeName)
+                case Secondary => application.removeSecondaryScope(scopeName)
+              }
+            }
+          )
+        case Left(e) => Left(e)
+      }
+  }
+
 }

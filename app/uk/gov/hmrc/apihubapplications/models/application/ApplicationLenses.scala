@@ -96,6 +96,13 @@ object ApplicationLenses {
 
   implicit class ApplicationLensOps(application: Application) {
 
+    def safeId: String = {
+      application.id match {
+        case Some(id) => id
+        case _ => throw new IllegalStateException(s"Application does not have an Id when expected to do so: name=${application.name}")
+      }
+    }
+
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
         case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_))).distinct)
@@ -112,6 +119,12 @@ object ApplicationLenses {
       applicationPrimaryScopes.set(
         application,
         applicationPrimaryScopes.get(application) :+ scope
+      )
+
+    def removePrimaryScope(scopeName: String): Application =
+      applicationPrimaryScopes.set(
+        application,
+        applicationPrimaryScopes.get(application).filterNot(_.name.equals(scopeName))
       )
 
     def getPrimaryMasterCredential: Option[Credential] =
@@ -160,6 +173,12 @@ object ApplicationLenses {
       applicationSecondaryScopes.set(
         application,
         applicationSecondaryScopes.get(application) :+ scope
+      )
+
+    def removeSecondaryScope(scopeName: String): Application =
+      applicationSecondaryScopes.set(
+        application,
+        applicationSecondaryScopes.get(application).filterNot(_.name.equals(scopeName))
       )
 
     def getSecondaryMasterCredential: Option[Credential] =
@@ -314,6 +333,10 @@ object ApplicationLenses {
 
     def removeApi(id: String): Application = {
       application.setApis(application.apis.filterNot(_.id == id))
+    }
+
+    def hasApi(id: String): Boolean = {
+      application.apis.exists(_.id.equals(id))
     }
 
     def updated(clock: Clock): Application = {

@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.connectors
+package uk.gov.hmrc.apihubapplications.models.api
 
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.libs.json.{Format, Json}
 
-import scala.concurrent.Future
+case class EndpointMethod(
+  httpMethod: String,
+  summary: Option[String],
+  description: Option[String],
+  scopes: Seq[String]
+)
 
-trait IntegrationCatalogueConnector {
+object EndpointMethod {
 
-  def linkApiToTeam(apiTeam: ApiTeam)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
-
-  def findById(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]]
+  implicit val formatEndpointMethod: Format[EndpointMethod] = Json.format[EndpointMethod]
 
 }

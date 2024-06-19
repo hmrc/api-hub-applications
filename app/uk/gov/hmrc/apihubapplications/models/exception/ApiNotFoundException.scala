@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.connectors
+package uk.gov.hmrc.apihubapplications.models.exception
 
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
-import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
-import uk.gov.hmrc.http.HeaderCarrier
+case class ApiNotFoundException(message: String) extends ApplicationsException(message, null)
 
-import scala.concurrent.Future
+object ApiNotFoundException {
 
-trait IntegrationCatalogueConnector {
+  def forId(apiId: String): ApiNotFoundException = {
+    ApiNotFoundException(s"Cannot find API with Id $apiId")
+  }
 
-  def linkApiToTeam(apiTeam: ApiTeam)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
-
-  def findById(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]]
+  def forApplication(applicationId: String, apiId: String): ApiNotFoundException = {
+    ApiNotFoundException(s"Cannot find API $apiId linked to application $applicationId")
+  }
 
 }
