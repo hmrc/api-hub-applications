@@ -62,6 +62,13 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       .map(Ok(_))
   }
 
+  def getApplicationsUsingApi(apiId: String, includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
+    applicationsService
+      .findAllUsingApi(apiId, includeDeleted)
+      .map(applications => Json.toJson(applications.map(_.makePublic())))
+      .map(Ok(_))
+  }
+
   def getApplication(id: String, enrich: Boolean): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
       applicationsService.findById(id, enrich)

@@ -97,6 +97,10 @@ class ApplicationsService @Inject()(
     repository.findAll(teamMemberEmail, includeDeleted)
   }
 
+  def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
+    repository.findAllUsingApi(apiId, includeDeleted)
+  }
+
   def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     repository.findById(id).flatMap {
       case Right(application) =>

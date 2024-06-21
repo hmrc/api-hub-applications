@@ -175,6 +175,62 @@ class ApplicationsRepositoryIntegrationSpec
     }
   }
 
+  "findAllUsingApi" - {
+    def applicationWithApis(name: String, apiIds: Seq[String], isDeleted: Boolean): Application = {
+      val now = LocalDateTime.now()
+      val apis = apiIds.map(Api(_, Seq.empty))
+      val deleted = if (isDeleted) Some(Deleted(now, "team@test.com")) else None
+      Application(None, name, now, Creator("test1@test.com"), now, Seq.empty, Environments(), Seq.empty, apis, deleted)
+    }
+
+    val targetApiId = "api_id"
+    val otherApiId = "other_api_id"
+    val appHasJustTargetApiIsNotDeleted = applicationWithApis("app1", Seq(targetApiId), isDeleted = false)
+    val appHasJustTargetApiIsDeleted = applicationWithApis("app2", Seq(targetApiId), isDeleted = true)
+    val appHasTargetApiAndOthersIsNotDeleted = applicationWithApis("app3", Seq(otherApiId, targetApiId), isDeleted = false)
+    val appHasTargetApiAndOthersIsDeleted = applicationWithApis("app4", Seq(otherApiId, targetApiId), isDeleted = true)
+    val appHasDifferentApiIsNotDeleted = applicationWithApis("app5", Seq(otherApiId), isDeleted = false)
+    val appHasDifferentApiIsDeleted = applicationWithApis("app6", Seq(otherApiId), isDeleted = true)
+
+    "must retrieve all applications associated with an API that are not soft deleted from MongoDb" in {
+      setMdcData()
+
+      val hasJustTargetApi = repository.insert(appHasJustTargetApiIsNotDeleted).futureValue
+      repository.insert(appHasJustTargetApiIsDeleted).futureValue
+      val hasTargetApiAndOthers = repository.insert(appHasTargetApiAndOthersIsNotDeleted).futureValue
+      repository.insert(appHasTargetApiAndOthersIsDeleted).futureValue
+      repository.insert(appHasDifferentApiIsNotDeleted).futureValue
+      repository.insert(appHasDifferentApiIsDeleted).futureValue
+
+      val result = repository
+        .findAllUsingApi(targetApiId, false)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Set(hasJustTargetApi, hasTargetApiAndOthers)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must retrieve all applications associated with an API, including those that are soft deleted, from MongoDb" in {
+      setMdcData()
+
+      val hasJustTargetApi = repository.insert(appHasJustTargetApiIsNotDeleted).futureValue
+      val hasJustTargetApiIsDeleted = repository.insert(appHasJustTargetApiIsDeleted).futureValue
+      val hasTargetApiAndOthers = repository.insert(appHasTargetApiAndOthersIsNotDeleted).futureValue
+      val hasTargetApiAndOthersIsDeleted = repository.insert(appHasTargetApiAndOthersIsDeleted).futureValue
+      repository.insert(appHasDifferentApiIsNotDeleted).futureValue
+      repository.insert(appHasDifferentApiIsDeleted).futureValue
+
+      val result = repository
+        .findAllUsingApi(targetApiId, true)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Set(hasJustTargetApi, hasJustTargetApiIsDeleted, hasTargetApiAndOthers, hasTargetApiAndOthersIsDeleted)
+      result.mdcData mustBe testMdcData
+    }
+  }
+
   "findById" - {
     "must return an application when it exists in MongoDb" in {
       setMdcData()
