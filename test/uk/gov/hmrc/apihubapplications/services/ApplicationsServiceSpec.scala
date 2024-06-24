@@ -36,7 +36,7 @@ import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.ScopeChanger
+import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -1469,7 +1469,7 @@ class ApplicationsServiceSpec
     emailConnector: EmailConnector,
     service: ApplicationsService,
     accessRequestsService: AccessRequestsService,
-    scopeChanger: ScopeChanger
+    scopeFixer: ScopeFixer
   )
 
   private def buildFixture: Fixture = {
@@ -1478,9 +1478,9 @@ class ApplicationsServiceSpec
     val idmsConnector: IdmsConnector = mock[IdmsConnector]
     val emailConnector: EmailConnector = mock[EmailConnector]
     val accessRequestsService: AccessRequestsService = mock[AccessRequestsService]
-    val scopeChanger = mock[ScopeChanger]
-    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, accessRequestsService, scopeChanger)
-    Fixture(clock, repository, idmsConnector, emailConnector, service, accessRequestsService, scopeChanger)
+    val scopeFixer = mock[ScopeFixer]
+    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, accessRequestsService, scopeFixer)
+    Fixture(clock, repository, idmsConnector, emailConnector, service, accessRequestsService, scopeFixer)
   }
 
 }

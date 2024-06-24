@@ -32,6 +32,12 @@ object ApiDetailLenses {
       set = (apiDetail, subDomain) => apiDetail.copy(subDomain = subDomain)
     )
 
+  val apiEndpoints: Lens[ApiDetail, Seq[Endpoint]] =
+    Lens[ApiDetail, Seq[Endpoint]](
+      get = _.endpoints,
+      set = (apiDetail, endpoints) => apiDetail.copy(endpoints = endpoints)
+    )
+
   implicit class ApiDetailLensOps(apiDetail: ApiDetail) {
 
     def getRequiredScopeNames: Set[String] = {
@@ -53,6 +59,9 @@ object ApiDetailLenses {
 
     def setSubDomain(subDomainCode: String): ApiDetail =
       setSubDomain(Some(subDomainCode))
+
+    def addEndpoint(endpoint: Endpoint): ApiDetail =
+      apiEndpoints.set(apiDetail, apiDetail.endpoints :+ endpoint)
 
   }
 

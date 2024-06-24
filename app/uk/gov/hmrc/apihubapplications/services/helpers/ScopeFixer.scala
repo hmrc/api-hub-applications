@@ -29,12 +29,13 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ScopeChanger @Inject()(
+class ScopeFixer @Inject()(
   integrationCatalogueConnector: IntegrationCatalogueConnector,
   idmsConnector: IdmsConnector
 )(implicit ec: ExecutionContext) {
 
-  def change(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+  // Manipulate the model first, adding and removing APIs and endpoints, THEN call this method to fix scopes
+  def fix(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     requiredScopes(application).flatMap {
       case Right(requiredScopes) =>
         minimiseScopesInEnvironment(application, requiredScopes, Primary).flatMap {

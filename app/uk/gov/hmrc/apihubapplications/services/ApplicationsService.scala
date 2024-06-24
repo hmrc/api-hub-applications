@@ -27,7 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, ScopeChanger}
+import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, ScopeFixer}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -41,7 +41,7 @@ class ApplicationsService @Inject()(
   idmsConnector: IdmsConnector,
   emailConnector: EmailConnector,
   accessRequestsService: AccessRequestsService,
-  scopeChanger: ScopeChanger
+  scopeFixer: ScopeFixer
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -87,7 +87,7 @@ class ApplicationsService @Inject()(
       .removeApi(apiId)
       .updated(clock)
 
-    scopeChanger.change(updated).flatMap {
+    scopeFixer.fix(updated).flatMap {
       case Right(_) =>
         accessRequestsService.cancelAccessRequests(application.safeId).flatMap {
           case Right(_) => repository.update(updated)
