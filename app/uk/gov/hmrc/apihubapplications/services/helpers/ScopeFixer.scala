@@ -72,10 +72,6 @@ class ScopeFixer @Inject()(
     currentScopes(application, environmentName) -- requiredScopes
   }
 
-  private def scopesToAdd(application: Application, requiredScopes: Set[String], environmentName: EnvironmentName) = {
-    requiredScopes -- currentScopes(application, environmentName)
-  }
-
   private def minimiseScopesInEnvironment(
     application: Application,
     requiredScopes: Set[String],
@@ -101,7 +97,7 @@ class ScopeFixer @Inject()(
 
     ApplicationEnrichers.process(
       application,
-      scopesToAdd(application, requiredScopes, Secondary)
+      requiredScopes
         .toSeq
         .map(
           scopeName =>

@@ -69,6 +69,33 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
+    "must always add all secondary scopes (self-healing)" in {
+      val api = baseApi(apiId1)
+        .addEndpoint(endpointForScope1)
+        .addEndpoint(endpointForScope2)
+
+      val application = applicationWithCredentials
+        .addSecondaryScope(scope1)
+        .addSecondaryScope(scope2)
+        .addApi(buildApi(api))
+
+      val fixture = buildFixture()
+
+      when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
+          verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
+
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verifyNoMoreInteractions(fixture.idmsConnector)
+          result.value mustBe application
+      }
+    }
+
     "must not remove scopes that are still required" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope2)
@@ -88,6 +115,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
         result =>
@@ -96,6 +124,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
           verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
           verify(fixture.idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName3))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
           result.value mustBe expected
       }
@@ -124,6 +153,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
           verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
           result.value mustBe expected
@@ -158,6 +188,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api2.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
           verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
           result.value mustBe expected

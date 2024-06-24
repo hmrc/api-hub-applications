@@ -112,14 +112,23 @@ object ApplicationLenses {
     def getPrimaryScopes: Seq[Scope] =
       applicationPrimaryScopes.get(application)
 
+    def hasPrimaryScope(scopeName: String): Boolean =
+      application.getPrimaryScopes.exists(_.name.equals(scopeName))
+
     def setPrimaryScopes(scopes: Seq[Scope]): Application =
       applicationPrimaryScopes.set(application, scopes)
 
-    def addPrimaryScope(scope: Scope): Application =
-      applicationPrimaryScopes.set(
-        application,
-        applicationPrimaryScopes.get(application) :+ scope
-      )
+    def addPrimaryScope(scope: Scope): Application = {
+      if (!application.hasPrimaryScope(scope.name)) {
+        applicationPrimaryScopes.set(
+          application,
+          applicationPrimaryScopes.get(application) :+ scope
+        )
+      }
+      else {
+        application
+      }
+    }
 
     def removePrimaryScope(scopeName: String): Application =
       applicationPrimaryScopes.set(
@@ -172,14 +181,23 @@ object ApplicationLenses {
     def getSecondaryScopes: Seq[Scope] =
       applicationSecondaryScopes.get(application)
 
+    def hasSecondaryScope(scopeName: String): Boolean =
+      application.getSecondaryScopes.exists(_.name.equals(scopeName))
+
     def setSecondaryScopes(scopes: Seq[Scope]): Application =
       applicationSecondaryScopes.set(application, scopes)
 
-    def addSecondaryScope(scope: Scope): Application =
-      applicationSecondaryScopes.set(
-        application,
-        applicationSecondaryScopes.get(application) :+ scope
-      )
+    def addSecondaryScope(scope: Scope): Application = {
+      if (!application.hasSecondaryScope(scope.name)) {
+        applicationSecondaryScopes.set(
+          application,
+          applicationSecondaryScopes.get(application) :+ scope
+        )
+      }
+      else {
+        application
+      }
+    }
 
     def removeSecondaryScope(scopeName: String): Application =
       applicationSecondaryScopes.set(

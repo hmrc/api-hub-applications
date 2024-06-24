@@ -88,9 +88,9 @@ class ApplicationsService @Inject()(
       .updated(clock)
 
     scopeFixer.fix(updated).flatMap {
-      case Right(_) =>
-        accessRequestsService.cancelAccessRequests(application.safeId).flatMap {
-          case Right(_) => repository.update(updated)
+      case Right(fixed) =>
+        accessRequestsService.cancelAccessRequests(fixed.safeId, apiId).flatMap {
+          case Right(_) => repository.update(fixed)
           case Left(e) => Future.successful(Left(e))
         }
       case Left(e) =>
