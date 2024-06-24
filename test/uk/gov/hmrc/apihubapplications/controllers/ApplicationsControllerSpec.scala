@@ -473,6 +473,73 @@ class ApplicationsControllerSpec
     }
   }
 
+  "removeApi" - {
+    "must process the request and respond with No Content on success" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val apiId = "test-api-id"
+
+      when(fixture.applicationsService.removeApi(any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+
+        verify(fixture.applicationsService).removeApi(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(apiId))(any())
+      }
+    }
+
+    "must respond with Not Found when the application does not exist" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val apiId = "test-api-id"
+
+      when(fixture.applicationsService.removeApi(any(), any())(any()))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must respond with Not Found when the API is not linked to the application" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val apiId = "test-api-id"
+
+      when(fixture.applicationsService.removeApi(any(), any())(any()))
+        .thenReturn(Future.successful(Left(ApiNotFoundException.forApplication(applicationId, apiId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return Bad Gateway when an IDMS exception is encountered" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val apiId = "test-api-id"
+
+      when(fixture.applicationsService.removeApi(any(), any())(any()))
+        .thenReturn(Future.successful(Left(IdmsException.clientNotFound("test-client-id"))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_GATEWAY
+      }
+    }
+  }
+
   "add credential" - {
     "must return 201 and a credential" in {
       val id = "app-id-1"

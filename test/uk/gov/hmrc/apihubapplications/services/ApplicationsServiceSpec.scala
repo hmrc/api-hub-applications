@@ -910,7 +910,7 @@ class ApplicationsServiceSpec
       environments = Environments()
     )
 
-    "must remove scopes, update the API in MongoDb, and cancel any pending access requests" in {
+    "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
       val fixture = buildFixture
       import fixture._
 
@@ -961,6 +961,24 @@ class ApplicationsServiceSpec
           verifyZeroInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any())
           result mustBe Left(ApiNotFoundException.forApplication(applicationId, apiId))
+      }
+    }
+
+    "must return any exceptions encountered" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val application = baseApplication.addApi(api)
+      val expected = IdmsException.clientNotFound("test-client-id")
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+      when(scopeFixer.fix(any())(any())).thenReturn(Future.successful(Left(expected)))
+
+      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+        result =>
+          verifyZeroInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any())
+          result mustBe Left(expected)
       }
     }
   }
