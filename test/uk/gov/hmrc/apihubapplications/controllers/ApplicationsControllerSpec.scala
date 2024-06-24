@@ -242,6 +242,67 @@ class ApplicationsControllerSpec
     }
   }
 
+  "find all applications with an API" - {
+    "must return 200 and a JSON array representing all applications in db that have the API in public form not including deleted apps" in {
+      val fixture = buildFixture()
+      val now = LocalDateTime.now()
+      val apiId = "my-api"
+
+      running(fixture.application) {
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
+
+        val expected_apps = Seq(application1, application2).zipWithIndex.map {
+          case (application, index) =>
+            application
+              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+        }
+
+        val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
+
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplicationsUsingApi(apiId).url)
+
+        when(fixture.applicationsService.findAllUsingApi(any(), any())).thenReturn(Future.successful(expected_apps))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe expected_json
+        verify(fixture.applicationsService).findAllUsingApi(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq(false))
+      }
+    }
+
+    "must return 200 and a JSON array representing all applications in db that have the API in public form including deleted apps" in {
+      val fixture = buildFixture()
+      val now = LocalDateTime.now()
+      val apiId = "my-api"
+
+      running(fixture.application) {
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
+          .delete(Deleted(now, "test-deleted-by"))
+
+        val expected_apps = Seq(application1, application2).zipWithIndex.map {
+          case (application, index) =>
+            application
+              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+        }
+
+        val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
+
+        val request = FakeRequest(GET, routes.ApplicationsController.getApplicationsUsingApi(apiId, true).url)
+
+        when(fixture.applicationsService.findAllUsingApi(any(), any())).thenReturn(Future.successful(expected_apps))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe expected_json
+        verify(fixture.applicationsService).findAllUsingApi(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq(true))
+      }
+    }
+  }
+
   "getApplication" - {
     "must return 200 Ok and a JSON body representing the application in public form when it exists in the repository" in {
       val id = "1"

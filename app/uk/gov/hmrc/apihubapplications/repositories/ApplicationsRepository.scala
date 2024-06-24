@@ -45,7 +45,8 @@ class ApplicationsRepository @Inject()(
     domainFormat = formatDataWithMongoIdentifier[SensitiveApplication],
     mongoComponent = mongoComponent,
     indexes = Seq(
-      IndexModel(Indexes.ascending("teamMembers.email"))
+      IndexModel(Indexes.ascending("teamMembers.email")),
+      IndexModel(Indexes.ascending("apis.id"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -66,6 +67,15 @@ class ApplicationsRepository @Inject()(
     Mdc.preservingMdc {
       collection
         .find(emailFilter(teamMemberEmail))
+        .toFuture()
+    } map (_.filter(deletedFilter(includeDeleted))
+      .map(_.decryptedValue.toModel))
+  }
+
+  def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
+    Mdc.preservingMdc {
+      collection
+        .find(Filters.equal("apis.id", apiId))
         .toFuture()
     } map (_.filter(deletedFilter(includeDeleted))
       .map(_.decryptedValue.toModel))

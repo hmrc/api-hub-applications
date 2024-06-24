@@ -347,6 +347,50 @@ class ApplicationsServiceSpec
     }
   }
 
+  "findAllUsingApi" - {
+    "must return all applications from the repository that have a given API and are not deleted" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val apiId = "test-api"
+      val applications = Seq(
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId)),
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId)),
+      )
+
+      when(repository.findAllUsingApi(any(), any())).thenReturn(Future.successful(applications))
+
+      service.findAllUsingApi(apiId, false) map {
+        actual =>
+          actual mustBe applications
+          verify(repository).findAllUsingApi(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq(false))
+          succeed
+      }
+    }
+
+    "must return deleted applications when requested" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val deleted = Deleted(LocalDateTime.now(clock), "test-deleted-by")
+      val apiId = "test-api"
+
+      val applications = Seq(
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId)).delete(deleted),
+        Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty).addApi(Api(apiId)).delete(deleted)
+      )
+
+      when(repository.findAllUsingApi(any(), any())).thenReturn(Future.successful(applications))
+
+      service.findAllUsingApi(apiId, true) map {
+        actual =>
+          actual mustBe applications
+          verify(repository).findAllUsingApi(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq(true))
+          succeed
+      }
+    }
+  }
+
   "findById" - {
     "must return the application when it exists" in {
       val fixture = buildFixture
