@@ -32,11 +32,11 @@ class ScopeChangerSpec extends AsyncFreeSpec with Matchers with MockitoSugar wit
 
   import ScopeChangerSpec._
 
-  "minimiseScopes" - {
+  "change" - {
     "must process an application with no APIs or Scopes efficiently" in {
       val fixture = buildFixture()
 
-      fixture.scopeChanger.minimiseScopes(baseApplication)(HeaderCarrier()).map {
+      fixture.scopeChanger.change(baseApplication)(HeaderCarrier()).map {
         result =>
           verifyZeroInteractions(fixture.integrationCatalogueConnector)
           verifyZeroInteractions(fixture.idmsConnector)
@@ -55,7 +55,7 @@ class ScopeChangerSpec extends AsyncFreeSpec with Matchers with MockitoSugar wit
 
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeChanger.minimiseScopes(application)(HeaderCarrier()).map {
+      fixture.scopeChanger.change(application)(HeaderCarrier()).map {
         result =>
           verifyZeroInteractions(fixture.integrationCatalogueConnector)
           verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)

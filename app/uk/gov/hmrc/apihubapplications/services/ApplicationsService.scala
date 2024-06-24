@@ -87,7 +87,7 @@ class ApplicationsService @Inject()(
       .removeApi(apiId)
       .updated(clock)
 
-    scopeChanger.minimiseScopes(updated).flatMap {
+    scopeChanger.change(updated).flatMap {
       case Right(_) =>
         accessRequestsService.cancelAccessRequests(application.safeId).flatMap {
           case Right(_) => repository.update(updated)

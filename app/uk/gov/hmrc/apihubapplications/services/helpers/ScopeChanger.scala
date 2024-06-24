@@ -34,11 +34,14 @@ class ScopeChanger @Inject()(
   idmsConnector: IdmsConnector
 )(implicit ec: ExecutionContext) {
 
-  def minimiseScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+  def change(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     requiredScopes(application).flatMap {
       case Right(requiredScopes) =>
         minimiseScopesInEnvironment(application, requiredScopes, Primary).flatMap {
-          case Right(application) => minimiseScopesInEnvironment(application, requiredScopes, Secondary)
+          case Right(application) => minimiseScopesInEnvironment(application, requiredScopes, Secondary).flatMap {
+            case Right(application) => addScopesToSecondary(application, requiredScopes)
+            case Left(e) => Future.successful(Left(e))
+          }
           case Left(e) => Future.successful(Left(e))
         }
       case Left(e) => Future.successful(Left(e))
@@ -68,6 +71,10 @@ class ScopeChanger @Inject()(
     currentScopes(application, environmentName) -- requiredScopes
   }
 
+  private def scopesToAdd(application: Application, requiredScopes: Set[String], environmentName: EnvironmentName) = {
+    requiredScopes -- currentScopes(application, environmentName)
+  }
+
   private def minimiseScopesInEnvironment(
     application: Application,
     requiredScopes: Set[String],
@@ -84,6 +91,22 @@ class ScopeChanger @Inject()(
         )
     )
 
+  }
+
+  private def addScopesToSecondary(
+    application: Application,
+    requiredScopes: Set[String]
+  )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
+
+    ApplicationEnrichers.process(
+      application,
+      scopesToAdd(application, requiredScopes, Secondary)
+        .toSeq
+        .map(
+          scopeName =>
+            ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scopeName)
+        )
+    )
   }
 
 }
