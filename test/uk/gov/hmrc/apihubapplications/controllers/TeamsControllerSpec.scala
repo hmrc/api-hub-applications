@@ -289,7 +289,7 @@ class TeamsControllerSpec
   }
 
   "renameTeam" - {
-    "must add rename team member and return 204 No Content when the request is valid" in {
+    "must rename team member and return 204 No Content when the request is valid" in {
       val fixture = buildFixture()
       val id = "test-id"
       val renameTeamRequest = RenameTeamRequest("new name")
