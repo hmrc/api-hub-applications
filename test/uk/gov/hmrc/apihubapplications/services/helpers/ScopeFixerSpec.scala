@@ -69,12 +69,47 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
+    "must remove scopes associated with a removed endpoint and retain scopes still used" in {
+      val api = baseApi(apiId1)
+        .addEndpoint(endpointForScope1)
+        .addEndpoint(endpointForScope2)
+
+      val application = applicationWithCredentials
+        .addPrimaryScope(scope1)
+        .addPrimaryScope(scope2)
+        .addSecondaryScope(scope1)
+        .addSecondaryScope(scope2)
+        .addApi(buildApi(api.removeEndpoint(endpointForScope2.path)))
+
+      val expected = application
+        .removePrimaryScope(scopeName2)
+        .removeSecondaryScope(scopeName2)
+
+      val fixture = buildFixture()
+
+      when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
+      when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
+          verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
+          verifyNoMoreInteractions(fixture.idmsConnector)
+          result.value mustBe expected
+      }
+    }
+
     "must always add all secondary scopes (self-healing)" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
+        .addPrimaryScope(scope1)
         .addSecondaryScope(scope1)
         .addSecondaryScope(scope2)
         .addApi(buildApi(api))

@@ -25,3 +25,15 @@ object Api {
   implicit val apiFormat: Format[Api] = Json.format[Api]
 
 }
+
+object ApiLenses {
+
+  implicit class ApiLensOps(api: Api) {
+
+    def addEndpoint(endpoint: Endpoint): Api = {
+      api.copy(endpoints = api.endpoints :+ endpoint)
+    }
+
+  }
+
+}

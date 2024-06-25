@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.models.api
 
 import uk.gov.hmrc.apihubapplications.models.Lens
+import uk.gov.hmrc.apihubapplications.models.application.Application
 
 object ApiDetailLenses {
 
@@ -40,12 +41,24 @@ object ApiDetailLenses {
 
   implicit class ApiDetailLensOps(apiDetail: ApiDetail) {
 
-    def getRequiredScopeNames: Set[String] = {
-      apiDetail
-        .endpoints
-        .flatMap(_.methods)
-        .flatMap(_.scopes)
-        .toSet
+    def getRequiredScopeNames(application: Application): Set[String] = {
+      apiDetail.endpoints.flatMap(
+        apiEndpoint =>
+          apiEndpoint.methods.filter(
+            endpointMethod =>
+              application.apis.exists(
+                api =>
+                  api.id.equals(apiDetail.id) &&
+                    api.endpoints.exists(
+                      applicationEndpoint =>
+                        applicationEndpoint.path.equals(apiEndpoint.path) &&
+                          applicationEndpoint.httpMethod.equalsIgnoreCase(endpointMethod.httpMethod)
+                    )
+              )
+          )
+          .flatMap(_.scopes)
+      )
+      .toSet
     }
 
     def setDomain(domainCode: Option[String]): ApiDetail =
@@ -62,6 +75,12 @@ object ApiDetailLenses {
 
     def addEndpoint(endpoint: Endpoint): ApiDetail =
       apiEndpoints.set(apiDetail, apiDetail.endpoints :+ endpoint)
+
+    def removeEndpoint(path: String): ApiDetail =
+      apiEndpoints.set(
+        apiDetail,
+        apiDetail.endpoints.filterNot(_.path.equals(path))
+      )
 
   }
 

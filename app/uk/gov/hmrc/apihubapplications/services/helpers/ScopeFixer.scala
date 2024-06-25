@@ -58,7 +58,7 @@ class ScopeFixer @Inject()(
         )
       )
       .map(useFirstApplicationsException)
-      .map(_.map(_.toSet.flatMap((x: ApiDetail) => x.getRequiredScopeNames)))
+      .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
   }
 
   private def currentScopes(application: Application, environmentName: EnvironmentName): Set[String] = {
