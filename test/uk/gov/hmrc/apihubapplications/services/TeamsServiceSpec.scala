@@ -25,7 +25,7 @@ import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, EmailException, TeamMemberExistsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -260,6 +260,40 @@ class TeamsServiceSpec
           verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember3)), ArgumentMatchers.eq(team))(any)
 
           result mustBe Right(())
+      }
+    }
+  }
+
+  "renameTeam" - {
+    "must lookup the team, update it, and persist" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.service.renameTeam(id, RenameTeamRequest("new name")).map {
+        result =>
+          verify(fixture.repository).update(eqTo(team.setName("new name")))
+          result mustBe Right(())
+      }
+    }
+
+    "must return an exception when returned by the repository" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+      val expected = TeamNotFoundException.forTeam(team)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
+
+      fixture.service.renameTeam(id, RenameTeamRequest("new name")).map {
+        result =>
+          result mustBe Left(expected)
       }
     }
   }

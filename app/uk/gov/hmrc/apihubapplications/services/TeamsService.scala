@@ -22,7 +22,7 @@ import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team, RenameTeamRequest}
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -71,6 +71,18 @@ class TeamsService @Inject()(
       case Right(team) =>
         val future = Future.successful(Left(raiseTeamMemberExistsException.forTeam(team)))
         future
+      case Left(e) =>
+        Future.successful(Left(e))
+    }
+  }
+
+  def renameTeam(id: String, request: RenameTeamRequest): Future[Either[ApplicationsException, Unit]] = {
+    repository.findById(id).flatMap {
+      case Right(team) =>
+        repository.update(team.setName(request.name)) flatMap {
+          case Right(_) => Future.successful(Right(()))
+          case Left(exception) => Future.successful(Left(exception))
+        }
       case Left(e) =>
         Future.successful(Left(e))
     }

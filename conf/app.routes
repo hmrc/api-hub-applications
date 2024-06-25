@@ -28,5 +28,6 @@ GET        /teams                                                               
 GET        /teams/:id                                                               uk.gov.hmrc.apihubapplications.controllers.TeamsController.findById(id: String)
 GET        /teams/name/:name                                                        uk.gov.hmrc.apihubapplications.controllers.TeamsController.findByName(name: String)
 POST       /teams/:id/members                                                       uk.gov.hmrc.apihubapplications.controllers.TeamsController.addTeamMember(id: String)
+PUT        /teams/:id                                                               uk.gov.hmrc.apihubapplications.controllers.TeamsController.renameTeam(id: String)
 
 GET        /apis/:publisherRef/deployment-status                                    uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatus(publisherRef: String)
