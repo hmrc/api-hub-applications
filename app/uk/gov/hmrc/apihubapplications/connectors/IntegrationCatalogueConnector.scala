@@ -16,14 +16,16 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.exception.IntegrationCatalogueException
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
+import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 
 trait IntegrationCatalogueConnector {
 
-  def linkApiToTeam(apiTeam: ApiTeam)(implicit hc: HeaderCarrier): Future[Either[IntegrationCatalogueException, Unit]]
+  def linkApiToTeam(apiTeam: ApiTeam)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+
+  def findById(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]]
 
 }

@@ -18,15 +18,17 @@ package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.mockito.MockitoSugar
+import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.Configuration
-import play.api.http.Status.{BAD_REQUEST, NO_CONTENT}
+import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.apihubapplications.connectors.{IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.exception.IntegrationCatalogueException
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, IntegrationCatalogueException}
+import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -36,7 +38,9 @@ class IntegrationCatalogueConnectorSpec
     with Matchers
     with WireMockSupport
     with HttpClientV2Support
-    with MockitoSugar {
+    with MockitoSugar
+    with ApiDetailGenerators
+    with EitherValues {
 
   import IntegrationCatalogueConnectorSpec._
 
@@ -71,6 +75,44 @@ class IntegrationCatalogueConnectorSpec
       buildConnector().linkApiToTeam(apiTeam)(HeaderCarrier()).map {
         result =>
           result mustBe Left(IntegrationCatalogueException.unexpectedResponse(BAD_REQUEST))
+      }
+    }
+  }
+
+  "IntegrationCatalogueConnector.findById" - {
+    "must place the correct request to Integration Catalogue and return the API when found" in {
+      val apiDetail = sampleApiDetail()
+
+      stubFor(
+        get(urlEqualTo(s"/integration-catalogue/integrations/${apiDetail.id}"))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("Authorization", equalTo(appAuthToken))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(apiDetail).toString())
+          )
+      )
+
+      buildConnector().findById(apiDetail.id)(HeaderCarrier()).map {
+        result =>
+          result.value mustBe apiDetail
+      }
+    }
+
+    "must return ApiNotFoundException when the API cannot be found" in {
+      val apiId = "test-api-id"
+
+      stubFor(
+        get(urlEqualTo(s"/integration-catalogue/integrations/$apiId"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector().findById(apiId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApiNotFoundException.forId(apiId))
       }
     }
   }

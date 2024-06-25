@@ -112,8 +112,6 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-
-
   private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
     val baseUrl = servicesConfig.baseUrl(s"idms-$environmentName")
     val path = servicesConfig.getConfString(s"idms-$environmentName.path", "")
@@ -182,6 +180,30 @@ class IdmsConnectorImpl @Inject()(
         case throwable =>
           Left(raiseIdmsException.error(throwable))
       }
+  }
+
+  override def deleteClientScope(
+    environmentName: EnvironmentName,
+    clientId: String,
+    scopeId: String
+  )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+
+    val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
+
+    httpClient.delete(url)
+      .setHeader(headersForEnvironment(environmentName): _*)
+      .withProxyIfRequired(environmentName)
+      .execute[Either[UpstreamErrorResponse, Unit]]
+      .map {
+        case Right(_) => Right(())
+        case Left(e) if e.statusCode == NOT_FOUND => Left(raiseIdmsException.clientNotFound(clientId))
+        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e))
+      }
+      .recover {
+        case throwable =>
+          Left(raiseIdmsException.error(throwable))
+      }
+
   }
 
   override def fetchClientScopes(

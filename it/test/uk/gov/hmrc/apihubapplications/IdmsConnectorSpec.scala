@@ -392,6 +392,74 @@ class IdmsConnectorSpec
     }
   }
 
+  "IdmsConnector.deleteClientScope" - {
+    "must place the correct request per environment to IDMS" in {
+      forAll(environmentNames) { environmentName: EnvironmentName =>
+        stubFor(
+          delete(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .willReturn(
+              aResponse()
+                .withStatus(200)
+            )
+        )
+
+        buildConnector(this).deleteClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier()) map {
+          response => response mustBe Right(())
+        }
+      }
+    }
+
+    "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
+      stubFor(
+        delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+          )
+      )
+
+      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+        response =>
+          response mustBe Left(IdmsException.clientNotFound(testClientId))
+      }
+    }
+
+    "must return IdmsException for any non-2xx response" in {
+      forAll(nonSuccessResponses) { status: Int =>
+        stubFor(
+          delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+            .willReturn(
+              aResponse()
+                .withStatus(status)
+            )
+        )
+
+        buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+          response =>
+            response mustBe Left(IdmsException.unexpectedResponse(status))
+        }
+      }
+    }
+
+    "must return IdmsException for any errors" in {
+      stubFor(
+        delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+        response =>
+          response.left.value mustBe a[IdmsException]
+          response.left.value.issue mustBe CallError
+      }
+    }
+  }
+
   "IdmsConnector.fetchClientScopes" - {
     "must place the correct request per environment to IDMS and return the client scopes" in {
       val scopes = Seq(ClientScope("test-scope-1"), ClientScope("test-scope-2"))

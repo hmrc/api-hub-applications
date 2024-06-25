@@ -122,6 +122,17 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
     }
   }
 
+  def removeApi(applicationId: String, apiId: String): Action[AnyContent] = identify.async {
+    implicit request =>
+      applicationsService.removeApi(applicationId, apiId).map {
+        case Right(_) => NoContent
+        case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: ApiNotFoundException) => NotFound
+        case Left(_: IdmsException) => BadGateway
+        case Left(e) => throw e
+      }
+  }
+
   def addCredential(applicationId: String, environmentName: EnvironmentName): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
       applicationsService.addCredential(applicationId, environmentName).map {

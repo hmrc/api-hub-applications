@@ -20,10 +20,11 @@ import com.google.inject.Inject
 import play.api.Logging
 import play.api.http.HeaderNames._
 import play.api.http.MimeTypes.JSON
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
-import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IntegrationCatalogueException}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
@@ -40,7 +41,7 @@ class IntegrationCatalogueConnectorImpl @Inject()(
   private val baseUrl = servicesConfig.baseUrl("integration-catalogue")
   private val appAuthToken = appConfig.appAuthToken
 
-  override def linkApiToTeam(apiTeam: ApiTeam)(implicit hc: HeaderCarrier): Future[Either[IntegrationCatalogueException, Unit]] = {
+  override def linkApiToTeam(apiTeam: ApiTeam)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     httpClient.post(url"$baseUrl/integration-catalogue/apis/team")
       .setHeader(CONTENT_TYPE -> JSON)
       .setHeader(AUTHORIZATION -> appAuthToken)
@@ -48,6 +49,18 @@ class IntegrationCatalogueConnectorImpl @Inject()(
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
         case Right(_) => Right(())
+        case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
+      }
+  }
+
+  override def findById(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]] = {
+    httpClient.get(url"$baseUrl/integration-catalogue/integrations/$apiId")
+      .setHeader(ACCEPT -> JSON)
+      .setHeader(AUTHORIZATION -> appAuthToken)
+      .execute[Either[UpstreamErrorResponse, ApiDetail]]
+      .map {
+        case Right(apiDetail) => Right(apiDetail)
+        case Left(e) if e.statusCode == NOT_FOUND => Left(raiseApiNotFoundException.forId(apiId))
         case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
       }
   }

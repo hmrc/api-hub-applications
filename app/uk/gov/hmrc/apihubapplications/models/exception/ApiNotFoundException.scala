@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.application
+package uk.gov.hmrc.apihubapplications.models.exception
 
-import play.api.libs.json.{Format, Json}
+case class ApiNotFoundException(message: String) extends ApplicationsException(message, null)
 
-case class Api(id: String, endpoints: Seq[Endpoint] = Seq.empty)
+object ApiNotFoundException {
 
-object Api {
+  def forId(apiId: String): ApiNotFoundException = {
+    ApiNotFoundException(s"Cannot find API with Id $apiId")
+  }
 
-  implicit val apiFormat: Format[Api] = Json.format[Api]
-
-}
-
-object ApiLenses {
-
-  implicit class ApiLensOps(api: Api) {
-
-    def addEndpoint(endpoint: Endpoint): Api = {
-      api.copy(endpoints = api.endpoints :+ endpoint)
-    }
-
+  def forApplication(applicationId: String, apiId: String): ApiNotFoundException = {
+    ApiNotFoundException(s"Cannot find API $apiId linked to application $applicationId")
   }
 
 }

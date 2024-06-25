@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, MockitoSugar}
-import org.scalatest.OptionValues
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -34,7 +34,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator with TableDrivenPropertyChecks with OptionValues {
+class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator with TableDrivenPropertyChecks with OptionValues with EitherValues {
 
   "createAccessRequest" - {
     "must pass the correct requests to the accessRequestsRepository" in {
@@ -613,6 +613,46 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
           verify(fixture.accessRequestsRepository).update(ArgumentMatchers.eq(updated))
           verifyZeroInteractions(fixture.emailConnector)
           result mustBe Left(exception)
+      }
+    }
+  }
+
+  "cancelAccessRequests" - {
+    "must cancel all pending access requests for the application and API" in {
+      val fixture = buildFixture()
+
+      val applicationId = "test-application-id"
+      val apiId = "test-api-id"
+
+      val request1 = AccessRequest(
+        id = Some("test-request-id-1"),
+        applicationId = applicationId,
+        apiId = apiId,
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(),
+        requestedBy = "test-requested-by",
+        decision = None
+      )
+
+      val request2 = request1.copy(id = Some("test-request-id-2"))
+      val request3 = request1.copy(id = Some("test-request-id-3"), apiId = "another-api-id")
+
+      val requests = Seq(request1, request2, request3)
+
+      when(fixture.accessRequestsRepository.find(any(), any())).thenReturn(Future.successful(requests))
+
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+
+      fixture.accessRequestsService.cancelAccessRequests(applicationId, apiId).map {
+        result =>
+          verify(fixture.accessRequestsRepository).find(ArgumentMatchers.eq(Some(applicationId)), ArgumentMatchers.eq(Some(Pending)))
+          verify(fixture.accessRequestsRepository).update(ArgumentMatchers.eq(request1.copy(status = Cancelled)))
+          verify(fixture.accessRequestsRepository).update(ArgumentMatchers.eq(request2.copy(status = Cancelled)))
+          verifyNoMoreInteractions(fixture.accessRequestsRepository)
+          result.value mustBe ()
       }
     }
   }

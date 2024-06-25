@@ -96,6 +96,13 @@ object ApplicationLenses {
 
   implicit class ApplicationLensOps(application: Application) {
 
+    def safeId: String = {
+      application.id match {
+        case Some(id) => id
+        case _ => throw new IllegalStateException(s"Application does not have an Id when expected to do so: name=${application.name}")
+      }
+    }
+
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
         case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_))).distinct)
@@ -103,16 +110,37 @@ object ApplicationLenses {
       }
 
     def getPrimaryScopes: Seq[Scope] =
-    applicationPrimaryScopes.get(application)
+      applicationPrimaryScopes.get(application)
+
+    def hasPrimaryScope(scopeName: String): Boolean =
+      application.getPrimaryScopes.exists(_.name.equals(scopeName))
 
     def setPrimaryScopes(scopes: Seq[Scope]): Application =
       applicationPrimaryScopes.set(application, scopes)
 
-    def addPrimaryScope(scope: Scope): Application =
+    def addPrimaryScope(scope: Scope): Application = {
+      if (!application.hasPrimaryScope(scope.name)) {
+        applicationPrimaryScopes.set(
+          application,
+          applicationPrimaryScopes.get(application) :+ scope
+        )
+      }
+      else {
+        application
+      }
+    }
+
+    def removePrimaryScope(scopeName: String): Application =
       applicationPrimaryScopes.set(
         application,
-        applicationPrimaryScopes.get(application) :+ scope
+        applicationPrimaryScopes.get(application).filterNot(_.name.equals(scopeName))
       )
+
+    def getPrimaryScopeNames: Set[String] =
+      applicationPrimaryScopes
+        .get(application)
+        .map(_.name)
+        .toSet
 
     def getPrimaryMasterCredential: Option[Credential] =
       applicationPrimaryCredentials.get(application)
@@ -153,14 +181,35 @@ object ApplicationLenses {
     def getSecondaryScopes: Seq[Scope] =
       applicationSecondaryScopes.get(application)
 
+    def hasSecondaryScope(scopeName: String): Boolean =
+      application.getSecondaryScopes.exists(_.name.equals(scopeName))
+
     def setSecondaryScopes(scopes: Seq[Scope]): Application =
       applicationSecondaryScopes.set(application, scopes)
 
-    def addSecondaryScope(scope: Scope): Application =
+    def addSecondaryScope(scope: Scope): Application = {
+      if (!application.hasSecondaryScope(scope.name)) {
+        applicationSecondaryScopes.set(
+          application,
+          applicationSecondaryScopes.get(application) :+ scope
+        )
+      }
+      else {
+        application
+      }
+    }
+
+    def removeSecondaryScope(scopeName: String): Application =
       applicationSecondaryScopes.set(
         application,
-        applicationSecondaryScopes.get(application) :+ scope
+        applicationSecondaryScopes.get(application).filterNot(_.name.equals(scopeName))
       )
+
+    def getSecondaryScopeNames: Set[String] =
+      applicationSecondaryScopes
+        .get(application)
+        .map(_.name)
+        .toSet
 
     def getSecondaryMasterCredential: Option[Credential] =
       applicationSecondaryCredentials.get(application)
@@ -314,6 +363,10 @@ object ApplicationLenses {
 
     def removeApi(id: String): Application = {
       application.setApis(application.apis.filterNot(_.id == id))
+    }
+
+    def hasApi(id: String): Boolean = {
+      application.apis.exists(_.id.equals(id))
     }
 
     def updated(clock: Clock): Application = {

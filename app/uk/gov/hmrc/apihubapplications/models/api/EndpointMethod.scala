@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.application
+package uk.gov.hmrc.apihubapplications.models.api
 
 import play.api.libs.json.{Format, Json}
 
-case class Api(id: String, endpoints: Seq[Endpoint] = Seq.empty)
+case class EndpointMethod(
+  httpMethod: String,
+  summary: Option[String],
+  description: Option[String],
+  scopes: Seq[String]
+)
 
-object Api {
+object EndpointMethod {
 
-  implicit val apiFormat: Format[Api] = Json.format[Api]
-
-}
-
-object ApiLenses {
-
-  implicit class ApiLensOps(api: Api) {
-
-    def addEndpoint(endpoint: Endpoint): Api = {
-      api.copy(endpoints = api.endpoints :+ endpoint)
-    }
-
-  }
+  implicit val formatEndpointMethod: Format[EndpointMethod] = Json.format[EndpointMethod]
 
 }

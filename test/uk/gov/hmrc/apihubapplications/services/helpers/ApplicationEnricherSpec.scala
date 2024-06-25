@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
@@ -33,7 +34,8 @@ import scala.concurrent.Future
 
 class ApplicationEnricherSpec extends AsyncFreeSpec
   with Matchers
-  with MockitoSugar {
+  with MockitoSugar
+  with EitherValues {
 
   import ApplicationEnricherSpec._
 
@@ -504,6 +506,85 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
     }
   }
 
+  "scopeRemovingApplicationEnricher" - {
+    "must remove a scope from the primary environment and also the application" in {
+      val expected = testApplication
+        .addPrimaryCredential(Credential(testClientId1, LocalDateTime.now(), None, None))
+        .addPrimaryCredential(Credential(testClientId2, LocalDateTime.now(), None, None))
+        .addPrimaryScope(Scope(testScopeName2))
+        .addSecondaryScope(Scope(testScopeName3))
+
+      val application = expected
+        .addPrimaryScope(Scope(testScopeName1))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.deleteClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      ApplicationEnrichers.scopeRemovingApplicationEnricher(Primary, application, idmsConnector, testScopeName1).map {
+        result =>
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId1), ArgumentMatchers.eq(testScopeName1))(any())
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId2), ArgumentMatchers.eq(testScopeName1))(any())
+          result.value.enrich(application) mustBe expected
+      }
+    }
+
+    "must remove a scope from the secondary environment and also the application" in {
+      val expected = testApplication
+        .addSecondaryCredential(Credential(testClientId1, LocalDateTime.now(), None, None))
+        .addSecondaryCredential(Credential(testClientId2, LocalDateTime.now(), None, None))
+        .addPrimaryScope(Scope(testScopeName2))
+        .addSecondaryScope(Scope(testScopeName3))
+
+      val application = expected
+        .addSecondaryScope(Scope(testScopeName1))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.deleteClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      ApplicationEnrichers.scopeRemovingApplicationEnricher(Secondary, application, idmsConnector, testScopeName1).map {
+        result =>
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId1), ArgumentMatchers.eq(testScopeName1))(any())
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId2), ArgumentMatchers.eq(testScopeName1))(any())
+          result.value.enrich(application) mustBe expected
+      }
+    }
+
+    "must ignore a Not Found response from IDMS (as this is the desired situation)" in {
+      val expected = testApplication
+        .addPrimaryCredential(Credential(testClientId1, LocalDateTime.now(), None, None))
+
+      val application = expected
+        .addPrimaryScope(Scope(testScopeName1))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.deleteClientScope(any(), any(), any())(any()))
+        .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
+
+      ApplicationEnrichers.scopeRemovingApplicationEnricher(Primary, application, idmsConnector, testScopeName1).map {
+        result =>
+          result.value.enrich(application) mustBe expected
+      }
+    }
+
+    "must return IdmsException if any call to IDMS fails" in {
+      val application = testApplication
+        .addPrimaryCredential(Credential(testClientId1, LocalDateTime.now(), None, None))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.deleteClientScope(any(), any(), any())(any()))
+        .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+
+      ApplicationEnrichers.scopeRemovingApplicationEnricher(Primary, application, idmsConnector, testScopeName1).map {
+        actual =>
+          actual mustBe Left(IdmsException.unexpectedResponse(500))
+      }
+    }
+  }
+
 }
 
 object ApplicationEnricherSpec {
@@ -514,8 +595,11 @@ object ApplicationEnricherSpec {
   val testClientId2: String = "test-client-id-2"
   val testClientResponse1: ClientResponse = ClientResponse(testClientId1, "test-secret-1")
   val testClientResponse2: ClientResponse = ClientResponse(testClientId2, "test-secret-2")
-  val testClientScope1: ClientScope = ClientScope("test-client-scope-1")
-  val testClientScope2: ClientScope = ClientScope("test-client-scope-2")
+  val testScopeName1: String = "test-scope-name-1"
+  val testScopeName2: String = "test-scope-name-2"
+  val testScopeName3: String = "test-scope-name-3"
+  val testClientScope1: ClientScope = ClientScope(testScopeName1)
+  val testClientScope2: ClientScope = ClientScope(testScopeName2)
   val testException: IdmsException = IdmsException("test-exception", CallError)
 
   def successfulEnricher(mutator: Application => Application): Future[Either[IdmsException, ApplicationEnricher]] = {

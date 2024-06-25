@@ -47,12 +47,11 @@ class AccessRequestsService @Inject()(
 
   private def sendAccessRequestSubmittedEmails(accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier) = {
     applicationsRepository.findById(accessRequest.applicationId).flatMap {
-      case Right(application) => {
+      case Right(application) =>
         for {
           _ <- emailConnector.sendAccessRequestSubmittedEmailToRequester(application, accessRequest)
           _ <- emailConnector.sendNewAccessRequestEmailToApprovers(application, accessRequest)
         } yield Future.successful(Right(()))
-      }
       case Left(exception) => Future.successful(Left(exception))
     }
   }
@@ -127,7 +126,7 @@ class AccessRequestsService @Inject()(
     }
   }
 
-  def cancelAccessRequests(applicationId: String) = {
+  def cancelAccessRequests(applicationId: String): Future[Either[ApplicationsException, Unit]] = {
     getAccessRequests(Some(applicationId), Some(Pending)).flatMap(
       accessRequests => {
         Future.sequence(accessRequests.map(pendingAccessRequest => accessRequestsRepository.update(
@@ -138,6 +137,23 @@ class AccessRequestsService @Inject()(
           case Left(e) => Left(e)
         }
       })
+  }
+
+  def cancelAccessRequests(applicationId: String, apiId: String): Future[Either[ApplicationsException, Unit]] = {
+    getAccessRequests(Some(applicationId), Some(Pending))
+      .map(_.filter(_.apiId.equals(apiId)))
+      .flatMap(
+        accessRequests =>
+          Future
+            .sequence(
+              accessRequests.map(
+                accessRequest =>
+                  accessRequestsRepository.update(accessRequest.setStatus(Cancelled))
+              )
+            )
+            .map(useFirstApplicationsException)
+            .map(_.map(_ => ()))
+      )
   }
 
 }

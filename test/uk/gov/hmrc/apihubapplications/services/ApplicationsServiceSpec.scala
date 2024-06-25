@@ -36,6 +36,7 @@ import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms._
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.apihubapplications.testhelpers.ApplicationGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -52,7 +53,7 @@ class ApplicationsServiceSpec
     with EitherValues
     with TableDrivenPropertyChecks {
 
-  val currentUser = "me@test.com"
+  import ApplicationsServiceSpec._
 
   "registerApplication" - {
     "must build the correct application, submit it to the repository and return it" in {
@@ -406,8 +407,8 @@ class ApplicationsServiceSpec
       val scope4 = "test-scope-4"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setPrimaryCredentials(Seq(Credential(primaryClientId, LocalDateTime.now(fixture.clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(fixture.clock), None, None)))
+        .setPrimaryCredentials(Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
@@ -420,7 +421,7 @@ class ApplicationsServiceSpec
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application
-        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(fixture.clock), Some(secondaryClientSecret), Some("1234"))))
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"))))
         .setSecondaryScopes(Seq(Scope(scope1), Scope(scope2)))
         .setPrimaryScopes(Seq(Scope(scope3), Scope(scope4)))
 
@@ -453,7 +454,7 @@ class ApplicationsServiceSpec
       val clientId = "test-client-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(fixture.clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
 
@@ -477,8 +478,8 @@ class ApplicationsServiceSpec
       val id = "test-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(fixture.clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(fixture.clock), None, None)))
+        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id)))
         .thenReturn(Future.successful(Right(application)))
@@ -596,7 +597,7 @@ class ApplicationsServiceSpec
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(fixture.clock), None, None)))
+        .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
@@ -621,7 +622,7 @@ class ApplicationsServiceSpec
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(fixture.clock), None, None)))
+        .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
@@ -661,8 +662,8 @@ class ApplicationsServiceSpec
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None)))
+        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(emailConnector.sendApplicationDeletedEmailToTeam(ArgumentMatchers.eq(application), ArgumentMatchers.eq(currentUser))(any())).thenReturn(Future.successful(Right(())))
@@ -687,8 +688,8 @@ class ApplicationsServiceSpec
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(fixture.clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(fixture.clock), None, None)))
+        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
       when(repository.findById(ArgumentMatchers.eq(id))).thenReturn(Future.successful(Right(application)))
       when(repository.update(any())).thenReturn(Future.successful(Right(())))
@@ -933,6 +934,97 @@ class ApplicationsServiceSpec
       }
     }
 
+  }
+
+  "removeApi" - {
+    val applicationId = "test-application-id"
+    val apiId = "test-api-id"
+
+    val api = Api(apiId, Seq.empty)
+
+    val onceUponATime = LocalDateTime.now(clock).minusDays(1)
+
+    val baseApplication = Application(
+      id = Some(applicationId),
+      name = "test-app-name",
+      created = onceUponATime,
+      createdBy = Creator("test-email"),
+      lastUpdated = onceUponATime,
+      teamMembers = Seq(TeamMember(email = "test-email")),
+      environments = Environments()
+    )
+
+    "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val application = baseApplication.addApi(api)
+      val updated = application
+        .removeApi(apiId)
+        .updated(clock)
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+      when(scopeFixer.fix(any())(any())).thenReturn(Future.successful(Right(updated)))
+      when(repository.update(any())).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.cancelAccessRequests(any(), any())).thenReturn(Future.successful(Right(())))
+
+      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+        result =>
+          verify(scopeFixer).fix(ArgumentMatchers.eq(updated))(any())
+          verify(repository).update(ArgumentMatchers.eq(updated))
+          verify(accessRequestsService).cancelAccessRequests(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(apiId))
+          result.value mustBe ()
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application cannot be found" in {
+      val fixture = buildFixture
+      import fixture._
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId)))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+        result =>
+          verifyZeroInteractions(fixture.scopeFixer)
+          verifyZeroInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any())
+          result mustBe Left(ApplicationNotFoundException.forId(applicationId))
+      }
+    }
+
+    "must return ApiNotFoundException when the API has not been linked with the application" in {
+      val fixture = buildFixture
+      import fixture._
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(baseApplication)))
+
+      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+        result =>
+          verifyZeroInteractions(fixture.scopeFixer)
+          verifyZeroInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any())
+          result mustBe Left(ApiNotFoundException.forApplication(applicationId, apiId))
+      }
+    }
+
+    "must return any exceptions encountered" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val application = baseApplication.addApi(api)
+      val expected = IdmsException.clientNotFound("test-client-id")
+
+      when(repository.findById(ArgumentMatchers.eq(applicationId))).thenReturn(Future.successful(Right(application)))
+      when(scopeFixer.fix(any())(any())).thenReturn(Future.successful(Left(expected)))
+
+      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+        result =>
+          verifyZeroInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any())
+          result mustBe Left(expected)
+      }
+    }
   }
 
   "addCredential" - {
@@ -1506,22 +1598,29 @@ class ApplicationsServiceSpec
   }
 
   private case class Fixture(
-    clock: Clock,
     repository: ApplicationsRepository,
     idmsConnector: IdmsConnector,
     emailConnector: EmailConnector,
     service: ApplicationsService,
-    accessRequestsService: AccessRequestsService
+    accessRequestsService: AccessRequestsService,
+    scopeFixer: ScopeFixer
   )
 
   private def buildFixture: Fixture = {
-    val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
     val repository: ApplicationsRepository = mock[ApplicationsRepository]
     val idmsConnector: IdmsConnector = mock[IdmsConnector]
     val emailConnector: EmailConnector = mock[EmailConnector]
     val accessRequestsService: AccessRequestsService = mock[AccessRequestsService]
-    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, accessRequestsService)
-    Fixture(clock, repository, idmsConnector, emailConnector, service, accessRequestsService)
+    val scopeFixer = mock[ScopeFixer]
+    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, accessRequestsService, scopeFixer)
+    Fixture(repository, idmsConnector, emailConnector, service, accessRequestsService, scopeFixer)
   }
+
+}
+
+object ApplicationsServiceSpec {
+
+  val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+  val currentUser = "me@test.com"
 
 }

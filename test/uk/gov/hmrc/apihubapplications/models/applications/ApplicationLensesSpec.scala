@@ -586,7 +586,7 @@ object ApplicationLensesSpec {
     (0 to Random.nextInt(5))
       .map(_ => randomString())
 
-  private def randomString(): String = Random.alphanumeric.take(Random.nextInt(10) + 1).mkString
+  private def randomString(): String = Random.alphanumeric.take(Random.nextInt(10) + 10).mkString
 
   trait LensBehaviours {
     this: AnyFreeSpec with Matchers =>
