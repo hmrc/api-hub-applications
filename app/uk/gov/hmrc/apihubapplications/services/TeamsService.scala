@@ -79,10 +79,7 @@ class TeamsService @Inject()(
   def renameTeam(id: String, request: RenameTeamRequest): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Right(team) =>
-        repository.update(team.setName(request.name)) flatMap {
-          case Right(_) => Future.successful(Right(()))
-          case Left(exception) => Future.successful(Left(exception))
-        }
+        repository.update(team.setName(request.name))
       case Left(e) =>
         Future.successful(Left(e))
     }

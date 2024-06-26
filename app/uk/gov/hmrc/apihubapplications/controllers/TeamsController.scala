@@ -97,7 +97,7 @@ class TeamsController @Inject()(
           teamsService.renameTeam(id, validRequest).map {
             case Right(_) => NoContent
             case Left(_: TeamNotFoundException) => NotFound
-            case Left(_: TeamMemberExistsException) => BadRequest
+            case Left(_: TeamNameNotUniqueException) => Conflict
             case Left(e) => throw e
           }
         case e: JsError =>

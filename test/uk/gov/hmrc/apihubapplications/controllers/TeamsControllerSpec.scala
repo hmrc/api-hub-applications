@@ -348,6 +348,28 @@ class TeamsControllerSpec
         verifyZeroInteractions(fixture.teamsService)
       }
     }
+
+    "must return 409 Conflict when the team name is not unique" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val renameTeamRequest = RenameTeamRequest("new name")
+
+      val exception = TeamNameNotUniqueException.forName("new name")
+
+      when(fixture.teamsService.renameTeam(any, any)).thenReturn(Future.successful(Left(exception)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.renameTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(renameTeamRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
+      }
+    }
   }
 
   private case class Fixture(application: PlayApplication, teamsService: TeamsService)
