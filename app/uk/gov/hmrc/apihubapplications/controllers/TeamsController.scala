@@ -23,7 +23,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.NewTeam
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest}
 import uk.gov.hmrc.apihubapplications.services.TeamsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -82,6 +82,22 @@ class TeamsController @Inject()(
             case Right(_) => NoContent
             case Left(_: TeamNotFoundException) => NotFound
             case Left(_: TeamMemberExistsException) => BadRequest
+            case Left(e) => throw e
+          }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+  }
+
+  def renameTeam(id: String): Action[JsValue] = identify(parse.json).async {
+    implicit request =>
+      request.body.validate[RenameTeamRequest] match {
+        case JsSuccess(validRequest, _) =>
+          teamsService.renameTeam(id, validRequest).map {
+            case Right(_) => NoContent
+            case Left(_: TeamNotFoundException) => NotFound
+            case Left(_: TeamNameNotUniqueException) => Conflict
             case Left(e) => throw e
           }
         case e: JsError =>

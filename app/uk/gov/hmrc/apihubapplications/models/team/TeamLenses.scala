@@ -27,6 +27,12 @@ object TeamLenses {
       set = (team, id) => team.copy(id = id)
     )
 
+  val teamName: Lens[Team, String] =
+    Lens[Team, String](
+      get = _.name,
+      set = (team, name) => team.copy(name = name)
+    )
+
   val teamTeamMembers: Lens[Team, Seq[TeamMember]] =
     Lens[Team, Seq[TeamMember]](
       get = _.teamMembers,
@@ -37,6 +43,10 @@ object TeamLenses {
 
     def setId(id: String): Team = {
       teamId.set(team, Some(id))
+    }
+
+    def setName(name: String): Team = {
+      teamName.set(team, name)
     }
 
     def setTeamMembers(teamMembers: Seq[TeamMember]): Team = {

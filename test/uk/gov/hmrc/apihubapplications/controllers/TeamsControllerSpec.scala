@@ -32,7 +32,7 @@ import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team}
+import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
 import uk.gov.hmrc.apihubapplications.services.TeamsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
@@ -284,6 +284,90 @@ class TeamsControllerSpec
 
         status(result) mustBe BAD_REQUEST
         verifyZeroInteractions(fixture.teamsService)
+      }
+    }
+  }
+
+  "renameTeam" - {
+    "must rename team member and return 204 No Content when the request is valid" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val renameTeamRequest = RenameTeamRequest("new name")
+
+      when(fixture.teamsService.renameTeam(any, any)).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.renameTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(renameTeamRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.teamsService).renameTeam(eqTo(id), eqTo(renameTeamRequest))
+      }
+    }
+
+    "must return 404 Not Found when the service returns TeamNotFoundException" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val renameTeamRequest = RenameTeamRequest("new name")
+
+      when(fixture.teamsService.renameTeam(any, any))
+        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.renameTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(renameTeamRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 400 BadRequest when the request body is not a valid TeamMemberRequest" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.renameTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.obj())
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+        verifyZeroInteractions(fixture.teamsService)
+      }
+    }
+
+    "must return 409 Conflict when the team name is not unique" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val renameTeamRequest = RenameTeamRequest("new name")
+
+      val exception = TeamNameNotUniqueException.forName("new name")
+
+      when(fixture.teamsService.renameTeam(any, any)).thenReturn(Future.successful(Left(exception)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.renameTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(renameTeamRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
       }
     }
   }

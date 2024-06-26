@@ -209,7 +209,7 @@ class TeamsRepositoryIntegrationSpec
       setMdcData()
 
       val saved = repository.insert(team1).futureValue.value
-      val updated = saved.addTeamMember("new-team-member")
+      val updated = saved.addTeamMember("new-team-member").setName("new name")
 
       val result = repository
         .update(updated)
