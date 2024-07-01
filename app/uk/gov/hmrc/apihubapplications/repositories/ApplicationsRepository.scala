@@ -23,6 +23,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
@@ -72,6 +73,15 @@ class ApplicationsRepository @Inject()(
       .map(_.decryptedValue.toModel))
   }
 
+  def findForTeams(teams: Seq[Team], includeDeleted: Boolean): Future[Seq[Application]] = {
+    Mdc.preservingMdc {
+      collection
+        .find(Filters.in("teamId", teams.flatMap(_.id): _*))
+        .toFuture()
+    } map (_.filter(deletedFilter(includeDeleted))
+      .map(_.decryptedValue.toModel))
+  }
+
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
@@ -92,7 +102,10 @@ class ApplicationsRepository @Inject()(
 
   private def emailFilter(teamMemberEmail: Option[String]): Bson = {
     teamMemberEmail match {
-      case Some(email) => Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)
+      case Some(email) => Filters.and(
+        Filters.exists("teamId", false),
+        Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)
+      )
       case None => Filters.empty()
     }
   }

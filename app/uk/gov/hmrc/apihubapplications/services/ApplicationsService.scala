@@ -41,7 +41,8 @@ class ApplicationsService @Inject()(
   idmsConnector: IdmsConnector,
   emailConnector: EmailConnector,
   accessRequestsService: AccessRequestsService,
-  scopeFixer: ScopeFixer
+  scopeFixer: ScopeFixer,
+  applicationsSearchService: ApplicationsSearchService
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -120,30 +121,15 @@ class ApplicationsService @Inject()(
   }
 
   def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
-    repository.findAll(teamMemberEmail, includeDeleted)
+    applicationsSearchService.findAll(teamMemberEmail, includeDeleted)
   }
 
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
-    repository.findAllUsingApi(apiId, includeDeleted)
+    applicationsSearchService.findAllUsingApi(apiId, includeDeleted)
   }
 
   def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    repository.findById(id).flatMap {
-      case Right(application) =>
-        if (enrich) {
-          ApplicationEnrichers.process(
-            application,
-            Seq(
-              ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
-              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
-              ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
-            )
-          )
-        } else {
-          Future.successful(Right(application))
-        }
-      case Left(e) => Future.successful(Left(e))
-    }
+    applicationsSearchService.findById(id, enrich)
   }
 
   def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
@@ -152,7 +138,7 @@ class ApplicationsService @Inject()(
   }
 
   def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    repository.findById(applicationId).flatMap {
+    findById(applicationId, false).flatMap {
       case Right(application) =>
         idmsConnector.deleteAllClients(application) flatMap {
           case Right(_) =>
@@ -319,6 +305,8 @@ class ApplicationsService @Inject()(
                      teamMember: TeamMember
                    )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     findById(applicationId, enrich = false).flatMap {
+      case Right(application) if application.teamId.isDefined =>
+        Future.successful(Left(raiseApplicationTeamMigratedException.forId(applicationId)))
       case Right(application) if !application.hasTeamMember(teamMember) =>
         repository.update(
           application

@@ -22,7 +22,7 @@ import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
 import uk.gov.hmrc.apihubapplications.models.accessRequest._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
-import uk.gov.hmrc.apihubapplications.repositories.{AccessRequestsRepository, ApplicationsRepository}
+import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -31,11 +31,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AccessRequestsService @Inject()(
-                                       accessRequestsRepository: AccessRequestsRepository,
-                                       applicationsRepository: ApplicationsRepository,
-                                       clock: Clock,
-                                       emailConnector: EmailConnector
-                                     )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+  accessRequestsRepository: AccessRequestsRepository,
+  applicationsSearchService: ApplicationsSearchService,
+  clock: Clock,
+  emailConnector: EmailConnector
+)(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
     accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
@@ -46,7 +46,7 @@ class AccessRequestsService @Inject()(
   }
 
   private def sendAccessRequestSubmittedEmails(accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier) = {
-    applicationsRepository.findById(accessRequest.applicationId).flatMap {
+    applicationsSearchService.findById(accessRequest.applicationId, false).flatMap {
       case Right(application) =>
         for {
           _ <- emailConnector.sendAccessRequestSubmittedEmailToRequester(application, accessRequest)
@@ -65,18 +65,19 @@ class AccessRequestsService @Inject()(
   }
 
   private def sendAccessApprovedEmails(accessRequest: AccessRequest)(implicit hc: HeaderCarrier) = {
-    applicationsRepository.findById(accessRequest.applicationId).flatMap {
+    applicationsSearchService.findById(accessRequest.applicationId, false).flatMap {
       case Right(application) => emailConnector.sendAccessApprovedEmailToTeam(application, accessRequest)
       case Left(exception) => Future.successful(Left(exception))
     }
   }
 
   private def sendAccessRejectedEmails(accessRequest: AccessRequest)(implicit hc: HeaderCarrier) = {
-    applicationsRepository.findById(accessRequest.applicationId).flatMap {
+    applicationsSearchService.findById(accessRequest.applicationId, false).flatMap {
       case Right(application) => emailConnector.sendAccessRejectedEmailToTeam(application, accessRequest)
       case Left(exception) => Future.successful(Left(exception))
     }
   }
+
   def approveAccessRequest(id: String,
                            decisionRequest: AccessRequestDecisionRequest,
                            applicationsService: ApplicationsService )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

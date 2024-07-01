@@ -86,6 +86,7 @@ object DbApplicationSpec {
     created = now.minusDays(2),
     createdBy = Creator("test-creator-email"),
     lastUpdated = now.minusDays(1),
+    teamId = None,
     teamMembers = Seq(TeamMember("test-creator-email"), TeamMember("test-member-email")),
     environments = Environments(),
     issues = Seq.empty,

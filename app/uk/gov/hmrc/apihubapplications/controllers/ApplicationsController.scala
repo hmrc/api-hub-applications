@@ -164,6 +164,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
           applicationsService.addTeamMember(applicationId, teamMemberRequest.toTeamMember).map {
             case Right(_) => NoContent
             case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(_: ApplicationTeamMigratedException) => Conflict
             case Left(_: TeamMemberExistsException) => BadRequest
             case Left(_) => InternalServerError
           }

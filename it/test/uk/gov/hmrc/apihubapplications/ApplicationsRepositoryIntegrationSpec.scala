@@ -180,7 +180,7 @@ class ApplicationsRepositoryIntegrationSpec
       val now = LocalDateTime.now()
       val apis = apiIds.map(Api(_, Seq.empty))
       val deleted = if (isDeleted) Some(Deleted(now, "team@test.com")) else None
-      Application(None, name, now, Creator("test1@test.com"), now, Seq.empty, Environments(), Seq.empty, apis, deleted)
+      Application(None, name, now, Creator("test1@test.com"), now, None, Seq.empty, Environments(), Seq.empty, apis, deleted)
     }
 
     val targetApiId = "api_id"
