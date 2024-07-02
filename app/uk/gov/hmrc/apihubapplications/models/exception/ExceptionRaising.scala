@@ -46,6 +46,12 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseApplicationTeamMigratedException {
+    def forId(id: String): ApplicationTeamMigratedException = {
+      log(ApplicationTeamMigratedException.forId(id))
+    }
+  }
+
   object raiseApiNotFoundException {
     def forId(apiId: String): ApiNotFoundException = {
       log(ApiNotFoundException.forId(apiId))

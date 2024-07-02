@@ -26,6 +26,7 @@ import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFo
 import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, ScopeFixer}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
@@ -41,7 +42,8 @@ class ApplicationsService @Inject()(
   idmsConnector: IdmsConnector,
   emailConnector: EmailConnector,
   accessRequestsService: AccessRequestsService,
-  scopeFixer: ScopeFixer
+  scopeFixer: ScopeFixer,
+  teamsService: TeamsService
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -99,28 +101,62 @@ class ApplicationsService @Inject()(
   }
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    val application = Application(newApplication, clock)
-      .assertTeamMember(newApplication.createdBy.email)
+    fetchTeam(newApplication).flatMap {
+      case Right(maybeTeam) =>
+        val application = Application(newApplication, clock) match {
+          case application if application.isMigrated => application
+          case application => application.assertTeamMember(newApplication.createdBy.email)
+        }
 
-    ApplicationEnrichers.process(
-      application,
-      Seq(
-        ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector, clock),
-        ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector, clock)
-      )
-    ).flatMap {
-      case Right(enriched) =>
-        for {
-          saved <- repository.insert(enriched)
-          _ <- emailConnector.sendAddTeamMemberEmail(saved)
-          _ <- emailConnector.sendApplicationCreatedEmailToCreator(saved)
-        } yield Right(saved)
+        ApplicationEnrichers.process(
+          application,
+          Seq(
+            ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector, clock),
+            ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector, clock)
+          )
+        ).flatMap {
+          case Right(enriched) =>
+            for {
+              saved <- insertApplication(enriched, maybeTeam)
+              _ <- emailConnector.sendAddTeamMemberEmail(saved)
+              _ <- emailConnector.sendApplicationCreatedEmailToCreator(saved)
+            } yield Right(saved)
+          case Left(e) => Future.successful(Left(e))
+        }
       case Left(e) => Future.successful(Left(e))
     }
   }
 
+  private def insertApplication(application: Application, maybeTeam: Option[Team]): Future[Application] = {
+    repository.insert(application).map(
+      saved =>
+        maybeTeam match {
+          case Some(team) => saved.setTeamMembers(team.teamMembers)
+          case None => saved
+        }
+    )
+  }
+
+  private def fetchTeam(newApplication: NewApplication): Future[Either[ApplicationsException, Option[Team]]] = {
+    newApplication.teamId match {
+      case Some(teamId) =>
+        teamsService.findById(teamId).map(_.map(Some(_)))
+      case None =>
+        Future.successful(Right(None))
+    }
+  }
+
   def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
-    repository.findAll(teamMemberEmail, includeDeleted)
+    repository.findAll(teamMemberEmail, includeDeleted).flatMap {
+      applications =>
+        teamMemberEmail match {
+          case Some(email) => teamsService.findAll(Some(email)).flatMap {
+            case teams if teams.nonEmpty => repository.findForTeams(teams, includeDeleted).map(moreApplications => applications ++ moreApplications)
+            case _ => Future.successful(applications)
+          }
+          case None => Future.successful(applications)
+        }
+    }
   }
 
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
@@ -319,6 +355,8 @@ class ApplicationsService @Inject()(
                      teamMember: TeamMember
                    )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     findById(applicationId, enrich = false).flatMap {
+      case Right(application) if application.isMigrated =>
+        Future.successful(Left(raiseApplicationTeamMigratedException.forId(applicationId)))
       case Right(application) if !application.hasTeamMember(teamMember) =>
         repository.update(
           application

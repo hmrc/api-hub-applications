@@ -17,12 +17,14 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.bson.Document
 import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.bson.{BsonArray, Document}
 import org.mongodb.scala.model._
 import play.api.Logging
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
@@ -66,7 +68,24 @@ class ApplicationsRepository @Inject()(
   def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find(emailFilter(teamMemberEmail))
+        .aggregate(
+          Seq(
+            emailMatch(teamMemberEmail)
+          ).flatten ++ findPipeline()
+        )
+        .toFuture()
+    } map (_.filter(deletedFilter(includeDeleted))
+      .map(_.decryptedValue.toModel))
+  }
+
+  def findForTeams(teams: Seq[Team], includeDeleted: Boolean): Future[Seq[Application]] = {
+    Mdc.preservingMdc {
+      collection
+        .aggregate(
+          Seq(
+            Aggregates.filter(Filters.in("teamId", teams.flatMap(_.id): _*))
+          ) ++ findPipeline()
+        )
         .toFuture()
     } map (_.filter(deletedFilter(includeDeleted))
       .map(_.decryptedValue.toModel))
@@ -75,10 +94,33 @@ class ApplicationsRepository @Inject()(
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find(Filters.equal("apis.id", apiId))
+        .aggregate(
+          Seq(
+            Aggregates.filter(Filters.equal("apis.id", apiId))
+          ) ++ findPipeline()
+        )
         .toFuture()
     } map (_.filter(deletedFilter(includeDeleted))
       .map(_.decryptedValue.toModel))
+  }
+
+  def findById(id: String): Future[Either[ApplicationsException, Application]] = {
+    stringToObjectId(id) match {
+      case Some(objectId) =>
+        Mdc.preservingMdc {
+          collection
+            .aggregate(
+              Seq(
+                Aggregates.filter(Filters.equal("_id", objectId))
+              ) ++ findPipeline()
+            )
+            .headOption()
+        } map {
+          case Some(application) if application.deleted.isEmpty => Right(application.decryptedValue.toModel)
+          case _ => Left(raiseApplicationNotFoundException.forId(id))
+        }
+      case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
+    }
   }
 
   private def deletedFilter(includeDeleted: Boolean)(application: SensitiveApplication): Boolean = {
@@ -90,26 +132,51 @@ class ApplicationsRepository @Inject()(
     }
   }
 
-  private def emailFilter(teamMemberEmail: Option[String]): Bson = {
-    teamMemberEmail match {
-      case Some(email) => Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)
-      case None => Filters.empty()
-    }
+  private def emailMatch(teamMemberEmail: Option[String]) = {
+    teamMemberEmail.map(
+      email => Aggregates.filter(
+        Filters.and(
+          Filters.exists("teamId", false),
+          Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)
+        )
+      )
+    )
   }
 
-  def findById(id: String): Future[Either[ApplicationsException, Application]] = {
-    stringToObjectId(id) match {
-      case Some(objectId) =>
-        Mdc.preservingMdc {
-          collection
-            .find(Filters.equal("_id", objectId))
-            .headOption()
-        } map {
-          case Some(application) if application.deleted.isEmpty => Right(application.decryptedValue.toModel)
-          case _ => Left(raiseApplicationNotFoundException.forId(id))
-        }
-      case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
-    }
+  private def findPipeline(): Seq[Bson] = {
+    Seq(
+      Aggregates.addFields(Field("teamObjectId", Document("$toObjectId" -> "$teamId"))),
+      Aggregates.lookup(
+        from = "teams",
+        localField = "teamObjectId",
+        foreignField = "_id",
+        as = "externalTeam"
+      ),
+      Aggregates.addFields(
+        Field[Bson](
+          "teamMembers",
+          Document(
+            "$cond" -> Document(
+              "if" -> Document(
+                "$eq" -> BsonArray(
+                  Document(
+                    "$ifNull" -> BsonArray("$teamId", "0")
+                  ),
+                  "0"
+                )
+              ),
+              "then" -> "$teamMembers",
+              "else" -> Document("$arrayElemAt" -> BsonArray("$externalTeam.teamMembers", 0))
+            )
+          )
+        )
+      ),
+      Aggregates.project(
+        Projections.fields(
+          Projections.exclude("teamObjectId", "externalTeam")
+        )
+      )
+    )
   }
 
   def insert(application: Application): Future[Application] = {
@@ -160,6 +227,21 @@ class ApplicationsRepository @Inject()(
 
   def listIndexes: Future[Seq[Document]] = {
     collection.listIndexes().toFuture()
+  }
+
+  def teamMigrationReport(): Future[Map[TeamMigrationKey, Int]] = {
+    findAll(None, true).map {
+      applications =>
+        applications.groupMapReduce(application => TeamMigrationKey(application.teamId.isDefined, application.deleted.isDefined))(_ => 1)(_ + _)
+    }
+  }
+
+  case class TeamMigrationKey(isMigrated: Boolean, isDeleted: Boolean)
+
+  object TeamMigrationKey {
+
+    implicit val formatTeamMigrationKey: Format[TeamMigrationKey] = Json.format[TeamMigrationKey]
+
   }
 
 }
