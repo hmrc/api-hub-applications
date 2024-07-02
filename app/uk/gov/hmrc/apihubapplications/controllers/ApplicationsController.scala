@@ -47,6 +47,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
           applicationsService.registerApplication(newApp).map {
             case Right(application) => Created(Json.toJson(application.makePublic()))
             case Left(_: IdmsException) => BadGateway
+            case Left(_: TeamNotFoundException) => BadRequest
             case Left(_) => InternalServerError
           }
         case e: JsError =>
