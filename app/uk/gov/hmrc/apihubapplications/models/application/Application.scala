@@ -37,20 +37,20 @@ case class Application (
 object Application {
 
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember]): Application = {
-    Application(id, name, createdBy, teamMembers, Clock.systemDefaultZone())
+    Application(id, name, createdBy, None, teamMembers, Clock.systemDefaultZone())
   }
 
-  def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember], clock: Clock): Application = {
+  def apply(id: Option[String], name: String, createdBy: Creator, teamId: Option[String], teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
-    Application(id, name, now, createdBy, now, None, teamMembers, Environments(), apis = Seq.empty, deleted = None)
+    Application(id, name, now, createdBy, now, teamId, teamMembers, Environments(), apis = Seq.empty, deleted = None)
   }
 
   def apply(newApplication: NewApplication): Application = {
-    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamMembers)
+    apply(newApplication, Clock.systemDefaultZone())
   }
 
   def apply(newApplication: NewApplication, clock: Clock): Application = {
-    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamMembers, clock)
+    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamId, newApplication.teamMembers.getOrElse(Seq.empty), clock)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {

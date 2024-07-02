@@ -407,7 +407,7 @@ class ApplicationsServiceSpec
       val scope3 = "test-scope-3"
       val scope4 = "test-scope-4"
 
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+      val application = Application(Some(id), "test-name", Creator("test-creator"), None, Seq.empty, clock)
         .setPrimaryCredentials(Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None)))
         .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None)))
 
@@ -454,7 +454,7 @@ class ApplicationsServiceSpec
       val id = "test-id"
       val clientId = "test-client-id"
 
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+      val application = Application(Some(id), "test-name", Creator("test-creator"), None, Seq.empty, clock)
         .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
@@ -478,7 +478,7 @@ class ApplicationsServiceSpec
 
       val id = "test-id"
 
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+      val application = Application(Some(id), "test-name", Creator("test-creator"), None, Seq.empty, clock)
         .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
         .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
 

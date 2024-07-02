@@ -132,7 +132,7 @@ class ApplicationsIntegrationSpec
             newApplication.teamMembers
           }
           else {
-            newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
+            newApplication.teamMembers.value :+ TeamMember(newApplication.createdBy.email)
           }
 
         // This test is becoming a bit tricky as the stored and returned responses deviate

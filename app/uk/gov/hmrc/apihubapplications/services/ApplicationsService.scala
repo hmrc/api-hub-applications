@@ -100,8 +100,10 @@ class ApplicationsService @Inject()(
   }
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    val application = Application(newApplication, clock)
-      .assertTeamMember(newApplication.createdBy.email)
+    val application = Application(newApplication, clock) match {
+      case application if application.isMigrated => application
+      case application => application.assertTeamMember(newApplication.createdBy.email)
+    }
 
     ApplicationEnrichers.process(
       application,

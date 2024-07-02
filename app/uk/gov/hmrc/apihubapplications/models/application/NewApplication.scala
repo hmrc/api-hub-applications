@@ -18,9 +18,13 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import play.api.libs.json.{Format, Json}
 
-case class NewApplication(name: String, createdBy: Creator, teamMembers: Seq[TeamMember])
+case class NewApplication(name: String, createdBy: Creator, teamId: Option[String] = None, teamMembers: Option[Seq[TeamMember]] = None)
 
 object NewApplication {
+
+  def apply(name: String, createdBy: Creator, teamMembers: Seq[TeamMember]): NewApplication = {
+    NewApplication(name, createdBy, None, Some(teamMembers))
+  }
 
   implicit val newApplicationFormat: Format[NewApplication] = Json.format[NewApplication]
 
