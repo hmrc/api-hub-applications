@@ -333,6 +333,9 @@ object ApplicationLenses {
       }
     }
 
+    def setTeamMembers(teamMembers: Seq[TeamMember]): Application =
+      applicationTeamMembers.set(application, teamMembers)
+
     def setIssues(issues: Seq[String]): Application = {
       applicationIssues.set(application, issues)
     }
