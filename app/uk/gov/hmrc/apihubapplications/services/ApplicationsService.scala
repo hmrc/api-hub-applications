@@ -41,7 +41,8 @@ class ApplicationsService @Inject()(
   idmsConnector: IdmsConnector,
   emailConnector: EmailConnector,
   accessRequestsService: AccessRequestsService,
-  scopeFixer: ScopeFixer
+  scopeFixer: ScopeFixer,
+  teamsService: TeamsService
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -120,7 +121,16 @@ class ApplicationsService @Inject()(
   }
 
   def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
-    repository.findAll(teamMemberEmail, includeDeleted)
+    repository.findAll(teamMemberEmail, includeDeleted).flatMap {
+      applications =>
+        teamMemberEmail match {
+          case Some(email) => teamsService.findAll(Some(email)).flatMap {
+            case teams if teams.nonEmpty => repository.findForTeams(teams, includeDeleted).map(moreApplications => applications ++ moreApplications)
+            case _ => Future.successful(applications)
+          }
+          case None => Future.successful(applications)
+        }
+    }
   }
 
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
@@ -319,6 +329,8 @@ class ApplicationsService @Inject()(
                      teamMember: TeamMember
                    )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     findById(applicationId, enrich = false).flatMap {
+      case Right(application) if application.isMigrated =>
+        Future.successful(Left(raiseApplicationTeamMigratedException.forId(applicationId)))
       case Right(application) if !application.hasTeamMember(teamMember) =>
         repository.update(
           application

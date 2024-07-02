@@ -317,6 +317,7 @@ class ApplicationsServiceSpec
       )
 
       when(repository.findAll(any(), any())).thenReturn(Future.successful(applications))
+      when(teamsService.findAll(any())).thenReturn(Future.successful(Seq.empty))
 
       service.findAll(Some("test-email-1"), false) map {
         actual =>
@@ -1603,7 +1604,8 @@ class ApplicationsServiceSpec
     emailConnector: EmailConnector,
     service: ApplicationsService,
     accessRequestsService: AccessRequestsService,
-    scopeFixer: ScopeFixer
+    scopeFixer: ScopeFixer,
+    teamsService: TeamsService
   )
 
   private def buildFixture: Fixture = {
@@ -1612,8 +1614,11 @@ class ApplicationsServiceSpec
     val emailConnector: EmailConnector = mock[EmailConnector]
     val accessRequestsService: AccessRequestsService = mock[AccessRequestsService]
     val scopeFixer = mock[ScopeFixer]
-    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, accessRequestsService, scopeFixer)
-    Fixture(repository, idmsConnector, emailConnector, service, accessRequestsService, scopeFixer)
+    val teamsService = mock[TeamsService]
+
+    val service: ApplicationsService = new ApplicationsService(repository, clock, idmsConnector, emailConnector, accessRequestsService, scopeFixer, teamsService)
+
+    Fixture(repository, idmsConnector, emailConnector, service, accessRequestsService, scopeFixer, teamsService)
   }
 
 }

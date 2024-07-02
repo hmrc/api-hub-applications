@@ -376,6 +376,10 @@ object ApplicationLenses {
     def delete(deleted: Deleted): Application = {
       applicationDeleted.set(application, Some(deleted))
     }
+
+    def isMigrated: Boolean = {
+      application.teamId.isDefined
+    }
   }
 
 }
