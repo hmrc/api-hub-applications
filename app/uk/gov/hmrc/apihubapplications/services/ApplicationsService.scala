@@ -26,7 +26,6 @@ import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFo
 import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
-import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, ScopeFixer}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
@@ -101,48 +100,33 @@ class ApplicationsService @Inject()(
   }
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    fetchTeam(newApplication).flatMap {
-      case Right(maybeTeam) =>
-        val application = Application(newApplication, clock) match {
-          case application if application.isMigrated => application
-          case application => application.assertTeamMember(newApplication.createdBy.email)
-        }
-
-        ApplicationEnrichers.process(
-          application,
-          Seq(
-            ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector, clock),
-            ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector, clock)
-          )
-        ).flatMap {
-          case Right(enriched) =>
-            for {
-              saved <- insertApplication(enriched, maybeTeam)
-              _ <- emailConnector.sendAddTeamMemberEmail(saved)
-              _ <- emailConnector.sendApplicationCreatedEmailToCreator(saved)
-            } yield Right(saved)
-          case Left(e) => Future.successful(Left(e))
-        }
-      case Left(e) => Future.successful(Left(e))
+    val application = Application(newApplication, clock) match {
+      case application if application.isMigrated => application
+      case application => application.assertTeamMember(newApplication.createdBy.email)
     }
-  }
 
-  private def insertApplication(application: Application, maybeTeam: Option[Team]): Future[Application] = {
-    repository.insert(application).map(
-      saved =>
-        maybeTeam match {
-          case Some(team) => saved.setTeamMembers(team.teamMembers)
-          case None => saved
-        }
-    )
-  }
-
-  private def fetchTeam(newApplication: NewApplication): Future[Either[ApplicationsException, Option[Team]]] = {
-    newApplication.teamId match {
-      case Some(teamId) =>
-        teamsService.findById(teamId).map(_.map(Some(_)))
-      case None =>
-        Future.successful(Right(None))
+    ApplicationEnrichers.process(
+      application,
+      Seq(
+        ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector, clock),
+        ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector, clock)
+      )
+    ).flatMap {
+      case Right(enriched) =>
+        repository.insert(enriched).flatMap(
+          saved =>
+            // We need to re-fetch the application so it has the correct team before emailing them
+            repository.findById(saved.safeId).flatMap {
+              case Right(fetched) =>
+                for {
+                  _ <- emailConnector.sendAddTeamMemberEmail(fetched)
+                  _ <- emailConnector.sendApplicationCreatedEmailToCreator(fetched)
+                } yield Right(saved.setTeamMembers(fetched.teamMembers))
+              case Left(e) =>
+                Future.successful(Left(e))
+            }
+        )
+      case Left(e) => Future.successful(Left(e))
     }
   }
 

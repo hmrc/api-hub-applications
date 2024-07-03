@@ -101,6 +101,9 @@ class ApplicationsServiceSpec
       when(repository.insert(ArgumentMatchers.eq(applicationWithCreds)))
         .thenReturn(Future.successful(saved))
 
+      when(repository.findById(ArgumentMatchers.eq(saved.safeId)))
+        .thenReturn(Future.successful(Right(saved)))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
           actual mustBe Right(saved)
@@ -184,6 +187,9 @@ class ApplicationsServiceSpec
       when(repository.insert(any()))
         .thenReturn(Future.successful(expected.copy(id = Some("id"))))
 
+      when(repository.findById(any()))
+        .thenReturn(Future.successful(Right(expected.copy(id = Some("id")))))
+
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
         .thenReturn(Future.successful(Right(())))
 
@@ -208,11 +214,23 @@ class ApplicationsServiceSpec
       val teamMember2 = TeamMember("test-email-2")
       val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
 
+      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
+
+      val application = Application(newApplication, clock)
+        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
+        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+        .addTeamMember(creator.email)
+
+      val saved = application.copy(id = Some("id"))
+
       when(idmsConnector.createClient(any(), any())(any()))
-        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+        .thenReturn(Future.successful(Right(clientResponse)))
 
       when(repository.insert(any()))
-        .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
+        .thenReturn(Future.successful(saved))
+
+      when(repository.findById(any()))
+        .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
         .thenReturn(Future.successful(Right(())))
@@ -222,10 +240,8 @@ class ApplicationsServiceSpec
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
-          val captor = ArgCaptor[Application]
-          verify(repository).insert(captor.capture)
-          val expected = captor.value.copy(id = Some("id"))
-          verify(emailConnector).sendAddTeamMemberEmail(ArgumentMatchers.eq(expected))(any())
+          verify(repository).insert(ArgumentMatchers.eq(application))
+          verify(emailConnector).sendAddTeamMemberEmail(ArgumentMatchers.eq(saved))(any())
           succeed
       }
     }
@@ -236,12 +252,21 @@ class ApplicationsServiceSpec
 
       val creator = Creator("test-email")
       val newApplication = NewApplication("test-name", creator, Seq.empty)
+      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
+      val application = Application(newApplication, clock)
+        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
+        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+        .addTeamMember(creator.email)
+      val saved = application.copy(id = Some("id"))
 
       when(idmsConnector.createClient(any(), any())(any()))
-        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+        .thenReturn(Future.successful(Right(clientResponse)))
 
       when(repository.insert(any()))
-        .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
+        .thenReturn(Future.successful(saved))
+
+      when(repository.findById(any()))
+        .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
         .thenReturn(Future.successful(Right(())))
@@ -251,10 +276,8 @@ class ApplicationsServiceSpec
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
-          val captor = ArgCaptor[Application]
-          verify(repository).insert(captor.capture)
-          val expected = captor.value.copy(id = Some("id"))
-          verify(emailConnector).sendApplicationCreatedEmailToCreator(ArgumentMatchers.eq(expected))(any())
+          verify(repository).insert(ArgumentMatchers.eq(application))
+          verify(emailConnector).sendApplicationCreatedEmailToCreator(ArgumentMatchers.eq(saved))(any())
           succeed
       }
     }
@@ -267,12 +290,21 @@ class ApplicationsServiceSpec
       val teamMember1 = TeamMember("test-email-1")
       val teamMember2 = TeamMember("test-email-2")
       val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
+      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
+      val application = Application(newApplication, clock)
+        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
+        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+        .addTeamMember(creator.email)
+      val saved = application.copy(id = Some("id"))
 
       when(idmsConnector.createClient(any(), any())(any()))
-        .thenReturn(Future.successful(Right(ClientResponse("test-client-id", "test-secret-1234"))))
+        .thenReturn(Future.successful(Right(clientResponse)))
 
       when(repository.insert(any()))
-        .thenAnswer((application: Application) => Future.successful(application.copy(id = Some("id"))))
+        .thenReturn(Future.successful(saved))
+
+      when(repository.findById(any()))
+        .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any())(any()))
         .thenReturn(Future.successful(Left(EmailException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
