@@ -32,3 +32,5 @@ POST       /teams/:id/members                                                   
 PUT        /teams/:id                                                               uk.gov.hmrc.apihubapplications.controllers.TeamsController.renameTeam(id: String)
 
 GET        /apis/:publisherRef/deployment-status                                    uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatus(publisherRef: String)
+
+GET        /users                                                                   uk.gov.hmrc.apihubapplications.controllers.UsersController.findAll()
