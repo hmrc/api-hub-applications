@@ -58,15 +58,21 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
   def getApplications(teamMember: Option[String], includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
     applicationsService
       .findAll(teamMember.map(decrypt), includeDeleted)
-      .map(applications => Json.toJson(applications.map(_.makePublic())))
-      .map(Ok(_))
+      .map(_.map(applications => applications.map(_.makePublic())))
+      .map {
+        case Right(applications) => Ok(Json.toJson(applications))
+        case Left(e) => throw e
+      }
   }
 
   def getApplicationsUsingApi(apiId: String, includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
     applicationsService
       .findAllUsingApi(apiId, includeDeleted)
-      .map(applications => Json.toJson(applications.map(_.makePublic())))
-      .map(Ok(_))
+      .map(_.map(applications => applications.map(_.makePublic())))
+      .map {
+        case Right(applications) => Ok(Json.toJson(applications))
+        case Left(e) => throw e
+      }
   }
 
   def getApplication(id: String, enrich: Boolean): Action[AnyContent] = identify.compose(Action).async {
@@ -165,6 +171,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             case Right(_) => NoContent
             case Left(_: ApplicationNotFoundException) => NotFound
             case Left(_: TeamMemberExistsException) => BadRequest
+            case Left(_: ApplicationTeamMigratedException) => Conflict
             case Left(_) => InternalServerError
           }
         case e: JsError =>

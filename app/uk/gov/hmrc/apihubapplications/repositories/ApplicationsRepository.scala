@@ -21,8 +21,10 @@ import org.mongodb.scala.bson.Document
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model._
 import play.api.Logging
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
@@ -67,6 +69,15 @@ class ApplicationsRepository @Inject()(
     Mdc.preservingMdc {
       collection
         .find(emailFilter(teamMemberEmail))
+        .toFuture()
+    } map (_.filter(deletedFilter(includeDeleted))
+      .map(_.decryptedValue.toModel))
+  }
+
+  def findForTeams(teams: Seq[Team], includeDeleted: Boolean): Future[Seq[Application]] = {
+    Mdc.preservingMdc {
+      collection
+        .find(Filters.in("teamId", teams.flatMap(_.id): _*))
         .toFuture()
     } map (_.filter(deletedFilter(includeDeleted))
       .map(_.decryptedValue.toModel))
@@ -160,6 +171,21 @@ class ApplicationsRepository @Inject()(
 
   def listIndexes: Future[Seq[Document]] = {
     collection.listIndexes().toFuture()
+  }
+
+  def teamMigrationReport(): Future[Map[TeamMigrationKey, Int]] = {
+    findAll(None, true).map {
+      applications =>
+        applications.groupMapReduce(application => TeamMigrationKey(application.teamId.isDefined, application.deleted.isDefined))(_ => 1)(_ + _)
+    }
+  }
+
+  case class TeamMigrationKey(isMigrated: Boolean, isDeleted: Boolean)
+
+  object TeamMigrationKey {
+
+    implicit val formatTeamMigrationKey: Format[TeamMigrationKey] = Json.format[TeamMigrationKey]
+
   }
 
 }

@@ -333,6 +333,9 @@ object ApplicationLenses {
       }
     }
 
+    def setTeamMembers(teamMembers: Seq[TeamMember]): Application =
+      applicationTeamMembers.set(application, teamMembers)
+
     def setIssues(issues: Seq[String]): Application = {
       applicationIssues.set(application, issues)
     }
@@ -376,6 +379,11 @@ object ApplicationLenses {
     def delete(deleted: Deleted): Application = {
       applicationDeleted.set(application, Some(deleted))
     }
+
+    def isMigrated: Boolean = {
+      application.teamId.isDefined
+    }
+
   }
 
 }
