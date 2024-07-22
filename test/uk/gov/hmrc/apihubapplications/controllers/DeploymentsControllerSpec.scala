@@ -34,7 +34,6 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Live}
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
@@ -43,7 +42,6 @@ import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
-import java.time.Instant
 import scala.concurrent.Future
 
 class DeploymentsControllerSpec

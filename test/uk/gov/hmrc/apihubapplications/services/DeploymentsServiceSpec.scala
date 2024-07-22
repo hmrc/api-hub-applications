@@ -167,7 +167,7 @@ class DeploymentsServiceSpec
   "updateApiTeam" - {
     "must pass the correct request to Integrations Catalogue and send appropriate emails and return the response" in {
       val fixture = buildFixture()
-      val apiDetail = sampleApiDetail
+      val apiDetail = sampleApiDetail().copy(teamId = Some("team1"))
       val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team1 = Team.apply("team 1", Seq(TeamMember("team1.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
@@ -183,7 +183,7 @@ class DeploymentsServiceSpec
         actual =>
           actual mustBe Right(updatedApiDetail)
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
-          verify(fixture.emailConnector).sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(apiDetail))(any)
+          verify(fixture.emailConnector).sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(team2), eqTo(apiDetail))(any)
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)
           succeed
       }
@@ -191,7 +191,7 @@ class DeploymentsServiceSpec
 
     "must handle no existing team" in {
       val fixture = buildFixture()
-      val apiDetail = sampleApiDetail.copy(teamId = None)
+      val apiDetail = sampleApiDetail().copy(teamId = None)
       val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
@@ -205,7 +205,7 @@ class DeploymentsServiceSpec
         actual =>
           actual mustBe Right(updatedApiDetail)
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any, any)(any))
+          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)
           succeed
       }
@@ -213,7 +213,7 @@ class DeploymentsServiceSpec
 
     "must handle email failure" in {
       val fixture = buildFixture()
-      val apiDetail = sampleApiDetail.copy(teamId = None)
+      val apiDetail = sampleApiDetail().copy(teamId = None)
       val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
@@ -233,7 +233,7 @@ class DeploymentsServiceSpec
 
     "must propagate errors from call to integrationCatalogueConnector.updateApiTeam" in {
       val fixture = buildFixture()
-      val apiDetail = sampleApiDetail.copy(teamId = None)
+      val apiDetail = sampleApiDetail().copy(teamId = None)
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
@@ -245,7 +245,7 @@ class DeploymentsServiceSpec
         actual =>
           actual mustBe Left(apiNotFoundException)
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any,any)(any))
+          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any,any,any)(any))
           verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(any,any)(any))
           succeed
       }
@@ -261,7 +261,7 @@ class DeploymentsServiceSpec
         actual =>
           actual mustBe Left(apiNotFoundException)
           verify(fixture.integrationCatalogueConnector).findById(eqTo("apiId"))(any)
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any,any)(any))
+          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any,any,any)(any))
           verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(any,any)(any))
           succeed
       }

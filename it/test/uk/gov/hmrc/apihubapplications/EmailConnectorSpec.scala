@@ -18,7 +18,6 @@ package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
-import org.apache.pekko.http.scaladsl.model.headers.LinkParams.title
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -28,7 +27,6 @@ import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestApi, AccessRequestRequest, Pending}
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Live}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
@@ -38,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.time.{Instant, LocalDateTime}
+import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 class EmailConnectorSpec
@@ -602,7 +600,8 @@ class EmailConnectorSpec
     val teamMemberEmail = "test@hmrc.digital.gov.uk"
     val apiname = "api name"
     val testTeamName = "test_team_name"
-    val apiDetail = sampleApiDetail.copy(title = apiname)
+    val apiDetail = sampleApiDetail().copy(title = apiname)
+    val newTeamName = "new team"
 
     "must place the correct request" in {
       val request = SendEmailRequest(
@@ -610,7 +609,8 @@ class EmailConnectorSpec
         apiOwnershipChangedToOldTeamTemplateId,
         Map(
           "teamname" -> testTeamName,
-          "apispecificationname" -> apiname
+          "apispecificationname" -> apiname,
+          "otherteamname" -> newTeamName
         )
       )
 
@@ -627,7 +627,7 @@ class EmailConnectorSpec
       )
 
       val currentTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
-      val newTeam = Team("new team", LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      val newTeam = Team(newTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
       buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam, newTeam, apiDetail)(new HeaderCarrier()) map {
         response =>
           response mustBe Right(())
@@ -645,7 +645,7 @@ class EmailConnectorSpec
       )
 
       val currentTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
-      val newTeam = Team("new team", LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      val newTeam = Team(newTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
 
       buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam, newTeam, apiDetail)(new HeaderCarrier()) map {
         response =>
@@ -658,7 +658,7 @@ class EmailConnectorSpec
     val teamMemberEmail = "test@hmrc.digital.gov.uk"
     val apiname = "api name"
     val testTeamName = "test_team_name"
-    val apiDetail = sampleApiDetail.copy(title = apiname)
+    val apiDetail = sampleApiDetail().copy(title = apiname)
 
     "must place the correct request" in {
       val request = SendEmailRequest(
