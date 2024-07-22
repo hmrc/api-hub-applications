@@ -20,6 +20,7 @@ import play.api.inject.{Binding, bind => bindz}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl, IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.services.{ApplicationsApiService, ApplicationsApiServiceImpl, ApplicationsCredentialsService, ApplicationsCredentialsServiceImpl, ApplicationsLifecycleService, ApplicationsLifecycleServiceImpl, ApplicationsSearchService, ApplicationsSearchServiceImpl}
 import uk.gov.hmrc.apihubapplications.tasks.DatabaseStatisticMetricOrchestratorTask
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
@@ -38,7 +39,11 @@ class Module extends play.api.inject.Module {
       bindz(classOf[DatabaseStatisticMetricOrchestratorTask]).toSelf.eagerly(),
       bindz(classOf[EmailConnector]).to(classOf[EmailConnectorImpl]).eagerly(),
       bindz(classOf[APIMConnector]).to(classOf[APIMConnectorImpl]).eagerly(),
-      bindz(classOf[IntegrationCatalogueConnector]).to(classOf[IntegrationCatalogueConnectorImpl]).eagerly()
+      bindz(classOf[IntegrationCatalogueConnector]).to(classOf[IntegrationCatalogueConnectorImpl]).eagerly(),
+      bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly(),
+      bindz(classOf[ApplicationsCredentialsService]).to(classOf[ApplicationsCredentialsServiceImpl]).eagerly(),
+      bindz(classOf[ApplicationsApiService]).to(classOf[ApplicationsApiServiceImpl]).eagerly(),
+      bindz(classOf[ApplicationsLifecycleService]).to(classOf[ApplicationsLifecycleServiceImpl]).eagerly()
     )
 
     val authTokenInitialiserBindings: Seq[Binding[_]] = if (configuration.get[Boolean]("create-internal-auth-token-on-start")) {
