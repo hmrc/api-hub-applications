@@ -20,6 +20,7 @@ import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
+import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.team.Team
@@ -55,6 +56,8 @@ class EmailConnectorImpl @Inject()(
   private val accessRequestSubmittedToToRequesterTemplateId = getAndValidate("email.accessRequestSubmittedEmailToRequesterTemplateId")
   private val newAccessRequestToApproversTemplateId = getAndValidate("email.newAccessRequestEmailToApproversTemplateId")
   private val teamMemberAddedToTeamTemplateId = getAndValidate("email.teamMemberAddedToTeamTemplateId")
+  private val apiOwnershipChangedToOldTeamTemplateId = getAndValidate("email.apiOwnershipChangedToOldTeamTemplateId")
+  private val apiOwnershipChangedToNewTeamTemplateId = getAndValidate("email.apiOwnershipChangedToNewTeamTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
@@ -194,6 +197,25 @@ class EmailConnectorImpl @Inject()(
       teamMembers.map(_.email),
       teamMemberAddedToTeamTemplateId,
       Map("teamname" -> team.name)
+    )
+    doPost(request)
+  }
+
+
+override def sendApiOwnershipChangedEmailToOldTeamMembers(team: Team, apiDetail: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val request = SendEmailRequest(
+      team.teamMembers.map(_.email),
+      apiOwnershipChangedToOldTeamTemplateId,
+      Map("teamname" -> team.name, "apispecificationname" -> apiDetail.title)
+    )
+    doPost(request)
+  }
+
+  override def sendApiOwnershipChangedEmailToNewTeamMembers(team: Team, apiDetail: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val request = SendEmailRequest(
+      team.teamMembers.map(_.email),
+      apiOwnershipChangedToNewTeamTemplateId,
+      Map("teamname" -> team.name, "apispecificationname" -> apiDetail.title)
     )
     doPost(request)
   }

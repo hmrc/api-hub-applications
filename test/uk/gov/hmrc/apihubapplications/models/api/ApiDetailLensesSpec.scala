@@ -19,9 +19,11 @@ package uk.gov.hmrc.apihubapplications.models.api
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses._
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Endpoint => ApplicationEndpoint}
 import uk.gov.hmrc.apihubapplications.models.application.ApiLenses._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Endpoint => ApplicationEndpoint}
+
+import java.time.Instant
 
 class ApiDetailLensesSpec extends AnyFreeSpec with Matchers {
 
@@ -66,7 +68,7 @@ object ApiDetailLensesSpec {
   private val apiId1: String = "test-api-id-1"
   private val apiId2: String = "test-api-id-2"
 
-  def baseApiDetail(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
+  def baseApiDetail(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty, Instant.now)
   val baseApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq.empty)
 
   def buildEndpoint(index: Int, methods: Int, scopes: Int): Endpoint = {

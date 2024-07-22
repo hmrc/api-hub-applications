@@ -20,6 +20,8 @@ import org.scalacheck.rng.Seed
 import org.scalacheck.{Arbitrary, Gen}
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiStatus, Endpoint, EndpointMethod}
 
+import java.time.Instant
+
 trait ApiDetailGenerators {
 
   private val listSizeQuota = 10
@@ -47,6 +49,10 @@ trait ApiDetailGenerators {
 
   implicit lazy val arbitraryEndpoint: Arbitrary[Endpoint] = Arbitrary(genEndpoint)
 
+  private def genInstant: Gen[Instant] = {
+    Gen.calendar.map(calendar => calendar.toInstant)
+  }
+
   private def genApiDetail: Gen[ApiDetail] = Gen.sized {size =>
     for {
       id <- Gen.uuid
@@ -61,6 +67,7 @@ trait ApiDetailGenerators {
       domain <- sensiblySizedAlphaNumStr
       subDomain <- sensiblySizedAlphaNumStr
       hods <- Gen.listOfN(size/ listSizeQuota, sensiblySizedAlphaNumStr).suchThat(_.nonEmpty)
+      reviewedDate <- genInstant
     } yield ApiDetail(
       id.toString,
       publisherReference,
@@ -73,7 +80,8 @@ trait ApiDetailGenerators {
       apiStatus,
       domain = Some(domain),
       subDomain = Some(subDomain),
-      hods = hods
+      hods = hods,
+      reviewedDate = reviewedDate
     )
   }
 

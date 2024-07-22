@@ -21,10 +21,10 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -33,10 +33,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DeploymentsController @Inject()(
-  identify: IdentifierAction,
-  cc: ControllerComponents,
-  deploymentsService: DeploymentsService
-)(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
+                                       identify: IdentifierAction,
+                                       cc: ControllerComponents,
+                                       deploymentsService: DeploymentsService
+                                     )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
@@ -97,4 +97,12 @@ class DeploymentsController @Inject()(
       }
   }
 
+  def updateApiTeam(apiId: String, teamId: String): Action[AnyContent] = identify.async {
+    implicit request =>
+      deploymentsService.updateApiTeam(apiId, teamId) flatMap {
+        case Right(updatedApiDetail) => Future.successful(Ok(Json.toJson(updatedApiDetail)))
+        case Left(_: ApiNotFoundException) => Future.successful(NotFound)
+        case Left(e) => throw e
+      }
+  }
 }

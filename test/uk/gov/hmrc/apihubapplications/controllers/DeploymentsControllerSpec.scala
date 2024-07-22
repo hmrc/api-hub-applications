@@ -34,13 +34,15 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Live}
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.exception.ApimException
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
+import java.time.Instant
 import scala.concurrent.Future
 
 class DeploymentsControllerSpec
@@ -108,7 +110,7 @@ class DeploymentsControllerSpec
         )
 
         val errors = Seq(Error("test-type", "test-message"))
-        val deployResponse = InvalidOasResponse(FailuresResponse("failure_code","failure_reason",Some(errors)))
+        val deployResponse = InvalidOasResponse(FailuresResponse("failure_code", "failure_reason", Some(errors)))
         val json = Json.toJson(deployRequest)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
@@ -143,7 +145,7 @@ class DeploymentsControllerSpec
           Seq("a hod")
         )
 
-        val deployResponse = InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None))
+        val deployResponse = InvalidOasResponse(FailuresResponse("failure_code", "failure_reason", None))
         val json = Json.toJson(deployRequest)
 
         val request: Request[JsValue] = FakeRequest(POST, routes.DeploymentsController.generate().url)
@@ -192,7 +194,7 @@ class DeploymentsControllerSpec
           Seq("a hod")
         )
 
-        val response = Right(InvalidOasResponse(FailuresResponse("failure_code","failure_reason",None)))
+        val response = Right(InvalidOasResponse(FailuresResponse("failure_code", "failure_reason", None)))
 
         val json = Json.toJson(deployRequest)
 
@@ -238,7 +240,7 @@ class DeploymentsControllerSpec
           .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
         val result = route(fixture.application, request).value
-        val e = the [ApimException] thrownBy status(result)
+        val e = the[ApimException] thrownBy status(result)
         e mustBe ApimException.unexpectedResponse(500)
       }
 
@@ -313,7 +315,7 @@ class DeploymentsControllerSpec
           .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
         val result = route(fixture.application, request).value
-        val e = the [ApimException] thrownBy status(result)
+        val e = the[ApimException] thrownBy status(result)
         e mustBe ApimException.unexpectedResponse(500)
       }
     }
@@ -440,13 +442,60 @@ class DeploymentsControllerSpec
         val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
         val result = route(fixture.application, request).value
 
-        val e = the [ApimException] thrownBy status(result)
+        val e = the[ApimException] thrownBy status(result)
         e mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR)
       }
     }
   }
 
+
+  "updateApiTeam" - {
+    val apiId = "apiId"
+    "must return 200 Ok and an updated ApiDetail" in {
+      val fixture = buildFixture()
+
+      val originalApiDetail = anApiDetail
+      val updatedApiDetail = originalApiDetail.copy(teamId = Some("team2"))
+
+      when(fixture.deploymentsService.updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any))
+        .thenReturn(Future.successful(Right(updatedApiDetail)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.updateApiTeam(apiId, "team2"))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(updatedApiDetail)
+
+        verify(fixture.deploymentsService).updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any)
+      }
+    }
+
+    "must return 404 Not found when service returns not found " in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any))
+        .thenReturn(Future.successful(Left(ApiNotFoundException.forId(apiId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.updateApiTeam(apiId, "team2"))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+
+        verify(fixture.deploymentsService).updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any)
+      }
+    }
+
+  }
+
+  private def anApiDetail: ApiDetail = ApiDetail("apiId", "test-publisher-ref",
+    "test-title", "test-description", "test-version", Seq.empty, None, "test-oas",
+    Live, Some("team1"), None, None, Seq.empty, Instant.now())
+
 }
+
+
 
 object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
 

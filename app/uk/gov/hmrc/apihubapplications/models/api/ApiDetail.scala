@@ -19,6 +19,8 @@ package uk.gov.hmrc.apihubapplications.models.api
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
 
+import java.time.Instant
+
 sealed trait ApiStatus
 
 case object Alpha extends WithName("ALPHA") with ApiStatus
@@ -48,7 +50,8 @@ case class ApiDetail(
   teamId: Option[String] = None,
   domain: Option[String] = None,
   subDomain: Option[String] = None,
-  hods: Seq[String] = List.empty
+  hods: Seq[String] = List.empty,
+  reviewedDate: Instant
 )
 
 object ApiDetail {

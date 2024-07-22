@@ -27,6 +27,7 @@ import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestApi, AccessRequestRequest, Pending}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Live}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
@@ -35,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.ExecutionContext
 
 class EmailConnectorSpec
@@ -594,6 +595,112 @@ class EmailConnectorSpec
     }
   }
 
+  "EmailConnector.sendApiOwnershipChangedEmailToOldTeamMembers" - {
+    val teamMemberEmail = "test@hmrc.digital.gov.uk"
+    val apiname = "api name"
+    val testTeamName = "test_team_name"
+    val apiDetail = anApiDetail.copy(title = apiname)
+
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(teamMemberEmail),
+        apiOwnershipChangedToOldTeamTemplateId,
+        Map(
+          "teamname" -> testTeamName,
+          "apispecificationname" -> apiname
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))), apiDetail)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))), apiDetail)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
+
+  "EmailConnector.sendApiOwnershipChangedEmailToNewdTeamMembers" - {
+    val teamMemberEmail = "test@hmrc.digital.gov.uk"
+    val apiname = "api name"
+    val testTeamName = "test_team_name"
+    val apiDetail = anApiDetail.copy(title = apiname)
+
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(teamMemberEmail),
+        apiOwnershipChangedToNewTeamTemplateId,
+        Map(
+          "teamname" -> testTeamName,
+          "apispecificationname" -> apiname
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendApiOwnershipChangedEmailToNewTeamMembers(Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))), apiDetail)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendApiOwnershipChangedEmailToNewTeamMembers(Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))), apiDetail)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
+
+  private def anApiDetail: ApiDetail = ApiDetail("apiId", "test-publisher-ref",
+    "test-title", "test-description", "test-version", Seq.empty, None, "test-oas",
+    Live, Some("team1"), None, None, Seq.empty, Instant.now())
+
 }
 
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
@@ -607,6 +714,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val accessRequestSubmittedEmailToRequesterTemplateId: String = "test-access-request-submitted-to-requester-template-id"
   val newAccessRequestEmailToApproversTemplateId: String = "test-new-access-request-to-approvers-template-id"
   val teamMemberAddedToTeamTemplateId: String = "test-team-member-added-to-team-template-id"
+  val apiOwnershipChangedToOldTeamTemplateId = "test-api-ownership-removed-to-team-template-id"
+  val apiOwnershipChangedToNewTeamTemplateId = "test-api-ownership-given-to-team-template-id"
 
   val email1: String = "test-email1@test.com"
   val email2: String = "test-email2@test.com"
@@ -633,7 +742,9 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.accessRequestSubmittedEmailToRequesterTemplateId" -> accessRequestSubmittedEmailToRequesterTemplateId,
         "microservice.services.email.newAccessRequestEmailToApproversTemplateId" -> newAccessRequestEmailToApproversTemplateId,
         "microservice.services.email.approversTeamEmails" -> "dummy.test1@digital.hmrc.gov.uk,dummy.test2@digital.hmrc.gov.uk",
-        "microservice.services.email.teamMemberAddedToTeamTemplateId" -> teamMemberAddedToTeamTemplateId
+        "microservice.services.email.teamMemberAddedToTeamTemplateId" -> teamMemberAddedToTeamTemplateId,
+        "microservice.services.email.apiOwnershipChangedToOldTeamTemplateId" -> apiOwnershipChangedToOldTeamTemplateId,
+        "microservice.services.email.apiOwnershipChangedToNewTeamTemplateId" -> apiOwnershipChangedToNewTeamTemplateId
       ))
     )
 
