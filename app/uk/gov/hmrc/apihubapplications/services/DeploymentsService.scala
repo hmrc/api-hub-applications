@@ -88,7 +88,7 @@ class DeploymentsService @Inject()(
           maybeNewTeam <- getTeam(teamId)
         } yield (maybeCurrentTeam, maybeNewTeam, updatedApiDetail) match {
           case (_, _, Right(updatedApiDetail)) =>
-            sendApiOwnershipChangedEmailToOldTeam(apiDetail, maybeCurrentTeam)
+            sendApiOwnershipChangedEmailToOldTeam(apiDetail, maybeCurrentTeam, maybeNewTeam)
             sendApiOwnershipChangedEmailToNewTeam(apiDetail, maybeNewTeam)
             Right(updatedApiDetail)
           case (_, _, Left(e)) => Left(e)
@@ -97,9 +97,9 @@ class DeploymentsService @Inject()(
     }
   }
 
-  private def sendApiOwnershipChangedEmailToOldTeam(apiDetail: ApiDetail, maybeCurrentTeam: Option[Team])(implicit hc: HeaderCarrier) = {
-    if (maybeCurrentTeam.isDefined) {
-      emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(maybeCurrentTeam.get, apiDetail) flatMap {
+  private def sendApiOwnershipChangedEmailToOldTeam(apiDetail: ApiDetail, maybeCurrentTeam: Option[Team], maybeNewTeam: Option[Team])(implicit hc: HeaderCarrier) = {
+    if (maybeCurrentTeam.isDefined && maybeNewTeam.isDefined) {
+      emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(maybeCurrentTeam.get, maybeNewTeam.get, apiDetail) flatMap {
         case Right(()) => Future.successful(())
         case Left(e) => throw e
       }

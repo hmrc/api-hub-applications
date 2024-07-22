@@ -202,11 +202,13 @@ class EmailConnectorImpl @Inject()(
   }
 
 
-override def sendApiOwnershipChangedEmailToOldTeamMembers(team: Team, apiDetail: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+override def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, apiDetail: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val request = SendEmailRequest(
-      team.teamMembers.map(_.email),
+      currentTeam.teamMembers.map(_.email),
       apiOwnershipChangedToOldTeamTemplateId,
-      Map("teamname" -> team.name, "apispecificationname" -> apiDetail.title)
+      Map("teamname" -> currentTeam.name,
+        "otherteamname" -> newTeam.name,
+        "apispecificationname" -> apiDetail.title)
     )
     doPost(request)
   }

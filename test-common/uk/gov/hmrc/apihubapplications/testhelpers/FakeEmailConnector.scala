@@ -48,7 +48,7 @@ class FakeEmailConnector extends EmailConnector {
 
   override def sendTeamMemberAddedEmailToTeamMembers(teamMembers: Seq[TeamMember], team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
 
-  override def sendApiOwnershipChangedEmailToOldTeamMembers(team: Team, api: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
+  override def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, api: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
 
   override def sendApiOwnershipChangedEmailToNewTeamMembers(team: Team, api: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = Future.successful(Right(()))
 }

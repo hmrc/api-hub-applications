@@ -623,7 +623,9 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))), apiDetail)(new HeaderCarrier()) map {
+      val currentTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      val newTeam = Team("new team", LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam, newTeam, apiDetail)(new HeaderCarrier()) map {
         response =>
           response mustBe Right(())
       }
@@ -639,7 +641,10 @@ class EmailConnectorSpec
           )
       )
 
-      buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))), apiDetail)(new HeaderCarrier()) map {
+      val currentTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      val newTeam = Team("new team", LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+
+      buildConnector(this).sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam, newTeam, apiDetail)(new HeaderCarrier()) map {
         response =>
           response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
       }
