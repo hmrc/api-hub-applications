@@ -133,7 +133,7 @@ class IntegrationCatalogueConnectorSpec
           )
       )
 
-      buildConnector().updateApiTeam(apiDetails.id, teamId)(HeaderCarrier()) map {
+      buildConnector().updateApiTeam(apiId, teamId)(HeaderCarrier()) map {
         actual =>
           actual mustBe Right(apiDetails)
       }
