@@ -40,6 +40,7 @@ import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
+import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
 import java.time.Instant
@@ -51,7 +52,8 @@ class DeploymentsControllerSpec
     with MockitoSugar
     with OptionValues
     with CryptoUtils
-    with TableDrivenPropertyChecks {
+    with TableDrivenPropertyChecks
+    with ApiDetailGenerators {
 
   import DeploymentsControllerSpec._
 
@@ -454,7 +456,7 @@ class DeploymentsControllerSpec
     "must return 200 Ok and an updated ApiDetail" in {
       val fixture = buildFixture()
 
-      val originalApiDetail = anApiDetail
+      val originalApiDetail = sampleApiDetail
       val updatedApiDetail = originalApiDetail.copy(teamId = Some("team2"))
 
       when(fixture.deploymentsService.updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any))
@@ -488,10 +490,6 @@ class DeploymentsControllerSpec
     }
 
   }
-
-  private def anApiDetail: ApiDetail = ApiDetail("apiId", "test-publisher-ref",
-    "test-title", "test-description", "test-version", Seq.empty, None, "test-oas",
-    Live, Some("team1"), None, None, Seq.empty, Instant.now())
 
 }
 

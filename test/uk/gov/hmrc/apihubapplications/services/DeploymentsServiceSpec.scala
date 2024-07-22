@@ -27,6 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, EmailException, IntegrationCatalogueException}
 import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, ZoneOffset}
@@ -37,7 +38,8 @@ class DeploymentsServiceSpec
     with Matchers
     with MockitoSugar
     with ArgumentMatchersSugar
-    with TableDrivenPropertyChecks {
+    with TableDrivenPropertyChecks
+    with ApiDetailGenerators {
 
   import DeploymentsServiceSpec._
 
@@ -165,7 +167,7 @@ class DeploymentsServiceSpec
   "updateApiTeam" - {
     "must pass the correct request to Integrations Catalogue and send appropriate emails and return the response" in {
       val fixture = buildFixture()
-      val apiDetail = anApiDetail
+      val apiDetail = sampleApiDetail
       val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team1 = Team.apply("team 1", Seq(TeamMember("team1.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
@@ -174,7 +176,7 @@ class DeploymentsServiceSpec
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
       when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(updatedApiDetail)))
-      when(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
 
       fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
@@ -189,7 +191,7 @@ class DeploymentsServiceSpec
 
     "must handle no existing team" in {
       val fixture = buildFixture()
-      val apiDetail = anApiDetail.copy(teamId = None)
+      val apiDetail = sampleApiDetail.copy(teamId = None)
       val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
@@ -211,7 +213,7 @@ class DeploymentsServiceSpec
 
     "must handle email failure" in {
       val fixture = buildFixture()
-      val apiDetail = anApiDetail.copy(teamId = None)
+      val apiDetail = sampleApiDetail.copy(teamId = None)
       val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
@@ -231,7 +233,7 @@ class DeploymentsServiceSpec
 
     "must propagate errors from call to integrationCatalogueConnector.updateApiTeam" in {
       val fixture = buildFixture()
-      val apiDetail = anApiDetail.copy(teamId = None)
+      val apiDetail = sampleApiDetail.copy(teamId = None)
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
@@ -265,10 +267,6 @@ class DeploymentsServiceSpec
       }
     }
   }
-
-  private def anApiDetail: ApiDetail = ApiDetail("apiId", "test-publisher-ref",
-    "test-title", "test-description", "test-version", Seq.empty, None, "test-oas",
-    Live, Some("team1"), None, None, Seq.empty, Instant.now())
 
   private case class Fixture(
                               apimConnector: APIMConnector,

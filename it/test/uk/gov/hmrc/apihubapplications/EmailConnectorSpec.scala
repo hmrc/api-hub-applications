@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
+import org.apache.pekko.http.scaladsl.model.headers.LinkParams.title
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -32,6 +33,7 @@ import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, 
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
 import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -44,7 +46,8 @@ class EmailConnectorSpec
     with Matchers
     with WireMockSupport
     with TableDrivenPropertyChecks
-    with EitherValues {
+    with EitherValues
+    with ApiDetailGenerators {
 
   import EmailConnectorSpec._
 
@@ -599,7 +602,7 @@ class EmailConnectorSpec
     val teamMemberEmail = "test@hmrc.digital.gov.uk"
     val apiname = "api name"
     val testTeamName = "test_team_name"
-    val apiDetail = anApiDetail.copy(title = apiname)
+    val apiDetail = sampleApiDetail.copy(title = apiname)
 
     "must place the correct request" in {
       val request = SendEmailRequest(
@@ -655,7 +658,7 @@ class EmailConnectorSpec
     val teamMemberEmail = "test@hmrc.digital.gov.uk"
     val apiname = "api name"
     val testTeamName = "test_team_name"
-    val apiDetail = anApiDetail.copy(title = apiname)
+    val apiDetail = sampleApiDetail.copy(title = apiname)
 
     "must place the correct request" in {
       val request = SendEmailRequest(
@@ -701,11 +704,6 @@ class EmailConnectorSpec
       }
     }
   }
-
-  private def anApiDetail: ApiDetail = ApiDetail("apiId", "test-publisher-ref",
-    "test-title", "test-description", "test-version", Seq.empty, None, "test-oas",
-    Live, Some("team1"), None, None, Seq.empty, Instant.now())
-
 }
 
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
