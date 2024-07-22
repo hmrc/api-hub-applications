@@ -119,14 +119,14 @@ class DeploymentsService @Inject()(
     }
   }
 
-  private def getTeam(teamId: String)(implicit hc: HeaderCarrier) = {
+  private def getTeam(teamId: String) = {
     teamsService.findById(teamId) flatMap {
       case Right(team) => Future.successful(Some(team))
       case _ => Future.successful(None)
     }
   }
 
-  private def getCurrentTeamForApi(apiDetail: ApiDetail)(implicit hc: HeaderCarrier) = {
+  private def getCurrentTeamForApi(apiDetail: ApiDetail) = {
     if (apiDetail.teamId.isDefined) {
       getTeam(apiDetail.teamId.get)
     }

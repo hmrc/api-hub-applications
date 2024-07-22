@@ -22,7 +22,7 @@ import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.Configuration
-import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.apihubapplications.connectors.{IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
@@ -116,6 +116,45 @@ class IntegrationCatalogueConnectorSpec
       }
     }
   }
+
+  "updateApiTeam" - {
+    val teamId = "team1"
+    val apiId = "apiId"
+    val apiDetails = sampleApiDetail().copy(id = apiId, teamId = Some(teamId))
+
+    "must place the correct request and return an ApiDetail" in {
+      stubFor(
+        put(urlEqualTo(s"/integration-catalogue/apis/$apiId/teams/$teamId"))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("Authorization", equalTo(appAuthToken))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(apiDetails).toString())
+          )
+      )
+
+      buildConnector().updateApiTeam(apiDetails.id, teamId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Right(apiDetails)
+      }
+    }
+
+    "must fail with an exception when integration catalogue returns a failure response" in {
+      stubFor(
+        put(urlEqualTo(s"/integration-catalogue/apis/${apiDetails.id}/teams/$teamId"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector().updateApiTeam(apiDetails.id, teamId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(IntegrationCatalogueException.unexpectedResponse(500))
+      }
+    }
+  }
+
 
   private def buildConnector(): IntegrationCatalogueConnector = {
     val servicesConfig = new ServicesConfig(

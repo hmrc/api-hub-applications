@@ -22,7 +22,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam, Live}
+import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, EmailException, IntegrationCatalogueException}

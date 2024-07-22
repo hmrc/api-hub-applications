@@ -454,7 +454,7 @@ class DeploymentsControllerSpec
     "must return 200 Ok and an updated ApiDetail" in {
       val fixture = buildFixture()
 
-      val originalApiDetail = sampleApiDetail
+      val originalApiDetail = sampleApiDetail()
       val updatedApiDetail = originalApiDetail.copy(teamId = Some("team2"))
 
       when(fixture.deploymentsService.updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any))
