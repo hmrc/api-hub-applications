@@ -16,11 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications.models.api
 
-import play.api.libs.json.{Format, JsString, JsSuccess, Json, OFormat, Reads, Writes}
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
-
-import java.time.{Instant, ZoneOffset}
-import java.time.format.DateTimeFormatter
 
 sealed trait ApiStatus
 
@@ -56,12 +53,6 @@ case class ApiDetail(
 
 object ApiDetail {
 
-  implicit val formatApiDetail: OFormat[ApiDetail] = {
-    val instantDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-    implicit val customInstantFormat: Format[Instant] = Format(
-      Reads(js => JsSuccess(instantDateFormatter.parse(js.as[String], Instant.from))),
-      Writes(d => JsString(instantDateFormatter.format(d.atOffset(ZoneOffset.UTC))))
-    )
-    Json.format[ApiDetail]
-  }
+  implicit val formatApiDetail: Format[ApiDetail] = Json.format[ApiDetail]
+
 }
