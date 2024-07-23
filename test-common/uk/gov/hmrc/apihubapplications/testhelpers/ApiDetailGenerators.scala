@@ -80,8 +80,7 @@ trait ApiDetailGenerators {
       apiStatus,
       domain = Some(domain),
       subDomain = Some(subDomain),
-      hods = hods,
-      reviewedDate = reviewedDate
+      hods = hods
     )
   }
 

@@ -153,6 +153,21 @@ class IntegrationCatalogueConnectorSpec
           actual mustBe Left(IntegrationCatalogueException.unexpectedResponse(500))
       }
     }
+
+    "must handle and return 404 not found when 404 returned from integrations catalogue call" in {
+      stubFor(
+        put(urlEqualTo(s"/integration-catalogue/apis/${apiDetails.id}/teams/$teamId"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector().updateApiTeam(apiDetails.id, teamId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(ApiNotFoundException.forId(s"${apiDetails.id}"))
+      }
+    }
   }
 
 
