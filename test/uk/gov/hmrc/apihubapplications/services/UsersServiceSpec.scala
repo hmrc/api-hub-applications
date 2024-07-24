@@ -20,23 +20,22 @@ import org.mockito.MockitoSugar
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Deleted, TeamMember}
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import java.time.LocalDateTime
 import scala.concurrent.Future
 
-class UserTeamsServiceSpec
+class UsersServiceSpec
   extends AsyncFreeSpec
   with Matchers
   with MockitoSugar {
 
-  import UserTeamsServiceSpec._
+  import UsersServiceSpec._
 
   "findAll" - {
     "must return an empty list if no emails are found in the repo" in {
       val fixture = buildFixture()
 
-      when(fixture.repository.findAll(true)).thenReturn(Future.successful(Seq.empty))
+      when(fixture.searchService.findAll(true)).thenReturn(Future.successful(Seq.empty))
 
       fixture.service.findAll().map {
         result => result mustBe Seq.empty
@@ -50,7 +49,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers(lowerCaseDomainEmail, upperCaseDomainEmail, lowerCaseMailboxEmail, upperCaseMailboxEmail)
       )
 
-      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
+      when(fixture.searchService.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(lowerCaseDomainEmail, lowerCaseMailboxEmail, upperCaseMailboxEmail)
@@ -67,7 +66,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers("user1@example.com"),
       )
 
-      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
+      when(fixture.searchService.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(
@@ -82,7 +81,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers("USER1@USER2@EXAMPLE.COM"),
       )
 
-      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
+      when(fixture.searchService.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq("USER1@USER2@example.com")
@@ -97,7 +96,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers(validEmail3),
       )
 
-      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
+      when(fixture.searchService.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(validEmail1, validEmail2, validEmail3)
@@ -112,7 +111,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers(validEmail3),
       )
 
-      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
+      when(fixture.searchService.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(
@@ -122,21 +121,21 @@ class UserTeamsServiceSpec
     }
   }
 
-  private case class Fixture(repository: ApplicationsRepository, service: UsersService)
+  private case class Fixture(searchService: ApplicationsSearchService, service: UsersService)
 
   private def buildFixture(): Fixture = {
-    val repository = mock[ApplicationsRepository]
+    val searchService = mock[ApplicationsSearchService]
 
-    val service = new UsersService(repository)
+    val service = new UsersService(searchService)
 
-    Fixture(repository, service)
+    Fixture(searchService, service)
   }
 }
 
-object UserTeamsServiceSpec {
+object UsersServiceSpec {
   def applicationWithTeamMembers(emails: String*): Application = {
     val teamMembers = emails.map(email => TeamMember(email))
-    Application(None, "Test Application", Creator("creator@example.com"), teamMembers)
+    Application(None, "Test Application", Creator("creator@example.com"), None, teamMembers)
   }
 
   val invalidEmail1 = "invalid-email"

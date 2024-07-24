@@ -65,10 +65,6 @@ class ApplicationsRepository @Inject()(
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
-  def findAll(includeDeleted: Boolean): Future[Seq[Application]] = {
-    findAll(None, Seq.empty, includeDeleted)
-  }
-
   def findAll(teamMemberEmail: Option[String], owningTeams: Seq[Team], includeDeleted: Boolean): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection

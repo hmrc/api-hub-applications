@@ -30,6 +30,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationsSearchService {
 
+  def findAll(includeDeleted: Boolean): Future[Seq[Application]] = {
+    findAll(None, includeDeleted)
+  }
+
   def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]]
 
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]]
@@ -46,10 +50,12 @@ class ApplicationsSearchServiceImpl @Inject()(
 )(implicit ec: ExecutionContext) extends ApplicationsSearchService {
 
   override def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
-    (for {
+    val applications = for {
       teams <- fetchUserTeams(teamMemberEmail)
       applications <- repository.findAll(teamMemberEmail, teams, includeDeleted)
-    } yield applications).flatMap(addTeams)
+    } yield applications
+
+    applications.flatMap(addTeams)
   }
 
   private def fetchUserTeams(teamMemberEmail: Option[String]): Future[Seq[Team]] = {

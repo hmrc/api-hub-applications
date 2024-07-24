@@ -18,17 +18,16 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class UsersService @Inject()(
-    applicationsRepository: ApplicationsRepository,
+  searchService: ApplicationsSearchService
 )(implicit ec: ExecutionContext) {
 
   def findAll(): Future[Seq[UserContactDetails]] = {
-    applicationsRepository
+    searchService
       .findAll(includeDeleted = true)
       .map(getUniqueEmails)
   }
@@ -37,7 +36,7 @@ class UsersService @Inject()(
     applications
       .flatMap(_.teamMembers)
       .map(_.email)
-      .flatMap(normaliseEmailAddress(_))
+      .flatMap(normaliseEmailAddress)
       .distinct
       .sortBy(_.toLowerCase)
       .map(UserContactDetails(_))
