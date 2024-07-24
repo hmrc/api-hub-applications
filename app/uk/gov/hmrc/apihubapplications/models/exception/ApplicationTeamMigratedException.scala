@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.apihubapplications.models.application
+package uk.gov.hmrc.apihubapplications.models.exception
 
-import play.api.libs.json.{Format, Json}
 
-case class NewApplication(
-  name: String,
-  createdBy: Creator,
-  teamMembers: Seq[TeamMember],
-  teamId: Option[String] = None
-)
+case class ApplicationTeamMigratedException(message: String) extends ApplicationsException(message, null)
 
-object NewApplication {
+object ApplicationTeamMigratedException {
 
-  implicit val newApplicationFormat: Format[NewApplication] = Json.format[NewApplication]
+  def forId(id: String): ApplicationTeamMigratedException = {
+    ApplicationTeamMigratedException(s"Application $id has been migrated to use global teams")
+  }
 
 }

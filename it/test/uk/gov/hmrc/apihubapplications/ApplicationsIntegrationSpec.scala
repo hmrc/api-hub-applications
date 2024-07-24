@@ -116,7 +116,7 @@ class ApplicationsIntegrationSpec
         val response = wsClient
           .url(s"$baseUrl/api-hub-applications/applications")
           .addHttpHeaders(("Content", "application/json"))
-          .post(Json.toJson(newApplication))
+          .post(Json.toJson(newApplication.copy(teamId = None)))
           .futureValue
 
         val responseApplication = response.json.as[Application]
@@ -135,16 +135,7 @@ class ApplicationsIntegrationSpec
             newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
           }
 
-        // This test is becoming a bit tricky as the stored and returned responses deviate
-        //  -we don't return hidden primary credentials
-        //  -we do return the client secret for secondary credentials
-        val expectedApplication = storedApplication
-          .makePublic()
-          .setSecondaryCredentials(
-            storedApplication
-              .getSecondaryCredentials
-              .map(credential => credential.copy(clientSecret = Some(FakeIdmsConnector.fakeSecret)))
-          )
+        val expectedApplication = storedApplication.makePublic()
 
         responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name
@@ -160,8 +151,8 @@ class ApplicationsIntegrationSpec
       forAll { (application1: Application, application2: Application) =>
         deleteAll().futureValue
 
-        insert(application1).futureValue
-        insert(application2).futureValue
+        insert(application1.copy(teamId = None)).futureValue
+        insert(application2.copy(teamId = None)).futureValue
 
         val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue.toModel)
 
@@ -181,10 +172,10 @@ class ApplicationsIntegrationSpec
       val myEmail = "member1@digital.hmrc.gov.uk"
       val myTeamMembers = Seq(TeamMember(myEmail), TeamMember("member2@digital.hmrc.gov.uk"))
 
-      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None)
+      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamId = None, teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None)
       val otherTeamMembers = Seq(TeamMember("member3@digital.hmrc.gov.uk"), TeamMember("member4@digital.hmrc.gov.uk"))
 
-      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None)
+      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), teamId = None, teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None)
       deleteAll().futureValue
       val crypto = fakeApplication().injector.instanceOf[ApplicationCrypto]
       insert(application1).futureValue
@@ -213,6 +204,7 @@ class ApplicationsIntegrationSpec
 
       insert(
         application
+          .copy(teamId = None)
           .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
           .setPrimaryScopes(Seq.empty)
           .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))

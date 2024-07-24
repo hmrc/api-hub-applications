@@ -852,6 +852,26 @@ class ApplicationsControllerSpec
         verifyZeroInteractions(fixture.applicationsService)
       }
     }
+
+    "must return 409 Conflict when the application has a global team (ie has been migrated)" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamMemberRequest = TeamMemberRequest("test-email")
+
+      when(fixture.applicationsService.addTeamMember(any(), any())(any()))
+        .thenReturn(Future.successful(Left(ApplicationTeamMigratedException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.addTeamMember(applicationId))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(teamMemberRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
+      }
+    }
   }
 
 }

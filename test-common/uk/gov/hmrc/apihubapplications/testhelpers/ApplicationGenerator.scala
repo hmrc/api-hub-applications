@@ -46,6 +46,12 @@ trait ApplicationGenerator {
     } yield Creator(email)
   }
 
+  val teamIdGenerator: Gen[Option[String]] = {
+    for {
+      teamId <- Gen.option(Gen.uuid)
+    } yield teamId.map(_.toString)
+  }
+
   val teamMemberGenerator: Gen[TeamMember] = {
     for {
       email <- emailGenerator
@@ -87,17 +93,22 @@ trait ApplicationGenerator {
       created <- localDateTimeGenerator
       createdBy <- creatorGenerator
       lastUpdated <- localDateTimeGenerator
+      teamId <- teamIdGenerator
       teamMembers <- Gen.listOf(teamMemberGenerator)
       environments <- environmentsGenerator
     } yield
     Application(
-      appId,
-      name,
-      created,
-      createdBy,
-      lastUpdated,
-      teamMembers,
-      environments
+      id = appId,
+      name = name,
+      created = created,
+      createdBy = createdBy,
+      lastUpdated = lastUpdated,
+      teamId = teamId,
+      teamMembers = teamMembers,
+      environments = environments,
+      issues = Seq.empty,
+      apis = Seq.empty,
+      deleted = None
     )
   }
 
@@ -107,11 +118,13 @@ trait ApplicationGenerator {
         name <- Gen.alphaStr
         createdBy <- creatorGenerator
         teamMembers <- Gen.listOf(teamMemberGenerator)
+        teamId <- teamIdGenerator
       } yield
         NewApplication(
           name,
           createdBy,
-          teamMembers
+          teamMembers,
+          teamId
         )
     }
 
