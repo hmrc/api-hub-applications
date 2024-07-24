@@ -328,6 +328,10 @@ object ApplicationLenses {
     def addTeamMember(email: String): Application =
       addTeamMember(TeamMember(email))
 
+    def setTeamMembers(teamMembers: Seq[TeamMember]): Application = {
+      applicationTeamMembers.set(application, teamMembers)
+    }
+
     def assertTeamMember(email: String): Application = {
       if (application.hasTeamMember(email)) {
         application

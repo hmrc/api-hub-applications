@@ -19,8 +19,8 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, NewApplication, Primary, Secondary, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
@@ -61,17 +61,26 @@ class ApplicationsLifecycleServiceImpl @Inject()(
       )
     ).flatMap {
       case Right(enriched) =>
-        for {
-          saved <- repository.insert(enriched)
-          _ <- emailConnector.sendAddTeamMemberEmail(saved)
-          _ <- emailConnector.sendApplicationCreatedEmailToCreator(saved)
-        } yield Right(saved)
+        repository.insert(enriched).flatMap(
+          saved =>
+            searchService.findById(saved.safeId, enrich = false).flatMap {
+              case Right(fetched) =>
+                val teamMemberEmail = emailConnector.sendAddTeamMemberEmail(fetched)
+                val creatorEmail = emailConnector.sendApplicationCreatedEmailToCreator(fetched)
+
+                for {
+                  _ <- teamMemberEmail
+                  _ <- creatorEmail
+                } yield Right(fetched)
+              case Left(e) => Future.successful(Left(e))
+            }
+        )
       case Left(e) => Future.successful(Left(e))
     }
   }
 
   override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    repository.findById(applicationId).flatMap {
+    searchService.findById(applicationId, false).flatMap {
       case Right(application) =>
         idmsConnector.deleteAllClients(application) flatMap {
           case Right(_) =>
@@ -106,6 +115,8 @@ class ApplicationsLifecycleServiceImpl @Inject()(
 
   override def addTeamMember(applicationId: String, teamMember: TeamMember)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId, enrich = false).flatMap {
+      case Right(application) if application.isTeamMigrated =>
+        Future.successful(Left(raiseApplicationTeamMigratedException.forId(applicationId)))
       case Right(application) if !application.hasTeamMember(teamMember) =>
         repository.update(
           application

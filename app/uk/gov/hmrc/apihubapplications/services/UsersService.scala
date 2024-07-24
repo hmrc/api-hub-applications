@@ -29,7 +29,7 @@ class UsersService @Inject()(
 
   def findAll(): Future[Seq[UserContactDetails]] = {
     applicationsRepository
-      .findAll(None, includeDeleted = true)
+      .findAll(includeDeleted = true)
       .map(getUniqueEmails)
   }
 

@@ -17,21 +17,29 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Deleted, Primary, Scope, Secondary, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Deleted, Issues, Primary, Scope, Secondary, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, ClientScope}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar {
+class ApplicationsSearchServiceSpec
+  extends AsyncFreeSpec
+    with Matchers
+    with MockitoSugar
+    with ArgumentMatchersSugar
+    with EitherValues
+    with OptionValues {
 
   import ApplicationsSearchServiceSpec._
 
@@ -45,13 +53,70 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty)
       )
 
-      when(repository.findAll(any, any)).thenReturn(Future.successful(applications))
+      when(teamsService.findAll(any)).thenReturn(Future.successful(Seq.empty))
+      when(repository.findAll(any, any, any)).thenReturn(Future.successful(applications))
 
       service.findAll(None, false) map {
         actual =>
           actual mustBe applications
-          verify(repository).findAll(eqTo(None), eqTo(false))
+          verify(repository).findAll(eqTo(None), eqTo(Seq.empty), eqTo(false))
           succeed
+      }
+    }
+
+    "must return team members for applications linked to global teams" in {
+      val fixture = buildFixture()
+      import fixture._
+
+      val teamId = "test-team-id"
+      val team = Team(
+        id = Some(teamId),
+        name = "test-team-name",
+        created = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember("test-email"))
+      )
+
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty)
+      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty)
+      val applications = Seq(application1, application2)
+
+      when(teamsService.findAll(any)).thenReturn(Future.successful(Seq.empty))
+      when(repository.findAll(eqTo(None), eqTo(Seq.empty), eqTo(false))).thenReturn(Future.successful(applications))
+      when(teamsService.findById(teamId)).thenReturn(Future.successful(Right(team)))
+
+      val expected = Seq(
+        application1.setTeamMembers(team.teamMembers),
+        application2
+      )
+
+      service.findAll(None, false) map {
+        actual =>
+          actual mustBe expected
+      }
+    }
+
+    "must return an issue if a global team cannot be found" in {
+      val fixture = buildFixture()
+      import fixture._
+
+      val teamId = "test-team-id"
+
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty)
+      val application2 = Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty)
+      val applications = Seq(application1, application2)
+
+      when(teamsService.findAll(any)).thenReturn(Future.successful(Seq.empty))
+      when(repository.findAll(eqTo(None), eqTo(Seq.empty), eqTo(false))).thenReturn(Future.successful(applications))
+      when(teamsService.findById(teamId)).thenReturn(Future.successful(Left(TeamNotFoundException.forId(teamId))))
+
+      val expected = Seq(
+        application1.addIssue(Issues.teamNotFound(teamId, TeamNotFoundException.forId(teamId))),
+        application2
+      )
+
+      service.findAll(None, false) map {
+        actual =>
+          actual mustBe expected
       }
     }
 
@@ -64,12 +129,37 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-1"), Seq(TeamMember("test-email-1")))
       )
 
-      when(repository.findAll(any, any)).thenReturn(Future.successful(applications))
+      when(teamsService.findAll(any)).thenReturn(Future.successful(Seq.empty))
+      when(repository.findAll(any, any, any)).thenReturn(Future.successful(applications))
 
       service.findAll(Some("test-email-1"), false) map {
         actual =>
           actual mustBe applications
-          verify(repository).findAll(eqTo(Some("test-email-1")), eqTo(false))
+          verify(repository).findAll(eqTo(Some("test-email-1")), eqTo(Seq.empty),  eqTo(false))
+          succeed
+      }
+    }
+
+    "must return applications owned by global teams with the named team member" in {
+      val fixture = buildFixture()
+      import fixture._
+
+      val team = Team(Some("test-team-id-1"), "test-team-name", LocalDateTime.now(clock), Seq.empty)
+
+      val applications = Seq(
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq(TeamMember("test-email-1"))),
+        Application(Some("test-id-2"), "test-name-2", Creator("test-email-1"), team.id.value)
+      )
+
+      when(teamsService.findAll(any)).thenReturn(Future.successful(Seq(team)))
+      when(repository.findAll(any, any, any)).thenReturn(Future.successful(applications))
+      when(teamsService.findById(eqTo(team.id.value))).thenReturn(Future.successful(Right(team)))
+
+      service.findAll(Some("test-email-1"), false) map {
+        actual =>
+          actual mustBe applications
+          verify(teamsService).findAll(eqTo(Some("test-email-1")))
+          verify(repository).findAll(eqTo(Some("test-email-1")), eqTo(Seq(team)),  eqTo(false))
           succeed
       }
     }
@@ -85,12 +175,13 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty).delete(deleted)
       )
 
-      when(repository.findAll(any, any)).thenReturn(Future.successful(applications))
+      when(teamsService.findAll(any)).thenReturn(Future.successful(Seq.empty))
+      when(repository.findAll(any, any, any)).thenReturn(Future.successful(applications))
 
       service.findAll(None, true) map {
         actual =>
           actual mustBe applications
-          verify(repository).findAll(eqTo(None), eqTo(true))
+          verify(repository).findAll(eqTo(None), eqTo(Seq.empty), eqTo(true))
           succeed
       }
     }
@@ -138,6 +229,64 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
           succeed
       }
     }
+
+    "must return team members for applications linked to global teams" in {
+      val fixture = buildFixture()
+      import fixture._
+
+      val teamId = "test-team-id"
+      val team = Team(
+        id = Some(teamId),
+        name = "test-team-name",
+        created = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember("test-email"))
+      )
+
+      val apiId = "test-api"
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty).addApi(Api(apiId))
+      val application2 = Application(Some("test-id-2"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId))
+
+      val applications = Seq(application1, application2)
+
+      when(repository.findAllUsingApi(eqTo(apiId), eqTo(false))).thenReturn(Future.successful(applications))
+      when(teamsService.findById(eqTo(teamId))).thenReturn(Future.successful(Right(team)))
+
+      val expected = Seq(
+        application1.setTeamMembers(team.teamMembers),
+        application2
+      )
+
+      service.findAllUsingApi(apiId, false) map {
+        actual =>
+          actual mustBe expected
+      }
+    }
+
+    "must return an issue if a global team cannot be found" in {
+      val fixture = buildFixture()
+      import fixture._
+
+      val teamId = "test-team-id"
+
+      val apiId = "test-api"
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty).addApi(Api(apiId))
+      val application2 = Application(Some("test-id-2"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId))
+
+      val applications = Seq(application1, application2)
+
+      when(repository.findAllUsingApi(eqTo(apiId), eqTo(false))).thenReturn(Future.successful(applications))
+      when(teamsService.findById(eqTo(teamId))).thenReturn(Future.successful(Left(TeamNotFoundException.forId(teamId))))
+
+      val expected = Seq(
+        application1.addIssue(Issues.teamNotFound(teamId, TeamNotFoundException.forId(teamId))),
+        application2
+      )
+
+      service.findAllUsingApi(apiId, false) map {
+        actual =>
+          actual mustBe expected
+      }
+    }
   }
 
   "findById" - {
@@ -179,6 +328,35 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       }
     }
 
+    "must return the application's team members when it is linked to a global team" in {
+      val fixture = buildFixture()
+      import fixture._
+
+      val teamId = "test-team-id"
+      val team = Team(
+        id = Some(teamId),
+        name = "test-team-name",
+        created = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember("test-email"))
+      )
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-name", Creator("test-creator"), teamId, clock)
+
+      when(repository.findById(eqTo(id)))
+        .thenReturn(Future.successful(Right(application)))
+
+      when(teamsService.findById(teamId))
+        .thenReturn(Future.successful(Right(team)))
+
+      val expected = application.setTeamMembers(team.teamMembers)
+
+      service.findById(id, false)(HeaderCarrier()).map(
+        actual =>
+          actual mustBe Right(expected)
+      )
+    }
+
     "must return ApplicationNotFoundException when the application does not exist" in {
       val fixture = buildFixture()
       import fixture._
@@ -191,6 +369,27 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       service.findById(id, enrich = true)(HeaderCarrier()).map(
         result =>
           result mustBe Left(ApplicationNotFoundException.forId(id))
+      )
+    }
+
+    "must return an issue when the team does not exist" in {
+      val fixture = buildFixture()
+      import fixture._
+
+      val teamId = "test-team-id"
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-name", Creator("test-creator"), teamId, clock)
+
+      when(repository.findById(eqTo(id)))
+        .thenReturn(Future.successful(Right(application)))
+
+      when(teamsService.findById(teamId))
+        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(teamId))))
+
+      service.findById(id, false)(HeaderCarrier()).map(
+        actual =>
+          actual.value.issues mustBe Seq(Issues.teamNotFound(teamId, TeamNotFoundException.forId(teamId)))
       )
     }
 
@@ -242,16 +441,18 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
   }
 
   private case class Fixture(
+    teamsService: TeamsService,
     repository: ApplicationsRepository,
     idmsConnector: IdmsConnector,
     service: ApplicationsSearchService
   )
 
   private def buildFixture(): Fixture = {
+    val teamsService = mock[TeamsService]
     val repository = mock[ApplicationsRepository]
     val idmsConnector = mock[IdmsConnector]
-    val service = new ApplicationsSearchServiceImpl(repository, idmsConnector)
-    Fixture(repository, idmsConnector, service)
+    val service = new ApplicationsSearchServiceImpl(teamsService, repository, idmsConnector)
+    Fixture(teamsService, repository, idmsConnector, service)
   }
 
 }

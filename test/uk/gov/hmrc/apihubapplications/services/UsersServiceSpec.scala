@@ -36,7 +36,7 @@ class UserTeamsServiceSpec
     "must return an empty list if no emails are found in the repo" in {
       val fixture = buildFixture()
 
-      when(fixture.repository.findAll(None, true)).thenReturn(Future.successful(Seq.empty))
+      when(fixture.repository.findAll(true)).thenReturn(Future.successful(Seq.empty))
 
       fixture.service.findAll().map {
         result => result mustBe Seq.empty
@@ -50,7 +50,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers(lowerCaseDomainEmail, upperCaseDomainEmail, lowerCaseMailboxEmail, upperCaseMailboxEmail)
       )
 
-      when(fixture.repository.findAll(None, true)).thenReturn(Future.successful(applications))
+      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(lowerCaseDomainEmail, lowerCaseMailboxEmail, upperCaseMailboxEmail)
@@ -67,7 +67,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers("user1@example.com"),
       )
 
-      when(fixture.repository.findAll(None, true)).thenReturn(Future.successful(applications))
+      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(
@@ -82,7 +82,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers("USER1@USER2@EXAMPLE.COM"),
       )
 
-      when(fixture.repository.findAll(None, true)).thenReturn(Future.successful(applications))
+      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq("USER1@USER2@example.com")
@@ -97,7 +97,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers(validEmail3),
       )
 
-      when(fixture.repository.findAll(None, true)).thenReturn(Future.successful(applications))
+      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(validEmail1, validEmail2, validEmail3)
@@ -112,7 +112,7 @@ class UserTeamsServiceSpec
         applicationWithTeamMembers(validEmail3),
       )
 
-      when(fixture.repository.findAll(None, true)).thenReturn(Future.successful(applications))
+      when(fixture.repository.findAll(true)).thenReturn(Future.successful(applications))
 
       fixture.service.findAll().map {
         result => result.map(_.email) mustBe Seq(

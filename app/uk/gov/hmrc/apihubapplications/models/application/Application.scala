@@ -40,6 +40,10 @@ object Application {
     Application(id, name, createdBy, teamMembers, Clock.systemDefaultZone())
   }
 
+  def apply(id: Option[String], name: String, createdBy: Creator, teamId: String): Application = {
+    Application(id, name, createdBy, Some(teamId), Seq.empty, Clock.systemDefaultZone())
+  }
+
   def apply(id: Option[String], name: String, createdBy: Creator, teamId: Option[String], teamMembers: Seq[TeamMember]): Application = {
     Application(id, name, createdBy, teamId, teamMembers, Clock.systemDefaultZone())
   }
@@ -47,6 +51,11 @@ object Application {
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
     Application(id, name, now, createdBy, now, None, teamMembers, Environments(), apis = Seq.empty, deleted = None)
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, teamId: String, clock: Clock): Application = {
+    val now = LocalDateTime.now(clock)
+    Application(id, name, now, createdBy, now, Some(teamId), Seq.empty, Environments(), apis = Seq.empty, deleted = None)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, teamId: Option[String], teamMembers: Seq[TeamMember], clock: Clock): Application = {
@@ -64,6 +73,10 @@ object Application {
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
     Application(id, name, now, createdBy, now, None, teamMembers, environments, apis = Seq.empty, deleted = None)
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamId: String, environments: Environments): Application = {
+    Application(id, name, now, createdBy, now, Some(teamId), Seq.empty, environments, apis = Seq.empty, deleted = None)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments, deleted: Option[Deleted]): Application = {

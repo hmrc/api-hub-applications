@@ -165,6 +165,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             case Right(_) => NoContent
             case Left(_: ApplicationNotFoundException) => NotFound
             case Left(_: TeamMemberExistsException) => BadRequest
+            case Left(_: ApplicationTeamMigratedException) => Conflict
             case Left(_) => InternalServerError
           }
         case e: JsError =>
