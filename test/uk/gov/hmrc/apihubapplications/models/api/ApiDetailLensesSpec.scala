@@ -19,9 +19,11 @@ package uk.gov.hmrc.apihubapplications.models.api
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses._
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Endpoint => ApplicationEndpoint}
 import uk.gov.hmrc.apihubapplications.models.application.ApiLenses._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Endpoint => ApplicationEndpoint}
+
+import java.time.Instant
 
 class ApiDetailLensesSpec extends AnyFreeSpec with Matchers {
 

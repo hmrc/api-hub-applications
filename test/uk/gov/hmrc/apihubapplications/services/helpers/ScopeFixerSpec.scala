@@ -21,13 +21,13 @@ import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses._
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Endpoint => ApplicationEndpoint, Primary, Scope, Secondary}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Primary, Scope, Secondary, Endpoint => ApplicationEndpoint}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.Future
 
 class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar with EitherValues {

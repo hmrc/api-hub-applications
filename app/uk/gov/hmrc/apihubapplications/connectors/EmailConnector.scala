@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.connectors
 
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
+import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.team.Team
@@ -42,4 +43,9 @@ trait EmailConnector {
   def sendNewAccessRequestEmailToApprovers(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
   def sendTeamMemberAddedEmailToTeamMembers(teamMembers: Seq[TeamMember], team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+
+  def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, api: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+
+  def sendApiOwnershipChangedEmailToNewTeamMembers(team: Team, api: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+
 }

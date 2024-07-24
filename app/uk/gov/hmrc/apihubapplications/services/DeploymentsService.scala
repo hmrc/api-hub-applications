@@ -17,24 +17,27 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
-import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, RedeploymentRequest, SuccessfulDeploymentsResponse}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
+import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
-import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DeploymentsService @Inject()(
-  apimConnector: APIMConnector,
-  integrationCatalogueConnector: IntegrationCatalogueConnector
-)(implicit ec: ExecutionContext) {
+                                    apimConnector: APIMConnector,
+                                    integrationCatalogueConnector: IntegrationCatalogueConnector,
+                                    emailConnector: EmailConnector,
+                                    teamsService: TeamsService
+                                  )(implicit ec: ExecutionContext) {
 
   def deployToSecondary(
-    request: DeploymentsRequest
-  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
+                         request: DeploymentsRequest
+                       )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
     for {
       deploymentsResponse <- apimConnector.deployToSecondary(request)
       linkApiToTeamResponse <- linkApiToTeam(deploymentsResponse, request.teamId)
@@ -42,16 +45,16 @@ class DeploymentsService @Inject()(
   }
 
   def redeployToSecondary(
-    publisherRef: String,
-    request: RedeploymentRequest
-  )(implicit hc: HeaderCarrier):  Future[Either[ApplicationsException, DeploymentsResponse]] = {
+                           publisherRef: String,
+                           request: RedeploymentRequest
+                         )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
     apimConnector.redeployToSecondary(publisherRef, request)
   }
 
   private def linkApiToTeam(
-    deploymentsResponse: Either[ApimException, DeploymentsResponse],
-    teamId: String
-  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
+                             deploymentsResponse: Either[ApimException, DeploymentsResponse],
+                             teamId: String
+                           )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
     deploymentsResponse match {
       case Right(response: SuccessfulDeploymentsResponse) =>
         integrationCatalogueConnector.linkApiToTeam(ApiTeam(response.id, teamId)).map {
@@ -64,16 +67,73 @@ class DeploymentsService @Inject()(
   }
 
   def getDeployment(
-    publisherRef: String,
-    environmentName: EnvironmentName
-  )(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
+                     publisherRef: String,
+                     environmentName: EnvironmentName
+                   )(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
     apimConnector.getDeployment(publisherRef, environmentName)
   }
 
   def promoteToProduction(
-    publisherRef: String
-  )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
+                           publisherRef: String
+                         )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     apimConnector.promoteToProduction(publisherRef)
   }
 
-}
+  def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]] = {
+    integrationCatalogueConnector.findById(apiId) flatMap {
+      case Right(apiDetail) =>
+        resolveCurrentAndNewTeams(apiDetail, teamId) flatMap {
+          case Right(owningTeams) =>
+            integrationCatalogueConnector.updateApiTeam(apiId, teamId) flatMap {
+              case Right(updatedApi) => for {
+                _ <- sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam)
+                _ <- sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam)
+              } yield updatedApi match {
+                case _ => Right(updatedApi)
+              }
+              case Left(e) => Future.successful(Left(e))
+            }
+            case Left(e) => Future.successful(Left(e))
+          }
+          case Left(e) => Future.successful(Left(e))
+        }
+    }
+
+    private case class OwningTeams(currentTeam: Option[Team], newTeam: Team)
+
+    private def resolveCurrentAndNewTeams(apiDetail: ApiDetail, teamId: String): Future[Either[ApplicationsException, OwningTeams]] = {
+      val eventualMaybeCurrentTeam = getTeam(apiDetail.teamId)
+      val eventualMaybeNewTeam = getTeam(Some(teamId))
+      for {
+        maybeCurrentTeam <- eventualMaybeCurrentTeam
+        maybeNewTeam <- eventualMaybeNewTeam
+      } yield (maybeCurrentTeam, maybeNewTeam) match {
+        case (_, None) => Left(TeamNotFoundException.forId(teamId))
+        case (_, Some(newTeam)) => Right(OwningTeams(maybeCurrentTeam, newTeam))
+      }
+    }
+
+    private def sendApiOwnershipChangedEmailToOldTeam(apiDetail: ApiDetail, maybeCurrentTeam: Option[Team], newTeam: Team)(implicit hc: HeaderCarrier) = {
+      if (maybeCurrentTeam.isDefined) {
+        emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(maybeCurrentTeam.get, newTeam, apiDetail) flatMap {
+          case _ => Future.successful(())
+        }
+      } else {
+        Future.successful(())
+      }
+    }
+
+    private def sendApiOwnershipChangedEmailToNewTeam(apiDetail: ApiDetail, newTeam: Team)(implicit hc: HeaderCarrier) =
+      emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(newTeam, apiDetail) flatMap (_ => Future.successful(()))
+
+    private def getTeam(maybeTeamId: Option[String]) = {
+      maybeTeamId match {
+        case Some(teamId) => teamsService.findById(teamId) map {
+          case Right(team) => Some(team)
+          case Left(_) => None
+        }
+        case None => Future.successful(None)
+      }
+
+    }
+  }
