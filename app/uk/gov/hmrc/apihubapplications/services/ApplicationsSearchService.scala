@@ -36,6 +36,10 @@ trait ApplicationsSearchService {
 
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]]
 
+  def findById(id: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    findById(id, false)
+  }
+
   def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
 
 }
