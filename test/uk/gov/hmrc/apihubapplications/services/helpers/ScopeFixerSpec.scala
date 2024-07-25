@@ -27,7 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Primary, Scope, Secondary, Endpoint => ApplicationEndpoint}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.{Instant, LocalDateTime}
+import java.time.LocalDateTime
 import scala.concurrent.Future
 
 class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar with EitherValues {
