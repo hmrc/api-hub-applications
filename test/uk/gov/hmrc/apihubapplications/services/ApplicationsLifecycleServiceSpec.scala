@@ -277,7 +277,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val id = "test-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       val captor: ArgumentCaptor[Application] = ArgumentCaptor.forClass(classOf[Application])
       when(repository.update(captor.capture())).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
@@ -305,7 +305,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val application = Application(Some(id), "test-description", creator, Seq(teamMember1, teamMember2))
 
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
@@ -331,7 +331,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val application = Application(Some(id), "test-description", creator, Seq(teamMember1, teamMember2))
 
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), any)(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), any)(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
@@ -357,7 +357,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val application = Application(Some(id), "test-description", creator, Seq(teamMember1, teamMember2))
 
       val notFoundException = ApplicationNotFoundException("Not found")
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Left(notFoundException)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Left(notFoundException)))
 
       service.delete(application.id.get, currentUser)(HeaderCarrier()).map {
         result =>
@@ -377,7 +377,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(idmsConnector.deleteAllClients(any)(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
@@ -402,7 +402,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
       when(idmsConnector.deleteAllClients(any)(any)).thenReturn(Future.successful(Right(())))
@@ -422,7 +422,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       import fixture._
 
       val id = "test-id"
-      when(repository.findById(eqTo(id)))
+      when(searchService.findById(eqTo(id))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
       service.delete(id, currentUser)(HeaderCarrier()).map {
@@ -442,7 +442,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
         .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(idmsConnector.deleteAllClients(eqTo(application))(any))
@@ -468,7 +468,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
         .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
-      when(repository.findById(eqTo(id))).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))

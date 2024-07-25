@@ -71,7 +71,7 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
   }
 
   override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    repository.findById(applicationId).flatMap {
+    searchService.findById(applicationId).flatMap {
       case Right(application) =>
         idmsConnector.deleteAllClients(application) flatMap {
           case Right(_) =>
