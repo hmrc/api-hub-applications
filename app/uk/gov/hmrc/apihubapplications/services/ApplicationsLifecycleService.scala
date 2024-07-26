@@ -61,11 +61,20 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
       )
     ).flatMap {
       case Right(enriched) =>
-        for {
-          saved <- repository.insert(enriched)
-          _ <- emailConnector.sendAddTeamMemberEmail(saved)
-          _ <- emailConnector.sendApplicationCreatedEmailToCreator(saved)
-        } yield Right(saved)
+        repository.insert(enriched).flatMap(
+          saved =>
+            searchService.findById(saved.safeId, enrich = false).flatMap {
+              case Right(fetched) =>
+                val teamMemberEmail = emailConnector.sendAddTeamMemberEmail(fetched)
+                val creatorEmail = emailConnector.sendApplicationCreatedEmailToCreator(fetched)
+
+                for {
+                  _ <- teamMemberEmail
+                  _ <- creatorEmail
+                } yield Right(fetched)
+              case Left(e) => Future.successful(Left(e))
+            }
+        )
       case Left(e) => Future.successful(Left(e))
     }
   }
@@ -106,6 +115,8 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
 
   override def addTeamMember(applicationId: String, teamMember: TeamMember)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId, enrich = false).flatMap {
+      case Right(application) if application.isTeamMigrated =>
+        Future.successful(Left(raiseApplicationTeamMigratedException.forId(applicationId)))
       case Right(application) if !application.hasTeamMember(teamMember) =>
         repository.update(
           application

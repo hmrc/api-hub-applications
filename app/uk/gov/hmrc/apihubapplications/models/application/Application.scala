@@ -36,6 +36,10 @@ case class Application (
 
 object Application {
 
+  def apply(id: Option[String], name: String, createdBy: Creator, teamId: String): Application = {
+    Application(id, name, createdBy, Some(teamId), Seq.empty, Clock.systemDefaultZone())
+  }
+
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember]): Application = {
     Application(id, name, createdBy, teamMembers, Clock.systemDefaultZone())
   }
@@ -60,6 +64,10 @@ object Application {
 
   def apply(newApplication: NewApplication, clock: Clock): Application = {
     apply(None, newApplication.name, newApplication.createdBy, newApplication.teamId, newApplication.teamMembers, clock)
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamId: String, environments: Environments): Application = {
+    Application(id, name, now, createdBy, now, Some(teamId), Seq.empty, environments, apis = Seq.empty, deleted = None)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {

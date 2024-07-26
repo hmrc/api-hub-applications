@@ -135,16 +135,8 @@ class ApplicationsIntegrationSpec
             newApplication.teamMembers :+ TeamMember(newApplication.createdBy.email)
           }
 
-        // This test is becoming a bit tricky as the stored and returned responses deviate
-        //  -we don't return hidden primary credentials
-        //  -we do return the client secret for secondary credentials
         val expectedApplication = storedApplication
           .makePublic()
-          .setSecondaryCredentials(
-            storedApplication
-              .getSecondaryCredentials
-              .map(credential => credential.copy(clientSecret = Some(FakeIdmsConnector.fakeSecret)))
-          )
 
         responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name

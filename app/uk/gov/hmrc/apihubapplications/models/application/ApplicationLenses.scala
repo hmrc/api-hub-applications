@@ -333,6 +333,14 @@ object ApplicationLenses {
       }
     }
 
+    def setTeamMembers(teamMembers: Seq[TeamMember]): Application = {
+      applicationTeamMembers.set(application, teamMembers)
+    }
+
+    def isTeamMigrated: Boolean = {
+      application.teamId.isDefined
+    }
+
     def setIssues(issues: Seq[String]): Application = {
       applicationIssues.set(application, issues)
     }
