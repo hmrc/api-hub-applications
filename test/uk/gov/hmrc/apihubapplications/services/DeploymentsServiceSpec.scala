@@ -168,20 +168,19 @@ class DeploymentsServiceSpec
     "must pass the correct request to Integrations Catalogue and send appropriate emails and return the response" in {
       val fixture = buildFixture()
       val apiDetail = sampleApiDetail().copy(teamId = Some("team1"))
-      val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team1 = Team.apply("team 1", Seq(TeamMember("team1.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team1"))).thenReturn(Future.successful(Right(team1)))
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
-      when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(updatedApiDetail)))
+      when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
 
       fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
         actual =>
-          actual mustBe Right(updatedApiDetail)
+          actual mustBe Right(())
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(team2), eqTo(apiDetail))(any)
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)
@@ -192,18 +191,17 @@ class DeploymentsServiceSpec
     "must handle no existing team" in {
       val fixture = buildFixture()
       val apiDetail = sampleApiDetail().copy(teamId = None)
-      val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
-      when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(updatedApiDetail)))
+      when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
 
 
       fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
         actual =>
-          actual mustBe Right(updatedApiDetail)
+          actual mustBe Right(())
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
           verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)
@@ -214,17 +212,16 @@ class DeploymentsServiceSpec
     "must handle email failure" in {
       val fixture = buildFixture()
       val apiDetail = sampleApiDetail().copy(teamId = None)
-      val updatedApiDetail = apiDetail.copy(teamId = Some("team2"))
       val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
-      when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(updatedApiDetail)))
+      when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
 
       fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
         actual =>
-          actual mustBe Right(updatedApiDetail)
+          actual mustBe Right(())
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)
           succeed

@@ -451,21 +451,17 @@ class DeploymentsControllerSpec
 
   "updateApiTeam" - {
     val apiId = "apiId"
-    "must return 200 Ok and an updated ApiDetail" in {
+    "must return 200 Ok" in {
       val fixture = buildFixture()
 
-      val originalApiDetail = sampleApiDetail()
-      val updatedApiDetail = originalApiDetail.copy(teamId = Some("team2"))
-
       when(fixture.deploymentsService.updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any))
-        .thenReturn(Future.successful(Right(updatedApiDetail)))
+        .thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.updateApiTeam(apiId, "team2"))
         val result = route(fixture.application, request).value
 
         status(result) mustBe OK
-        contentAsJson(result) mustBe Json.toJson(updatedApiDetail)
 
         verify(fixture.deploymentsService).updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any)
       }
