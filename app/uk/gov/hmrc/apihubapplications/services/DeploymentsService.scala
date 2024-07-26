@@ -79,17 +79,17 @@ class DeploymentsService @Inject()(
     apimConnector.promoteToProduction(publisherRef)
   }
 
-  def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]] = {
+  def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     integrationCatalogueConnector.findById(apiId) flatMap {
       case Right(apiDetail) =>
         resolveCurrentAndNewTeams(apiDetail, teamId) flatMap {
           case Right(owningTeams) =>
             integrationCatalogueConnector.updateApiTeam(apiId, teamId) flatMap {
-              case Right(updatedApi) => for {
+              case Right(()) => for {
                 _ <- sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam)
                 _ <- sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam)
-              } yield updatedApi match {
-                case _ => Right(updatedApi)
+              } yield (()) match {
+                case _ => Right(())
               }
               case Left(e) => Future.successful(Left(e))
             }

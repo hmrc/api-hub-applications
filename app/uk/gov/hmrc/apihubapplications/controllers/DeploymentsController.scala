@@ -100,7 +100,7 @@ class DeploymentsController @Inject()(
   def updateApiTeam(apiId: String, teamId: String): Action[AnyContent] = identify.async {
     implicit request =>
       deploymentsService.updateApiTeam(apiId, teamId) flatMap {
-        case Right(updatedApiDetail) => Future.successful(Ok(Json.toJson(updatedApiDetail)))
+        case Right(()) => Future.successful(Ok)
         case Left(_: ApiNotFoundException) => Future.successful(NotFound)
         case Left(e) => throw e
       }

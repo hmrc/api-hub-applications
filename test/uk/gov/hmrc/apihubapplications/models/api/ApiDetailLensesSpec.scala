@@ -23,8 +23,6 @@ import uk.gov.hmrc.apihubapplications.models.application.ApiLenses._
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Endpoint => ApplicationEndpoint}
 
-import java.time.Instant
-
 class ApiDetailLensesSpec extends AnyFreeSpec with Matchers {
 
   import ApiDetailLensesSpec._

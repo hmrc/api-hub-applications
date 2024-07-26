@@ -65,13 +65,13 @@ class IntegrationCatalogueConnectorImpl @Inject()(
       }
   }
 
-  override def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]] = {
+  override def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     httpClient.put(url"$baseUrl/integration-catalogue/apis/$apiId/teams/$teamId")
       .setHeader((ACCEPT, JSON))
       .setHeader(AUTHORIZATION -> appAuthToken)
-      .execute[Either[UpstreamErrorResponse, ApiDetail]]
+      .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
-        case Right(apiDetail) => Right(apiDetail)
+        case Right(()) => Right(())
         case Left(e) if e.statusCode == NOT_FOUND => Left(raiseApiNotFoundException.forId(apiId))
         case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
       }
