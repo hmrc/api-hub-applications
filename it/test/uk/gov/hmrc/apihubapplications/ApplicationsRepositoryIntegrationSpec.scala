@@ -24,7 +24,9 @@ import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
 import uk.gov.hmrc.mongo.MongoComponent
@@ -97,7 +99,7 @@ class ApplicationsRepositoryIntegrationSpec
       repository.insert(application4).futureValue
 
       val result = repository
-        .findAll(None, false)
+        .findAll(None, Seq.empty, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -120,7 +122,7 @@ class ApplicationsRepositoryIntegrationSpec
       val saved4 = repository.insert(application4).futureValue
 
       val result = repository
-        .findAll(None, true)
+        .findAll(None, Seq.empty, true)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -143,7 +145,7 @@ class ApplicationsRepositoryIntegrationSpec
       repository.insert(application4).futureValue
 
       val result = repository
-        .findAll(Some("test1@test.com"), false)
+        .findAll(Some("test1@test.com"), Seq.empty, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -166,11 +168,91 @@ class ApplicationsRepositoryIntegrationSpec
       repository.insert(application4).futureValue
 
       val result = repository
-        .findAll(Some("test1@test.com"), true)
+        .findAll(Some("test1@test.com"), Seq.empty, true)
         .map(ResultWithMdcData(_))
         .futureValue
 
       result.data must contain theSameElementsAs Seq(saved1, saved3)
+      result.mdcData mustBe testMdcData
+    }
+    "must retrieve all applications owned by given teams that are not soft deleted from MongoDb" in {
+      setMdcData()
+
+      val team1 = Team(Some("test-team-id-1"), "test-team-1", LocalDateTime.now(clock), Seq.empty)
+      val team2 = Team(Some("test-team-id-2"), "test-team-2", LocalDateTime.now(clock), Seq.empty)
+      val team3 = Team(Some("test-team-id-3"), "test-team-3", LocalDateTime.now(clock), Seq.empty)
+
+      val now = LocalDateTime.now()
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, Environments())
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, team2.id.value, Environments())
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, "test-team-id-4", Environments())
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, Environments()).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
+
+      val saved1 = repository.insert(application1).futureValue
+      val saved2 = repository.insert(application2).futureValue
+      repository.insert(application3).futureValue
+      repository.insert(application4).futureValue
+
+      val result = repository
+        .findAll(None, Seq(team1, team2, team3), includeDeleted = false)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Set(saved1, saved2)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must retrieve all applications owned by given teams including soft deleted from MongoDb" in {
+      setMdcData()
+
+      val team1 = Team(Some("test-team-id-1"), "test-team-1", LocalDateTime.now(clock), Seq.empty)
+      val team2 = Team(Some("test-team-id-2"), "test-team-2", LocalDateTime.now(clock), Seq.empty)
+      val team3 = Team(Some("test-team-id-3"), "test-team-3", LocalDateTime.now(clock), Seq.empty)
+
+      val now = LocalDateTime.now()
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, Environments())
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, team2.id.value, Environments())
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, "test-team-id-4", Environments())
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, Environments()).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
+
+      val saved1 = repository.insert(application1).futureValue
+      val saved2 = repository.insert(application2).futureValue
+      repository.insert(application3).futureValue
+      val saved4 = repository.insert(application4).futureValue
+
+      val result = repository
+        .findAll(None, Seq(team1, team2, team3), includeDeleted = true)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Set(saved1, saved2, saved4)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must combine team member email and team filters correctly" in {
+      setMdcData()
+
+      val teamMemberEmail = "test0email-1"
+      val team1 = Team(Some("test-team-id-1"), "test-team-1", LocalDateTime.now(clock), Seq.empty)
+      val team2 = Team(Some("test-team-id-2"), "test-team-2", LocalDateTime.now(clock), Seq.empty)
+
+      val now = LocalDateTime.now()
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, Environments())
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq(TeamMember(teamMemberEmail)), Environments())
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, Environments()).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
+
+      val saved1 = repository.insert(application1).futureValue
+      val saved2 = repository.insert(application2).futureValue
+      repository.insert(application3).futureValue
+      repository.insert(application4).futureValue
+
+      val result = repository
+        .findAll(Some(teamMemberEmail), Seq(team1, team2), includeDeleted = false)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data must contain theSameElementsAs Set(saved1, saved2)
       result.mdcData mustBe testMdcData
     }
   }
@@ -180,7 +262,7 @@ class ApplicationsRepositoryIntegrationSpec
       val now = LocalDateTime.now()
       val apis = apiIds.map(Api(_, Seq.empty))
       val deleted = if (isDeleted) Some(Deleted(now, "team@test.com")) else None
-      Application(None, name, now, Creator("test1@test.com"), now, Seq.empty, Environments(), Seq.empty, apis, deleted)
+      Application(None, name, now, Creator("test1@test.com"), now, None, Seq.empty, Environments(), Seq.empty, apis, deleted)
     }
 
     val targetApiId = "api_id"

@@ -308,6 +308,11 @@ object ApplicationLenses {
       }
     }
 
+
+    def setTeamId(teamId: String): Application = {
+      application.copy(teamId = Some(teamId))
+    }
+
     def hasTeamMember(email: String): Boolean =
       applicationTeamMembers.get(application)
         .exists(teamMember => teamMember.email.equalsIgnoreCase(email))
@@ -331,6 +336,14 @@ object ApplicationLenses {
       else {
         application.addTeamMember(email)
       }
+    }
+
+    def setTeamMembers(teamMembers: Seq[TeamMember]): Application = {
+      applicationTeamMembers.set(application, teamMembers)
+    }
+
+    def isTeamMigrated: Boolean = {
+      application.teamId.isDefined
     }
 
     def setIssues(issues: Seq[String]): Application = {

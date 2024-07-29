@@ -23,6 +23,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
@@ -46,7 +47,8 @@ class ApplicationsRepository @Inject()(
     mongoComponent = mongoComponent,
     indexes = Seq(
       IndexModel(Indexes.ascending("teamMembers.email")),
-      IndexModel(Indexes.ascending("apis.id"))
+      IndexModel(Indexes.ascending("apis.id")),
+      IndexModel(Indexes.ascending("teamId"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -63,13 +65,34 @@ class ApplicationsRepository @Inject()(
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
-  def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
+  def findAll(teamMemberEmail: Option[String], owningTeams: Seq[Team], includeDeleted: Boolean): Future[Seq[Application]] = {
     Mdc.preservingMdc {
       collection
-        .find(emailFilter(teamMemberEmail))
+        .find(orFilters(emailFilter(teamMemberEmail), teamsFilter(owningTeams)))
         .toFuture()
     } map (_.filter(deletedFilter(includeDeleted))
       .map(_.decryptedValue.toModel))
+  }
+
+  private def emailFilter(teamMemberEmail: Option[String]): Option[Bson] = {
+    teamMemberEmail.map(
+      email =>
+        Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)
+    )
+  }
+
+  private def teamsFilter(teams: Seq[Team]): Option[Bson] = {
+    teams match {
+      case Nil => None
+      case teams => Some(Filters.in("teamId", teams.flatMap(_.id): _*))
+    }
+  }
+
+  private def orFilters(filters: Option[Bson]*): Bson = {
+    filters.flatten match {
+      case Nil => Filters.empty()
+      case filters => Filters.or(filters: _*)
+    }
   }
 
   def findAllUsingApi(apiId: String, includeDeleted: Boolean): Future[Seq[Application]] = {
@@ -87,13 +110,6 @@ class ApplicationsRepository @Inject()(
     }
     else {
       application.deleted.isEmpty
-    }
-  }
-
-  private def emailFilter(teamMemberEmail: Option[String]): Bson = {
-    teamMemberEmail match {
-      case Some(email) => Filters.equal("teamMembers.email", SensitiveTeamMember(TeamMember(email)).email)
-      case None => Filters.empty()
     }
   }
 

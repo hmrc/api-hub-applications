@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models.application
 
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, IdmsException}
 
 object Issues {
 
@@ -30,6 +30,10 @@ object Issues {
 
   def secondaryScopesNotFound(idmsException: IdmsException): String = {
     s"Secondary scopes not found. ${idmsException.message}"
+  }
+
+  def teamNotFound(teamId: String, applicationsException: ApplicationsException): String = {
+    s"Team $teamId not found. ${applicationsException.getMessage}"
   }
 
 }

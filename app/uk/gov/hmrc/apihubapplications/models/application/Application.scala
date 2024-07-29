@@ -26,6 +26,7 @@ case class Application (
   created: LocalDateTime,
   createdBy: Creator,
   lastUpdated: LocalDateTime,
+  teamId: Option[String],
   teamMembers: Seq[TeamMember],
   environments: Environments,
   issues: Seq[String] = Seq.empty,
@@ -35,33 +36,50 @@ case class Application (
 
 object Application {
 
+  def apply(id: Option[String], name: String, createdBy: Creator, teamId: String): Application = {
+    Application(id, name, createdBy, Some(teamId), Seq.empty, Clock.systemDefaultZone())
+  }
+
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember]): Application = {
     Application(id, name, createdBy, teamMembers, Clock.systemDefaultZone())
   }
 
+  def apply(id: Option[String], name: String, createdBy: Creator, teamId: Option[String], teamMembers: Seq[TeamMember]): Application = {
+    Application(id, name, createdBy, teamId, teamMembers, Clock.systemDefaultZone())
+  }
+
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
-    Application(id, name, now, createdBy, now, teamMembers, Environments(), apis = Seq.empty, deleted = None)
+    Application(id, name, now, createdBy, now, None, teamMembers, Environments(), apis = Seq.empty, deleted = None)
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, teamId: Option[String], teamMembers: Seq[TeamMember], clock: Clock): Application = {
+    val now = LocalDateTime.now(clock)
+    Application(id, name, now, createdBy, now, teamId, teamMembers, Environments(), apis = Seq.empty, deleted = None)
   }
 
   def apply(newApplication: NewApplication): Application = {
-    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamMembers)
+    apply(newApplication, Clock.systemDefaultZone())
   }
 
   def apply(newApplication: NewApplication, clock: Clock): Application = {
-    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamMembers, clock)
+    apply(None, newApplication.name, newApplication.createdBy, newApplication.teamId, newApplication.teamMembers, clock)
+  }
+
+  def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamId: String, environments: Environments): Application = {
+    Application(id, name, now, createdBy, now, Some(teamId), Seq.empty, environments, apis = Seq.empty, deleted = None)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
-    Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty, deleted = None)
+    Application(id, name, now, createdBy, now, None, teamMembers, environments, apis = Seq.empty, deleted = None)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments, deleted: Option[Deleted]): Application = {
-    Application(id, name, now, createdBy, now, teamMembers, environments, apis = Seq.empty, deleted = deleted)
+    Application(id, name, now, createdBy, now, None, teamMembers, environments, apis = Seq.empty, deleted = deleted)
   }
 
   def apply(id: Option[String], name: String, created: LocalDateTime, createdBy: Creator, lastUpdated: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
-    Application(id, name, created, createdBy, lastUpdated, teamMembers, environments, apis = Seq.empty, deleted = None)
+    Application(id, name, created, createdBy, lastUpdated, None, teamMembers, environments, apis = Seq.empty, deleted = None)
   }
 
   implicit val applicationFormat: Format[Application] = Json.format[Application]
