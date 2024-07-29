@@ -50,6 +50,25 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         DbApplication(application).toModel.getPrimaryMasterCredential.value.clientSecret mustBe None
         DbApplication(application).toModel.getSecondaryMasterCredential.value.clientSecret mustBe None
       }
+
+      "must remove team members when the application has a team Id" in {
+        val application = testApplication.setTeamId("test-team-id")
+
+        val expected = DbApplication(
+          id = application.id,
+          name = application.name,
+          created = application.created,
+          createdBy = application.createdBy,
+          lastUpdated = application.lastUpdated,
+          teamId = application.teamId,
+          teamMembers = Seq.empty,
+          environments = DbEnvironments(Environments()),
+          apis = Some(Seq.empty),
+          deleted = None
+        )
+
+        DbApplication(application) mustBe expected
+      }
     }
 
     "when translating from DbApplication to Application" - {

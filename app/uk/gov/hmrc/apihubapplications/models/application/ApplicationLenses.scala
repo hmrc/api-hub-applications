@@ -308,6 +308,11 @@ object ApplicationLenses {
       }
     }
 
+
+    def setTeamId(teamId: String): Application = {
+      application.copy(teamId = Some(teamId))
+    }
+
     def hasTeamMember(email: String): Boolean =
       applicationTeamMembers.get(application)
         .exists(teamMember => teamMember.email.equalsIgnoreCase(email))
