@@ -22,7 +22,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, EmailException, TeamMemberExistsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
@@ -260,6 +260,72 @@ class TeamsServiceSpec
           verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember3)), ArgumentMatchers.eq(team))(any)
 
           result mustBe Right(())
+      }
+    }
+  }
+
+  "removeTeamMember" - {
+    "must remove the team member from the team" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1
+        .setId(id)
+        .addTeamMember(teamMember1)
+        .addTeamMember(teamMember3)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.service.removeTeamMember(id, teamMember3.email).map {
+        result =>
+          verify(fixture.repository).update(eqTo(team.removeTeamMember(teamMember3.email)))
+          result mustBe Right(())
+      }
+    }
+
+    "must prevent removing the last team member from the team" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team3
+        .setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+
+      fixture.service.removeTeamMember(id, teamMember1.email).map {
+        result =>
+          result mustBe Left((LastTeamMemberException.forTeam(team)))
+      }
+    }
+
+    "must return TeamMemberDoesNotExistException if the team member is not part of the team" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+
+      fixture.service.removeTeamMember(id, teamMember3.email).map {
+        result =>
+          result mustBe Left(TeamMemberDoesNotExistException.forTeam(team))
+      }
+    }
+
+    "must return any exception returned by the repository" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+      val expected = TeamNotFoundException.forTeam(team)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
+
+      fixture.service.removeTeamMember(id, teamMember1.email).map {
+        result =>
+          result mustBe Left(expected)
       }
     }
   }

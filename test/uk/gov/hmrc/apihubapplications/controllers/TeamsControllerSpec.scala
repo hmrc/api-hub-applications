@@ -39,6 +39,8 @@ import uk.gov.hmrc.crypto.ApplicationCrypto
 
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.Future
+import uk.gov.hmrc.apihubapplications.models.exception.TeamMemberDoesNotExistException
+import uk.gov.hmrc.apihubapplications.models.exception.LastTeamMemberException
 
 class TeamsControllerSpec
   extends AnyFreeSpec
@@ -284,6 +286,80 @@ class TeamsControllerSpec
 
         status(result) mustBe BAD_REQUEST
         verifyZeroInteractions(fixture.teamsService)
+      }
+    }
+  }
+
+  "removeTeamMember" - {
+    "must remove the team member and return 204 No Content when the request is valid" in {
+      val fixture = buildFixture()
+      val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+      val id = "test-id"
+      val encryptedEmail = encrypt(crypto, teamMember1.email)
+
+      when(fixture.teamsService.removeTeamMember(any, any)).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.teamsService).removeTeamMember(eqTo(id), eqTo(teamMember1.email))
+      }
+    }
+
+    "must return 409 Conflict when the team member is the last one on the team" in {
+      val fixture = buildFixture()
+      val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+      val encryptedEmail = encrypt(crypto, teamMember1.email)
+      val id = "test-id"
+
+      when(fixture.teamsService.removeTeamMember(any, any))
+        .thenReturn(Future.successful(Left(LastTeamMemberException.forTeam(team1))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
+      }
+    }
+
+    "must return 404 Not Found when the service returns TeamNotFoundException" in {
+      val fixture = buildFixture()
+      val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+      val encryptedEmail = encrypt(crypto, teamMember1.email)
+      val id = "test-id"
+
+      when(fixture.teamsService.removeTeamMember(any, any))
+        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 404 Not Found when the team member is not part of the team" in {
+      val fixture = buildFixture()
+      val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
+      val encryptedEmail = encrypt(crypto, teamMember1.email)
+      val id = "test-id"
+
+      when(fixture.teamsService.removeTeamMember(any, any))
+        .thenReturn(Future.successful(Left(TeamMemberDoesNotExistException.forTeam(team1))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
       }
     }
   }

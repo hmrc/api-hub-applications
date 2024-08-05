@@ -64,6 +64,13 @@ object TeamLenses {
       addTeamMember(TeamMember(email))
     }
 
+    def removeTeamMember(email: String): Team = {
+      teamTeamMembers.set(
+        team,
+        team.teamMembers.filterNot(_.email.equalsIgnoreCase(email))
+      )
+    }
+
     def hasTeamMember(email: String): Boolean = {
       team.teamMembers.exists(_.email.equalsIgnoreCase(email))
     }

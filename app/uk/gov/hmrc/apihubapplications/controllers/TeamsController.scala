@@ -21,7 +21,12 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception.{
+  TeamMemberDoesNotExistException,
+  TeamMemberExistsException,
+  TeamNameNotUniqueException,
+  TeamNotFoundException
+}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest}
 import uk.gov.hmrc.apihubapplications.services.TeamsService
@@ -29,6 +34,7 @@ import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.apihubapplications.models.exception.LastTeamMemberException
 
 @Singleton
 class TeamsController @Inject()(
@@ -87,6 +93,17 @@ class TeamsController @Inject()(
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
+      }
+  }
+
+  def removeTeamMember(id: String, encryptedEmail: String): Action[AnyContent] = identify.async {
+    _ =>
+      teamsService.removeTeamMember(id, decrypt(encryptedEmail)).map {
+        case Right(_) => NoContent
+        case Left(_: LastTeamMemberException) => Conflict
+        case Left(_: TeamNotFoundException) => NotFound
+        case Left(_: TeamMemberDoesNotExistException) => NotFound
+        case Left(e) => throw e
       }
   }
 

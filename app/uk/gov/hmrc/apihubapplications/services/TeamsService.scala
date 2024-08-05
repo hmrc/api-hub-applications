@@ -76,6 +76,18 @@ class TeamsService @Inject()(
     }
   }
 
+  def removeTeamMember(id: String, encryptedEmail: String): Future[Either[ApplicationsException, Unit]] =
+    repository.findById(id).flatMap {
+      case Right(team) if !team.hasTeamMember(encryptedEmail) =>
+        Future.successful(Left(raiseTeamMemberDoesNotExistException.forTeam(team)))
+      case Right(team) if team.teamMembers.size < 2 =>
+        Future.successful(Left(raiseLastTeamMemberException.forTeam(team)))
+      case Right(team) =>
+        repository.update(team.removeTeamMember(encryptedEmail))
+      case Left(e) =>
+        Future.successful(Left(e))
+    }
+
   def renameTeam(id: String, request: RenameTeamRequest): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Right(team) =>
