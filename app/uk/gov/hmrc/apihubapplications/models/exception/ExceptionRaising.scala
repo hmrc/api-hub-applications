@@ -154,6 +154,18 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseTeamMemberDoesNotExistException {
+    def forTeam(team: Team): TeamMemberDoesNotExistException = {
+      log(TeamMemberDoesNotExistException.forTeam(team))
+    }
+  }
+
+  object raiseLastTeamMemberException {
+    def forTeam(team: Team): LastTeamMemberException = {
+      log(LastTeamMemberException.forTeam(team))
+    }
+  }
+
   object raiseApimException {
     def unexpectedResponse(statusCode: Int): ApimException = {
       log(ApimException.unexpectedResponse(statusCode))
