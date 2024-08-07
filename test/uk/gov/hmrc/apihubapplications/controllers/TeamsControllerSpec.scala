@@ -297,7 +297,7 @@ class TeamsControllerSpec
       val id = "test-id"
       val encryptedEmail = encrypt(crypto, teamMember1.email)
 
-      when(fixture.teamsService.removeTeamMember(any, any)).thenReturn(Future.successful(Right(())))
+      when(fixture.teamsService.removeTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
@@ -305,7 +305,7 @@ class TeamsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.teamsService).removeTeamMember(eqTo(id), eqTo(teamMember1.email))
+        verify(fixture.teamsService).removeTeamMember(eqTo(id), eqTo(teamMember1.email))(any)
       }
     }
 
@@ -315,7 +315,7 @@ class TeamsControllerSpec
       val encryptedEmail = encrypt(crypto, teamMember1.email)
       val id = "test-id"
 
-      when(fixture.teamsService.removeTeamMember(any, any))
+      when(fixture.teamsService.removeTeamMember(any, any)(any))
         .thenReturn(Future.successful(Left(LastTeamMemberException.forTeam(team1))))
 
       running(fixture.application) {
@@ -333,7 +333,7 @@ class TeamsControllerSpec
       val encryptedEmail = encrypt(crypto, teamMember1.email)
       val id = "test-id"
 
-      when(fixture.teamsService.removeTeamMember(any, any))
+      when(fixture.teamsService.removeTeamMember(any, any)(any))
         .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
 
       running(fixture.application) {
@@ -351,7 +351,7 @@ class TeamsControllerSpec
       val encryptedEmail = encrypt(crypto, teamMember1.email)
       val id = "test-id"
 
-      when(fixture.teamsService.removeTeamMember(any, any))
+      when(fixture.teamsService.removeTeamMember(any, any)(any))
         .thenReturn(Future.successful(Left(TeamMemberDoesNotExistException.forTeam(team1))))
 
       running(fixture.application) {

@@ -97,7 +97,7 @@ class TeamsController @Inject()(
   }
 
   def removeTeamMember(id: String, encryptedEmail: String): Action[AnyContent] = identify.async {
-    _ =>
+    implicit request =>
       teamsService.removeTeamMember(id, decrypt(encryptedEmail)).map {
         case Right(_) => NoContent
         case Left(_: LastTeamMemberException) => Conflict

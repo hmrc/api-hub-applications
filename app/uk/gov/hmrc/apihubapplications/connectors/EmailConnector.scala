@@ -28,6 +28,7 @@ import scala.concurrent.Future
 trait EmailConnector {
 
   def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+
   def sendApplicationDeletedEmailToCurrentUser(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
   def sendApplicationDeletedEmailToTeam(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
@@ -47,5 +48,7 @@ trait EmailConnector {
   def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, api: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
   def sendApiOwnershipChangedEmailToNewTeamMembers(team: Team, api: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+
+  def sendRemoveTeamMemberFromTeamEmail(email: String, team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
 }

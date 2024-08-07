@@ -58,6 +58,7 @@ class EmailConnectorImpl @Inject()(
   private val teamMemberAddedToTeamTemplateId = getAndValidate("email.teamMemberAddedToTeamTemplateId")
   private val apiOwnershipChangedToOldTeamTemplateId = getAndValidate("email.apiOwnershipChangedToOldTeamTemplateId")
   private val apiOwnershipChangedToNewTeamTemplateId = getAndValidate("email.apiOwnershipChangedToNewTeamTemplateId")
+  private val removeTeamMemberFromTeamTemplateId = getAndValidate("email.removeTeamMemberFromTeamTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
@@ -221,6 +222,16 @@ override def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, new
     )
     doPost(request)
   }
+
+  override def sendRemoveTeamMemberFromTeamEmail(email: String, team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException,Unit]] = {
+    val request = SendEmailRequest(
+      Seq(email),
+      removeTeamMemberFromTeamTemplateId,
+      Map("teamname" -> team.name)
+    )
+    doPost(request)
+  }
+    
 }
 // Elided class from the email api
 // See https://github.com/hmrc/email/blob/main/app/uk/gov/hmrc/email/controllers/model/SendEmailRequest.scala
