@@ -276,8 +276,9 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendRemoveTeamMemberFromTeamEmail(any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.service.removeTeamMember(id, teamMember3.email).map {
+      fixture.service.removeTeamMember(id, teamMember3.email)(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.removeTeamMember(teamMember3.email)))
           result mustBe Right(())
@@ -293,7 +294,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
 
-      fixture.service.removeTeamMember(id, teamMember1.email).map {
+      fixture.service.removeTeamMember(id, teamMember1.email)(HeaderCarrier()).map {
         result =>
           result mustBe Left((LastTeamMemberException.forTeam(team)))
       }
@@ -307,7 +308,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
 
-      fixture.service.removeTeamMember(id, teamMember3.email).map {
+      fixture.service.removeTeamMember(id, teamMember3.email)(HeaderCarrier()).map {
         result =>
           result mustBe Left(TeamMemberDoesNotExistException.forTeam(team))
       }
@@ -322,8 +323,9 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
+      when(fixture.emailConnector.sendRemoveTeamMemberFromTeamEmail(any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.service.removeTeamMember(id, teamMember1.email).map {
+      fixture.service.removeTeamMember(id, teamMember1.email)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }

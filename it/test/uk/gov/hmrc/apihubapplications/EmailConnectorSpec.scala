@@ -704,6 +704,54 @@ class EmailConnectorSpec
       }
     }
   }
+
+  "EmailConnector.sendRemoveTeamMemberFromTeamEmail" - {
+    val teamMemberEmail = "test@hmrc.digital.gov.uk"
+    val testTeamName = "test_team_name"
+
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(teamMemberEmail),
+        removeTeamMemberFromTeamTemplateId,
+        Map(
+          "teamname" -> testTeamName,
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      buildConnector(this).sendRemoveTeamMemberFromTeamEmail(teamMemberEmail, Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))))(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      buildConnector(this).sendRemoveTeamMemberFromTeamEmail(teamMemberEmail, Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail))))(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
 }
 
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
@@ -719,6 +767,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val teamMemberAddedToTeamTemplateId: String = "test-team-member-added-to-team-template-id"
   val apiOwnershipChangedToOldTeamTemplateId = "test-api-ownership-removed-to-team-template-id"
   val apiOwnershipChangedToNewTeamTemplateId = "test-api-ownership-given-to-team-template-id"
+  val removeTeamMemberFromTeamTemplateId = "test-remove-team-member-from-team-template-id"
 
   val email1: String = "test-email1@test.com"
   val email2: String = "test-email2@test.com"
@@ -747,7 +796,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.approversTeamEmails" -> "dummy.test1@digital.hmrc.gov.uk,dummy.test2@digital.hmrc.gov.uk",
         "microservice.services.email.teamMemberAddedToTeamTemplateId" -> teamMemberAddedToTeamTemplateId,
         "microservice.services.email.apiOwnershipChangedToOldTeamTemplateId" -> apiOwnershipChangedToOldTeamTemplateId,
-        "microservice.services.email.apiOwnershipChangedToNewTeamTemplateId" -> apiOwnershipChangedToNewTeamTemplateId
+        "microservice.services.email.apiOwnershipChangedToNewTeamTemplateId" -> apiOwnershipChangedToNewTeamTemplateId,
+        "microservice.services.email.removeTeamMemberFromTeamTemplateId" -> removeTeamMemberFromTeamTemplateId
       ))
     )
 
