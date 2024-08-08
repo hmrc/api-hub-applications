@@ -531,7 +531,9 @@ object APIMConnectorSpec {
     status = "a status",
     domain = "a domain",
     subDomain = "a subdomain",
-    hods = Seq("a hod")
+    hods = Seq("a hod"),
+    Seq("test-prefix-1", "test-prefix-2"),
+    Some("test-egress-prefix")
   )
 
   private val redeploymentRequest = RedeploymentRequest(

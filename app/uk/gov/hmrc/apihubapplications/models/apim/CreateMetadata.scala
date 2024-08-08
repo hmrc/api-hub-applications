@@ -18,7 +18,19 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class CreateMetadata(lineOfBusiness: String, name: String, description: String, egress: String, passthrough: Boolean, status: Option[String], domain: String, subdomain: String, backends: Seq[String])
+case class CreateMetadata(
+  lineOfBusiness: String,
+  name: String,
+  description: String,
+  egress: String,
+  passthrough: Boolean,
+  status: Option[String],
+  domain: String,
+  subdomain: String,
+  backends: Seq[String],
+  prefixesToRemove: Seq[String],
+  egressPrefix: String
+)
 
 object CreateMetadata {
 
@@ -32,7 +44,9 @@ object CreateMetadata {
       status = Option.apply(request.status),
       domain = request.domain,
       subdomain = request.subDomain,
-      backends = request.hods
+      backends = request.hods,
+      prefixesToRemove = request.prefixesToRemove,
+      egressPrefix = request.egressPrefix.getOrElse("")
     )
   }
 
