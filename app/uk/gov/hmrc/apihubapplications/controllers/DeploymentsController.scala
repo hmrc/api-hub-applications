@@ -87,6 +87,15 @@ class DeploymentsController @Inject()(
     case _ => None
   }
 
+  def getDeploymentDetails(publisherRef: String): Action[AnyContent] = identify.async {
+    implicit request =>
+      deploymentsService.getDeploymentDetails(publisherRef).map {
+        case Right(deploymentDetails) => Ok(Json.toJson(deploymentDetails))
+        case Left(e) if e.issue == ServiceNotFound => NotFound
+        case Left(e) => throw e
+      }
+  }
+
   def promoteToProduction(publisherRef: String): Action[AnyContent] = identify.async {
     implicit request =>
       deploymentsService.promoteToProduction(publisherRef).map {
@@ -105,4 +114,5 @@ class DeploymentsController @Inject()(
         case Left(e) => throw e
       }
   }
+
 }

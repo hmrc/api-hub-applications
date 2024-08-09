@@ -395,6 +395,47 @@ class DeploymentsControllerSpec
     }
   }
 
+  "getDeploymentDetails" - {
+    "must return 200 Ok and a DeploymentDetails JSON payload when returned by APIM" in {
+      val fixture = buildFixture()
+
+      val deploymentDetails = DeploymentDetails(
+        description = "test-description",
+        status = "test-status",
+        domain = "test-domain",
+        subDomain = "test-dub-domain",
+        hods = Seq("test-backend-1", "test-backend-2"),
+        egressPrefix = Some("test-egress-prefix"),
+        prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
+      )
+
+      when(fixture.deploymentsService.getDeploymentDetails(ArgumentMatchers.eq(publisherRef))(any()))
+        .thenReturn(Future.successful(Right(deploymentDetails)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.getDeploymentDetails(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(deploymentDetails)
+      }
+    }
+
+    "must return 404 Not Found when the service does not exist in APIM" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.getDeploymentDetails(ArgumentMatchers.eq(publisherRef))(any()))
+        .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.getDeploymentDetails(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
   "promoteToProduction" - {
     "must return 200 Ok and a SuccessfulDeploymentsResponse when APIM returns success" in {
       val fixture = buildFixture()
@@ -530,7 +571,9 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
     status = "test-status",
     domain = "a different domain",
     subDomain = "a different subdomain",
-    hods = Seq("a different hod")
+    hods = Seq("a different hod"),
+    prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
+    egressPrefix = Some("test-egress-prefix")
   )
 
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")

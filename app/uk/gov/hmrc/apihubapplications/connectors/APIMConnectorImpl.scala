@@ -172,8 +172,8 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
-    httpClient.get(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/deployments/$publisherReference")
-      .setHeader("Authorization" -> authorizationForEnvironment(Primary))
+    httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
+      .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
       .setHeader("Accept" -> "application/json")
       .execute[Either[UpstreamErrorResponse, DetailsResponse]]
       .map {

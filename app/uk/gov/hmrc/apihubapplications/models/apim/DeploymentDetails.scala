@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications.models.apim
 
+import play.api.libs.json.{Format, Json}
+
 case class DeploymentDetails (
   description: String,
   status: String,
@@ -25,3 +27,9 @@ case class DeploymentDetails (
   egressPrefix: Option[String],
   prefixesToRemove: Seq[String]
 )
+
+object DeploymentDetails {
+
+  implicit val formatDeploymentDetails: Format[DeploymentDetails] = Json.format[DeploymentDetails]
+
+}

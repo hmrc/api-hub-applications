@@ -394,8 +394,8 @@ class APIMConnectorSpec
   "APIMConnector.getDeploymentDetails" - {
     "must place the correct request and return the DeploymentDetails on success" in {
       stubFor(
-        get(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/deployments/$serviceId"))
-          .withHeader("Authorization", equalTo(authorizationTokenPrimary))
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("Accept", equalTo("application/json"))
           .willReturn(
             aResponse()
@@ -411,7 +411,7 @@ class APIMConnectorSpec
 
     "must return ServiceNotFound when APIM returns a 404 Not Found" in {
       stubFor(
-        get(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
           .willReturn(
             aResponse()
               .withStatus(NOT_FOUND)
@@ -426,7 +426,7 @@ class APIMConnectorSpec
 
     "must return UnexpectedResponse when APIM returns one" in {
       stubFor(
-        get(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
           .willReturn(
             aResponse()
               .withStatus(INTERNAL_SERVER_ERROR)
@@ -591,7 +591,9 @@ object APIMConnectorSpec {
     status = "a status",
     domain = "a domain",
     subDomain = "a subdomain",
-    hods = Seq("a hod")
+    hods = Seq("a hod"),
+    prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
+    egressPrefix = Some("test-egress-prefix")
   )
 
   private val deploymentFrom = DeploymentFrom(
