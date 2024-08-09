@@ -18,7 +18,15 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class UpdateMetadata(description: String, status: String, domain: String, subdomain: String, backends: Seq[String])
+case class UpdateMetadata(
+  description: String,
+  status: String,
+  domain: String,
+  subdomain: String,
+  backends: Seq[String],
+  prefixestoremove: Seq[String],
+  egressprefix: String
+)
 
 object UpdateMetadata {
 
@@ -28,7 +36,9 @@ object UpdateMetadata {
       status = request.status,
       domain = request.domain,
       subdomain = request.subDomain,
-      backends = request.hods
+      backends = request.hods,
+      prefixestoremove = request.prefixesToRemove,
+      egressprefix = request.egressPrefix.getOrElse("")
     )
   }
 

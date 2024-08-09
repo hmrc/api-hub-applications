@@ -18,19 +18,39 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class RedeploymentRequest(
+case class DetailsResponse(
   description: String,
-  oas: String,
   status: String,
   domain: String,
-  subDomain: String,
-  hods: Seq[String],
-  prefixesToRemove: Seq[String],
-  egressPrefix: Option[String]
-)
+  subdomain: String,
+  backends: Seq[String],
+  egressprefix: String,
+  prefixestoremove: Seq[String]
+) {
 
-object RedeploymentRequest {
+  def toDeploymentDetails: DeploymentDetails = {
+    DeploymentDetails(
+      description = description,
+      status = status,
+      domain = domain,
+      subDomain = subdomain,
+      hods = backends,
+      egressPrefix = egressPrefix,
+      prefixesToRemove = prefixestoremove
+    )
+  }
 
-  implicit val formatRedeploymentRequest: Format[RedeploymentRequest] = Json.format[RedeploymentRequest]
+  private def egressPrefix: Option[String] = {
+    egressprefix.trim match {
+      case s if s.nonEmpty => Some(s)
+      case _ => None
+    }
+  }
+
+}
+
+object DetailsResponse {
+
+  implicit val formatDetailsResponse: Format[DetailsResponse] = Json.format[DetailsResponse]
 
 }

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -39,7 +40,8 @@ class DeploymentsServiceSpec
     with MockitoSugar
     with ArgumentMatchersSugar
     with TableDrivenPropertyChecks
-    with ApiDetailGenerators {
+    with ApiDetailGenerators
+    with EitherValues {
 
   import DeploymentsServiceSpec._
 
@@ -135,6 +137,30 @@ class DeploymentsServiceSpec
           result mustBe Right(Some(deploymentResponse))
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
           succeed
+      }
+    }
+  }
+
+  "getDeploymentDetails" - {
+    "must pass the request to the APIM connector and return the response" in {
+      val fixture = buildFixture()
+      val publisherRef = "test-publisher-ref"
+
+      val deploymentDetails = DeploymentDetails(
+        description = "test-description",
+        status = "test-status",
+        domain = "test-domain",
+        subDomain = "test-dub-domain",
+        hods = Seq("test-backend-1", "test-backend-2"),
+        egressPrefix = Some("test-egress-prefix"),
+        prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
+      )
+
+      when(fixture.apimConnector.getDeploymentDetails(eqTo(publisherRef))(any))
+        .thenReturn(Future.successful(Right(deploymentDetails)))
+      fixture.deploymentsService.getDeploymentDetails(publisherRef)(HeaderCarrier()).map {
+        result =>
+          result.value mustBe deploymentDetails
       }
     }
   }
@@ -298,7 +324,9 @@ object DeploymentsServiceSpec {
     status = "test-status",
     domain = "a domain",
     subDomain = "a subdomain",
-    hods = Seq("a hod")
+    hods = Seq("a hod"),
+    prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
+    egressPrefix = Some("test-egress-prefix")
   )
 
 }

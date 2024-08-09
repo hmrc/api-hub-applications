@@ -391,6 +391,55 @@ class APIMConnectorSpec
 
   }
 
+  "APIMConnector.getDeploymentDetails" - {
+    "must place the correct request and return the DeploymentDetails on success" in {
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("Accept", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(detailsResponse).toString())
+          )
+      )
+
+      buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier()).map(
+        actual =>
+          actual.value mustBe detailsResponse.toDeploymentDetails
+      )
+    }
+
+    "must return ServiceNotFound when APIM returns a 404 Not Found" in {
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier()).map(
+        actual =>
+          actual.left.value mustBe ApimException.serviceNotFound(serviceId)
+      )
+    }
+
+    "must return UnexpectedResponse when APIM returns one" in {
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier()).map(
+        actual =>
+          actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR)
+      )
+    }
+  }
+
   "APIMConnector.promoteToProduction" - {
     "must place the correct request and return the DeploymentsResponse on success" in {
       stubFor(
@@ -542,7 +591,9 @@ object APIMConnectorSpec {
     status = "a status",
     domain = "a domain",
     subDomain = "a subdomain",
-    hods = Seq("a hod")
+    hods = Seq("a hod"),
+    prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
+    egressPrefix = Some("test-egress-prefix")
   )
 
   private val deploymentFrom = DeploymentFrom(
@@ -568,5 +619,15 @@ object APIMConnectorSpec {
       mergeRequestIid = 201,
       uri = "test-uri"
     )
+
+  private val detailsResponse = DetailsResponse(
+    description = "test-description",
+    status = "test-status",
+    domain = "test-domain",
+    subdomain = "test-sub-domain",
+    backends = Seq("test-backend-1", "test-backend-2"),
+    egressprefix = "test-egress-prefix",
+    prefixestoremove = Seq("test-prefix-1", "test-prefix-2")
+  )
 
 }
