@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
+import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentResponse, DeploymentsRequest, DeploymentsResponse, RedeploymentRequest, ValidateResponse}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -32,6 +32,8 @@ trait APIMConnector {
   def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
   def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]]
+
+  def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]]
 
   def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 

@@ -171,6 +171,18 @@ class APIMConnectorImpl @Inject()(
       }
   }
 
+  override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
+    httpClient.get(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/deployments/$publisherReference")
+      .setHeader("Authorization" -> authorizationForEnvironment(Primary))
+      .setHeader("Accept" -> "application/json")
+      .execute[Either[UpstreamErrorResponse, DetailsResponse]]
+      .map {
+        case Right(detailsResponse) => Right(detailsResponse.toDeploymentDetails)
+        case Left(e) if e.statusCode == 404 => Left(raiseApimException.serviceNotFound(publisherReference))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode))
+      }
+  }
+
   override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     val deploymentFrom = DeploymentFrom(
       env = "env/test",
