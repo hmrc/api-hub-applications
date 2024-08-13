@@ -31,7 +31,8 @@ case class DbApplication(
   teamMembers: Seq[TeamMember],
   environments: DbEnvironments,
   apis: Option[Seq[Api]],
-  deleted: Option[Deleted]
+  deleted: Option[Deleted],
+  teamName: Option[String],
 ) {
 
   def toModel: Application =
@@ -46,7 +47,8 @@ case class DbApplication(
       environments = environments.toModel(this),
       issues = Seq.empty,
       apis = apis.getOrElse(Seq.empty),
-      deleted = deleted
+      deleted = deleted,
+      teamName = teamName,
     )
 
 }
@@ -64,7 +66,8 @@ object DbApplication {
       teamMembers = application.teamId.map(_ => Seq.empty).getOrElse(application.teamMembers),
       environments = DbEnvironments(application.environments),
       apis = Some(application.apis),
-      deleted = application.deleted
+      deleted = application.deleted,
+      teamName = application.teamName,
     )
 
   implicit val formatDbApplication: Format[DbApplication] = Json.format[DbApplication]

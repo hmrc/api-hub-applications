@@ -48,7 +48,8 @@ class ApplicationsRepository @Inject()(
     indexes = Seq(
       IndexModel(Indexes.ascending("teamMembers.email")),
       IndexModel(Indexes.ascending("apis.id")),
-      IndexModel(Indexes.ascending("teamId"))
+      IndexModel(Indexes.ascending("teamId")),
+      IndexModel(Indexes.ascending("teamName"))
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields

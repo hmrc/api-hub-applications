@@ -308,9 +308,12 @@ object ApplicationLenses {
       }
     }
 
-
     def setTeamId(teamId: String): Application = {
       application.copy(teamId = Some(teamId))
+    }
+
+    def setTeamName(teamName: String): Application = {
+      application.copy(teamName = Some(teamName))
     }
 
     def hasTeamMember(email: String): Boolean =
