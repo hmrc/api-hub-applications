@@ -85,12 +85,21 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
         idmsConnector.deleteAllClients(application) flatMap {
           case Right(_) =>
             accessRequestsService.cancelAccessRequests(applicationId) flatMap {
-              case Right(_) => softDelete(application, currentUser) flatMap {
-                case Right(_) => sendApplicationDeletedEmails(application, currentUser) flatMap {
-                  _ => Future.successful(Right(()))
+              case Right(_) =>
+                accessRequestsService.getAccessRequests(Some(applicationId), None).flatMap(
+                  requests =>
+                    if (requests.nonEmpty) {
+                      softDelete(application, currentUser)
+                    }
+                    else {
+                      hardDelete(applicationId)
+                    }
+                ).flatMap {
+                  case Right(_) => sendApplicationDeletedEmails(application, currentUser) flatMap {
+                    _ => Future.successful(Right(()))
+                  }
+                  case Left(e) => Future.successful(Left(e))
                 }
-                case Left(e) => Future.successful(Left(e))
-              }
               case Left(e) => Future.successful(Left(e))
             }
           case Left(e) => Future.successful(Left(e))
@@ -102,6 +111,10 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
   private def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
     val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), currentUser)))
     repository.update(softDeletedApplication)
+  }
+
+  private def hardDelete(applicationId: String): Future[Either[ApplicationsException, Unit]] = {
+    repository.delete(applicationId)
   }
 
   private def sendApplicationDeletedEmails(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

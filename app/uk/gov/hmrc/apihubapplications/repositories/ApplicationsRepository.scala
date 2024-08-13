@@ -166,6 +166,26 @@ class ApplicationsRepository @Inject()(
     }
   }
 
+  def delete(id: String): Future[Either[ApplicationsException, Unit]] = {
+    stringToObjectId(id) match {
+      case Some(objectId) =>
+        Mdc.preservingMdc {
+          collection
+            .deleteOne(Filters.equal("_id", objectId))
+            .toFuture()
+        } map (
+          result =>
+            if (result.getDeletedCount > 0) {
+              Right(())
+            }
+            else {
+              Left(raiseNotUpdatedException.forId(id))
+            }
+        )
+      case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
+    }
+  }
+
   def countOfAllApplications(): Future[Long] = {
     Mdc.preservingMdc {
       collection
