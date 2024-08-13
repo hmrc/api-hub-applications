@@ -18,7 +18,6 @@ package uk.gov.hmrc.apihubapplications
 
 import org.mongodb.scala.result.InsertOneResult
 import org.scalatest.OptionValues
-import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -262,7 +261,7 @@ class ApplicationsIntegrationSpec
   }
 
   "Deleting an application" should {
-    "soft delete the application and respond with 204 No Content when successful" in {
+    "hard delete the application and respond with 204 No Content when successful" in {
       forAll { (application: Application) =>
         deleteAll().futureValue
         insert(application).futureValue
@@ -277,11 +276,7 @@ class ApplicationsIntegrationSpec
         response.status shouldBe NO_CONTENT
 
         val storedApplications = findAll().futureValue
-        storedApplications.size shouldBe 1
-        val storedApplication = storedApplications.headOption
-        storedApplication.isDefined mustBe true
-        storedApplication.get.deleted.isDefined mustBe true
-        storedApplication.get.deleted.get.decryptedValue mustBe Deleted(LocalDateTime.now(clock), "me@test.com")
+        storedApplications.size shouldBe 0
       }
     }
 
