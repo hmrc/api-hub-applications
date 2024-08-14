@@ -457,7 +457,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         when(teamsService.findById(eqTo(teamId)))
           .thenReturn(Future.successful(Right(team)))
 
-        service.addTeam(application).map {
+        service.asInstanceOf[ApplicationsSearchServiceImpl].addTeam(application).map {
           result =>
             result mustBe  application.setTeamMembers(teamMembers).setTeamName(teamName)
             succeed
@@ -470,7 +470,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
     teamsService: TeamsService,
     repository: ApplicationsRepository,
     idmsConnector: IdmsConnector,
-    service: ApplicationsSearchServiceImpl
+    service: ApplicationsSearchService
   )
 
   private def buildFixture: Fixture = {

@@ -32,7 +32,6 @@ case class DbApplication(
   environments: DbEnvironments,
   apis: Option[Seq[Api]],
   deleted: Option[Deleted],
-  teamName: Option[String],
 ) {
 
   def toModel: Application =
@@ -48,7 +47,7 @@ case class DbApplication(
       issues = Seq.empty,
       apis = apis.getOrElse(Seq.empty),
       deleted = deleted,
-      teamName = teamName,
+      teamName = None,
     )
 
 }
@@ -67,7 +66,6 @@ object DbApplication {
       environments = DbEnvironments(application.environments),
       apis = Some(application.apis),
       deleted = application.deleted,
-      teamName = application.teamName,
     )
 
   implicit val formatDbApplication: Format[DbApplication] = Json.format[DbApplication]

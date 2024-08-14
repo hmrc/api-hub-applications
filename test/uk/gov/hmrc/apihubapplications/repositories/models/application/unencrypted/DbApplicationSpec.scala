@@ -65,7 +65,6 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           environments = DbEnvironments(Environments()),
           apis = Some(Seq.empty),
           deleted = None,
-          teamName = None
         )
 
         DbApplication(application) mustBe expected
