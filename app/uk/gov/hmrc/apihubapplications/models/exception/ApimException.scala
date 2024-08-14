@@ -35,11 +35,22 @@ object ApimException {
   }
 
   def unexpectedResponse(statusCode: Int): ApimException = {
-    ApimException(s"Unexpected response $statusCode returned from APIM", UnexpectedResponse)
+    unexpectedResponse(statusCode, Seq.empty)
+  }
+
+  def unexpectedResponse(statusCode: Int, context: Seq[(String, AnyRef)]): ApimException = {
+    ApimException(
+      ApplicationsException.addContext(s"Unexpected response $statusCode returned from APIM", context),
+      UnexpectedResponse
+    )
   }
 
   def unexpectedResponse(response: UpstreamErrorResponse): ApimException = {
-    unexpectedResponse(response.statusCode)
+    unexpectedResponse(response.statusCode, Seq.empty)
+  }
+
+  def unexpectedResponse(response: UpstreamErrorResponse, context: Seq[(String, AnyRef)]): ApimException = {
+    unexpectedResponse(response.statusCode, context)
   }
 
   def invalidResponse(errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]): ApimException = {

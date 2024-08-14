@@ -17,3 +17,12 @@
 package uk.gov.hmrc.apihubapplications.models.exception
 
 abstract class ApplicationsException(message: String, cause: Throwable) extends RuntimeException(message, cause)
+
+object ApplicationsException {
+
+  def addContext(message: String, context: Seq[(String, AnyRef)]): String = {
+    val contextMessage = context.map(value => s"${value._1}=${value._2}").mkString("; ")
+    s"$message $contextMessage".trim
+  }
+
+}

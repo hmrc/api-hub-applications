@@ -67,12 +67,12 @@ trait ExceptionRaising {
       log(IdmsException.clientNotFound(clientId))
     }
 
-    def unexpectedResponse(response: UpstreamErrorResponse): IdmsException = {
-      log(IdmsException.unexpectedResponse(response))
+    def unexpectedResponse(response: UpstreamErrorResponse, context: Seq[(String, AnyRef)] = Seq.empty): IdmsException = {
+      log(IdmsException.unexpectedResponse(response, context))
     }
 
-    def error(throwable: Throwable): IdmsException = {
-      log(IdmsException.error(throwable))
+    def error(throwable: Throwable, context: Seq[(String, AnyRef)] = Seq.empty): IdmsException = {
+      log(IdmsException.error(throwable, context))
     }
   }
 
@@ -167,8 +167,8 @@ trait ExceptionRaising {
   }
 
   object raiseApimException {
-    def unexpectedResponse(statusCode: Int): ApimException = {
-      log(ApimException.unexpectedResponse(statusCode))
+    def unexpectedResponse(statusCode: Int, context: Seq[(String, AnyRef)] = Seq.empty): ApimException = {
+      log(ApimException.unexpectedResponse(statusCode, context))
     }
 
     def invalidResponse(errors: collection.Seq[(JsPath, collection.Seq[JsonValidationError])]): ApimException = {
