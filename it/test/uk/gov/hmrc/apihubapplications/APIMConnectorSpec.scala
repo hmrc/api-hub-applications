@@ -184,6 +184,8 @@ class APIMConnectorSpec
     }
 
     "must return unexpected response when the Simple API Deployment service returns one" in {
+      val context = Seq("metadata" -> Json.prettyPrint(Json.toJson(CreateMetadata(deploymentsRequest))))
+
       stubFor(
         post(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments"))
           .willReturn(
@@ -194,7 +196,7 @@ class APIMConnectorSpec
 
       buildConnector().deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Left(ApimException.unexpectedResponse(500))
+          actual mustBe Left(ApimException.unexpectedResponse(500, context))
       }
     }
   }
@@ -276,6 +278,8 @@ class APIMConnectorSpec
     }
 
     "must return unexpected response when the Simple API Deployment service returns one" in {
+      val context = Seq("publisherReference" -> publisherRef, "metadata" -> Json.prettyPrint(Json.toJson(UpdateMetadata(redeploymentRequest))))
+
       stubFor(
         put(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$publisherRef"))
           .willReturn(
@@ -286,7 +290,7 @@ class APIMConnectorSpec
 
       buildConnector().redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Left(ApimException.unexpectedResponse(500))
+          actual mustBe Left(ApimException.unexpectedResponse(500, context))
       }
     }
 
@@ -375,6 +379,9 @@ class APIMConnectorSpec
     }
 
     "must return unexpected response when APIM returns one" in {
+      val publisherReference = "publisher_ref"
+      val context = Seq("publisherReference" -> publisherReference, "environment" -> Primary)
+
       stubFor(
         get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
           .willReturn(
@@ -383,9 +390,9 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier()).map {
+      buildConnector().getDeployment(publisherReference, Primary)(HeaderCarrier()).map {
         actual =>
-          actual mustBe Left(ApimException.unexpectedResponse(500))
+          actual mustBe Left(ApimException.unexpectedResponse(500, context))
       }
     }
 
@@ -425,6 +432,8 @@ class APIMConnectorSpec
     }
 
     "must return UnexpectedResponse when APIM returns one" in {
+      val context = Seq("publisherReference" -> serviceId)
+
       stubFor(
         get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
           .willReturn(
@@ -435,7 +444,7 @@ class APIMConnectorSpec
 
       buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier()).map(
         actual =>
-          actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR)
+          actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
       )
     }
   }
@@ -508,6 +517,8 @@ class APIMConnectorSpec
     }
 
     "must return UnexpectedResponse when APIM returns one" in {
+      val context = Seq("publisherReference" -> serviceId)
+
       stubFor(
         put(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/deployment-from"))
           .willReturn(
@@ -518,7 +529,7 @@ class APIMConnectorSpec
 
       buildConnector().promoteToProduction(serviceId)(HeaderCarrier()).map {
         actual =>
-          actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR)
+          actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
       }
     }
   }
@@ -626,8 +637,8 @@ object APIMConnectorSpec {
     domain = "test-domain",
     subdomain = "test-sub-domain",
     backends = Seq("test-backend-1", "test-backend-2"),
-    egressprefix = "test-egress-prefix",
-    prefixestoremove = Seq("test-prefix-1", "test-prefix-2")
+    egressPrefix = "test-egress-prefix",
+    prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
   )
 
 }

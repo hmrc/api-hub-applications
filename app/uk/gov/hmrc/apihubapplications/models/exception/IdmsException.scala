@@ -36,17 +36,35 @@ object IdmsException {
   def clientNotFound(clientId: String): IdmsException = {
     IdmsException(s"Client not found: clientId=$clientId", ClientNotFound)
   }
-
   def unexpectedResponse(statusCode: Int): IdmsException = {
-    IdmsException(s"Unexpected response $statusCode returned from IDMS", UnexpectedResponse)
+    unexpectedResponse(statusCode, Seq.empty)
+  }
+
+  def unexpectedResponse(statusCode: Int, context: Seq[(String, AnyRef)]): IdmsException = {
+    IdmsException(
+      ApplicationsException.addContext(s"Unexpected response $statusCode returned from IDMS", context),
+      UnexpectedResponse
+    )
   }
 
   def unexpectedResponse(response: UpstreamErrorResponse): IdmsException = {
-    unexpectedResponse(response.statusCode)
+    unexpectedResponse(response, Seq.empty)
+  }
+
+  def unexpectedResponse(response: UpstreamErrorResponse, context: Seq[(String, AnyRef)]): IdmsException = {
+    unexpectedResponse(response.statusCode, context)
   }
 
   def error(throwable: Throwable): IdmsException = {
-    IdmsException("Error calling IDMS", throwable, CallError)
+    error(throwable, Seq.empty)
+  }
+
+  def error(throwable: Throwable, context: Seq[(String, AnyRef)]): IdmsException = {
+    IdmsException(
+      ApplicationsException.addContext("Error calling IDMS", context),
+      throwable,
+      CallError
+    )
   }
 
 }

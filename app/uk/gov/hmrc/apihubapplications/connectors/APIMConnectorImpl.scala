@@ -62,6 +62,8 @@ class APIMConnectorImpl @Inject()(
 
   override def deployToSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
+    val metadata = Json.toJson(CreateMetadata(request))
+    val context = Seq("metadata" -> Json.prettyPrint(metadata))
 
     httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
       .setHeader(headersForEnvironment(Secondary): _*)
@@ -70,7 +72,7 @@ class APIMConnectorImpl @Inject()(
       .withBody(
         Source(
           Seq(
-            DataPart("metadata", Json.toJson(CreateMetadata(request)).toString()),
+            DataPart("metadata", metadata.toString()),
             DataPart("openapi", request.oas)
           )
         )
@@ -85,13 +87,15 @@ class APIMConnectorImpl @Inject()(
             handleBadRequest(response)
           }
           else {
-            Left(raiseApimException.unexpectedResponse(response.status.intValue))
+            Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
           }
       )
   }
 
   override def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
+    val metadata = Json.toJson(UpdateMetadata(request))
+    val context = Seq("publisherReference" -> publisherReference, "metadata" -> Json.prettyPrint(metadata))
 
     httpClient.put(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
       .setHeader(headersForEnvironment(Secondary): _*)
@@ -100,7 +104,7 @@ class APIMConnectorImpl @Inject()(
       .withBody(
         Source(
           Seq(
-            DataPart("metadata", Json.toJson(UpdateMetadata(request)).toString()),
+            DataPart("metadata", metadata.toString()),
             DataPart("openapi", request.oas)
           )
         )
@@ -118,7 +122,7 @@ class APIMConnectorImpl @Inject()(
             Left(raiseApimException.serviceNotFound(publisherReference))
           }
           else {
-            Left(raiseApimException.unexpectedResponse(response.status.intValue))
+            Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
           }
       )
   }
@@ -157,6 +161,8 @@ class APIMConnectorImpl @Inject()(
   override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
     val url = url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/$publisherReference"
+    val context = Seq("publisherReference" -> publisherReference, "environment" -> environment)
+
     httpClient.get(url)
       .setHeader(headersForEnvironment(environment): _*)
       .withProxyIfRequired(environment, useProxyForSecondary)
@@ -167,11 +173,13 @@ class APIMConnectorImpl @Inject()(
         case Left(e) if e.statusCode == 403 =>
           logger.warn(s"Received 403 back from APIM ${environment.toString} whilst looking up publisher reference: $publisherReference and useProxyForSecondary: $useProxyForSecondary. Full url: ${url.toString}")
           Right(None)
-        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
   }
 
   override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
+    val context = Seq("publisherReference" -> publisherReference)
+
     httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
       .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
       .setHeader("Accept" -> "application/json")
@@ -179,11 +187,12 @@ class APIMConnectorImpl @Inject()(
       .map {
         case Right(detailsResponse) => Right(detailsResponse.toDeploymentDetails)
         case Left(e) if e.statusCode == 404 => Left(raiseApimException.serviceNotFound(publisherReference))
-        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
   }
 
   override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
+    val context = Seq("publisherReference" -> publisherReference)
     val deploymentFrom = DeploymentFrom(
       env = "env/test",
       serviceId = publisherReference
@@ -207,7 +216,7 @@ class APIMConnectorImpl @Inject()(
             Left(raiseApimException.serviceNotFound(publisherReference))
           }
           else {
-            Left(raiseApimException.unexpectedResponse(response.status.intValue))
+            Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
           }
       )
   }

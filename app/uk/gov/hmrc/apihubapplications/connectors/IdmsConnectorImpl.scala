@@ -40,8 +40,9 @@ class IdmsConnectorImpl @Inject()(
 
   import ProxySupport._
 
-    override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
+  override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients"
+    val context = Seq("environmentName" -> environmentName, "client" -> client)
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
@@ -51,16 +52,17 @@ class IdmsConnectorImpl @Inject()(
       .execute[Either[UpstreamErrorResponse, ClientResponse]]
       .map {
         case Right(clientResponse) => Right(clientResponse)
-        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e))
+        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e, context))
       }
       .recover {
         case throwable =>
-          Left(raiseIdmsException.error(throwable))
+          Left(raiseIdmsException.error(throwable, context))
       }
   }
 
   override def fetchClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-secret"
+    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
@@ -72,16 +74,17 @@ class IdmsConnectorImpl @Inject()(
         case Left(e) if e.statusCode == 404 =>
           Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          Left(raiseIdmsException.unexpectedResponse(e))
+          Left(raiseIdmsException.unexpectedResponse(e, context))
       }
       .recover {
         case throwable =>
-          Left(raiseIdmsException.error(throwable))
+          Left(raiseIdmsException.error(throwable, context))
       }
   }
 
   override def deleteClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId"
+    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
 
     httpClient.delete(url)
       .setHeader(headersForEnvironment(environmentName): _*)
@@ -90,11 +93,11 @@ class IdmsConnectorImpl @Inject()(
       .map {
         case Right(()) => Right(())
         case Left(e) if e.statusCode == NOT_FOUND => Left(raiseIdmsException.clientNotFound(clientId))
-        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e))
+        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e, context))
       }
       .recover {
         case throwable =>
-          Left(raiseIdmsException.error(throwable))
+          Left(raiseIdmsException.error(throwable, context))
       }
   }
 
@@ -142,6 +145,7 @@ class IdmsConnectorImpl @Inject()(
 
   override def newSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-secret"
+    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
@@ -153,17 +157,18 @@ class IdmsConnectorImpl @Inject()(
         case Left(e) if e.statusCode == 404 =>
           Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          Left(raiseIdmsException.unexpectedResponse(e))
+          Left(raiseIdmsException.unexpectedResponse(e, context))
       }
       .recover {
         case throwable =>
-          Left(raiseIdmsException.error(throwable))
+          Left(raiseIdmsException.error(throwable, context))
       }
 
   }
 
   override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
+    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
 
     httpClient.put(url)
       .setHeader(headersForEnvironment(environmentName): _*)
@@ -174,11 +179,11 @@ class IdmsConnectorImpl @Inject()(
         case Left(e) if e.statusCode == 404 =>
           Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          Left(raiseIdmsException.unexpectedResponse(e))
+          Left(raiseIdmsException.unexpectedResponse(e, context))
       }
       .recover {
         case throwable =>
-          Left(raiseIdmsException.error(throwable))
+          Left(raiseIdmsException.error(throwable, context))
       }
   }
 
@@ -189,6 +194,7 @@ class IdmsConnectorImpl @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
 
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
+    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
 
     httpClient.delete(url)
       .setHeader(headersForEnvironment(environmentName): _*)
@@ -197,11 +203,11 @@ class IdmsConnectorImpl @Inject()(
       .map {
         case Right(_) => Right(())
         case Left(e) if e.statusCode == NOT_FOUND => Left(raiseIdmsException.clientNotFound(clientId))
-        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e))
+        case Left(e) => Left(raiseIdmsException.unexpectedResponse(e, context))
       }
       .recover {
         case throwable =>
-          Left(raiseIdmsException.error(throwable))
+          Left(raiseIdmsException.error(throwable, context))
       }
 
   }
@@ -211,6 +217,7 @@ class IdmsConnectorImpl @Inject()(
     clientId: String
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes"
+    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
@@ -222,11 +229,11 @@ class IdmsConnectorImpl @Inject()(
         case Left(e) if e.statusCode == 404 =>
           Left(raiseIdmsException.clientNotFound(clientId))
         case Left(e) =>
-          Left(raiseIdmsException.unexpectedResponse(e))
+          Left(raiseIdmsException.unexpectedResponse(e, context))
       }
       .recover {
         case throwable =>
-          Left(raiseIdmsException.error(throwable))
+          Left(raiseIdmsException.error(throwable, context))
       }
   }
 

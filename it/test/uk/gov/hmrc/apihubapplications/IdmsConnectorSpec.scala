@@ -75,6 +75,8 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx response" in {
+      val context = Seq("environmentName" -> Primary, "client" -> testClient)
+
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           post(urlEqualTo(s"/primary/identity/clients"))
@@ -90,7 +92,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
           result =>
-            result mustBe Left(IdmsException.unexpectedResponse(status))
+            result mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
@@ -153,6 +155,8 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx response" in {
+      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
@@ -164,7 +168,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
           clientResponse =>
-            clientResponse mustBe Left(IdmsException.unexpectedResponse(status))
+            clientResponse mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
@@ -221,6 +225,8 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx or 404 response" in {
+      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
@@ -232,7 +238,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
           actual =>
-            actual mustBe Left(IdmsException.unexpectedResponse(status))
+            actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
@@ -291,6 +297,8 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx response" in {
+      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           post(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
@@ -302,7 +310,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier()) map {
           clientResponse =>
-            clientResponse mustBe Left(IdmsException.unexpectedResponse(status))
+            clientResponse mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
@@ -359,6 +367,8 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx response" in {
+      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId, "scopeId" -> testScopeId)
+
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
@@ -370,7 +380,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
           response =>
-            response mustBe Left(IdmsException.unexpectedResponse(status))
+            response mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
@@ -427,6 +437,8 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx response" in {
+      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId, "scopeId" -> testScopeId)
+
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
@@ -438,7 +450,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
           response =>
-            response mustBe Left(IdmsException.unexpectedResponse(status))
+            response mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
@@ -500,6 +512,8 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx response" in {
+      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+
       forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
@@ -512,7 +526,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
           actual =>
-            actual mustBe Left(IdmsException.unexpectedResponse(status))
+            actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
@@ -567,6 +581,8 @@ class IdmsConnectorSpec
     "must ignore IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
+      val context = Seq("environmentName" -> Secondary, "clientId" -> clientId2)
+
       stubFor(
         delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
           .willReturn(
@@ -591,14 +607,16 @@ class IdmsConnectorSpec
         actual =>
           verify(deleteRequestedFor(urlEqualTo(s"/$Primary/identity/clients/$clientId1")))
           verify(deleteRequestedFor(urlEqualTo(s"/$Secondary/identity/clients/$clientId2")))
-          actual mustBe Left(IdmsException.unexpectedResponse(500))
+          actual mustBe Left(IdmsException.unexpectedResponse(500, context))
       }
     }
 
     "must return IdmsException for any non-success response apart from 404" in {
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      val context = Seq("environmentName" -> Primary, "clientId" -> clientId1)
+
       forAll(nonSuccessResponses) { status: Int =>
-        val clientId1 = "test-client-id-1"
-        val clientId2 = "test-client-id-2"
         stubFor(
           delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
             .willReturn(
@@ -612,7 +630,7 @@ class IdmsConnectorSpec
 
         buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
           actual =>
-            actual mustBe Left(IdmsException.unexpectedResponse(status))
+            actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
       }
     }
