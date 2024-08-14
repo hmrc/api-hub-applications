@@ -23,10 +23,11 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, Deleted, Environments, NewApplication, Primary, Secondary, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationTeamMigratedException, EmailException, IdmsException, NotUpdatedException, TeamMemberExistsException}
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
+import uk.gov.hmrc.apihubapplications.models.exception._
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.http.HeaderCarrier
@@ -303,7 +304,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
   }
 
   "delete" - {
-    "must soft delete the application and leave in the repository" in {
+    "must soft delete the application and leave in the repository when it has access requests" in {
       val fixture = buildFixture
       import fixture._
 
@@ -316,12 +317,36 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(idmsConnector.deleteAllClients(eqTo(application))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
+
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).update(any)
           val captured = captor.getValue
           captured.deleted mustBe Some(Deleted(LocalDateTime.now(clock), currentUser))
+          succeed
+      }
+    }
+
+    "must hard delete the application when it does not have any access requests" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+      when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
+      when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
+      when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
+      when(idmsConnector.deleteAllClients(eqTo(application))(any)).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(repository.delete(any)).thenReturn(Future.successful(Right(())))
+
+      service.delete(id, currentUser)(HeaderCarrier()).map {
+        actual =>
+          actual mustBe Right(())
+          verify(repository).delete(eqTo(id))
           succeed
       }
     }
@@ -343,6 +368,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(idmsConnector.deleteAllClients(eqTo(application))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
 
       service.delete(application.id.get, currentUser)(HeaderCarrier()) map {
         _ =>
@@ -369,6 +395,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), any)(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
       when(idmsConnector.deleteAllClients(eqTo(application))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
 
       service.delete(application.id.get, currentUser)(HeaderCarrier()).map {
         result =>
@@ -415,6 +442,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
 
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
@@ -440,6 +468,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(idmsConnector.deleteAllClients(any)(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
 
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
@@ -640,5 +669,20 @@ object ApplicationsLifecycleServiceSpec {
 
   val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
   val currentUser = "me@test.com"
+
+  val accessRequest: AccessRequest = AccessRequest(
+    id = Some("test-id"),
+    applicationId = "test-application-id",
+    apiId = "test-api-id",
+    apiName = "test-api-name",
+    status = Approved,
+    endpoints = Seq.empty,
+    supportingInformation = "test-info",
+    requested = LocalDateTime.now(clock),
+    requestedBy = "test-requested-by",
+    decision = None
+  )
+
+  val someAccessRequests: Seq[AccessRequest] = Seq(accessRequest)
 
 }

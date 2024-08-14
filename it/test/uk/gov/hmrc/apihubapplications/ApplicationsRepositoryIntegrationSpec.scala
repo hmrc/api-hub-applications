@@ -413,6 +413,40 @@ class ApplicationsRepositoryIntegrationSpec
     }
   }
 
+  "delete" - {
+    "must delete the application from MongoDb when it exists" in {
+      setMdcData()
+
+      val application = Application(None, "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com")))
+      val saved = repository.insert(application).futureValue
+
+      val result = repository
+        .delete(saved.safeId)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Right(())
+      result.mdcData mustBe testMdcData
+
+      val actual = repository.findById(saved.safeId).futureValue
+      actual mustBe Left(ApplicationNotFoundException.forId(saved.safeId))
+    }
+
+    "must return NotUpdatedException when the application does not exist in the database" in {
+      setMdcData()
+
+      val id = List.fill(24)("0").mkString
+
+      val result = repository
+        .delete(id)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(NotUpdatedException.forId(id))
+      result.mdcData mustBe testMdcData
+    }
+  }
+
   "countOfAllApplications" - {
     "must return the correct count of applications" in {
       setMdcData()
