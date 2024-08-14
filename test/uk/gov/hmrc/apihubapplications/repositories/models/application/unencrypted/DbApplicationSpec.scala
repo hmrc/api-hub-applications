@@ -64,7 +64,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           teamMembers = Seq.empty,
           environments = DbEnvironments(Environments()),
           apis = Some(Seq.empty),
-          deleted = None
+          deleted = None,
         )
 
         DbApplication(application) mustBe expected
@@ -109,7 +109,8 @@ object DbApplicationSpec {
     teamMembers = Seq(TeamMember("test-creator-email"), TeamMember("test-member-email")),
     environments = Environments(),
     issues = Seq.empty,
-    deleted = None
+    deleted = None,
+    teamName = None
   )
 
   private val testDbApplication = DbApplication(testApplication)

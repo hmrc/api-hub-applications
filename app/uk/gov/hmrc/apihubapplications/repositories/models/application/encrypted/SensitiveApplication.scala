@@ -48,7 +48,7 @@ case class SensitiveApplication(
       teamMembers = teamMembers.map(_.decryptedValue),
       environments = environments,
       apis = apis,
-      deleted = deleted.map(_.decryptedValue)
+      deleted = deleted.map(_.decryptedValue),
     )
   }
 
@@ -67,7 +67,7 @@ object SensitiveApplication {
       teamMembers = dbApplication.teamMembers.map(SensitiveTeamMember(_)),
       environments = dbApplication.environments,
       apis = dbApplication.apis,
-      deleted = dbApplication.deleted.map(SensitiveDeleted(_))
+      deleted = dbApplication.deleted.map(SensitiveDeleted(_)),
     )
   }
 

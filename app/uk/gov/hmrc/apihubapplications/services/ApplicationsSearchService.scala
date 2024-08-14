@@ -97,11 +97,11 @@ class ApplicationsSearchServiceImpl @Inject()(
     }
   }
 
-  private def addTeam(application: Application): Future[Application] = {
+  private[services] def addTeam(application: Application): Future[Application] = {
     application.teamId match {
       case Some(teamId) =>
         teamsService.findById(teamId).map {
-          case Right(team) => application.setTeamMembers(team.teamMembers)
+          case Right(team) => application.setTeamMembers(team.teamMembers).setTeamName(team.name)
           case Left(e) => application.addIssue(Issues.teamNotFound(teamId, e))
         }
       case None =>

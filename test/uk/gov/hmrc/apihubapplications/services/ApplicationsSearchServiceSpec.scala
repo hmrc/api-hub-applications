@@ -79,7 +79,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       when(teamsService.findById(teamId)).thenReturn(Future.successful(Right(team)))
 
       val expected = Seq(
-        application1.setTeamMembers(team.teamMembers),
+        application1.setTeamMembers(team.teamMembers).setTeamName(team.name),
         application2
       )
 
@@ -143,7 +143,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq(TeamMember("test-email-1"))),
         Application(Some("test-id-2"), "test-name-2", Creator("test-email-1"), team.id.value)
-      )
+      ).map(_.setTeamName(team.name))
 
       when(teamsService.findAll(any)).thenReturn(Future.successful(Seq(team)))
       when(repository.findAll(any, any, any)).thenReturn(Future.successful(applications))
@@ -246,7 +246,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       when(teamsService.findById(eqTo(teamId))).thenReturn(Future.successful(Right(team)))
 
       val expected = Seq(
-        application1.setTeamMembers(team.teamMembers),
+        application1.setTeamMembers(team.teamMembers).setTeamName(team.name),
         application2
       )
 
@@ -336,6 +336,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
       val id = "test-id"
       val application = Application(Some(id), "test-name", Creator("test-creator"), Some(teamId), Seq.empty, clock)
+        .setTeamName(team.name)
 
       when(repository.findById(eqTo(id)))
         .thenReturn(Future.successful(Right(application)))
@@ -430,6 +431,37 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
           result mustBe Right(application)
           verifyZeroInteractions(idmsConnector)
           succeed
+      }
+    }
+
+    "addTeam" - {
+      "must set team members and team name on the application" in {
+        val fixture = buildFixture
+        import fixture._
+
+        val id = "test-id"
+        val teamId = "team-id"
+        val teamName = "team-name"
+        val teamMembers = Seq(TeamMember("test-email"))
+
+        val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+          .setTeamId(teamId)
+
+        val team = Team(
+            id = Some(teamId),
+            name = teamName,
+            created = LocalDateTime.now(),
+            teamMembers = teamMembers,
+          )
+
+        when(teamsService.findById(eqTo(teamId)))
+          .thenReturn(Future.successful(Right(team)))
+
+        service.asInstanceOf[ApplicationsSearchServiceImpl].addTeam(application).map {
+          result =>
+            result mustBe  application.setTeamMembers(teamMembers).setTeamName(teamName)
+            succeed
+        }
       }
     }
   }
