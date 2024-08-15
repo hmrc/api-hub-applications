@@ -323,7 +323,7 @@ class ApplicationsRepositoryIntegrationSpec
       val expected = repository.insert(application).futureValue
 
       val result = repository
-        .findById(expected.id.value)
+        .findById(expected.id.value, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -331,18 +331,35 @@ class ApplicationsRepositoryIntegrationSpec
       result.mdcData mustBe testMdcData
     }
 
-    "must return ApplicationNotFoundException when the application is soft deleted in MongoDb" in {
+    "must return ApplicationNotFoundException when the application is soft deleted in MongoDb and includeDeleted is false" in {
       setMdcData()
       val now = LocalDateTime.now()
       val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
       val expected = repository.insert(application).futureValue
 
       val result = repository
-        .findById(expected.id.get)
+        .findById(expected.id.get, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
       result.data mustBe Left(ApplicationNotFoundException.forId(expected.id.get))
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return an application when the application is soft deleted in MongoDb and includeDeleted is true" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+
+      val expected = repository.insert(application).futureValue
+
+      val result = repository
+        .findById(expected.id.value, true)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Right(expected)
       result.mdcData mustBe testMdcData
     }
 
@@ -352,7 +369,7 @@ class ApplicationsRepositoryIntegrationSpec
       val id = List.fill(24)("0").mkString
 
       val result = repository
-        .findById(id)
+        .findById(id, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -366,7 +383,7 @@ class ApplicationsRepositoryIntegrationSpec
       val id = "invalid"
 
       val result = repository
-        .findById(id)
+        .findById(id, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -393,7 +410,7 @@ class ApplicationsRepositoryIntegrationSpec
       result.data mustBe Right(())
       result.mdcData mustBe testMdcData
 
-      val actual = repository.findById(updated.id.value).futureValue
+      val actual = repository.findById(updated.id.value, false).futureValue
       actual.map(_.copy(lastUpdated = updated.lastUpdated)) mustBe Right(updated)
     }
 
@@ -428,7 +445,7 @@ class ApplicationsRepositoryIntegrationSpec
       result.data mustBe Right(())
       result.mdcData mustBe testMdcData
 
-      val actual = repository.findById(saved.safeId).futureValue
+      val actual = repository.findById(saved.safeId, false).futureValue
       actual mustBe Left(ApplicationNotFoundException.forId(saved.safeId))
     }
 

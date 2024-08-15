@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentMatchers.{anyBoolean, anyString}
 import org.mockito.Mockito.{verifyNoInteractions, when}
 import org.mockito.MockitoSugar
 import org.mockito.MockitoSugar.mock
@@ -79,7 +79,7 @@ object MongoJobSpec {
     val mockApplication = Application(Some("test-mongo-job-app"), "test-name-1", Creator("test-email-1"), Seq.empty)
 
     val mockRepository = mock[ApplicationsRepository]
-    when(mockRepository.findById(anyString())).thenReturn(Future.successful(Right(mockApplication)))
+    when(mockRepository.findById(anyString(), anyBoolean())).thenReturn(Future.successful(Right(mockApplication)))
 
     var applicationBuilder = new GuiceApplicationBuilder().overrides(bind[ApplicationsRepository].toInstance(mockRepository))
 

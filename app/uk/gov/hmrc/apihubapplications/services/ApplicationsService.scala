@@ -76,8 +76,8 @@ class ApplicationsService @Inject()(
     searchService.findAllUsingApi(apiId, includeDeleted)
   }
 
-  override def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    searchService.findById(id, enrich)
+  override def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    searchService.findById(id, enrich, includeDeleted)
   }
 
 }

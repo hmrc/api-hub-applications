@@ -313,7 +313,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Right(expected)))
+        when(fixture.applicationsService.findById(any(), any(), any())(any())).thenReturn(Future.successful(Right(expected)))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id, enrich = true).url)
 
@@ -321,7 +321,7 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe Json.toJson(expected.makePublic())
 
-        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(true))(any())
+        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(true), ArgumentMatchers.eq(false))(any())
       }
     }
 
@@ -329,7 +329,7 @@ class ApplicationsControllerSpec
       val id = "id"
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.findById(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 
@@ -342,7 +342,7 @@ class ApplicationsControllerSpec
       val id = "id"
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.findById(any(), any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id).url)
 
@@ -357,7 +357,7 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.findById(any(), any())(any())).thenReturn(Future.successful(Right(expected)))
+        when(fixture.applicationsService.findById(any(), any(), any())(any())).thenReturn(Future.successful(Right(expected)))
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplication(id, enrich = false).url)
 
@@ -365,7 +365,7 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe Json.toJson(expected)
 
-        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(false))(any())
+        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(false), ArgumentMatchers.eq(false))(any())
       }
     }
   }
