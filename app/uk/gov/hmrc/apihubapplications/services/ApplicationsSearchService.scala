@@ -42,7 +42,11 @@ trait ApplicationsSearchService {
     findById(id, false)
   }
 
-  def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
+  def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    findById(id, enrich, false)
+  }
+
+  def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
 
 }
 
@@ -75,10 +79,10 @@ class ApplicationsSearchServiceImpl @Inject()(
       .flatMap(addTeams)
   }
 
-  override def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    repository.findById(id).flatMap {
+  override def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    repository.findById(id, includeDeleted).flatMap {
       case Right(application) =>
-        (if (enrich) {
+        (if (enrich && application.deleted.isEmpty) {
           ApplicationEnrichers.process(
             application,
             Seq(

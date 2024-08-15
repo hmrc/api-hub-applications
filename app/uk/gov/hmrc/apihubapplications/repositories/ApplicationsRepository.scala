@@ -113,17 +113,18 @@ class ApplicationsRepository @Inject()(
     }
   }
 
-  def findById(id: String): Future[Either[ApplicationsException, Application]] = {
+  def findById(id: String, includeDeleted: Boolean): Future[Either[ApplicationsException, Application]] = {
     stringToObjectId(id) match {
       case Some(objectId) =>
         Mdc.preservingMdc {
           collection
             .find(Filters.equal("_id", objectId))
             .headOption()
-        } map {
-          case Some(application) if application.deleted.isEmpty => Right(application.decryptedValue.toModel)
-          case _ => Left(raiseApplicationNotFoundException.forId(id))
-        }
+        } map (_.filter(deletedFilter(includeDeleted))
+          .map(_.decryptedValue.toModel)  match {
+            case Some(application) => Right(application)
+            case None => Left(raiseApplicationNotFoundException.forId(id))
+          })
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
     }
   }

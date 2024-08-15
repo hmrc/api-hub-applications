@@ -301,7 +301,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         .setPrimaryCredentials(Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None)))
         .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None)))
 
-      when(repository.findById(eqTo(id)))
+      when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
 
       when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(secondaryClientId))(any))
@@ -338,7 +338,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val application = Application(Some(id), "test-name", Creator("test-creator"), Some(teamId), Seq.empty, clock)
         .setTeamName(team.name)
 
-      when(repository.findById(eqTo(id)))
+      when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
 
       when(teamsService.findById(teamId))
@@ -358,7 +358,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
       val id = "test-id"
 
-      when(repository.findById(eqTo(id)))
+      when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
       service.findById(id, enrich = true)(HeaderCarrier()).map(
@@ -376,7 +376,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val id = "test-id"
       val application = Application(Some(id), "test-name", Creator("test-creator"), Some(teamId), Seq.empty, clock)
 
-      when(repository.findById(eqTo(id)))
+      when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
 
       when(teamsService.findById(teamId))
@@ -400,7 +400,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
       val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
 
-      when(repository.findById(eqTo(id)))
+      when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
 
       when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(clientId))(any))
@@ -423,10 +423,31 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
         .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
 
-      when(repository.findById(eqTo(id)))
+      when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
 
       service.findById(id, enrich = false)(HeaderCarrier()).map {
+        result =>
+          result mustBe Right(application)
+          verifyZeroInteractions(idmsConnector)
+          succeed
+      }
+    }
+
+    "must not attempt to enrich with IDMS data if the application is deleted" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock).copy(deleted = Some(Deleted(LocalDateTime.now(clock), "test-deleted-by")))
+        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
+
+      when(repository.findById(eqTo(id), any))
+        .thenReturn(Future.successful(Right(application)))
+
+      service.findById(id, true)(HeaderCarrier()).map {
         result =>
           result mustBe Right(application)
           verifyZeroInteractions(idmsConnector)

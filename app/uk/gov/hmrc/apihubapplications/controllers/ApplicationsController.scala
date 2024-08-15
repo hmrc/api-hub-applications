@@ -69,9 +69,9 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       .map(Ok(_))
   }
 
-  def getApplication(id: String, enrich: Boolean): Action[AnyContent] = identify.compose(Action).async {
+  def getApplication(id: String, enrich: Boolean, includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
-      applicationsService.findById(id, enrich)
+      applicationsService.findById(id, enrich, includeDeleted)
         .map {
           case Right(application) => Ok(Json.toJson(application.makePublic()))
           case Left(_: ApplicationNotFoundException) => NotFound
