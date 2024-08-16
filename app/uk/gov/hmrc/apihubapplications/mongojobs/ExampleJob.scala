@@ -16,10 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications.mongojobs
 
-import scala.concurrent.Future
+import com.google.inject.Inject
+import play.api.Logging
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 
-trait MongoJob {
+import scala.concurrent.{ExecutionContext, Future}
 
-  def run(): Future[Unit]
+class ExampleJob @Inject()(applicationsRepository: ApplicationsRepository)(implicit ec: ExecutionContext) extends MongoJob with Logging {
+
+  override def run(): Future[Unit] = {
+    logger.info(s"Example mongo job is running...")
+    applicationsRepository.listIndexes.foreach(i => logger.info(s"Index: $i"))
+    Future(())
+  }
 
 }

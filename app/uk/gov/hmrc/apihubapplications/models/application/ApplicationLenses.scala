@@ -392,6 +392,10 @@ object ApplicationLenses {
     def delete(deleted: Deleted): Application = {
       applicationDeleted.set(application, Some(deleted))
     }
+
+    def isDeleted: Boolean = {
+      application.deleted.isDefined
+    }
   }
 
 }
