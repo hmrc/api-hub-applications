@@ -24,6 +24,22 @@ import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
+/*
+  This module uses configuration to determine if a migration should run and if so which.
+
+  The configuration used is:
+    mongoJob.enabled - boolean value indicating if a migration should run
+    mongoJob.className - name of the migration class to run, which must be a MongoJob
+
+  If the migration should not run then this module does not configure anything.
+
+  If the migration should run then the MongoJob class and LockClient will both be
+  instantiated. The MongoJob will be injected into LockClient, which is responsible
+  for running the job.
+
+  This allows us to have several jobs defined in the project and then opt to run a
+  specific one via a configuration change and redeploy.
+ */
 class MongoJobModule extends play.api.inject.Module with Logging {
 
   override def bindings(environment: Environment, configuration: Configuration): collection.Seq[Binding[_]] = {
