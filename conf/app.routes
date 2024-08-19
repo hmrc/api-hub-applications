@@ -9,6 +9,7 @@ GET        /applications/:id                                                    
 POST       /applications/:id/delete                                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteApplication(id: String)
 PUT        /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
 DELETE     /applications/:applicationId/apis/:apiId                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.removeApi(applicationId: String, apiId: String)
+PUT        /applications/:applicationId/teams/:teamId                               uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.changeOwningTeam(applicationId: String, teamId: String)
 POST       /applications/:id/team-members                                           uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addTeamMember(id: String)
 GET        /applications/using-api/:id                                              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplicationsUsingApi(id: String, includeDeleted: Boolean ?= false)
 

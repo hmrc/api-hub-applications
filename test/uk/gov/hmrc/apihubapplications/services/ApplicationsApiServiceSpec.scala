@@ -24,8 +24,9 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
-import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationNotFoundException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.http.HeaderCarrier
@@ -344,9 +345,103 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     }
   }
 
+  "changeOwningTeam" - {
+    val applicationId = "test-application-id"
+    val teamId = "test-team-id"
+
+    val team = Team("team-name", Seq.empty, clock)
+
+    val onceUponATime = LocalDateTime.now(clock).minusDays(1)
+
+    val baseApplication = Application(
+      id = Some(applicationId),
+      name = "test-app-name",
+      created = onceUponATime,
+      createdBy = Creator("test-email"),
+      lastUpdated = onceUponATime,
+      teamMembers = Seq(TeamMember(email = "test-email")),
+      environments = Environments()
+    )
+
+    "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val application = baseApplication.setTeamId(teamId)
+      val updated = application
+        .setTeamId(teamId)
+        .updated(clock)
+
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updated)))
+      when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
+
+      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+        result =>
+          verify(scopeFixer).fix(eqTo(updated))(any)
+          verify(repository).update(eqTo(updated))
+          verify(teamsService).findById(eqTo(teamId))
+          result.value mustBe ()
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application cannot be found" in {
+      val fixture = buildFixture
+      import fixture._
+
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+        result =>
+          verifyZeroInteractions(fixture.scopeFixer)
+          verifyZeroInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any)
+          result mustBe Left(ApplicationNotFoundException.forId(applicationId))
+      }
+    }
+
+    "must return TeamNotFoundException when the team is not found" in {
+      val fixture = buildFixture
+      import fixture._
+
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
+      when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException(""))))
+
+      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+        result =>
+          verifyZeroInteractions(fixture.scopeFixer)
+          verifyZeroInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any)
+          result mustBe Left(TeamNotFoundException.forId(teamId))
+      }
+    }
+
+    "must return any exceptions encountered" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val application = baseApplication.setTeamId(teamId)
+      val expected = IdmsException.clientNotFound("test-client-id")
+
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Left(expected)))
+      when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
+
+      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+        result =>
+          verifyZeroInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any)
+          result mustBe Left(expected)
+      }
+    }
+  }
+
   private case class Fixture(
     searchService: ApplicationsSearchService,
     accessRequestsService: AccessRequestsService,
+    teamsService: TeamsService,
     repository: ApplicationsRepository,
     idmsConnector: IdmsConnector,
     scopeFixer: ScopeFixer,
@@ -356,11 +451,12 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
   private def buildFixture: Fixture = {
     val searchService = mock[ApplicationsSearchService]
     val accessRequestsService = mock[AccessRequestsService]
+    val teamsService = mock[TeamsService]
     val repository = mock[ApplicationsRepository]
     val idmsConnector = mock[IdmsConnector]
     val scopeFixer = mock[ScopeFixer]
-    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, repository, idmsConnector, scopeFixer, clock)
-    Fixture(searchService, accessRequestsService, repository, idmsConnector, scopeFixer, service)
+    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, idmsConnector, scopeFixer, clock)
+    Fixture(searchService, accessRequestsService, teamsService, repository, idmsConnector, scopeFixer, service)
   }
 
 }

@@ -36,12 +36,15 @@ trait ApplicationsApiService {
 
   def removeApi(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
+  def changeOwningTeam(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+
 }
 
 @Singleton
 class ApplicationsApiServiceImpl @Inject()(
   searchService: ApplicationsSearchService,
   accessRequestsService: AccessRequestsService,
+  teamsService: TeamsService,
   repository: ApplicationsRepository,
   idmsConnector: IdmsConnector,
   scopeFixer: ScopeFixer,
@@ -102,4 +105,27 @@ class ApplicationsApiServiceImpl @Inject()(
     }
   }
 
+  override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    searchService.findById(applicationId, enrich = true).flatMap {
+      case Right(application) => changeOwningTeam(application, teamId)
+      case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
+
+  private def changeOwningTeam(application: Application, teamId: String)(implicit hc: HeaderCarrier) = {
+    val updated = application
+      .setTeamId(teamId)
+      .updated(clock)
+
+    teamsService.findById(teamId).flatMap {
+      case Right(_) =>
+        scopeFixer.fix(updated).flatMap {
+          case Right(fixed) => repository.update(fixed)
+          case Left(e) => Future.successful(Left(e))
+        }
+      case _ => Future.successful(Left(raiseTeamNotFoundException.forId(teamId)))
+    }
+  }
 }
