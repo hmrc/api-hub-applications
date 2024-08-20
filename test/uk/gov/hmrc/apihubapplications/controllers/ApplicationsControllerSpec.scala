@@ -601,6 +601,73 @@ class ApplicationsControllerSpec
     }
   }
 
+  "changeOwningTeam" - {
+    "must process the request and respond with No Content on success" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamId = "team-id"
+
+      when(fixture.applicationsService.changeOwningTeam(any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+
+        verify(fixture.applicationsService).changeOwningTeam(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(teamId))(any())
+      }
+    }
+
+    "must respond with Not Found when the application does not exist" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamId = "team-id"
+
+      when(fixture.applicationsService.changeOwningTeam(any(), any())(any()))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must respond with Not Found when the team does not exist" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamId = "team-id"
+
+      when(fixture.applicationsService.changeOwningTeam(any(), any())(any()))
+        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(teamId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return Bad Gateway when an IDMS exception is encountered" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val teamId = "team-id"
+
+      when(fixture.applicationsService.changeOwningTeam(any(), any())(any()))
+        .thenReturn(Future.successful(Left(IdmsException.clientNotFound("test-client-id"))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_GATEWAY
+      }
+    }
+  }
+
   "add credential" - {
     "must return 201 and a credential" in {
       val id = "app-id-1"

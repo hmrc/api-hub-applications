@@ -133,6 +133,17 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
+  def changeOwningTeam(applicationId: String, teamId: String): Action[AnyContent] = identify.async {
+    implicit request =>
+      applicationsService.changeOwningTeam(applicationId, teamId).map {
+        case Right(_) => NoContent
+        case Left(_: ApplicationNotFoundException) => NotFound
+        case Left(_: TeamNotFoundException) => NotFound
+        case Left(_: IdmsException) => BadGateway
+        case Left(e) => throw e
+      }
+  }
+
   def addCredential(applicationId: String, environmentName: EnvironmentName): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
       applicationsService.addCredential(applicationId, environmentName).map {
