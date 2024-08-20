@@ -61,8 +61,8 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
       )
     ).flatMap {
       case Right(enriched) =>
-        repository.insert(enriched).flatMap(
-          saved =>
+        repository.insert(enriched).flatMap {
+          case saved if saved.teamId.isEmpty =>
             searchService.findById(saved.safeId, enrich = false).flatMap {
               case Right(fetched) =>
                 val teamMemberEmail = emailConnector.sendAddTeamMemberEmail(fetched)
@@ -74,7 +74,8 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
                 } yield Right(fetched)
               case Left(e) => Future.successful(Left(e))
             }
-        )
+          case saved => Future.successful(Right(saved))
+        }
       case Left(e) => Future.successful(Left(e))
     }
   }
