@@ -191,7 +191,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       }
     }
 
-    "must email team members" in {
+    "must email team members if no teamId is present" in {
       val fixture = buildFixture
       import fixture._
 
@@ -207,6 +207,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
+        .copy(teamId = None)
         .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
         .addSecondaryCredential(clientResponse.asNewCredential(clock))
 
@@ -229,7 +230,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       }
     }
 
-    "must email application creator" in {
+    "must email application creator if no teamId is present" in {
       val fixture = buildFixture
       import fixture._
 
@@ -243,6 +244,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
+        .copy(teamId = None)
         .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
         .addSecondaryCredential(clientResponse.asNewCredential(clock))
 
@@ -261,6 +263,35 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
           verify(emailConnector).sendApplicationCreatedEmailToCreator(eqTo(saved))(any)
+          succeed
+      }
+    }
+
+    "must not send any emails if teamId is present" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val creator = Creator("test-email")
+      val newApplication = NewApplication("test-name", creator, Seq.empty)
+
+      val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
+
+      when(idmsConnector.createClient(any, any)(any))
+        .thenReturn(Future.successful(Right(clientResponse)))
+
+      val saved = Application(newApplication, clock)
+        .copy(id = Some("id"))
+        .copy(teamId = Some("team-id"))
+        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
+        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+
+      when(repository.insert(any)).thenReturn(Future.successful(saved))
+
+      service.registerApplication(newApplication)(HeaderCarrier()) map {
+        _ =>
+          verify(searchService, never).findById(any)(any)
+          verify(emailConnector, never).sendAddTeamMemberEmail(any)(any)
+          verify(emailConnector, never).sendApplicationCreatedEmailToCreator(any)(any)
           succeed
       }
     }
