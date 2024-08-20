@@ -114,17 +114,14 @@ class ApplicationsApiServiceImpl @Inject()(
   }
 
 
-  private def changeOwningTeam(application: Application, teamId: String)(implicit hc: HeaderCarrier) = {
+  private def changeOwningTeam(application: Application, teamId: String) = {
     val updated = application
       .setTeamId(teamId)
       .updated(clock)
 
     teamsService.findById(teamId).flatMap {
       case Right(_) =>
-        scopeFixer.fix(updated).flatMap {
-          case Right(fixed) => repository.update(fixed)
-          case Left(e) => Future.successful(Left(e))
-        }
+        repository.update(updated)
       case _ => Future.successful(Left(raiseTeamNotFoundException.forId(teamId)))
     }
   }

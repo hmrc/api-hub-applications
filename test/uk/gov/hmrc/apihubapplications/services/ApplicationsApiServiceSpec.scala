@@ -373,13 +373,11 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         .updated(clock)
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updated)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
-          verify(scopeFixer).fix(eqTo(updated))(any)
           verify(repository).update(eqTo(updated))
           verify(teamsService).findById(eqTo(teamId))
           result.value mustBe ()
@@ -395,7 +393,6 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.scopeFixer)
           verifyZeroInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(ApplicationNotFoundException.forId(applicationId))
@@ -411,7 +408,6 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.scopeFixer)
           verifyZeroInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(TeamNotFoundException.forId(teamId))
@@ -422,11 +418,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture._
 
-      val application = baseApplication.setTeamId(teamId)
       val expected = IdmsException.clientNotFound("test-client-id")
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Left(expected)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
