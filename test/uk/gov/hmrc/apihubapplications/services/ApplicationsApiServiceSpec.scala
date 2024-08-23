@@ -372,7 +372,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         .setTeamId(teamId)
         .updated(clock)
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
 
@@ -388,7 +388,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture._
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
+      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
@@ -403,7 +403,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture._
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
       when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException(""))))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
@@ -420,7 +420,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       val expected = IdmsException.clientNotFound("test-client-id")
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
