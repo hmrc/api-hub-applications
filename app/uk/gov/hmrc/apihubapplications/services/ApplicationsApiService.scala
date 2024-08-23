@@ -106,7 +106,7 @@ class ApplicationsApiServiceImpl @Inject()(
   }
 
   override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    searchService.findById(applicationId, enrich = true).flatMap {
+    searchService.findById(applicationId, enrich = true, includeDeleted = true).flatMap {
       case Right(application) => changeOwningTeam(application, teamId)
       case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
       case Left(e) => Future.successful(Left(e))
