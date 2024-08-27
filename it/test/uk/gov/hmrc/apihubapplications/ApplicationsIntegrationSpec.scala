@@ -26,6 +26,8 @@ import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
+import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.CONTENT_TYPE
 import play.api.{Application => GuideApplication}
@@ -40,6 +42,7 @@ import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -55,13 +58,13 @@ class ApplicationsIntegrationSpec
     with ScalaCheckPropertyChecks
     with ApplicationGenerator {
 
-  private val wsClient = app.injector.instanceOf[WSClient]
+  private lazy val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl = s"http://localhost:$port"
   private lazy val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-  override def fakeApplication(): GuideApplication =
+  private lazy val playApplication = {
     GuiceApplicationBuilder()
       .overrides(
-        bind[ApplicationsRepository].toInstance(repository),
+        bind[ApplicationsRepository].toInstance(applicationRepository),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction]),
         bind[IdmsConnector].to(classOf[FakeIdmsConnector]),
         bind[EmailConnector].to(classOf[FakeEmailConnector]),
@@ -69,14 +72,16 @@ class ApplicationsIntegrationSpec
       )
       .configure("metrics.enabled" -> false)
       .build()
-
-  override protected lazy val repository: ApplicationsRepository = {
-    new ApplicationsRepository(mongoComponent, NoCrypto)
   }
+  override def fakeApplication(): GuideApplication = playApplication
+
+  override protected val repository: ApplicationsRepository = applicationRepository
+
+  private def applicationRepository: ApplicationsRepository = ApplicationsRepository(mongoComponent, NoCrypto)
 
   "POST to register a new application" should {
     "respond with a 201 Created and body containing the application" in {
-      forAll { newApplication: NewApplication =>
+      forAll { (newApplication: NewApplication) =>
         val response =
           wsClient
             .url(s"$baseUrl/api-hub-applications/applications")
@@ -110,7 +115,7 @@ class ApplicationsIntegrationSpec
     }
 
     "add a full Application to the database" in {
-      forAll { newApplication: NewApplication =>
+      forAll { (newApplication: NewApplication) =>
 
         val response = wsClient
           .url(s"$baseUrl/api-hub-applications/applications")
@@ -202,38 +207,38 @@ class ApplicationsIntegrationSpec
       forAll { (application: Application) =>
         deleteAll().futureValue
 
-      insert(
-        application
-          .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
-          .setPrimaryScopes(Seq.empty)
-          .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
-      ).futureValue
+        insert(
+          application
+            .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+            .setPrimaryScopes(Seq.empty)
+            .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+        ).futureValue
 
-      val storedApplication = findAll().futureValue.head.decryptedValue.toModel
+        val storedApplication = findAll().futureValue.head.decryptedValue.toModel
 
-      val expected = storedApplication
-        .setSecondaryCredentials(
-          storedApplication
-            .getSecondaryCredentials.map(
-              credential => credential.copy(
-                clientSecret = Some(FakeIdmsConnector.fakeSecret),
-                secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
+        val expected = storedApplication
+          .setSecondaryCredentials(
+            storedApplication
+              .getSecondaryCredentials.map(
+                credential => credential.copy(
+                  clientSecret = Some(FakeIdmsConnector.fakeSecret),
+                  secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
+                )
               )
+          )
+          .setPrimaryScopes(
+            Seq(
+              Scope(FakeIdmsConnector.fakeClientScopeId1),
+              Scope(FakeIdmsConnector.fakeClientScopeId2)
             )
-        )
-        .setPrimaryScopes(
-          Seq(
-            Scope(FakeIdmsConnector.fakeClientScopeId1),
-            Scope(FakeIdmsConnector.fakeClientScopeId2)
           )
-        )
-        .setSecondaryScopes(
-          Seq(
-            Scope(FakeIdmsConnector.fakeClientScopeId1),
-            Scope(FakeIdmsConnector.fakeClientScopeId2)
+          .setSecondaryScopes(
+            Seq(
+              Scope(FakeIdmsConnector.fakeClientScopeId1),
+              Scope(FakeIdmsConnector.fakeClientScopeId2)
+            )
           )
-        )
-        .makePublic()
+          .makePublic()
 
         val response =
           wsClient

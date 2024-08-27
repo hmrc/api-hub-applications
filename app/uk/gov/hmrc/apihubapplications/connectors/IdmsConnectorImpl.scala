@@ -20,6 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
@@ -46,7 +47,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(headersForEnvironment(environmentName): _*)
+      .setHeader(headersForEnvironment(environmentName)*)
       .withBody(Json.toJson(client))
       .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, ClientResponse]]
@@ -66,7 +67,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(headersForEnvironment(environmentName): _*)
+      .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
@@ -87,7 +88,7 @@ class IdmsConnectorImpl @Inject()(
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
 
     httpClient.delete(url)
-      .setHeader(headersForEnvironment(environmentName): _*)
+      .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
@@ -149,7 +150,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(headersForEnvironment(environmentName): _*)
+      .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
@@ -171,7 +172,7 @@ class IdmsConnectorImpl @Inject()(
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
 
     httpClient.put(url)
-      .setHeader(headersForEnvironment(environmentName): _*)
+      .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
@@ -197,7 +198,7 @@ class IdmsConnectorImpl @Inject()(
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
 
     httpClient.delete(url)
-      .setHeader(headersForEnvironment(environmentName): _*)
+      .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
@@ -221,7 +222,7 @@ class IdmsConnectorImpl @Inject()(
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
-      .setHeader(headersForEnvironment(environmentName): _*)
+      .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
       .execute[Either[UpstreamErrorResponse, Seq[ClientScope]]]
       .map {

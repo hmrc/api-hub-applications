@@ -79,7 +79,7 @@ class EmailConnectorSpec
     }
 
     "must return EmailException for any non-2xx response" in {
-      forAll(nonSuccessResponses) { status: Int =>
+      forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
           post(urlEqualTo("/hmrc/email"))
             .willReturn(

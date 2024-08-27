@@ -45,7 +45,7 @@ object RepositoryHelpers {
 
   def buildAndFilter(filters: Option[Bson]*): Bson = {
     filters.flatten match {
-      case filters if filters.nonEmpty => Filters.and(filters: _*)
+      case filters if filters.nonEmpty => Filters.and(filters*)
       case _ => Filters.empty()
     }
   }

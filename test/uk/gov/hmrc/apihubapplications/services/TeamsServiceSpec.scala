@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.{ArgumentMatchers, ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{never, verify, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception._
@@ -36,7 +38,6 @@ class TeamsServiceSpec
   extends AsyncFreeSpec
   with Matchers
   with MockitoSugar
-  with ArgumentMatchersSugar
   with EitherValues {
 
   import TeamsServiceSpec._
@@ -70,7 +71,7 @@ class TeamsServiceSpec
 
       fixture.service.create(newTeam)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(saved))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember1, teamMember2)), eqTo(saved))(any)
 
           result.value mustBe saved
       }
@@ -88,7 +89,7 @@ class TeamsServiceSpec
 
       fixture.service.create(newTeam)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember1, teamMember2)), ArgumentMatchers.eq(saved))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember1, teamMember2)), eqTo(saved))(any)
 
           result.value mustBe saved
       }
@@ -237,7 +238,7 @@ class TeamsServiceSpec
       fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember3)), ArgumentMatchers.eq(team))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember3)), eqTo(team))(any)
 
           result mustBe Right(())
       }
@@ -257,7 +258,7 @@ class TeamsServiceSpec
       fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(ArgumentMatchers.eq(Seq(teamMember3)), ArgumentMatchers.eq(team))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember3)), eqTo(team))(any)
 
           result mustBe Right(())
       }

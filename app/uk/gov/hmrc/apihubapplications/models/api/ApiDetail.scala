@@ -31,7 +31,7 @@ object ApiStatus extends Enumerable.Implicits {
   val values: Seq[ApiStatus] = Seq(Alpha, Beta, Live, Deprecated)
 
   implicit val enumerable: Enumerable[ApiStatus] =
-    Enumerable(values.map(value => value.toString -> value): _*)
+    Enumerable(values.map(value => value.toString -> value)*)
 
 }
 
