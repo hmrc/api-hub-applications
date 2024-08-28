@@ -18,12 +18,12 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{verify, verifyNoInteractions, when}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.MockitoSugar.mock
+import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -81,7 +81,7 @@ class ApplicationsControllerSpec
           .addSecondaryCredential(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment")))
           .copy(id = Some("test-id"))
 
-        when(fixture.applicationsService.registerApplication(eqTo(newApplication))(any()))
+        when(fixture.applicationsService.registerApplication(ArgumentMatchers.eq(newApplication))(any()))
           .thenReturn(Future.successful(Right(expected)))
 
         val result = route(fixture.application, request).value
@@ -180,7 +180,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
-        verify(fixture.applicationsService).findAll(eqTo(None), eqTo(false))
+        verify(fixture.applicationsService).findAll(ArgumentMatchers.eq(None), ArgumentMatchers.eq(false))
       }
     }
 
@@ -203,7 +203,7 @@ class ApplicationsControllerSpec
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
           Some(encrypt(crypto, teamMemberEmail))).url)
 
-        when(fixture.applicationsService.findAll(eqTo(Some(teamMemberEmail)), eqTo(false)))
+        when(fixture.applicationsService.findAll(ArgumentMatchers.eq(Some(teamMemberEmail)), ArgumentMatchers.eq(false)))
           .thenReturn(Future.successful(expected_apps))
 
         val result = route(fixture.application, request).value
@@ -237,7 +237,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
-        verify(fixture.applicationsService).findAll(eqTo(None), eqTo(true))
+        verify(fixture.applicationsService).findAll(ArgumentMatchers.eq(None), ArgumentMatchers.eq(true))
       }
     }
   }
@@ -268,7 +268,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
-        verify(fixture.applicationsService).findAllUsingApi(eqTo(apiId), eqTo(false))
+        verify(fixture.applicationsService).findAllUsingApi(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq(false))
       }
     }
 
@@ -298,7 +298,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe expected_json
-        verify(fixture.applicationsService).findAllUsingApi(eqTo(apiId), eqTo(true))
+        verify(fixture.applicationsService).findAllUsingApi(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq(true))
       }
     }
   }
@@ -321,7 +321,7 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe Json.toJson(expected.makePublic())
 
-        verify(fixture.applicationsService).findById(eqTo(id), eqTo(true), eqTo(false))(any())
+        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(true), ArgumentMatchers.eq(false))(any())
       }
     }
 
@@ -365,7 +365,7 @@ class ApplicationsControllerSpec
         status(result) mustBe Status.OK
         contentAsJson(result) mustBe Json.toJson(expected)
 
-        verify(fixture.applicationsService).findById(eqTo(id), eqTo(false), eqTo(false))(any())
+        verify(fixture.applicationsService).findById(ArgumentMatchers.eq(id), ArgumentMatchers.eq(false), ArgumentMatchers.eq(false))(any())
       }
     }
   }
@@ -376,7 +376,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), eqTo(userEmail))(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), ArgumentMatchers.eq(userEmail))(any()))
           .thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -385,7 +385,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).delete(any(), eqTo(userEmail))(any())
+        verify(fixture.applicationsService).delete(any(), ArgumentMatchers.eq(userEmail))(any())
       }
     }
 
@@ -394,7 +394,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -411,7 +411,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -429,7 +429,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -446,7 +446,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(ArgumentMatchers.eq(id), any())(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url).withHeaders(CONTENT_TYPE -> "application/json")
@@ -465,7 +465,7 @@ class ApplicationsControllerSpec
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(eqTo(id), eqTo(api))(any())).thenReturn(Future.successful(Right(())))
+        when(fixture.applicationsService.addApi(ArgumentMatchers.eq(id), ArgumentMatchers.eq(api))(any())).thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
@@ -548,7 +548,7 @@ class ApplicationsControllerSpec
 
         status(result) mustBe NO_CONTENT
 
-        verify(fixture.applicationsService).removeApi(eqTo(applicationId), eqTo(apiId))(any())
+        verify(fixture.applicationsService).removeApi(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(apiId))(any())
       }
     }
 
@@ -615,7 +615,7 @@ class ApplicationsControllerSpec
 
         status(result) mustBe NO_CONTENT
 
-        verify(fixture.applicationsService).changeOwningTeam(eqTo(applicationId), eqTo(teamId))(any())
+        verify(fixture.applicationsService).changeOwningTeam(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(teamId))(any())
       }
     }
 
@@ -675,7 +675,7 @@ class ApplicationsControllerSpec
       val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"))
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Right(credential)))
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Right(credential)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -685,12 +685,12 @@ class ApplicationsControllerSpec
       }
     }
 
-    "must return 404 Not Found when adding credential but the application does not exist in the repository" in {
+   "must return 404 Not Found when adding credential but the application does not exist in the repository" in {
       val id = "id"
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -704,7 +704,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -718,7 +718,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
+        when(fixture.applicationsService.addCredential(ArgumentMatchers.eq(id), ArgumentMatchers.eq(Primary))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -741,7 +741,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(Primary), eqTo(clientId))(any())
+        verify(fixture.applicationsService).deleteCredential(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId))(any())
       }
     }
 
@@ -839,7 +839,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).addTeamMember(eqTo(applicationId), eqTo(teamMemberRequest.toTeamMember))(any())
+        verify(fixture.applicationsService).addTeamMember(ArgumentMatchers.eq(applicationId), ArgumentMatchers.eq(teamMemberRequest.toTeamMember))(any())
       }
     }
 
@@ -916,7 +916,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST
-        verifyNoInteractions(fixture.applicationsService)
+        verifyZeroInteractions(fixture.applicationsService)
       }
     }
 
@@ -943,7 +943,7 @@ class ApplicationsControllerSpec
 
 }
 
-object ApplicationsControllerSpec extends MockitoSugar {
+object ApplicationsControllerSpec {
 
   implicit val materializer: Materializer = Materializer(ActorSystem())
 

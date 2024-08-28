@@ -90,18 +90,18 @@ class DeploymentsService @Inject()(
           case Right(owningTeams) =>
             integrationCatalogueConnector.updateApiTeam(apiId, teamId) flatMap {
               case Right(()) => for {
-                  _ <- sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam)
-                  _ <- sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam)
-                } yield (()) match {
-                  case _ => Right(())
-                }
+                _ <- sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam)
+                _ <- sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam)
+              } yield (()) match {
+                case _ => Right(())
+              }
               case Left(e) => Future.successful(Left(e))
             }
+            case Left(e) => Future.successful(Left(e))
+          }
           case Left(e) => Future.successful(Left(e))
         }
-      case Left(e) => Future.successful(Left(e))
     }
-  }
 
     private case class OwningTeams(currentTeam: Option[Team], newTeam: Team)
 

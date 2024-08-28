@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{verify, verifyNoInteractions, verifyNoMoreInteractions, when}
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses._
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
@@ -32,7 +30,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.LocalDateTime
 import scala.concurrent.Future
 
-class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with EitherValues {
+class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar with EitherValues {
 
   import ScopeFixerSpec._
 
@@ -42,8 +40,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       fixture.scopeFixer.fix(baseApplication)(HeaderCarrier()).map {
         result =>
-          verifyNoInteractions(fixture.integrationCatalogueConnector)
-          verifyNoInteractions(fixture.idmsConnector)
+          verifyZeroInteractions(fixture.integrationCatalogueConnector)
+          verifyZeroInteractions(fixture.idmsConnector)
           result.value mustBe baseApplication
       }
     }
@@ -61,7 +59,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
         result =>
-          verifyNoInteractions(fixture.integrationCatalogueConnector)
+          verifyZeroInteractions(fixture.integrationCatalogueConnector)
           verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
           verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName2))(any)
           verify(fixture.idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)

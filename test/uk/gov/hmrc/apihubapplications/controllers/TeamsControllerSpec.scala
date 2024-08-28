@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{verify, verifyNoInteractions, when}
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -31,7 +29,7 @@ import play.api.test.Helpers._
 import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.exception.{TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
@@ -41,11 +39,14 @@ import uk.gov.hmrc.crypto.ApplicationCrypto
 
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.Future
+import uk.gov.hmrc.apihubapplications.models.exception.TeamMemberDoesNotExistException
+import uk.gov.hmrc.apihubapplications.models.exception.LastTeamMemberException
 
 class TeamsControllerSpec
   extends AnyFreeSpec
   with Matchers
   with MockitoSugar
+  with ArgumentMatchersSugar
   with OptionValues
   with CryptoUtils {
 
@@ -87,7 +88,7 @@ class TeamsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST
-        verifyNoInteractions(fixture.teamsService)
+        verifyZeroInteractions(fixture.teamsService)
       }
     }
 
@@ -284,7 +285,7 @@ class TeamsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST
-        verifyNoInteractions(fixture.teamsService)
+        verifyZeroInteractions(fixture.teamsService)
       }
     }
   }
@@ -420,7 +421,7 @@ class TeamsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST
-        verifyNoInteractions(fixture.teamsService)
+        verifyZeroInteractions(fixture.teamsService)
       }
     }
 

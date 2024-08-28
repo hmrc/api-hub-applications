@@ -42,7 +42,7 @@ import scala.concurrent.duration.DurationInt
  */
 class MongoJobModule extends play.api.inject.Module with Logging {
 
-  override def bindings(environment: Environment, configuration: Configuration): collection.Seq[Binding[?]] = {
+  override def bindings(environment: Environment, configuration: Configuration): collection.Seq[Binding[_]] = {
     val workToDo = configuration.getOptional[Boolean]("mongoJob.enabled").getOrElse(false)
 
     logger.info(s"Startup mongo job needs doing: $workToDo")

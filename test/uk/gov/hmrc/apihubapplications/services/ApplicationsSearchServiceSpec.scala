@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{verify, verifyNoInteractions, when}
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Deleted, Issues, Primary, Scope, Secondary, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
@@ -35,7 +33,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with OptionValues with EitherValues {
+class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar with OptionValues with EitherValues {
 
   import ApplicationsSearchServiceSpec._
 
@@ -431,7 +429,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       service.findById(id, enrich = false)(HeaderCarrier()).map {
         result =>
           result mustBe Right(application)
-          verifyNoInteractions(idmsConnector)
+          verifyZeroInteractions(idmsConnector)
           succeed
       }
     }
@@ -452,7 +450,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       service.findById(id, true)(HeaderCarrier()).map {
         result =>
           result mustBe Right(application)
-          verifyNoInteractions(idmsConnector)
+          verifyZeroInteractions(idmsConnector)
           succeed
       }
     }

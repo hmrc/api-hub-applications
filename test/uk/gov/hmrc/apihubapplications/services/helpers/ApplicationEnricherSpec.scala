@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -153,9 +152,9 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       val idmsConnector = mock[IdmsConnector]
 
-      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(testClientResponse1.clientId))(any()))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
-      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(testClientResponse2.clientId))(any()))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
         .thenReturn(Future.successful(Right(testClientResponse2)))
 
       ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
@@ -186,9 +185,9 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       val idmsConnector = mock[IdmsConnector]
 
-      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(testClientResponse1.clientId))(any()))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
-      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(testClientResponse2.clientId))(any()))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
         .thenReturn(Future.successful(Left(exception)))
 
       ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector) map {
@@ -216,9 +215,9 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       val idmsConnector = mock[IdmsConnector]
 
-      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(testClientResponse1.clientId))(any()))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
-      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(testClientResponse2.clientId))(any()))
+      when(idmsConnector.fetchClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse2.clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId2))))
 
       ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector).map {
@@ -245,7 +244,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
         )
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(testClientResponse1.clientId))(any()))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Right(Seq(testClientScope1, testClientScope2))))
 
       ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector).map {
@@ -270,7 +269,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val applicationWithIssues = application.copy(issues = Seq("Secondary scopes not found. test-message"))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(testClientResponse1.clientId))(any()))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(exception)))
 
       ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector) map {
@@ -290,7 +289,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
         .addIssue(Issues.secondaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(testClientResponse1.clientId))(any()))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
 
       ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector).map {
@@ -316,7 +315,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val applicationWithIssues = application.copy(issues = Seq("Primary scopes not found. test-message"))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(testClientResponse1.clientId))(any()))
+      when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
         .thenReturn(Future.successful(Left(exception)))
 
       ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector) map {
@@ -337,7 +336,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       .addIssue(Issues.primaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
 
     val idmsConnector = mock[IdmsConnector]
-    when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(testClientResponse1.clientId))(any()))
+    when(idmsConnector.fetchClientScopes(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientResponse1.clientId))(any()))
       .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
 
     ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector).map {
@@ -352,7 +351,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val expected = testApplication.setPrimaryCredentials(Seq(Credential(testClientResponse1.clientId, LocalDateTime.now(clock), None, None)))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(testApplication)))(any()))
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
 
       ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector, clock).map {
@@ -365,7 +364,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val expected = testApplication.setSecondaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(testApplication)))(any()))
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
 
       ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, testApplication, idmsConnector, clock).map {
@@ -378,7 +377,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val expected = IdmsException("test-message", CallError)
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(testApplication)))(any()))
+      when(idmsConnector.createClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Left(expected)))
 
       ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector, clock).map {
@@ -393,7 +392,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val application = testApplication.addPrimaryCredential(Credential(testClientId1, LocalDateTime.now(clock), None, None))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.deleteClient(eqTo(Primary), eqTo(testClientId1))(any()))
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId1))(any()))
         .thenReturn(Future.successful(Right(())))
 
       ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
@@ -409,7 +408,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val application = testApplication.addSecondaryCredential(Credential(testClientId1, LocalDateTime.now(clock), None, None))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.deleteClient(eqTo(Secondary), eqTo(testClientId1))(any()))
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId1))(any()))
         .thenReturn(Future.successful(Right(())))
 
       ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, testClientId1, idmsConnector).map {
@@ -425,7 +424,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val application = testApplication.addPrimaryCredential(Credential(testClientId1, LocalDateTime.now(clock), None, None))
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.deleteClient(eqTo(Primary), eqTo(testClientId1))(any()))
+      when(idmsConnector.deleteClient(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId1))(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
 
       ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
@@ -464,14 +463,14 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val scope = "test-scope"
       val idmsConnector = mock[IdmsConnector]
 
-      when(idmsConnector.addClientScope(eqTo(Primary), any(), eqTo(scope))(any()))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Primary), any(), ArgumentMatchers.eq(scope))(any()))
         .thenReturn(Future.successful(Right(())))
 
       ApplicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope).map {
         case Right(enricher) =>
           enricher.enrich(application) mustBe application.addPrimaryScope(Scope(scope))
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scope))(any())
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId2), eqTo(scope))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId1), ArgumentMatchers.eq(scope))(any())
+          verify(idmsConnector).addClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(clientId2), ArgumentMatchers.eq(scope))(any())
           succeed
         case Left(e) => fail("Unexpected Left response", e)
       }
@@ -483,7 +482,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val scope = "test-scope"
       val idmsConnector = mock[IdmsConnector]
 
-      when(idmsConnector.addClientScope(eqTo(Secondary), eqTo(clientId), eqTo(scope))(any()))
+      when(idmsConnector.addClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(clientId), ArgumentMatchers.eq(scope))(any()))
         .thenReturn(Future.successful(Right(())))
 
       ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope).map {
@@ -524,8 +523,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       ApplicationEnrichers.scopeRemovingApplicationEnricher(Primary, application, idmsConnector, testScopeName1).map {
         result =>
-          verify(idmsConnector).deleteClientScope(eqTo(Primary), eqTo(testClientId1), eqTo(testScopeName1))(any())
-          verify(idmsConnector).deleteClientScope(eqTo(Primary), eqTo(testClientId2), eqTo(testScopeName1))(any())
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId1), ArgumentMatchers.eq(testScopeName1))(any())
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Primary), ArgumentMatchers.eq(testClientId2), ArgumentMatchers.eq(testScopeName1))(any())
           result.value.enrich(application) mustBe expected
       }
     }
@@ -546,8 +545,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       ApplicationEnrichers.scopeRemovingApplicationEnricher(Secondary, application, idmsConnector, testScopeName1).map {
         result =>
-          verify(idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(testClientId1), eqTo(testScopeName1))(any())
-          verify(idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(testClientId2), eqTo(testScopeName1))(any())
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId1), ArgumentMatchers.eq(testScopeName1))(any())
+          verify(idmsConnector).deleteClientScope(ArgumentMatchers.eq(Secondary), ArgumentMatchers.eq(testClientId2), ArgumentMatchers.eq(testScopeName1))(any())
           result.value.enrich(application) mustBe expected
       }
     }

@@ -18,13 +18,13 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{verify, when}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.MockitoSugar.mock
+import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor2, TableFor3}
-import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -84,7 +84,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -123,7 +123,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -160,7 +160,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -212,7 +212,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.deployToSecondary(ArgumentMatchers.eq(deployRequest))(any()))
           .thenReturn(Future.successful(response))
 
         val result = route(fixture.application, request).value
@@ -268,7 +268,7 @@ class DeploymentsControllerSpec
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.redeployToSecondary(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
+        when(fixture.deploymentsService.redeployToSecondary(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(redeploymentRequest))(any()))
           .thenReturn(Future.successful(Right(deploymentsResponse)))
 
         val result = route(fixture.application, request).value
@@ -287,7 +287,7 @@ class DeploymentsControllerSpec
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.redeployToSecondary(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
+        when(fixture.deploymentsService.redeployToSecondary(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(redeploymentRequest))(any()))
           .thenReturn(Future.successful(Right(invalidOasResponse)))
 
         val result = route(fixture.application, request).value
@@ -360,9 +360,9 @@ class DeploymentsControllerSpec
 
           val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
 
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Primary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
             .thenReturn(Future.successful(Right(primaryResponse)))
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Secondary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
             .thenReturn(Future.successful(Right(secondaryResponse)))
           val result = route(fixture.application, request).value
 
@@ -383,9 +383,9 @@ class DeploymentsControllerSpec
 
           val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
 
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Primary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Primary))(any()))
             .thenReturn(Future.successful(primaryResponse))
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Secondary))(any()))
+          when(fixture.deploymentsService.getDeployment(ArgumentMatchers.eq(publisherRef), ArgumentMatchers.eq(Secondary))(any()))
             .thenReturn(Future.successful(secondaryResponse))
           val result = route(fixture.application, request).value
 
@@ -409,7 +409,7 @@ class DeploymentsControllerSpec
         prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
       )
 
-      when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef))(any()))
+      when(fixture.deploymentsService.getDeploymentDetails(ArgumentMatchers.eq(publisherRef))(any()))
         .thenReturn(Future.successful(Right(deploymentDetails)))
 
       running(fixture.application) {
@@ -424,7 +424,7 @@ class DeploymentsControllerSpec
     "must return 404 Not Found when the service does not exist in APIM" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef))(any()))
+      when(fixture.deploymentsService.getDeploymentDetails(ArgumentMatchers.eq(publisherRef))(any()))
         .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
 
       running(fixture.application) {
@@ -450,7 +450,7 @@ class DeploymentsControllerSpec
         status(result) mustBe OK
         contentAsJson(result) mustBe Json.toJson(deploymentsResponse)
 
-        verify(fixture.deploymentsService).promoteToProduction(eqTo(publisherRef))(any)
+        verify(fixture.deploymentsService).promoteToProduction(ArgumentMatchers.eq(publisherRef))(any)
       }
     }
 
@@ -505,7 +505,7 @@ class DeploymentsControllerSpec
     "must return 200 Ok" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.updateApiTeam(eqTo(apiId), eqTo("team2"))(any))
+      when(fixture.deploymentsService.updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any))
         .thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
@@ -514,14 +514,14 @@ class DeploymentsControllerSpec
 
         status(result) mustBe OK
 
-        verify(fixture.deploymentsService).updateApiTeam(eqTo(apiId), eqTo("team2"))(any)
+        verify(fixture.deploymentsService).updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any)
       }
     }
 
     "must return 404 Not found when service returns not found " in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.updateApiTeam(eqTo(apiId), eqTo("team2"))(any))
+      when(fixture.deploymentsService.updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any))
         .thenReturn(Future.successful(Left(ApiNotFoundException.forId(apiId))))
 
       running(fixture.application) {
@@ -530,7 +530,7 @@ class DeploymentsControllerSpec
 
         status(result) mustBe NOT_FOUND
 
-        verify(fixture.deploymentsService).updateApiTeam(eqTo(apiId), eqTo("team2"))(any)
+        verify(fixture.deploymentsService).updateApiTeam(ArgumentMatchers.eq(apiId), ArgumentMatchers.eq("team2"))(any)
       }
     }
 
@@ -540,7 +540,7 @@ class DeploymentsControllerSpec
 
 
 
-object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoSugar {
+object DeploymentsControllerSpec extends TableDrivenPropertyChecks {
 
   implicit val materializer: Materializer = Materializer(ActorSystem())
 

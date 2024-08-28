@@ -33,7 +33,7 @@ class ApplicationsRepositorySpec
   extends AnyFreeSpec
     with Matchers {
 
-  private implicit val crypto: Encrypter & Decrypter = NoCrypto
+  private implicit val crypto: Encrypter with Decrypter = NoCrypto
   private implicit val formatSensitiveApplication: Format[SensitiveApplication] = SensitiveApplication.formatSensitiveApplication
 
   "JSON serialisation and deserialisation" - {
@@ -56,7 +56,7 @@ class ApplicationsRepositorySpec
            |""".stripMargin)
 
       val result = json.validate(formatDataWithMongoIdentifier[SensitiveApplication])
-      result mustBe a[JsSuccess[?]]
+      result mustBe a[JsSuccess[_]]
 
       val expected = Application(
         Some("63bebf8bbbeccc26c12294e5"),
@@ -101,7 +101,7 @@ class ApplicationsRepositorySpec
            |""".stripMargin)
 
       val result = json.validate(formatDataWithMongoIdentifier[SensitiveApplication])
-      result mustBe a[JsSuccess[?]]
+      result mustBe a[JsSuccess[_]]
 
       val anEndpoint = Endpoint("GET", "/foo/bar")
       val anApi = Api("63bebf8bbbeccc26c12294e6", Seq(anEndpoint))
