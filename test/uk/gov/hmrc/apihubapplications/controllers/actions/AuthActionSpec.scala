@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.controllers.actions
 
-import org.mockito.ArgumentMatchers.{eq => eqTo}
-import org.mockito.Mockito.when
+import org.mockito.{ArgumentMatchers, MockitoSugar}
 import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import play.api.http.Status
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -35,7 +33,7 @@ import uk.gov.hmrc.internalauth.client.test.{BackendAuthComponentsStub, StubBeha
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
+class AuthActionSpec extends AnyFreeSpec with MockitoSugar {
 
 
   class Harness(authAction: IdentifierAction) {
@@ -85,7 +83,7 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
             IAAction("WRITE")
           )
 
-          when (mockStubBehaviour.stubAuth(eqTo(Some(canAccessPredicate)), eqTo(Retrieval.EmptyRetrieval))).thenReturn(Future.unit)
+          when (mockStubBehaviour.stubAuth(ArgumentMatchers.eq(Some(canAccessPredicate)), ArgumentMatchers.eq(Retrieval.EmptyRetrieval))).thenReturn(Future.unit)
 
           val result = authAction.invokeBlock(
             FakeRequest().withHeaders("Authorization" -> "Anything whatsoever"),
@@ -124,7 +122,7 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
           IAAction("WRITE")
         )
 
-        when(mockStubBehaviour.stubAuth(eqTo(Some(canAccessPredicate)), eqTo(Retrieval.EmptyRetrieval))).thenReturn(Future.unit)
+        when(mockStubBehaviour.stubAuth(ArgumentMatchers.eq(Some(canAccessPredicate)), ArgumentMatchers.eq(Retrieval.EmptyRetrieval))).thenReturn(Future.unit)
 
         val result = authAction.invokeBlock(
           FakeRequest().withHeaders("Authorization" -> "Anything whatsoever"),
@@ -162,7 +160,7 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
           IAAction("WRITE")
         )
 
-        when(mockStubBehaviour.stubAuth(eqTo(Some(canAccessPredicate)), eqTo(Retrieval.EmptyRetrieval)))
+        when(mockStubBehaviour.stubAuth(ArgumentMatchers.eq(Some(canAccessPredicate)), ArgumentMatchers.eq(Retrieval.EmptyRetrieval)))
           .thenReturn(Future.failed(UpstreamErrorResponse("Unauthorized", Status.UNAUTHORIZED)))
 
         val result = authAction.invokeBlock(

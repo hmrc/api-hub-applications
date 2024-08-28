@@ -20,7 +20,6 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.Document
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model._
-import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
@@ -85,14 +84,14 @@ class ApplicationsRepository @Inject()(
   private def teamsFilter(teams: Seq[Team]): Option[Bson] = {
     teams match {
       case Nil => None
-      case teams => Some(Filters.in("teamId", teams.flatMap(_.id)*))
+      case teams => Some(Filters.in("teamId", teams.flatMap(_.id): _*))
     }
   }
 
   private def orFilters(filters: Option[Bson]*): Bson = {
     filters.flatten match {
       case Nil => Filters.empty()
-      case filters => Filters.or(filters*)
+      case filters => Filters.or(filters: _*)
     }
   }
 

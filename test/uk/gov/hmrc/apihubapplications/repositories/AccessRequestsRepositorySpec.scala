@@ -30,7 +30,7 @@ import java.time.LocalDateTime
 
 class AccessRequestsRepositorySpec extends AnyFreeSpec with Matchers {
 
-  private implicit val crypto: Encrypter & Decrypter = NoCrypto
+  private implicit val crypto: Encrypter with Decrypter = NoCrypto
   private implicit val formatSensitiveAccessRequest: Format[SensitiveAccessRequest] = SensitiveAccessRequest.formatSensitiveAccessRequest
 
   "AccessRequestsRepository" - {
@@ -92,7 +92,7 @@ class AccessRequestsRepositorySpec extends AnyFreeSpec with Matchers {
       )
 
       val result = json.validate(formatDataWithMongoIdentifier[SensitiveAccessRequest])
-      result mustBe a[JsSuccess[?]]
+      result mustBe a[JsSuccess[_]]
       result.get.id mustBe Some("63bebf8bbbeccc26c12294e5")
     }
   }

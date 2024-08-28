@@ -19,7 +19,6 @@ package uk.gov.hmrc.apihubapplications.connectors
 import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
-import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}

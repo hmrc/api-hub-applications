@@ -29,7 +29,7 @@ object EnvironmentName extends Enumerable.Implicits {
   val values: Seq[EnvironmentName] = Seq(Primary, Secondary)
 
   implicit val enumerable: Enumerable[EnvironmentName] =
-    Enumerable(values.map(value => value.toString -> value)*)
+    Enumerable(values.map(value => value.toString -> value): _*)
 
   implicit val pathBindableEnvironmentName: PathBindable[EnvironmentName] = new PathBindable[EnvironmentName] {
     override def bind(key: String, value: String): Either[String, EnvironmentName] = {

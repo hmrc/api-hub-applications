@@ -16,10 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.Mockito.when
+import org.mockito.MockitoSugar
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Deleted, TeamMember}
 
 import java.time.LocalDateTime

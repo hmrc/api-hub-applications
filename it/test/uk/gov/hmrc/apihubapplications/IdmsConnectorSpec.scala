@@ -51,7 +51,7 @@ class IdmsConnectorSpec
 
   "IdmsConnector.createClient" - {
     "must place the correct request per environment to IDMS and return the ClientResponse" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           post(urlEqualTo(s"/$environmentName/identity/clients"))
             .withHeader("Accept", equalTo("application/json"))
@@ -77,7 +77,7 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-2xx response" in {
       val context = Seq("environmentName" -> Primary, "client" -> testClient)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           post(urlEqualTo(s"/primary/identity/clients"))
             .withHeader("Content-Type", equalTo("application/json"))
@@ -120,7 +120,7 @@ class IdmsConnectorSpec
 
   "IdmsConnector.fetchClient" - {
     "must place the correct request per environment to IDMS and return the secret" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
@@ -157,7 +157,7 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-2xx response" in {
       val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
             .willReturn(
@@ -192,7 +192,7 @@ class IdmsConnectorSpec
 
   "IdmsConnector.deleteClient" - {
     "must place the correct request per environment to IDMS and succeed" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           delete(urlEqualTo(s"/$environmentName/identity/clients/$testClientId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
@@ -227,7 +227,7 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-2xx or 404 response" in {
       val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
             .willReturn(
@@ -262,7 +262,7 @@ class IdmsConnectorSpec
 
   "IdmsConnector.newSecret" - {
     "must place the correct request per environment to IDMS and return the new secret" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           post(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
@@ -299,7 +299,7 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-2xx response" in {
       val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           post(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
             .willReturn(
@@ -334,7 +334,7 @@ class IdmsConnectorSpec
 
   "IdmsConnector.addClientScope" - {
     "must place the correct request per environment to IDMS and return true" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           put(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
@@ -369,7 +369,7 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-2xx response" in {
       val context = Seq("environmentName" -> Primary, "clientId" -> testClientId, "scopeId" -> testScopeId)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .willReturn(
@@ -404,7 +404,7 @@ class IdmsConnectorSpec
 
   "IdmsConnector.deleteClientScope" - {
     "must place the correct request per environment to IDMS" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           delete(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
@@ -439,7 +439,7 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-2xx response" in {
       val context = Seq("environmentName" -> Primary, "clientId" -> testClientId, "scopeId" -> testScopeId)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .willReturn(
@@ -476,7 +476,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return the client scopes" in {
       val scopes = Seq(ClientScope("test-scope-1"), ClientScope("test-scope-2"))
 
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(environmentNames) { environmentName: EnvironmentName =>
         stubFor(
           get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes"))
             .withHeader("Accept", equalTo("application/json"))
@@ -514,7 +514,7 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-2xx response" in {
       val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
             .withHeader("Accept", equalTo("application/json"))
@@ -616,7 +616,7 @@ class IdmsConnectorSpec
       val clientId2 = "test-client-id-2"
       val context = Seq("environmentName" -> Primary, "clientId" -> clientId1)
 
-      forAll(nonSuccessResponses) { (status: Int) =>
+      forAll(nonSuccessResponses) { status: Int =>
         stubFor(
           delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
             .willReturn(
@@ -712,7 +712,7 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
   val testSecret: Secret = Secret("test-secret")
   val testClient: Client = Client("test-name", "test-description")
   val testClientResponse: ClientResponse = ClientResponse(testClientId, testSecret.secret)
-  val environmentNames: TableFor1[WithName & EnvironmentName] = Table(
+  val environmentNames: TableFor1[WithName with EnvironmentName] = Table(
     "environment",
     Primary,
     Secondary
