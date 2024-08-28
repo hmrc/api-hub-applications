@@ -2,7 +2,7 @@ import play.sbt.routes.RoutesKeys
 import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "3.4.2"
 
 lazy val microservice = Project("api-hub-applications", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
@@ -21,14 +21,16 @@ lazy val microservice = Project("api-hub-applications", file("."))
     )
   )
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(CodeCoverageSettings.settings: _*)
+  .settings(CodeCoverageSettings.settings*)
   .settings(
     Test / unmanagedSourceDirectories += baseDirectory.value / "test-common"
   )
   .settings(scalacOptions ++= Seq("-deprecation", "-feature"))
+  .settings(scalacOptions := scalacOptions.value.diff(Seq("-Wunused:all")))
 
 lazy val it = (project in file("it"))
   .enablePlugins(PlayScala)
   .dependsOn(microservice % "test->test")
   .settings(DefaultBuildSettings.itSettings())
   .settings(libraryDependencies ++= AppDependencies.it)
+  .settings(scalacOptions := scalacOptions.value.diff(Seq("-Wunused:all")))

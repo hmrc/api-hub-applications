@@ -28,10 +28,21 @@ object MongoIdentifier {
 
   private def writesDataWithId[T](implicit formatT: Format[T]): Writes[T] = {
     formatT.transform(
-      json => json.transform(
-        JsPath.json.update((JsPath \ "_id" \ "$oid").json.copyFrom((JsPath \ "id").json.pick))
-          andThen (JsPath \ "id").json.prune
-      ).get
+      json => {
+        // We suspect there is a bug in the Mongo libraries somewhere.
+        // The write transform is being called twice so we need to add a check
+        // to see if we've already transformed or not. If it looks
+        // transformed then just return the Json else transform it.
+        if ((json \ "_id").isDefined) {
+          json
+        }
+        else {
+          json.transform(
+            JsPath.json.update((JsPath \ "_id" \ "$oid").json.copyFrom((JsPath \ "id").json.pick))
+              andThen (JsPath \ "id").json.prune
+          ).get
+        }
+      }
     )
   }
 

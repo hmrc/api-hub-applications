@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{never, times, verify, verifyNoMoreInteractions, when}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Rejected}
@@ -34,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time._
 import scala.concurrent.Future
 
-class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar with TableDrivenPropertyChecks {
+class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with TableDrivenPropertyChecks {
 
   import ApplicationsCredentialsServiceSpec._
 

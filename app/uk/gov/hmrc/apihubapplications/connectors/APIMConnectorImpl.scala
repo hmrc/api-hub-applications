@@ -21,6 +21,9 @@ import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import play.api.http.Status._
 import play.api.libs.json.{JsPath, Json, JsonValidationError}
+import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
+import play.api.libs.ws.WSBodyWritables.bodyWritableOf_Multipart
 import play.api.mvc.MultipartFormData.DataPart
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
@@ -66,7 +69,7 @@ class APIMConnectorImpl @Inject()(
     val context = Seq("metadata" -> Json.prettyPrint(metadata))
 
     httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
-      .setHeader(headersForEnvironment(Secondary): _*)
+      .setHeader(headersForEnvironment(Secondary)*)
       .withProxyIfRequired(Secondary, useProxyForSecondary)
       .setHeader("Accept" -> "application/json")
       .withBody(
@@ -98,7 +101,7 @@ class APIMConnectorImpl @Inject()(
     val context = Seq("publisherReference" -> publisherReference, "metadata" -> Json.prettyPrint(metadata))
 
     httpClient.put(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
-      .setHeader(headersForEnvironment(Secondary): _*)
+      .setHeader(headersForEnvironment(Secondary)*)
       .withProxyIfRequired(Secondary, useProxyForSecondary)
       .setHeader("Accept" -> "application/json")
       .withBody(
@@ -164,7 +167,7 @@ class APIMConnectorImpl @Inject()(
     val context = Seq("publisherReference" -> publisherReference, "environment" -> environment)
 
     httpClient.get(url)
-      .setHeader(headersForEnvironment(environment): _*)
+      .setHeader(headersForEnvironment(environment)*)
       .withProxyIfRequired(environment, useProxyForSecondary)
       .execute[Either[UpstreamErrorResponse, SuccessfulDeploymentResponse]]
       .map {

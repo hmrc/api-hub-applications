@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
@@ -38,7 +40,6 @@ class DeploymentsServiceSpec
   extends AsyncFreeSpec
     with Matchers
     with MockitoSugar
-    with ArgumentMatchersSugar
     with TableDrivenPropertyChecks
     with ApiDetailGenerators
     with EitherValues {
@@ -229,7 +230,7 @@ class DeploymentsServiceSpec
         actual =>
           actual mustBe Right(())
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
+          verify(fixture.emailConnector, times(0)).sendApiOwnershipChangedEmailToOldTeamMembers(any, any, any)(any)
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)
           succeed
       }
@@ -268,8 +269,8 @@ class DeploymentsServiceSpec
         actual =>
           actual mustBe Left(apiNotFoundException)
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any,any,any)(any))
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(any,any)(any))
+          verify(fixture.emailConnector, times(0)).sendApiOwnershipChangedEmailToOldTeamMembers(any,any,any)(any)
+          verify(fixture.emailConnector, times(0)).sendApiOwnershipChangedEmailToNewTeamMembers(any,any)(any)
           succeed
       }
     }
@@ -284,8 +285,8 @@ class DeploymentsServiceSpec
         actual =>
           actual mustBe Left(apiNotFoundException)
           verify(fixture.integrationCatalogueConnector).findById(eqTo("apiId"))(any)
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(any,any,any)(any))
-          verifyZeroInteractions(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(any,any)(any))
+          verify(fixture.emailConnector, times(0)).sendApiOwnershipChangedEmailToOldTeamMembers(any,any,any)(any)
+          verify(fixture.emailConnector, times(0)).sendApiOwnershipChangedEmailToNewTeamMembers(any,any)(any)
           succeed
       }
     }

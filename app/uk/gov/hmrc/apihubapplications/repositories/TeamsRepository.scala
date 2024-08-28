@@ -19,6 +19,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.name.Named
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.ErrorCategory
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.{Collation, CollationStrength, Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
 import play.api.Logging

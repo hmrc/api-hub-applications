@@ -55,7 +55,7 @@ class ApplicationsRepositoryIntegrationSpec
     playApplication.injector.instanceOf[ExecutionContext]
   }
 
-  override protected lazy val repository: ApplicationsRepository = {
+  override protected val repository: ApplicationsRepository = {
     playApplication.injector.instanceOf[ApplicationsRepository]
   }
 

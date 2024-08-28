@@ -17,12 +17,14 @@
 package uk.gov.hmrc.apihubapplications.controllers
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.{ArgumentMatchers, MockitoSugar}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{never, verify, when}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -61,7 +63,7 @@ class AccessRequestsControllerSpec
           val result = route(fixture.application, request).value
 
           status(result) mustBe CREATED
-          verify(fixture.accessRequestsService).createAccessRequest(ArgumentMatchers.eq(accessRequestRequest))(any())
+          verify(fixture.accessRequestsService).createAccessRequest(eqTo(accessRequestRequest))(any())
         }
       }
     }
@@ -102,7 +104,7 @@ class AccessRequestsControllerSpec
 
           status(result) mustBe OK
           contentAsJson(result) mustBe Json.toJson(expected)
-          verify(fixture.accessRequestsService).getAccessRequests(ArgumentMatchers.eq(applicationIdFilter), ArgumentMatchers.eq(statusFilter))
+          verify(fixture.accessRequestsService).getAccessRequests(eqTo(applicationIdFilter), eqTo(statusFilter))
         }
       }
     }
@@ -121,7 +123,7 @@ class AccessRequestsControllerSpec
 
         status(result) mustBe OK
         contentAsJson(result) mustBe Json.toJson(accessRequest)
-        verify(fixture.accessRequestsService).getAccessRequest(ArgumentMatchers.eq(accessRequest.id.value))
+        verify(fixture.accessRequestsService).getAccessRequest(eqTo(accessRequest.id.value))
       }
     }
 
@@ -154,7 +156,7 @@ class AccessRequestsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.accessRequestsService).approveAccessRequest(ArgumentMatchers.eq(id), ArgumentMatchers.eq(decisionRequest))(any())
+        verify(fixture.accessRequestsService).approveAccessRequest(eqTo(id), eqTo(decisionRequest))(any())
       }
     }
 
@@ -238,7 +240,7 @@ class AccessRequestsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.accessRequestsService).rejectAccessRequest(ArgumentMatchers.eq(id), ArgumentMatchers.eq(decisionRequest))(any())
+        verify(fixture.accessRequestsService).rejectAccessRequest(eqTo(id), eqTo(decisionRequest))(any())
       }
     }
 

@@ -19,6 +19,7 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.client.model.IndexOptions
 import org.mongodb.scala.model.{Filters, IndexModel, Indexes, ReplaceOptions}
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus, Pending}

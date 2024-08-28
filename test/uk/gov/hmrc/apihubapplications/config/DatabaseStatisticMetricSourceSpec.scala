@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.apihubapplications.config
 
-import org.mockito.MockitoSugar
+import org.mockito.Mockito.when
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.config.DatabaseStatisticsMetricOrchestratorProvider.DatabaseStatisticsMetricSource
 import uk.gov.hmrc.apihubapplications.repositories.{AccessRequestsRepository, ApplicationsRepository}
 
@@ -31,8 +32,8 @@ class DatabaseStatisticMetricSourceSpec extends AsyncFreeSpec with Matchers with
       val applicationsRepository = mock[ApplicationsRepository]
       val accessRequestsRepository = mock[AccessRequestsRepository]
 
-      when(applicationsRepository.countOfAllApplications()).thenReturn(Future.successful(42))
-      when(accessRequestsRepository.countOfPendingApprovals()).thenReturn(Future.successful(13))
+      when(applicationsRepository.countOfAllApplications()).thenReturn(Future.successful(42L))
+      when(accessRequestsRepository.countOfPendingApprovals()).thenReturn(Future.successful(13L))
 
       val metricSource = new DatabaseStatisticsMetricSource(applicationsRepository, accessRequestsRepository)
 
