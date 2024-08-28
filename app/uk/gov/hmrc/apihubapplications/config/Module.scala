@@ -29,7 +29,7 @@ import scala.collection.immutable.Seq
 
 class Module extends play.api.inject.Module {
 
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = {
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] = {
     val bindings = Seq(
       bindz(classOf[AppConfig]).toSelf.eagerly(),
       bindz(classOf[Clock]).toInstance(Clock.systemUTC()),
@@ -46,7 +46,7 @@ class Module extends play.api.inject.Module {
       bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly()
     )
 
-    val authTokenInitialiserBindings: Seq[Binding[_]] = if (configuration.get[Boolean]("create-internal-auth-token-on-start")) {
+    val authTokenInitialiserBindings: Seq[Binding[?]] = if (configuration.get[Boolean]("create-internal-auth-token-on-start")) {
       Seq(bindz(classOf[InternalAuthTokenInitialiser]).to(classOf[InternalAuthTokenInitialiserImpl]).eagerly())
     } else {
       Seq(bindz(classOf[InternalAuthTokenInitialiser]).to(classOf[NoOpInternalAuthTokenInitialiser]).eagerly())

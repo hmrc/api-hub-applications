@@ -22,6 +22,7 @@ import play.api.http.HeaderNames._
 import play.api.http.MimeTypes.JSON
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}

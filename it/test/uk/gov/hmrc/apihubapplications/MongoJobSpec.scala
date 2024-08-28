@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import org.mockito.Mockito.verifyNoInteractions
-import org.mockito.MockitoSugar
-import org.mockito.MockitoSugar.mock
+import org.mockito.Mockito.{verify, verifyNoInteractions}
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.running
@@ -60,7 +59,7 @@ class MongoJobSpec
   }
 }
 
-object MongoJobSpec {
+object MongoJobSpec extends MockitoSugar {
 
   case class Fixture(application: PlayApplication,
                      applicationsRepository: ApplicationsRepository)

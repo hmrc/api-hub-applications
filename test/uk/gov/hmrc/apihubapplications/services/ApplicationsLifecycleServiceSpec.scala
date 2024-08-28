@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.captor.ArgCaptor
-import org.mockito.{ArgumentCaptor, ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{never, times, verify, verifyNoMoreInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved}
@@ -35,7 +37,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar with EitherValues {
+class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with EitherValues {
 
   import ApplicationsLifecycleServiceSpec._
 
@@ -114,7 +116,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
-          verifyZeroInteractions(repository.insert(any))
+          verify(repository, times(0)).insert(any)
           succeed
       }
     }
@@ -139,7 +141,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
-          verifyZeroInteractions(repository.insert(any))
+          verify(repository, times(0)).insert(any)
           succeed
       }
     }
@@ -184,9 +186,9 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
-          val captor = ArgCaptor[Application]
+          val captor = ArgumentCaptor.forClass(classOf[Application])
           verify(repository).insert(captor.capture)
-          captor.value.teamMembers mustBe expected.teamMembers
+          captor.getValue.teamMembers mustBe expected.teamMembers
           succeed
       }
     }

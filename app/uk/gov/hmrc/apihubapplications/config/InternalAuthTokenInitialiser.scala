@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.config
 
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.{ConfigLoader, Configuration, Logging}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2

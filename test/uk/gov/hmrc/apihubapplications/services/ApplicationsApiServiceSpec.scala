@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{never, verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -34,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with ArgumentMatchersSugar with EitherValues {
+class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with EitherValues {
 
   import ApplicationsApiServiceSpec._
 
@@ -304,8 +306,8 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.scopeFixer)
-          verifyZeroInteractions(fixture.accessRequestsService)
+          verifyNoInteractions(fixture.scopeFixer)
+          verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(ApplicationNotFoundException.forId(applicationId))
       }
@@ -319,8 +321,8 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.scopeFixer)
-          verifyZeroInteractions(fixture.accessRequestsService)
+          verifyNoInteractions(fixture.scopeFixer)
+          verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(ApiNotFoundException.forApplication(applicationId, apiId))
       }
@@ -338,7 +340,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.accessRequestsService)
+          verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(expected)
       }
@@ -393,7 +395,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.accessRequestsService)
+          verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(ApplicationNotFoundException.forId(applicationId))
       }
@@ -408,7 +410,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.accessRequestsService)
+          verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(TeamNotFoundException.forId(teamId))
       }
@@ -425,7 +427,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
-          verifyZeroInteractions(fixture.accessRequestsService)
+          verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
           result mustBe Left(expected)
       }
