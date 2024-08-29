@@ -18,14 +18,14 @@ package uk.gov.hmrc.apihubapplications
 
 import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters
-import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.{EitherValues, OptionValues}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationDataIssueException, ApplicationNotFoundException, DuplicateName, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
@@ -40,7 +40,8 @@ class ApplicationsRepositoryIntegrationSpec
   with Matchers
   with DefaultPlayMongoRepositorySupport[SensitiveApplication]
   with OptionValues
-  with MdcTesting {
+  with MdcTesting
+  with EitherValues {
 
   private lazy val playApplication = {
     new GuiceApplicationBuilder()
@@ -68,18 +69,63 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application = Application(None, "test-app1", Creator("test1@test.com"), now, Seq.empty, Environments())
 
       val result = repository
         .insert(application)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data.id mustBe defined
+      result.data.value.id mustBe defined
       result.mdcData mustBe testMdcData
 
-      val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue.toModel
-      persisted mustEqual result.data
+      val persisted = find(Filters.equal("_id", new ObjectId(result.data.value.id.value))).futureValue.head.decryptedValue.toModel
+      persisted mustEqual result.data.value
+    }
+
+    "must not persist an application in MongoDb if its name matches an existing non-deleted application" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val appName = "test-app"
+      val existingApplication = Application(None, appName, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val newApplication = Application(None, appName, Creator("test2@test.com"), now, Seq.empty, Environments())
+
+      val result1 = repository
+        .insert(existingApplication)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      val result2 = repository
+        .insert(newApplication)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result1.data.value.id mustBe defined
+      result2.data.left.value mustBe ApplicationDataIssueException.forApplication(newApplication, DuplicateName)
+    }
+
+    "must successfully persist an application in MongoDb if its name matches an existing deleted application" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val appName = "test-app"
+      val existingApplication = Application(None, appName, Creator("test1@test.com"), now, Seq.empty, Environments())
+            .copy(deleted = Some(Deleted(LocalDateTime.now(clock), "delete@example.com")))
+      val newApplication = Application(None, appName, Creator("test2@test.com"), now, Seq.empty, Environments())
+
+      val result1 = repository
+        .insert(existingApplication)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      val result2 = repository
+        .insert(newApplication)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result1.data.value.id mustBe defined
+      result2.data.value.id mustBe defined
     }
   }
 
@@ -323,7 +369,7 @@ class ApplicationsRepositoryIntegrationSpec
       val expected = repository.insert(application).futureValue
 
       val result = repository
-        .findById(expected.id.value, false)
+        .findById(expected.value.id.value, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -338,11 +384,11 @@ class ApplicationsRepositoryIntegrationSpec
       val expected = repository.insert(application).futureValue
 
       val result = repository
-        .findById(expected.id.get, false)
+        .findById(expected.value.id.get, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data mustBe Left(ApplicationNotFoundException.forId(expected.id.get))
+      result.data mustBe Left(ApplicationNotFoundException.forId(expected.value.id.get))
       result.mdcData mustBe testMdcData
     }
 
@@ -355,7 +401,7 @@ class ApplicationsRepositoryIntegrationSpec
       val expected = repository.insert(application).futureValue
 
       val result = repository
-        .findById(expected.id.value, true)
+        .findById(expected.value.id.value, true)
         .map(ResultWithMdcData(_))
         .futureValue
 
@@ -400,7 +446,7 @@ class ApplicationsRepositoryIntegrationSpec
       val application = Application(None, "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com"))).copy(apis = Seq(api))
 
       val saved = repository.insert(application).futureValue
-      val updated = saved.copy(name = "test-app-updated")
+      val updated = saved.value.copy(name = "test-app-updated")
 
       val result = repository
         .update(updated)
@@ -438,15 +484,15 @@ class ApplicationsRepositoryIntegrationSpec
       val saved = repository.insert(application).futureValue
 
       val result = repository
-        .delete(saved.safeId)
+        .delete(saved.value.safeId)
         .map(ResultWithMdcData(_))
         .futureValue
 
       result.data mustBe Right(())
       result.mdcData mustBe testMdcData
 
-      val actual = repository.findById(saved.safeId, false).futureValue
-      actual mustBe Left(ApplicationNotFoundException.forId(saved.safeId))
+      val actual = repository.findById(saved.value.safeId, false).futureValue
+      actual mustBe Left(ApplicationNotFoundException.forId(saved.value.safeId))
     }
 
     "must return NotUpdatedException when the application does not exist in the database" in {

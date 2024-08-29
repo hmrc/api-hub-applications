@@ -25,6 +25,7 @@ sealed trait DataIssue
 case object InvalidPrimaryCredentials extends WithName("Invalid primary credentials") with DataIssue
 case object InvalidSecondaryCredentials extends WithName("Invalid secondary credentials") with DataIssue
 case object InvalidPrimaryScope extends WithName("Invalid primary scope") with DataIssue
+case object DuplicateName extends WithName("Duplicate application name") with DataIssue
 
 case class ApplicationDataIssueException(
   applicationId: String,

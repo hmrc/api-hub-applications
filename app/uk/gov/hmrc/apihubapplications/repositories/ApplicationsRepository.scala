@@ -17,16 +17,18 @@
 package uk.gov.hmrc.apihubapplications.repositories
 
 import com.google.inject.{Inject, Singleton}
+import com.mongodb.ErrorCategory
 import org.mongodb.scala.bson.Document
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model._
-import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
+import org.mongodb.scala.model.*
+import org.mongodb.scala.{MongoWriteException, ObservableFuture, SingleObservableFuture}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, DuplicateName, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
-import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.isDuplicateKey
+import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.*
+import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.*
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
@@ -50,6 +52,7 @@ class ApplicationsRepository @Inject()(
       IndexModel(Indexes.ascending("teamMembers.email")),
       IndexModel(Indexes.ascending("apis.id")),
       IndexModel(Indexes.ascending("teamId")),
+      IndexModel(Indexes.ascending("name"), IndexOptions().unique(true).partialFilterExpression(Filters.equal("deleted", null))),
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -130,7 +133,7 @@ class ApplicationsRepository @Inject()(
     }
   }
 
-  def insert(application: Application): Future[Application] = {
+  def insert(application: Application): Future[Either[ApplicationsException, Application]] = {
     Mdc.preservingMdc {
       collection
         .insertOne(
@@ -138,10 +141,13 @@ class ApplicationsRepository @Inject()(
         )
         .toFuture()
     } map (
-      result => application.copy(
+      result => Right(application.copy(
         id = Some(result.getInsertedId.asObjectId().getValue.toString)
-      )
-    )
+      ))
+    ) recoverWith {
+      case e: MongoWriteException if isDuplicateKey(e) =>
+        Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, DuplicateName)))
+    }
   }
 
   def update(application: Application): Future[Either[ApplicationsException, Unit]] = {
@@ -163,7 +169,10 @@ class ApplicationsRepository @Inject()(
             else {
               Left(raiseNotUpdatedException.forApplication(application))
             }
-        )
+        ) recoverWith {
+          case e: MongoWriteException if isDuplicateKey(e) =>
+            Future.successful(Left(raiseApplicationDataIssueException.forApplication(application, DuplicateName)))
+        }
       case None => Future.successful(Left(raiseApplicationNotFoundException.forApplication(application)))
     }
   }
@@ -200,4 +209,10 @@ class ApplicationsRepository @Inject()(
     collection.listIndexes().toFuture()
   }
 
+}
+
+object ApplicationsRepository {
+  private def isDuplicateKey(e: MongoWriteException): Boolean = {
+    ErrorCategory.fromErrorCode(e.getCode) == ErrorCategory.DUPLICATE_KEY
+  }
 }
