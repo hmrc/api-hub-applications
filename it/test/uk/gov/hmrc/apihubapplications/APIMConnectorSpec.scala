@@ -416,6 +416,24 @@ class APIMConnectorSpec
       )
     }
 
+    "must correctly handle missing egressPrefix and prefixesToRemove values" in {
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("Accept", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(detailsResponseWithMissingValues).toString())
+          )
+      )
+
+      buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier()).map(
+        actual => {
+          actual.value mustBe detailsResponseWithMissingValues.toDeploymentDetails
+        }
+      )
+    }
+
     "must return ServiceNotFound when APIM returns a 404 Not Found" in {
       stubFor(
         get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
@@ -637,8 +655,18 @@ object APIMConnectorSpec {
     domain = "test-domain",
     subdomain = "test-sub-domain",
     backends = Seq("test-backend-1", "test-backend-2"),
-    egressPrefix = "test-egress-prefix",
-    prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
+    egressPrefix = Some("test-egress-prefix"),
+    prefixesToRemove = Some(Seq("test-prefix-1", "test-prefix-2"))
+  )
+ 
+  private val detailsResponseWithMissingValues = DetailsResponse(
+    description = "Keying Service API",
+    status = "ALPHA",
+    domain = "8",
+    subdomain = "8.16",
+    backends = Seq("EMS"),
+    egressPrefix = None,
+    prefixesToRemove = None
   )
 
 }
