@@ -26,7 +26,7 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, DuplicateName, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.isDuplicateKey
+import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository.{caseInsensitiveCollation, isDuplicateKey}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.*
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.*
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
@@ -52,7 +52,10 @@ class ApplicationsRepository @Inject()(
       IndexModel(Indexes.ascending("teamMembers.email")),
       IndexModel(Indexes.ascending("apis.id")),
       IndexModel(Indexes.ascending("teamId")),
-      IndexModel(Indexes.ascending("name"), IndexOptions().unique(true).partialFilterExpression(Filters.equal("deleted", null))),
+      IndexModel(Indexes.ascending("name"), IndexOptions()
+        .unique(true)
+        .collation(caseInsensitiveCollation)
+        .partialFilterExpression(Filters.equal("deleted", null))),
     ),
     extraCodecs = Seq(
       // Sensitive string codec so we can operate on individual string fields
@@ -212,6 +215,11 @@ class ApplicationsRepository @Inject()(
 }
 
 object ApplicationsRepository {
+  private val caseInsensitiveCollation: Collation = Collation.builder()
+    .locale("en")
+    .collationStrength(CollationStrength.PRIMARY)
+    .build()
+
   private def isDuplicateKey(e: MongoWriteException): Boolean = {
     ErrorCategory.fromErrorCode(e.getCode) == ErrorCategory.DUPLICATE_KEY
   }

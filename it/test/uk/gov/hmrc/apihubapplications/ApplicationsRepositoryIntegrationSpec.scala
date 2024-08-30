@@ -83,13 +83,13 @@ class ApplicationsRepositoryIntegrationSpec
       persisted mustEqual result.data.value
     }
 
-    "must not persist an application in MongoDb if its name matches an existing non-deleted application" in {
+    "must not persist an application in MongoDb if its name matches an existing non-deleted application ignoring case" in {
       setMdcData()
 
       val now = LocalDateTime.now()
       val appName = "test-app"
-      val existingApplication = Application(None, appName, Creator("test1@test.com"), now, Seq.empty, Environments())
-      val newApplication = Application(None, appName, Creator("test2@test.com"), now, Seq.empty, Environments())
+      val existingApplication = Application(None, appName.toLowerCase, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val newApplication = Application(None, appName.toUpperCase, Creator("test2@test.com"), now, Seq.empty, Environments())
 
       val result1 = repository
         .insert(existingApplication)
