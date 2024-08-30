@@ -131,7 +131,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       service.findAll(Some("test-email-1"), false) map {
         actual =>
           actual mustBe applications
-          verify(repository).findAll(eqTo(Some("test-email-1")), eqTo(Seq.empty),  eqTo(false))
+          verify(repository).findAll(eqTo(Some("test-email-1")), eqTo(Seq.empty), eqTo(false))
           succeed
       }
     }
@@ -155,7 +155,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         actual =>
           actual mustBe applications
           verify(teamsService).findAll(eqTo(Some("test-email-1")))
-          verify(repository).findAll(eqTo(Some("test-email-1")), eqTo(Seq(team)),  eqTo(false))
+          verify(repository).findAll(eqTo(Some("test-email-1")), eqTo(Seq(team)), eqTo(false))
           succeed
       }
     }
@@ -456,35 +456,232 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
           succeed
       }
     }
+  }
 
-    "addTeam" - {
-      "must set team members and team name on the application" in {
-        val fixture = buildFixture
-        import fixture._
 
-        val id = "test-id"
-        val teamId = "team-id"
-        val teamName = "team-name"
-        val teamMembers = Seq(TeamMember("test-email"))
 
-        val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-          .setTeamId(teamId)
+  "findByTeamId" - {
+    "must return applications when linked to a team" in {
+      val fixture = buildFixture
+      import fixture._
 
-        val team = Team(
-            id = Some(teamId),
-            name = teamName,
-            created = LocalDateTime.now(),
-            teamMembers = teamMembers,
-          )
+      val id = "test-id"
+      val teamId = "team-id"
+      val team = Team(
+        id = Some(teamId),
+        name = "test-team-name",
+        created = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember("test-email"))
+      )
+      val primaryClientId = "test-primary-client-id"
+      val secondaryClientId = "test-secondary-client-id"
+      val secondaryClientSecret = "test-secondary-secret-1234"
+      val scope1 = "test-scope-1"
+      val scope2 = "test-scope-2"
+      val scope3 = "test-scope-3"
+      val scope4 = "test-scope-4"
 
-        when(teamsService.findById(eqTo(teamId)))
-          .thenReturn(Future.successful(Right(team)))
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+        .setPrimaryCredentials(Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None)))
+        .setTeamId(teamId)
 
-        service.asInstanceOf[ApplicationsSearchServiceImpl].addTeam(application).map {
-          result =>
-            result mustBe  application.setTeamMembers(teamMembers).setTeamName(teamName)
-            succeed
-        }
+      when(repository.findByTeamId(teamId, true))
+        .thenReturn(Future.successful(Right(Seq(application))))
+
+      when(teamsService.findById(teamId))
+        .thenReturn(Future.successful(Right(team)))
+
+      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(secondaryClientId))(any))
+        .thenReturn(Future.successful(Right(ClientResponse(secondaryClientId, secondaryClientSecret))))
+      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(secondaryClientId))(any))
+        .thenReturn(Future.successful(Right(Seq(ClientScope(scope1), ClientScope(scope2)))))
+      when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(primaryClientId))(any))
+        .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
+
+      val expected = application
+        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"))))
+        .setSecondaryScopes(Seq(Scope(scope1), Scope(scope2)))
+        .setPrimaryScopes(Seq(Scope(scope3), Scope(scope4)))
+        .setTeamName(team.name)
+        .setTeamMembers(team.teamMembers)
+
+      service.findByTeamId(teamId, enrich = true, includeDeleted = true)(HeaderCarrier()).map {
+        result =>
+          result mustBe Right(Seq(expected))
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application does not exist" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+
+      when(repository.findByTeamId(eqTo(id), any))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forTeamId(id))))
+
+      service.findByTeamId(id, enrich = true, includeDeleted = true)(HeaderCarrier()).map(
+        result =>
+          result mustBe Left(ApplicationNotFoundException.forTeamId(id))
+      )
+    }
+
+    "must return an issue when the team does not exist" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val teamId = "test-team-id"
+
+      val id = "test-id"
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Some(teamId), Seq.empty, clock)
+
+      when(repository.findByTeamId(eqTo(teamId), any))
+        .thenReturn(Future.successful(Right(Seq(application))))
+
+      when(teamsService.findById(teamId))
+        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(teamId))))
+
+      service.findByTeamId(teamId, false, true)(HeaderCarrier()).map(
+        actual =>
+          actual.value.flatMap(_.issues) mustBe Seq(Issues.teamNotFound(teamId, TeamNotFoundException.forId(teamId)))
+      )
+    }
+
+    "must not return IdmsException when that is returned from the IDMS connector and return issues instead" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+      val teamId = "test-team-id"
+      val team = Team(
+        id = Some(teamId),
+        name = "test-team-name",
+        created = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember("test-email"))
+      )
+      val clientId = "test-client-id"
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+        .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setTeamId(teamId)
+        .setTeamName(team.name)
+        .setTeamMembers(team.teamMembers)
+
+      val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
+
+      when(repository.findByTeamId(eqTo(teamId), any))
+        .thenReturn(Future.successful(Right(Seq(application))))
+
+      when(teamsService.findById(teamId))
+        .thenReturn(Future.successful(Right(team)))
+
+      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(clientId))(any))
+        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
+      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(clientId))(any))
+        .thenReturn(Future.successful(Right(Seq.empty)))
+
+      service.findByTeamId(teamId, enrich = true, includeDeleted = true)(HeaderCarrier()).map {
+        result => result mustBe Right(Seq(application1WithIssues))
+      }
+    }
+
+    "must not enrich with IDMS data unless asked to" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+      val teamId = "test-team-id"
+      val team = Team(
+        id = Some(teamId),
+        name = "test-team-name",
+        created = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember("test-email"))
+      )
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
+        .setTeamMembers(team.teamMembers)
+        .setTeamName(team.name)
+        .setTeamId(teamId)
+
+      when(repository.findByTeamId(eqTo(teamId), any))
+        .thenReturn(Future.successful(Right(Seq(application))))
+
+      when(teamsService.findById(teamId))
+        .thenReturn(Future.successful(Right(team)))
+
+      service.findByTeamId(teamId, enrich = false, includeDeleted = true)(HeaderCarrier()).map {
+        result =>
+          result mustBe Right(Seq(application))
+          verifyNoInteractions(idmsConnector)
+          succeed
+      }
+    }
+
+    "must not attempt to enrich with IDMS data if the application is deleted" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+      val teamId = "test-team-id"
+      val team = Team(
+        id = Some(teamId),
+        name = "test-team-name",
+        created = LocalDateTime.now(clock),
+        teamMembers = Seq(TeamMember("test-email"))
+      )
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock).copy(deleted = Some(Deleted(LocalDateTime.now(clock), "test-deleted-by")))
+        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
+        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
+        .setTeamMembers(team.teamMembers)
+        .setTeamName(team.name)
+        .setTeamId(teamId)
+
+      when(repository.findByTeamId(eqTo(teamId), any))
+        .thenReturn(Future.successful(Right(Seq(application))))
+
+      when(teamsService.findById(teamId))
+        .thenReturn(Future.successful(Right(team)))
+
+      service.findByTeamId(teamId, true, true)(HeaderCarrier()).map {
+        result =>
+          result mustBe Right(Seq(application))
+          verifyNoInteractions(idmsConnector)
+          succeed
+      }
+    }
+  }
+
+  "addTeam" - {
+    "must set team members and team name on the application" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val id = "test-id"
+      val teamId = "team-id"
+      val teamName = "team-name"
+      val teamMembers = Seq(TeamMember("test-email"))
+
+      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
+        .setTeamId(teamId)
+
+      val team = Team(
+        id = Some(teamId),
+        name = teamName,
+        created = LocalDateTime.now(),
+        teamMembers = teamMembers,
+      )
+
+      when(teamsService.findById(eqTo(teamId)))
+        .thenReturn(Future.successful(Right(team)))
+
+      service.asInstanceOf[ApplicationsSearchServiceImpl].addTeam(application).map {
+        result =>
+          result mustBe application.setTeamMembers(teamMembers).setTeamName(teamName)
+          succeed
       }
     }
   }

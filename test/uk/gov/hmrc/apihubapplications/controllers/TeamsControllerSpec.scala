@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{verify, verifyNoInteractions, when}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
@@ -27,19 +27,20 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import play.api.{Application => PlayApplication}
+import play.api.test.Helpers.*
+import play.api.Application as PlayApplication
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
+import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
-import uk.gov.hmrc.apihubapplications.services.TeamsService
+import uk.gov.hmrc.apihubapplications.services.{ApplicationsService, TeamsService}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
 
 import java.time.{Clock, LocalDateTime}
+import java.util.UUID
 import scala.concurrent.Future
 
 class TeamsControllerSpec
@@ -169,6 +170,41 @@ class TeamsControllerSpec
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.findById(id))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
+  "findTeamApplications" - {
+    "must return 200 Ok and there are applications linked to the team" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val team = team1.setId(id)
+      val application = testApplication.copy(teamId = Some(id))
+
+      when(fixture.applicationsService.findByTeamId(eqTo(id), eqTo(true), eqTo(true))(any))
+        .thenReturn(Future.successful(Right(Seq(application))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.findTeamApplications(id, true))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(Seq(application))
+      }
+    }
+
+    "must return 404 Not Found when the Team does not exist" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+
+      when(fixture.applicationsService.findByTeamId(eqTo(id), eqTo(true), eqTo(true))(any))
+        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.findTeamApplications(id, true))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -447,20 +483,22 @@ class TeamsControllerSpec
     }
   }
 
-  private case class Fixture(application: PlayApplication, teamsService: TeamsService)
+  private case class Fixture(application: PlayApplication, teamsService: TeamsService, applicationsService: ApplicationsService)
 
   private def buildFixture(): Fixture = {
     val teamsService = mock[TeamsService]
+    val applicationsService = mock[ApplicationsService]
 
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(stubControllerComponents()),
         bind[TeamsService].toInstance(teamsService),
+        bind[ApplicationsService].toInstance(applicationsService),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .build()
 
-    Fixture(application, teamsService)
+    Fixture(application, teamsService, applicationsService)
   }
 
 }
@@ -476,4 +514,7 @@ object TeamsControllerSpec {
   val team2: Team = Team("test-team-2", LocalDateTime.now(), Seq(teamMember3, teamMember4))
   val team3: Team = Team("test-team-3", LocalDateTime.now(), Seq(teamMember1))
 
+  val testCreator: Creator = Creator("test@email.com")
+  val testApplication: Application =
+    Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator, Seq(TeamMember(testCreator.email)))
 }

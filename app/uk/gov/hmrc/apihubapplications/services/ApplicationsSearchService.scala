@@ -19,11 +19,11 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Issues}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
+import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, Helpers}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,6 +47,8 @@ trait ApplicationsSearchService {
   }
 
   def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
+
+  def findByTeamId(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]]
 
 }
 
@@ -100,6 +102,30 @@ class ApplicationsSearchServiceImpl @Inject()(
       case Left(e) => Future.successful(Left(e))
     }
   }
+
+  override def findByTeamId(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]] =
+    repository.findByTeamId(id, includeDeleted).flatMap {
+      case Right(applications) =>
+        Future.sequence(applications.map(application =>
+          if (enrich && application.deleted.isEmpty) {
+            ApplicationEnrichers.process(
+              application,
+              Seq(
+                ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
+                ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
+                ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
+              )
+            )
+          } else {
+            Future.successful(Right(application))
+          })
+        ).map(Helpers.useFirstException)
+        .flatMap {
+            case Right(applications) => addTeams(applications).map(Right(_))
+            case Left(e) => Future.successful(Left(e))
+          }
+      case Left(e) => Future.successful(Left(e))
+    }
 
   private[services] def addTeam(application: Application): Future[Application] = {
     application.teamId match {

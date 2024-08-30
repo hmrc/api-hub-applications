@@ -23,8 +23,8 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
@@ -33,7 +33,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class ApplicationsRepositoryIntegrationSpec
   extends AnyFreeSpec
@@ -388,6 +388,99 @@ class ApplicationsRepositoryIntegrationSpec
         .futureValue
 
       result.data mustBe Left(ApplicationNotFoundException.forId(id))
+      result.mdcData mustBe testMdcData
+    }
+  }
+
+  "findByTeamId" - {
+    val teamId = "team-id"
+    "must return an application when it exists in MongoDb and belongs to the expected team" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+        .copy(teamId = Some(teamId))
+
+      val expected = repository.insert(application).futureValue
+
+      val result = repository
+        .findByTeamId(teamId, false)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Right(Seq(expected))
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return the applications that belong a team" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val applications = Seq(
+        Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+          .copy(teamId = Some(teamId)),
+        Application(None, "test-app2", Creator("test1@test.com"), now, Seq.empty, Environments())
+          .copy(teamId = Some(teamId)),
+      )
+
+      val expected = Future.traverse(applications)(application =>
+        repository.insert(application)
+      ).futureValue
+
+      val result = repository
+        .findByTeamId(teamId, false)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Right(expected)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return ApplicationNotFoundException when the application is soft deleted in MongoDb and includeDeleted is false" in {
+      setMdcData()
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+        .copy(teamId = Some(teamId))
+      val expected = repository.insert(application).futureValue
+
+      val result = repository
+        .findByTeamId(teamId, false)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(ApplicationNotFoundException.forTeamId(teamId))
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return an application when the application is soft deleted in MongoDb and includeDeleted is true" in {
+      setMdcData()
+
+      val now = LocalDateTime.now()
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+        .copy(teamId = Some(teamId))
+
+      val expected = Seq(repository.insert(application).futureValue)
+
+      val result = repository
+        .findByTeamId(teamId, true)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Right(expected)
+      result.mdcData mustBe testMdcData
+    }
+
+    "must return ApplicationNotFoundException when the application does not exist in MongoDb" in {
+      setMdcData()
+
+      val teamId = List.fill(24)("0").mkString
+
+      val result = repository
+        .findByTeamId(teamId, false)
+        .map(ResultWithMdcData(_))
+        .futureValue
+
+      result.data mustBe Left(ApplicationNotFoundException.forTeamId(teamId))
       result.mdcData mustBe testMdcData
     }
   }
