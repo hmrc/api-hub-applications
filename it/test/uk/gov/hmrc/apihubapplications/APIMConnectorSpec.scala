@@ -416,20 +416,66 @@ class APIMConnectorSpec
       )
     }
 
-    "must correctly handle missing egressPrefix and prefixesToRemove values" in {
+    "must correctly handle null egressPrefix and prefixesToRemove values" in {
+      val detailsResponseWithNullValues =
+        """
+          |{
+          |    "description": "Keying Service API",
+          |    "status": "ALPHA",
+          |    "domain": "8",
+          |    "subdomain": "8.16",
+          |    "backends": [
+          |        "EMS"
+          |    ],
+          |    "egressPrefix": null,
+          |    "prefixesToRemove": null
+          |}
+          |""".stripMargin
+
       stubFor(
         get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("Accept", equalTo("application/json"))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(detailsResponseWithMissingValues).toString())
+              .withBody(detailsResponseWithNullValues)
           )
       )
 
       buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier()).map(
         actual => {
-          actual.value mustBe detailsResponseWithMissingValues.toDeploymentDetails
+          actual.value mustBe deploymentDetailsWithoutEgressOrPrefixes
+        }
+      )
+    }
+
+    "must correctly handle missing egressPrefix and prefixesToRemove values" in {
+      val detailsResponseWithMissingValues =
+        """
+          |{
+          |    "description": "Keying Service API",
+          |    "status": "ALPHA",
+          |    "domain": "8",
+          |    "subdomain": "8.16",
+          |    "backends": [
+          |        "EMS"
+          |    ]
+          |}
+          |""".stripMargin
+
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("Accept", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withBody(detailsResponseWithMissingValues)
+          )
+      )
+
+      buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier()).map(
+        actual => {
+          actual.value mustBe deploymentDetailsWithoutEgressOrPrefixes
         }
       )
     }
@@ -658,15 +704,15 @@ object APIMConnectorSpec {
     egressPrefix = Some("test-egress-prefix"),
     prefixesToRemove = Some(Seq("test-prefix-1", "test-prefix-2"))
   )
- 
-  private val detailsResponseWithMissingValues = DetailsResponse(
+
+  private val deploymentDetailsWithoutEgressOrPrefixes = DeploymentDetails(
     description = "Keying Service API",
     status = "ALPHA",
     domain = "8",
-    subdomain = "8.16",
-    backends = Seq("EMS"),
+    subDomain = "8.16",
+    hods = Seq("EMS"),
     egressPrefix = None,
-    prefixesToRemove = None
+    prefixesToRemove = Seq.empty
   )
 
 }
