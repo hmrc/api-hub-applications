@@ -24,8 +24,8 @@ case class DetailsResponse(
   domain: String,
   subdomain: String,
   backends: Seq[String],
-  egressPrefix: String,
-  prefixesToRemove: Seq[String]
+  egressPrefix: Option[String],
+  prefixesToRemove: Option[Seq[String]]
 ) {
 
   def toDeploymentDetails: DeploymentDetails = {
@@ -36,15 +36,19 @@ case class DetailsResponse(
       subDomain = subdomain,
       hods = backends,
       egressPrefix = mapEgressPrefix,
-      prefixesToRemove = prefixesToRemove
+      prefixesToRemove = mapPrefixesToRemove
     )
   }
 
   private def mapEgressPrefix: Option[String] = {
-    egressPrefix.trim match {
-      case s if s.nonEmpty => Some(s)
+    egressPrefix.map(_.trim) match {
+      case Some(s) if s.nonEmpty => Some(s)
       case _ => None
     }
+  }
+
+  private def mapPrefixesToRemove: Seq[String] = {
+    prefixesToRemove.getOrElse(Seq.empty)
   }
 
 }
