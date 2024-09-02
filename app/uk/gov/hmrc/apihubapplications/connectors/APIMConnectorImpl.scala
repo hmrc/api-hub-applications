@@ -181,11 +181,13 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
+    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
     val context = Seq("publisherReference" -> publisherReference)
 
     httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
       .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
       .setHeader("Accept" -> "application/json")
+      .withProxyIfRequired(Secondary, useProxyForSecondary)
       .execute[Either[UpstreamErrorResponse, DetailsResponse]]
       .map {
         case Right(detailsResponse) => Right(detailsResponse.toDeploymentDetails)
