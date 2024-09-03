@@ -29,6 +29,7 @@ PUT        /deployments/:publisherRef/promote                                   
 POST       /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.create()
 GET        /teams                                                                   uk.gov.hmrc.apihubapplications.controllers.TeamsController.findAll(teamMember: Option[String] ?= None)
 GET        /teams/:id                                                               uk.gov.hmrc.apihubapplications.controllers.TeamsController.findById(id: String)
+GET        /teams/:id/applications                                                  uk.gov.hmrc.apihubapplications.controllers.TeamsController.findTeamApplications(id: String, includeDeleted: Boolean ?= false)
 GET        /teams/name/:name                                                        uk.gov.hmrc.apihubapplications.controllers.TeamsController.findByName(name: String)
 POST       /teams/:id/members                                                       uk.gov.hmrc.apihubapplications.controllers.TeamsController.addTeamMember(id: String)
 DELETE     /teams/:id/members/:encryptedEmail                                       uk.gov.hmrc.apihubapplications.controllers.TeamsController.removeTeamMember(id: String, encryptedEmail: String)

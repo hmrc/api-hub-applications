@@ -21,26 +21,22 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.exception.{
-  TeamMemberDoesNotExistException,
-  TeamMemberExistsException,
-  TeamNameNotUniqueException,
-  TeamNotFoundException
-}
+import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, LastTeamMemberException, TeamMemberDoesNotExistException, TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest}
-import uk.gov.hmrc.apihubapplications.services.TeamsService
+import uk.gov.hmrc.apihubapplications.services.{ApplicationsSearchService, TeamsService}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.apihubapplications.models.exception.LastTeamMemberException
 
 @Singleton
 class TeamsController @Inject()(
   cc: ControllerComponents,
   identify: IdentifierAction,
   teamsService: TeamsService,
+  applicationsService: ApplicationsSearchService,
   crypto: ApplicationCrypto
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
@@ -71,6 +67,12 @@ class TeamsController @Inject()(
       case Left(_: TeamNotFoundException) => NotFound
       case Left(e) => throw e
     }
+  }
+
+  def findTeamApplications(id: String, includeDeleted: Boolean): Action[AnyContent] = identify.async {
+    implicit request =>
+      applicationsService.findByTeamId(id, includeDeleted = includeDeleted)
+        .map(applications => Ok(Json.toJson(applications)))
   }
 
   def findByName(name: String): Action[AnyContent] = identify.async {

@@ -40,7 +40,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ApplicationsRepository @Inject()(
   mongoComponent: MongoComponent,
-  @Named("aes") implicit val crypto: Encrypter with Decrypter
+  @Named("aes") implicit val crypto: Encrypter & Decrypter
 )(implicit ec: ExecutionContext)
   extends PlayMongoRepository[SensitiveApplication](
     collectionName = "applications",
@@ -129,6 +129,14 @@ class ApplicationsRepository @Inject()(
       case None => Future.successful(Left(raiseApplicationNotFoundException.forId(id)))
     }
   }
+
+  def findByTeamId(teamId: String, includeDeleted: Boolean): Future[Seq[Application]] =
+    Mdc.preservingMdc {
+      collection
+        .find(Filters.equal("teamId", teamId))
+        .filter(deletedFilter(includeDeleted))
+        .toFuture()
+    } map (_.map(_.decryptedValue.toModel))
 
   def insert(application: Application): Future[Application] = {
     Mdc.preservingMdc {
