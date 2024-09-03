@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
+import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
+import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
+import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, ScopeFixer}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -47,6 +49,7 @@ class ApplicationsApiServiceImpl @Inject()(
   teamsService: TeamsService,
   repository: ApplicationsRepository,
   idmsConnector: IdmsConnector,
+  emailConnector: EmailConnector,
   scopeFixer: ScopeFixer,
   clock: Clock
 )(implicit ec: ExecutionContext) extends ApplicationsApiService with Logging with ExceptionRaising {
@@ -114,15 +117,33 @@ class ApplicationsApiServiceImpl @Inject()(
   }
 
 
-  private def changeOwningTeam(application: Application, teamId: String) = {
+  private def changeOwningTeam(application: Application, teamId: String)(implicit hc: HeaderCarrier) = {
     val updated = application
       .setTeamId(teamId)
       .updated(clock)
 
     teamsService.findById(teamId).flatMap {
-      case Right(_) =>
-        repository.update(updated)
+      case Right(team) =>
+        for {
+          updateResult <- repository.update(updated)
+          _ <- sendNotificationOnOwningTeamChange(application, updated, team)
+        } yield updateResult
       case _ => Future.successful(Left(raiseTeamNotFoundException.forId(teamId)))
     }
   }
+
+  private def sendNotificationOnOwningTeamChange(
+    application: Application,
+    updated: Application,
+    newTeam: Team,
+  )(implicit hc: HeaderCarrier) =
+    (application.teamId, updated.teamId) match {
+      case (Some(oldTeamId), Some(newTeamId)) if oldTeamId != newTeamId =>
+        (for {
+          oldTeam <- EitherT(teamsService.findById(oldTeamId))
+          _ <- EitherT(emailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers(oldTeam, newTeam, application))
+          _ <- EitherT(emailConnector.sendApplicationOwnershipChangedEmailToNewTeamMembers(newTeam, application))
+        } yield ()).value
+      case _ => Future.successful(Right(()))
+    }
 }

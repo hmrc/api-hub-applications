@@ -60,6 +60,8 @@ class EmailConnectorImpl @Inject()(
   private val apiOwnershipChangedToOldTeamTemplateId = getAndValidate("email.apiOwnershipChangedToOldTeamTemplateId")
   private val apiOwnershipChangedToNewTeamTemplateId = getAndValidate("email.apiOwnershipChangedToNewTeamTemplateId")
   private val removeTeamMemberFromTeamTemplateId = getAndValidate("email.removeTeamMemberFromTeamTemplateId")
+  private val applicationOwnershipChangedToOldTeamTemplateId = getAndValidate("email.applicationOwnershipChangedToOldTeamTemplateId")
+  private val applicationOwnershipChangedToNewTeamTemplateId = getAndValidate("email.applicationOwnershipChangedToNewTeamTemplateId")
 
   private def doPost(request: SendEmailRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     httpClient.post(url)
@@ -204,7 +206,7 @@ class EmailConnectorImpl @Inject()(
   }
 
 
-override def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, apiDetail: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+  override def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, apiDetail: ApiDetail)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val request = SendEmailRequest(
       currentTeam.teamMembers.map(_.email),
       apiOwnershipChangedToOldTeamTemplateId,
@@ -232,7 +234,31 @@ override def sendApiOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, new
     )
     doPost(request)
   }
-    
+
+  override def sendApplicationOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val request = SendEmailRequest(
+      currentTeam.teamMembers.map(_.email),
+      applicationOwnershipChangedToOldTeamTemplateId,
+      Map(
+        "teamname" -> newTeam.name,
+        "oldteamname" -> currentTeam.name,
+        "applicationname" -> application.name,
+      )
+    )
+    doPost(request)
+  }
+
+  override def sendApplicationOwnershipChangedEmailToNewTeamMembers(team: Team, application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
+    val request = SendEmailRequest(
+      team.teamMembers.map(_.email),
+      applicationOwnershipChangedToNewTeamTemplateId,
+      Map(
+        "teamname" -> team.name,
+        "applicationname" -> application.name,
+      )
+    )
+    doPost(request)
+  }
 }
 // Elided class from the email api
 // See https://github.com/hmrc/email/blob/main/app/uk/gov/hmrc/email/controllers/model/SendEmailRequest.scala

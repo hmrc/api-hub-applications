@@ -22,7 +22,7 @@ import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
-import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
+import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
@@ -350,6 +350,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
   "changeOwningTeam" - {
     val applicationId = "test-application-id"
     val teamId = "test-team-id"
+    val oldTeamId = "test-old-team-id"
 
     val team = Team("team-name", Seq.empty, clock)
 
@@ -365,11 +366,11 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       environments = Environments()
     )
 
-    "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
+    "must remove scopes, cancel any pending access requests, send emails to both the old and new team and update the application in MongoDb" in {
       val fixture = buildFixture
       import fixture._
 
-      val application = baseApplication.setTeamId(teamId)
+      val application = baseApplication.setTeamId(oldTeamId)
       val updated = application
         .setTeamId(teamId)
         .updated(clock)
@@ -377,11 +378,17 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
+      when(emailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
+        .thenReturn(Future.successful((Right(()))))
+      when(emailConnector.sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any))
+        .thenReturn(Future.successful((Right(()))))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
           verify(repository).update(eqTo(updated))
           verify(teamsService).findById(eqTo(teamId))
+          verify(emailConnector).sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any)
+          verify(emailConnector).sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any)
           result.value mustBe ()
       }
     }
@@ -440,6 +447,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     teamsService: TeamsService,
     repository: ApplicationsRepository,
     idmsConnector: IdmsConnector,
+    emailConnector: EmailConnector,
     scopeFixer: ScopeFixer,
     service: ApplicationsApiService
   )
@@ -450,9 +458,10 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     val teamsService = mock[TeamsService]
     val repository = mock[ApplicationsRepository]
     val idmsConnector = mock[IdmsConnector]
+    val emailConnector = mock[EmailConnector]
     val scopeFixer = mock[ScopeFixer]
-    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, idmsConnector, scopeFixer, clock)
-    Fixture(searchService, accessRequestsService, teamsService, repository, idmsConnector, scopeFixer, service)
+    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, idmsConnector, emailConnector, scopeFixer, clock)
+    Fixture(searchService, accessRequestsService, teamsService, repository, idmsConnector, emailConnector, scopeFixer, service)
   }
 
 }
