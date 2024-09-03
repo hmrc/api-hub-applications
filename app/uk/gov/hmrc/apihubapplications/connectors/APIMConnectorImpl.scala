@@ -185,7 +185,7 @@ class APIMConnectorImpl @Inject()(
     val context = Seq("publisherReference" -> publisherReference)
 
     httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
-      .setHeader("Authorization" -> authorizationForEnvironment(Secondary))
+      .setHeader(headersForEnvironment(Secondary)*)
       .setHeader("Accept" -> "application/json")
       .withProxyIfRequired(Secondary, useProxyForSecondary)
       .execute[Either[UpstreamErrorResponse, DetailsResponse]]
