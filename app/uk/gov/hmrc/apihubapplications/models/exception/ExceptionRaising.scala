@@ -41,9 +41,6 @@ trait ExceptionRaising {
       log(ApplicationNotFoundException.forId(id))
     }
 
-    def forTeamId(teamId: String): ApplicationNotFoundException =
-      log(ApplicationNotFoundException.forTeamId(teamId))
-
     def forApplication(application: Application): ApplicationNotFoundException = {
       log(ApplicationNotFoundException.forApplication(application))
     }

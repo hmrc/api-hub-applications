@@ -487,7 +487,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         .setTeamId(teamId)
 
       when(repository.findByTeamId(teamId, true))
-        .thenReturn(Future.successful(Right(Seq(application))))
+        .thenReturn(Future.successful(Seq(application)))
 
       when(teamsService.findById(teamId))
         .thenReturn(Future.successful(Right(team)))
@@ -500,158 +500,28 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application
-        .setSecondaryCredentials(Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"))))
-        .setSecondaryScopes(Seq(Scope(scope1), Scope(scope2)))
-        .setPrimaryScopes(Seq(Scope(scope3), Scope(scope4)))
+        .setTeamMembers(Seq(TeamMember("test-email")))
         .setTeamName(team.name)
-        .setTeamMembers(team.teamMembers)
 
-      service.findByTeamId(teamId, enrich = true, includeDeleted = true)(HeaderCarrier()).map {
+      service.findByTeamId(teamId, includeDeleted = true)(HeaderCarrier()).map {
         result =>
-          result mustBe Right(Seq(expected))
+          result mustBe Seq(expected)
       }
     }
 
-    "must return ApplicationNotFoundException when the application does not exist" in {
+    "must return an empty result when the application does not exist" in {
       val fixture = buildFixture
       import fixture._
 
       val id = "test-id"
 
       when(repository.findByTeamId(eqTo(id), any))
-        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forTeamId(id))))
+        .thenReturn(Future.successful(Seq.empty[Application]))
 
-      service.findByTeamId(id, enrich = true, includeDeleted = true)(HeaderCarrier()).map(
+      service.findByTeamId(id, includeDeleted = true)(HeaderCarrier()).map(
         result =>
-          result mustBe Left(ApplicationNotFoundException.forTeamId(id))
+          result mustBe Seq.empty[Application]
       )
-    }
-
-    "must return an issue when the team does not exist" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val teamId = "test-team-id"
-
-      val id = "test-id"
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Some(teamId), Seq.empty, clock)
-
-      when(repository.findByTeamId(eqTo(teamId), any))
-        .thenReturn(Future.successful(Right(Seq(application))))
-
-      when(teamsService.findById(teamId))
-        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(teamId))))
-
-      service.findByTeamId(teamId, false, true)(HeaderCarrier()).map(
-        actual =>
-          actual.value.flatMap(_.issues) mustBe Seq(Issues.teamNotFound(teamId, TeamNotFoundException.forId(teamId)))
-      )
-    }
-
-    "must not return IdmsException when that is returned from the IDMS connector and return issues instead" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val id = "test-id"
-      val teamId = "test-team-id"
-      val team = Team(
-        id = Some(teamId),
-        name = "test-team-name",
-        created = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember("test-email"))
-      )
-      val clientId = "test-client-id"
-
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
-        .setTeamId(teamId)
-        .setTeamName(team.name)
-        .setTeamMembers(team.teamMembers)
-
-      val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
-
-      when(repository.findByTeamId(eqTo(teamId), any))
-        .thenReturn(Future.successful(Right(Seq(application))))
-
-      when(teamsService.findById(teamId))
-        .thenReturn(Future.successful(Right(team)))
-
-      when(idmsConnector.fetchClient(eqTo(Secondary), eqTo(clientId))(any))
-        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
-      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(clientId))(any))
-        .thenReturn(Future.successful(Right(Seq.empty)))
-
-      service.findByTeamId(teamId, enrich = true, includeDeleted = true)(HeaderCarrier()).map {
-        result => result mustBe Right(Seq(application1WithIssues))
-      }
-    }
-
-    "must not enrich with IDMS data unless asked to" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val id = "test-id"
-      val teamId = "test-team-id"
-      val team = Team(
-        id = Some(teamId),
-        name = "test-team-name",
-        created = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember("test-email"))
-      )
-
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
-        .setTeamMembers(team.teamMembers)
-        .setTeamName(team.name)
-        .setTeamId(teamId)
-
-      when(repository.findByTeamId(eqTo(teamId), any))
-        .thenReturn(Future.successful(Right(Seq(application))))
-
-      when(teamsService.findById(teamId))
-        .thenReturn(Future.successful(Right(team)))
-
-      service.findByTeamId(teamId, enrich = false, includeDeleted = true)(HeaderCarrier()).map {
-        result =>
-          result mustBe Right(Seq(application))
-          verifyNoInteractions(idmsConnector)
-          succeed
-      }
-    }
-
-    "must not attempt to enrich with IDMS data if the application is deleted" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val id = "test-id"
-      val teamId = "test-team-id"
-      val team = Team(
-        id = Some(teamId),
-        name = "test-team-name",
-        created = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember("test-email"))
-      )
-
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock).copy(deleted = Some(Deleted(LocalDateTime.now(clock), "test-deleted-by")))
-        .setPrimaryCredentials(Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
-        .setTeamMembers(team.teamMembers)
-        .setTeamName(team.name)
-        .setTeamId(teamId)
-
-      when(repository.findByTeamId(eqTo(teamId), any))
-        .thenReturn(Future.successful(Right(Seq(application))))
-
-      when(teamsService.findById(teamId))
-        .thenReturn(Future.successful(Right(team)))
-
-      service.findByTeamId(teamId, true, true)(HeaderCarrier()).map {
-        result =>
-          result mustBe Right(Seq(application))
-          verifyNoInteractions(idmsConnector)
-          succeed
-      }
     }
   }
 

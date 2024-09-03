@@ -130,16 +130,13 @@ class ApplicationsRepository @Inject()(
     }
   }
 
-  def findByTeamId(teamId: String, includeDeleted: Boolean): Future[Either[ApplicationsException, Seq[Application]]] =
+  def findByTeamId(teamId: String, includeDeleted: Boolean): Future[Seq[Application]] =
     Mdc.preservingMdc {
       collection
         .find(Filters.equal("teamId", teamId))
         .filter(deletedFilter(includeDeleted))
         .toFuture()
-    } map (_.map(_.decryptedValue.toModel)  match {
-      case Nil => Left(raiseApplicationNotFoundException.forTeamId(teamId))
-      case applications => Right(applications)
-    })
+    } map (_.map(_.decryptedValue.toModel))
 
   def insert(application: Application): Future[Application] = {
     Mdc.preservingMdc {

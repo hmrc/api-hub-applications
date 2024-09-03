@@ -408,7 +408,7 @@ class ApplicationsRepositoryIntegrationSpec
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data mustBe Right(Seq(expected))
+      result.data mustBe Seq(expected)
       result.mdcData mustBe testMdcData
     }
 
@@ -419,24 +419,27 @@ class ApplicationsRepositoryIntegrationSpec
       val applications = Seq(
         Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
           .copy(teamId = Some(teamId)),
-        Application(None, "test-app2", Creator("test1@test.com"), now, Seq.empty, Environments())
-          .copy(teamId = Some(teamId)),
+        Application(None, "test-app-other-team", Creator("test1@test.com"), now, Seq.empty, Environments())
+          .copy(teamId = Some("other-team")),
+        Application(None, "test-deleted-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+          .copy(teamId = Some("another-team"))
+          .copy(deleted = Some(Deleted(LocalDateTime.now(clock), "test-user")))
       )
 
       val expected = Future.traverse(applications)(application =>
         repository.insert(application)
-      ).futureValue
+      ).futureValue.filter(a => !a.isDeleted && a.teamId.contains(teamId))
 
       val result = repository
         .findByTeamId(teamId, false)
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data mustBe Right(expected)
+      result.data mustBe expected
       result.mdcData mustBe testMdcData
     }
 
-    "must return ApplicationNotFoundException when the application is soft deleted in MongoDb and includeDeleted is false" in {
+    "must return an empty result when the application is soft deleted in MongoDb and includeDeleted is false" in {
       setMdcData()
       val now = LocalDateTime.now()
       val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
@@ -448,7 +451,7 @@ class ApplicationsRepositoryIntegrationSpec
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data mustBe Left(ApplicationNotFoundException.forTeamId(teamId))
+      result.data mustBe Seq.empty[Application]
       result.mdcData mustBe testMdcData
     }
 
@@ -466,11 +469,11 @@ class ApplicationsRepositoryIntegrationSpec
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data mustBe Right(expected)
+      result.data mustBe expected
       result.mdcData mustBe testMdcData
     }
 
-    "must return ApplicationNotFoundException when the application does not exist in MongoDb" in {
+    "must return an empty result when the application does not exist in MongoDb" in {
       setMdcData()
 
       val teamId = List.fill(24)("0").mkString
@@ -480,7 +483,7 @@ class ApplicationsRepositoryIntegrationSpec
         .map(ResultWithMdcData(_))
         .futureValue
 
-      result.data mustBe Left(ApplicationNotFoundException.forTeamId(teamId))
+      result.data mustBe Seq.empty[Application]
       result.mdcData mustBe testMdcData
     }
   }

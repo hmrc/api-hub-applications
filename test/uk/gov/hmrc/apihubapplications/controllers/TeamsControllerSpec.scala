@@ -35,7 +35,7 @@ import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
 import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
-import uk.gov.hmrc.apihubapplications.services.{ApplicationsService, TeamsService}
+import uk.gov.hmrc.apihubapplications.services.{ApplicationsSearchService, TeamsService}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
 
@@ -184,8 +184,8 @@ class TeamsControllerSpec
       val team = team1.setId(id)
       val application = testApplication.copy(teamId = Some(id))
 
-      when(fixture.applicationsService.findByTeamId(eqTo(id), eqTo(true), eqTo(true))(any))
-        .thenReturn(Future.successful(Right(Seq(application))))
+      when(fixture.applicationsService.findByTeamId(eqTo(id), eqTo(true))(any))
+        .thenReturn(Future.successful(Seq(application)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.findTeamApplications(id, true))
@@ -196,18 +196,21 @@ class TeamsControllerSpec
       }
     }
 
-    "must return 404 Not Found when the Team does not exist" in {
+    "must return 200 Ok and there are no applications linked to the team" in {
       val fixture = buildFixture()
       val id = "test-id"
+      val team = team1.setId(id)
+      val application = testApplication.copy(teamId = Some(id))
 
-      when(fixture.applicationsService.findByTeamId(eqTo(id), eqTo(true), eqTo(true))(any))
-        .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+      when(fixture.applicationsService.findByTeamId(eqTo(id), eqTo(true))(any))
+        .thenReturn(Future.successful(Seq.empty[Application]))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.findTeamApplications(id, true))
         val result = route(fixture.application, request).value
 
-        status(result) mustBe NOT_FOUND
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(Seq.empty[Application])
       }
     }
   }
@@ -483,17 +486,17 @@ class TeamsControllerSpec
     }
   }
 
-  private case class Fixture(application: PlayApplication, teamsService: TeamsService, applicationsService: ApplicationsService)
+  private case class Fixture(application: PlayApplication, teamsService: TeamsService, applicationsService: ApplicationsSearchService)
 
   private def buildFixture(): Fixture = {
     val teamsService = mock[TeamsService]
-    val applicationsService = mock[ApplicationsService]
+    val applicationsService = mock[ApplicationsSearchService]
 
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(stubControllerComponents()),
         bind[TeamsService].toInstance(teamsService),
-        bind[ApplicationsService].toInstance(applicationsService),
+        bind[ApplicationsSearchService].toInstance(applicationsService),
         bind[IdentifierAction].to(classOf[FakeIdentifierAction])
       )
       .build()

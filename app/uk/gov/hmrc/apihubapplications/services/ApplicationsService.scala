@@ -84,8 +84,8 @@ class ApplicationsService @Inject()(
     searchService.findById(id, enrich, includeDeleted)
   }
 
-  override def findByTeamId(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]] = {
-    searchService.findByTeamId(id, enrich, includeDeleted)
+  override def findByTeamId(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Seq[Application]] = {
+    searchService.findByTeamId(id, includeDeleted)
   }
 
 }

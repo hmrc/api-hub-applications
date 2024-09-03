@@ -48,7 +48,7 @@ trait ApplicationsSearchService {
 
   def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
 
-  def findByTeamId(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]]
+  def findByTeamId(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Seq[Application]]
 
 }
 
@@ -103,29 +103,9 @@ class ApplicationsSearchServiceImpl @Inject()(
     }
   }
 
-  override def findByTeamId(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Application]]] =
-    repository.findByTeamId(id, includeDeleted).flatMap {
-      case Right(applications) =>
-        Future.sequence(applications.map(application =>
-          if (enrich && application.deleted.isEmpty) {
-            ApplicationEnrichers.process(
-              application,
-              Seq(
-                ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
-                ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
-                ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
-              )
-            )
-          } else {
-            Future.successful(Right(application))
-          })
-        ).map(Helpers.useFirstException)
-        .flatMap {
-            case Right(applications) => addTeams(applications).map(Right(_))
-            case Left(e) => Future.successful(Left(e))
-          }
-      case Left(e) => Future.successful(Left(e))
-    }
+  override def findByTeamId(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Seq[Application]] =
+    repository.findByTeamId(id, includeDeleted)
+      .flatMap(addTeams)
 
   private[services] def addTeam(application: Application): Future[Application] = {
     application.teamId match {

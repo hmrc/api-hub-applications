@@ -26,9 +26,6 @@ object ApplicationNotFoundException {
     ApplicationNotFoundException(s"Cannot find application with id $id")
   }
 
-  def forTeamId(teamId: String): ApplicationNotFoundException =
-    ApplicationNotFoundException(s"Cannot find applications for team with id $teamId")
-
   def forApplication(application: Application): ApplicationNotFoundException = {
     forId(application.id.getOrElse("<none>"))
   }
