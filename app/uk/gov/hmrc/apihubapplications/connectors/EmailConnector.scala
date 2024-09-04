@@ -51,4 +51,8 @@ trait EmailConnector {
 
   def sendRemoveTeamMemberFromTeamEmail(email: String, team: Team)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
 
+  def sendApplicationOwnershipChangedEmailToOldTeamMembers(currentTeam: Team, newTeam: Team, application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+
+  def sendApplicationOwnershipChangedEmailToNewTeamMembers(team: Team, application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]]
+
 }

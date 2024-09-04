@@ -752,6 +752,115 @@ class EmailConnectorSpec
       }
     }
   }
+
+  "EmailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers" - {
+    val teamMemberEmail = "test@hmrc.digital.gov.uk"
+    val oldTeamMemberEmail = "test@hmrc.digital.gov.uk"
+    val testTeamName = "test_team_name"
+    val testOldTeamName = "test_old_team_name"
+    val testApplicationName = application.name
+
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(oldTeamMemberEmail),
+        applicationOwnershipChangedToOldTeamTemplateId,
+        Map(
+          "teamname" -> testTeamName,
+          "oldteamname" -> testOldTeamName,
+          "applicationname" -> testApplicationName,
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      val newTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      val oldTeam = Team(testOldTeamName, LocalDateTime.now(), Seq(TeamMember(oldTeamMemberEmail)))
+      buildConnector(this).sendApplicationOwnershipChangedEmailToOldTeamMembers(oldTeam, newTeam, application)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      val newTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      val oldTeam = Team(testOldTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      buildConnector(this).sendApplicationOwnershipChangedEmailToOldTeamMembers(oldTeam, newTeam, application)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
+
+  "EmailConnector.sendApplicationOwnershipChangedEmailToNewTeamMembers" - {
+    val teamMemberEmail = "test@hmrc.digital.gov.uk"
+    val testTeamName = "test_team_name"
+    val testApplicationName = application.name
+
+    "must place the correct request" in {
+      val request = SendEmailRequest(
+        Seq(teamMemberEmail),
+        applicationOwnershipChangedToNewTeamTemplateId,
+        Map(
+          "teamname" -> testTeamName,
+          "applicationname" -> testApplicationName,
+        )
+      )
+
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .withRequestBody(
+            equalToJson(Json.toJson(request).toString())
+          )
+          .willReturn(
+            aResponse()
+              .withStatus(ACCEPTED)
+          )
+      )
+
+      val newTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      buildConnector(this).sendApplicationOwnershipChangedEmailToNewTeamMembers(newTeam, application)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Right(())
+      }
+    }
+
+    "must handle non-2xx responses" in {
+      stubFor(
+        post(urlEqualTo("/hmrc/email"))
+          .withHeader("Content-Type", equalTo("application/json"))
+          .willReturn(
+            aResponse()
+              .withStatus(BAD_GATEWAY)
+          )
+      )
+
+      val newTeam = Team(testTeamName, LocalDateTime.now(), Seq(TeamMember(teamMemberEmail)))
+      buildConnector(this).sendApplicationOwnershipChangedEmailToNewTeamMembers(newTeam, application)(new HeaderCarrier()) map {
+        response =>
+          response mustBe Left(EmailException(s"Unexpected response $BAD_GATEWAY returned from Email API", null, UnexpectedResponse))
+      }
+    }
+  }
 }
 
 object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
@@ -768,6 +877,8 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
   val apiOwnershipChangedToOldTeamTemplateId = "test-api-ownership-removed-to-team-template-id"
   val apiOwnershipChangedToNewTeamTemplateId = "test-api-ownership-given-to-team-template-id"
   val removeTeamMemberFromTeamTemplateId = "test-remove-team-member-from-team-template-id"
+  val applicationOwnershipChangedToOldTeamTemplateId = "hipp_notify_application_old_owning_team"
+  val applicationOwnershipChangedToNewTeamTemplateId = "hipp_notify_application_new_owning_team"
 
   val email1: String = "test-email1@test.com"
   val email2: String = "test-email2@test.com"
@@ -797,7 +908,9 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
         "microservice.services.email.teamMemberAddedToTeamTemplateId" -> teamMemberAddedToTeamTemplateId,
         "microservice.services.email.apiOwnershipChangedToOldTeamTemplateId" -> apiOwnershipChangedToOldTeamTemplateId,
         "microservice.services.email.apiOwnershipChangedToNewTeamTemplateId" -> apiOwnershipChangedToNewTeamTemplateId,
-        "microservice.services.email.removeTeamMemberFromTeamTemplateId" -> removeTeamMemberFromTeamTemplateId
+        "microservice.services.email.removeTeamMemberFromTeamTemplateId" -> removeTeamMemberFromTeamTemplateId,
+        "microservice.services.email.applicationOwnershipChangedToOldTeamTemplateId" -> applicationOwnershipChangedToOldTeamTemplateId,
+        "microservice.services.email.applicationOwnershipChangedToNewTeamTemplateId" -> applicationOwnershipChangedToNewTeamTemplateId,
       ))
     )
 
