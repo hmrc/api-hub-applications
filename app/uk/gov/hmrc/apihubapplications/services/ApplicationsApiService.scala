@@ -59,8 +59,7 @@ class ApplicationsApiServiceImpl @Inject()(
     def doRepositoryUpdate(application: Application, newApi: AddApiRequest): Future[Either[ApplicationsException, Unit]] = {
       repository.update(
         application
-          .removeApi(newApi.id)
-          .addApi(Api(newApi.id, newApi.endpoints))
+          .replaceApi(Api(newApi.id, newApi.endpoints))
           .updated(clock)
       )
     }
@@ -68,17 +67,11 @@ class ApplicationsApiServiceImpl @Inject()(
     searchService.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
         val updated = application.removeApi(newApi.id)
-        ApplicationEnrichers.process(
-          updated,
-          newApi.scopes.distinct.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, updated, idmsConnector, scope))
-        ) flatMap {
-          case Right(_) => doRepositoryUpdate(application, newApi) map {
-            case Right(_) => Right(())
-            case Left(e) => Left(e)
-          }
-          case Left(e) => Future.successful(Left(e))
-        }
-      case Left(e) => Future.successful(Left(e))
+        (for {
+          enrichedApplication <- EitherT(ApplicationEnrichers.process(updated, newApi.scopes.distinct.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, updated, idmsConnector, scope))))
+          fixedApplication <- EitherT(scopeFixer.fix(enrichedApplication))
+          _ <- EitherT(doRepositoryUpdate(fixedApplication, newApi))
+        } yield()).value
     }
 
   }
