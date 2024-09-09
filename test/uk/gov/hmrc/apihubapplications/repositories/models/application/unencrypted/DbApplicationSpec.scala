@@ -69,6 +69,13 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
         DbApplication(application) mustBe expected
       }
+
+      "must correctly map Apis to DbApis" in {
+        val api = Api("test-id", "test-title", Seq(Endpoint("endpoint-method", "endpoint-path")))
+        val application = testApplication.setApis(Seq(api))
+
+        DbApplication(application).apis mustBe Some(Seq(DbApi(api.id, Some(api.title), api.endpoints)))
+      }
     }
 
     "when translating from DbApplication to Application" - {
@@ -90,6 +97,14 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
         dbApplication.toModel mustBe expected
       }
+
+      "must correctly map DbApis to Apis" in {
+        val dbApi = DbApi("test-id", Some("test-title"), Seq(Endpoint("endpoint-method", "endpoint-path")))
+        val dbApplication = testDbApplication.copy(apis = Some(Seq(dbApi)))
+
+        dbApplication.toModel.apis mustBe Seq(Api(dbApi.id, dbApi.title.value, dbApi.endpoints))
+      }
+
     }
   }
 

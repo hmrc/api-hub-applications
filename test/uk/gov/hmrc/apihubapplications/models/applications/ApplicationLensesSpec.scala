@@ -533,6 +533,30 @@ class ApplicationLensesSpec extends LensBehaviours {
         application.makePublic().getPrimaryCredentials mustBe Seq(visible)
       }
     }
+    
+    "replaceApi" - {
+      "must append the API if it is not already present" in {
+        val api1 = Api("api-1", "api-1-name")
+        val api2 = Api("api-2", "api-2-name")
+
+        val application = testApplication.copy(apis = Seq(api1))
+
+        val updatedApplication = application.replaceApi(api2)
+        updatedApplication.apis mustBe Seq(api1, api2)
+      }
+
+      "must replace the API if it is already present, preserving the order of the API list" in {
+        val api1 = Api("api-1", "api-1-name")
+        val api2 = Api("api-2", "api-2-name")
+        val api3 = Api("api-3", "api-3-name")
+        val replacementApi2 = Api("api-2", "new api 2")
+        
+        val application = testApplication.copy(apis = Seq(api1, api2, api3))
+
+        val updatedApplication = application.replaceApi(replacementApi2)
+        updatedApplication.apis mustBe Seq(api1, replacementApi2, api3)
+      }
+    }
   }
 
 }

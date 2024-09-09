@@ -72,17 +72,20 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       )
 
       val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-      val updatedApp = app.copy(
+      val appWithScopesAdded = app.setSecondaryScopes(Seq(Scope("test-scope-1")))
+      val appWithScopesFixed = app.setSecondaryScopes(Seq(Scope("test-scope-1-fixed")))
+      val appWithScopesFixedAndApisAdded = appWithScopesFixed.copy(
         apis = Seq(Api(api.id, api.title, api.endpoints)))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Right(())))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updatedApp)))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(appWithScopesFixed)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(repository.update(eqTo(appWithScopesFixedAndApisAdded))).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
-          verify(repository).update(eqTo(updatedApp))
+          verify(repository).update(eqTo(appWithScopesFixedAndApisAdded))
+          verify(scopeFixer).fix(eqTo(appWithScopesAdded))(any)
           actual mustBe Right(())
       }
     }
@@ -109,92 +112,20 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         )
       )
 
-      val updatedApp = app.setApis(Seq(Api(api.id, api.title, api.endpoints)))
+      val appWithScopesFixed = app.setSecondaryScopes(Seq(Scope("test-scope-1-fixed")))
+      val appWithScopesFixedAndApisAdded = appWithScopesFixed.copy(
+        apis = Seq(Api(api.id, api.title, api.endpoints)))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Right(())))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updatedApp)))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(appWithScopesFixed)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(repository.update(any)).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
-          verify(repository).update(eqTo(updatedApp))
+          verify(repository).update(eqTo(appWithScopesFixedAndApisAdded))
           actual mustBe Right(())
       }
-    }
-
-    "must update idms with new secondary scope when additional scopes are required" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
-      val app = Application(
-        id = Some(testAppId),
-        name = "test-app-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(clock), None, None))))
-      )
-
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(app)))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right({})))
-
-      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
-        actual =>
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo("test-scope-1"))(any)
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo("test-scope-2"))(any)
-
-          actual mustBe Right(())
-      }
-    }
-
-    "should update IDMS with new secondary scopes even when they are already present (self-healing)" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val scope1 = "test-scope-1"
-      val scope2 = "test-scope-2"
-
-      val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
-      val app = Application(
-        id = Some(testAppId),
-        name = "test-app-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
-      ).setSecondaryCredentials(
-        Seq(
-          Credential(testClientId, LocalDateTime.now(clock), None, None)
-        )
-      )
-
-      val newApi = AddApiRequest(
-        id = "api_id",
-        title = "api_title",
-        endpoints = Seq(Endpoint("GET", "/foo/bar")),
-        scopes = Seq(scope1, scope2)
-      )
-
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(app)))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
-
-      service.addApi(testAppId, newApi)(HeaderCarrier()) map {
-        actual =>
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo(scope1))(any)
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo(scope2))(any)
-          actual mustBe Right(())
-      }
-
     }
 
     "must handle idms fail and return error for secondary scope" in {
