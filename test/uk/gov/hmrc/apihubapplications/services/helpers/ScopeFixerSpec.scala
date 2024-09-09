@@ -277,6 +277,7 @@ object ScopeFixerSpec {
   private def buildApi(apiDetail: ApiDetail): Api = {
     Api(
       id = apiDetail.id,
+      title = apiDetail.title,
       endpoints = apiDetail.endpoints.flatMap(
         endpoint =>
           endpoint.methods.map(

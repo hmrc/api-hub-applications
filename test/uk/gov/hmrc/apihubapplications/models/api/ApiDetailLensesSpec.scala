@@ -37,11 +37,11 @@ class ApiDetailLensesSpec extends AnyFreeSpec with Matchers {
       val apiDetail2 = baseApiDetail(apiId2)
         .addEndpoint(buildEndpoint(2, 2, 2))
 
-      val api1 = buildApi(apiDetail1.id)
+      val api1 = buildApi(apiDetail1.id, apiDetail1.title)
         .addEndpoint(buildApiEndpoint(1, 1))
         .addEndpoint(buildApiEndpoint(2, 2))
 
-      val api2 = buildApi(apiDetail2.id)
+      val api2 = buildApi(apiDetail2.id, apiDetail2.title)
         .addEndpoint(buildApiEndpoint(2, 1))
 
       val application = baseApplication
@@ -99,9 +99,10 @@ object ApiDetailLensesSpec {
     s"test-scope-$index-$method-$scope"
   }
 
-  def buildApi(apiId: String): Api = {
+  def buildApi(apiId: String, apiTitle: String): Api = {
     Api(
       id = apiId,
+      title = apiTitle,
       endpoints = Seq.empty
     )
   }

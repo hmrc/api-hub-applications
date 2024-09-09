@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.models.requests
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.Endpoint
 
-case class AddApiRequest(id: String, endpoints: Seq[Endpoint] = Seq.empty, scopes: Seq[String] = Seq.empty)
+case class AddApiRequest(id: String, title: String, endpoints: Seq[Endpoint] = Seq.empty, scopes: Seq[String] = Seq.empty)
 
 object AddApiRequest {
 

@@ -49,7 +49,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val testAppId = "test-app-id"
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
+      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
@@ -71,12 +71,13 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         environments = Environments()
       )
 
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
       val updatedApp = app.copy(
-        apis = Seq(Api(api.id, api.endpoints)))
+        apis = Seq(Api(api.id, api.title, api.endpoints)))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updatedApp)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
@@ -90,7 +91,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture._
 
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
 
       val testAppId = "test-app-id"
 
@@ -104,14 +105,15 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         environments = Environments()
       ).setApis(
         Seq(
-          Api(api.id, Seq(Endpoint("GET", "/bar/foo")))
+          Api(api.id, api.title, Seq(Endpoint("GET", "/bar/foo")))
         )
       )
 
-      val updatedApp = app.setApis(Seq(Api(api.id, api.endpoints)))
+      val updatedApp = app.setApis(Seq(Api(api.id, api.title, api.endpoints)))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updatedApp)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
@@ -139,9 +141,10 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(app)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right({})))
 
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
+      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
         actual =>
           verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo("test-scope-1"))(any)
           verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo("test-scope-2"))(any)
@@ -175,12 +178,14 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       val newApi = AddApiRequest(
         id = "api_id",
+        title = "api_title",
         endpoints = Seq(Endpoint("GET", "/foo/bar")),
         scopes = Seq(scope1, scope2)
       )
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(app)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, newApi)(HeaderCarrier()) map {
@@ -215,7 +220,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Left(exception)))
 
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
+      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
         actual =>
           verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo(testScopeId))(any)
           verify(repository, never).update(any)
@@ -240,12 +245,13 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         environments = Environments()
       )
 
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
       val updatedApp = app.copy(
-        apis = Seq(Api(api.id, api.endpoints)))
+        apis = Seq(Api(api.id, api.title, api.endpoints)))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updatedApp)))
       when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
@@ -259,8 +265,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
   "removeApi" - {
     val applicationId = "test-application-id"
     val apiId = "test-api-id"
+    val apiTitle = "api_title"
 
-    val api = Api(apiId, Seq.empty)
+    val api = Api(apiId, apiTitle, Seq.empty)
 
     val onceUponATime = LocalDateTime.now(clock).minusDays(1)
 

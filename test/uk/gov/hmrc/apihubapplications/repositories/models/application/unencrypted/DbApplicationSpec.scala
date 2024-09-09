@@ -63,7 +63,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           teamId = application.teamId,
           teamMembers = Seq.empty,
           environments = DbEnvironments(Environments()),
-          apis = Some(Seq.empty),
+          apis = None,
           deleted = None,
         )
 

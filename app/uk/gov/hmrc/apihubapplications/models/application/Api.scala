@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import play.api.libs.json.{Format, Json}
 
-case class Api(id: String, endpoints: Seq[Endpoint] = Seq.empty)
+case class Api(id: String, title: String, endpoints: Seq[Endpoint] = Seq.empty)
 
 object Api {
 
