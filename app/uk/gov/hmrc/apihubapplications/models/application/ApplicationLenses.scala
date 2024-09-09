@@ -381,6 +381,13 @@ object ApplicationLenses {
       application.setApis(application.apis.filterNot(_.id == id))
     }
 
+    def replaceApi(api: Api): Application = {
+      application.apis.indexWhere(_.id == api.id) match {
+        case -1 => addApi(api)
+        case index => application.setApis(application.apis.updated(index, api))
+      }
+    }
+
     def hasApi(id: String): Boolean = {
       application.apis.exists(_.id.equals(id))
     }

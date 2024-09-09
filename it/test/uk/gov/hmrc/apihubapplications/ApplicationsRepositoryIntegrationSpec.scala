@@ -260,7 +260,7 @@ class ApplicationsRepositoryIntegrationSpec
   "findAllUsingApi" - {
     def applicationWithApis(name: String, apiIds: Seq[String], isDeleted: Boolean): Application = {
       val now = LocalDateTime.now()
-      val apis = apiIds.map(Api(_, Seq.empty))
+      val apis = apiIds.map(id => Api(id, s"${id}_title", Seq.empty))
       val deleted = if (isDeleted) Some(Deleted(now, "team@test.com")) else None
       Application(None, name, now, Creator("test1@test.com"), now, None, Seq.empty, Environments(), Seq.empty, apis, deleted, None)
     }
@@ -492,7 +492,7 @@ class ApplicationsRepositoryIntegrationSpec
     "must update MongoDb when the application exists in the database" in {
       setMdcData()
 
-      val api = Api("api_id", Seq(Endpoint("GET", "/foo/bar")))
+      val api = Api("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")))
       val application = Application(None, "test-app", Creator("test1@test.com"), Seq(TeamMember("test1@test.com"))).copy(apis = Seq(api))
 
       val saved = repository.insert(application).futureValue

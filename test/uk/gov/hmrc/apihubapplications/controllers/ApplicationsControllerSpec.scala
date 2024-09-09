@@ -249,8 +249,8 @@ class ApplicationsControllerSpec
       val apiId = "my-api"
 
       running(fixture.application) {
-        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
-        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api1"))
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api2"))
 
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
@@ -278,8 +278,8 @@ class ApplicationsControllerSpec
       val apiId = "my-api"
 
       running(fixture.application) {
-        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
-        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId))
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api1"))
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api2"))
           .delete(Deleted(now, "test-deleted-by"))
 
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
@@ -461,7 +461,7 @@ class ApplicationsControllerSpec
   "add api" - {
     "must return 204 NoContent" in {
       val id = "app-id-1"
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
@@ -498,7 +498,7 @@ class ApplicationsControllerSpec
 
     "must return 404 Not Found when adding new scopes but the application does not exist in the repository" in {
       val id = "id"
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
@@ -516,7 +516,7 @@ class ApplicationsControllerSpec
     }
 
     "must return 500 Internal Server Error for unexpected application exceptions" in {
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
