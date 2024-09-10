@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
+import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, ExceptionRaising}
@@ -48,7 +48,6 @@ class ApplicationsApiServiceImpl @Inject()(
   accessRequestsService: AccessRequestsService,
   teamsService: TeamsService,
   repository: ApplicationsRepository,
-  idmsConnector: IdmsConnector,
   emailConnector: EmailConnector,
   scopeFixer: ScopeFixer,
   clock: Clock
@@ -56,21 +55,12 @@ class ApplicationsApiServiceImpl @Inject()(
 
   override def addApi(applicationId: String, addApiRequest: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
-    def doRepositoryUpdate(application: Application, addApiRequest: AddApiRequest): Future[Either[ApplicationsException, Unit]] = {
-      repository.update(
-        application
-          .replaceApi(Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints))
-          .updated(clock)
-      )
-    }
-
     searchService.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
-        val updated = application.removeApi(addApiRequest.id)
+        val updated = application.replaceApi(Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints)).updated(clock)
         (for {
-          enrichedApplication <- EitherT(ApplicationEnrichers.process(updated, addApiRequest.scopes.distinct.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, updated, idmsConnector, scope))))
-          fixedApplication <- EitherT(scopeFixer.fix(enrichedApplication))
-          _ <- EitherT(doRepositoryUpdate(fixedApplication, addApiRequest))
+          fixedApplication <- EitherT(scopeFixer.fix(updated))
+          _ <- EitherT(repository.update(fixedApplication))
         } yield ()).value
       case Left(e) => Future.successful(Left(e))
     }
