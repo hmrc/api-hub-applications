@@ -103,41 +103,41 @@ class DeploymentsService @Inject()(
     }
   }
 
-    private case class OwningTeams(currentTeam: Option[Team], newTeam: Team)
+  private case class OwningTeams(currentTeam: Option[Team], newTeam: Team)
 
-    private def resolveCurrentAndNewTeams(apiDetail: ApiDetail, teamId: String): Future[Either[ApplicationsException, OwningTeams]] = {
-      val eventualMaybeCurrentTeam = getTeam(apiDetail.teamId)
-      val eventualMaybeNewTeam = getTeam(Some(teamId))
-      for {
-        maybeCurrentTeam <- eventualMaybeCurrentTeam
-        maybeNewTeam <- eventualMaybeNewTeam
-      } yield (maybeCurrentTeam, maybeNewTeam) match {
-        case (_, None) => Left(TeamNotFoundException.forId(teamId))
-        case (_, Some(newTeam)) => Right(OwningTeams(maybeCurrentTeam, newTeam))
-      }
-    }
-
-    private def sendApiOwnershipChangedEmailToOldTeam(apiDetail: ApiDetail, maybeCurrentTeam: Option[Team], newTeam: Team)(implicit hc: HeaderCarrier) = {
-      if (maybeCurrentTeam.isDefined) {
-        emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(maybeCurrentTeam.get, newTeam, apiDetail) flatMap {
-          case _ => Future.successful(())
-        }
-      } else {
-        Future.successful(())
-      }
-    }
-
-    private def sendApiOwnershipChangedEmailToNewTeam(apiDetail: ApiDetail, newTeam: Team)(implicit hc: HeaderCarrier) =
-      emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(newTeam, apiDetail) flatMap (_ => Future.successful(()))
-
-    private def getTeam(maybeTeamId: Option[String]) = {
-      maybeTeamId match {
-        case Some(teamId) => teamsService.findById(teamId) map {
-          case Right(team) => Some(team)
-          case Left(_) => None
-        }
-        case None => Future.successful(None)
-      }
-
+  private def resolveCurrentAndNewTeams(apiDetail: ApiDetail, teamId: String): Future[Either[ApplicationsException, OwningTeams]] = {
+    val eventualMaybeCurrentTeam = getTeam(apiDetail.teamId)
+    val eventualMaybeNewTeam = getTeam(Some(teamId))
+    for {
+      maybeCurrentTeam <- eventualMaybeCurrentTeam
+      maybeNewTeam <- eventualMaybeNewTeam
+    } yield (maybeCurrentTeam, maybeNewTeam) match {
+      case (_, None) => Left(TeamNotFoundException.forId(teamId))
+      case (_, Some(newTeam)) => Right(OwningTeams(maybeCurrentTeam, newTeam))
     }
   }
+
+  private def sendApiOwnershipChangedEmailToOldTeam(apiDetail: ApiDetail, maybeCurrentTeam: Option[Team], newTeam: Team)(implicit hc: HeaderCarrier) = {
+    if (maybeCurrentTeam.isDefined) {
+      emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(maybeCurrentTeam.get, newTeam, apiDetail) flatMap {
+        case _ => Future.successful(())
+      }
+    } else {
+      Future.successful(())
+    }
+  }
+
+  private def sendApiOwnershipChangedEmailToNewTeam(apiDetail: ApiDetail, newTeam: Team)(implicit hc: HeaderCarrier) =
+    emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(newTeam, apiDetail) flatMap (_ => Future.successful(()))
+
+  private def getTeam(maybeTeamId: Option[String]) = {
+    maybeTeamId match {
+      case Some(teamId) => teamsService.findById(teamId) map {
+        case Right(team) => Some(team)
+        case Left(_) => None
+      }
+      case None => Future.successful(None)
+    }
+
+  }
+}

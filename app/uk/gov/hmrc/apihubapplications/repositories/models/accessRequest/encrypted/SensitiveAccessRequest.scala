@@ -70,7 +70,7 @@ object SensitiveAccessRequest {
       decision = accessRequest.decision.map(SensitiveAccessRequestDecision(_))
     )
 
-  implicit def formatSensitiveAccessRequest(implicit crypto: Encrypter with Decrypter): Format[SensitiveAccessRequest] = {
+  implicit def formatSensitiveAccessRequest(implicit crypto: Encrypter & Decrypter): Format[SensitiveAccessRequest] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveAccessRequest]
   }

@@ -42,7 +42,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class TeamsRepository @Inject()(
   mongoComponent: MongoComponent,
-  @Named("aes") implicit val crypto: Encrypter with Decrypter
+  @Named("aes") implicit val crypto: Encrypter & Decrypter
 )(implicit ec: ExecutionContext)
   extends PlayMongoRepository[SensitiveTeam](
     collectionName = "teams",
