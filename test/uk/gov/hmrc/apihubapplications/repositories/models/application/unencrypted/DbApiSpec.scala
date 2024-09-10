@@ -45,6 +45,25 @@ class DbApiSpec extends AnyFreeSpec with Matchers with OptionValues {
       }
 
     }
+
+    "when converting from Api to DbApi" - {
+      "copy values correctly" in {
+        val api = Api("test-id", "test-title", Seq(Endpoint("endpoint-method", "endpoint-path")))
+        val dbApi = DbApi(api)
+
+        dbApi.id mustBe api.id
+        dbApi.title.value mustEqual api.title
+        dbApi.endpoints mustBe api.endpoints
+      }
+
+      "assign None to the title if the default title value is present" in {
+        val api = Api("test-id", "API name unknown", Seq(Endpoint("endpoint-method", "endpoint-path")))
+        val dbApi = DbApi(api)
+
+        dbApi.title mustEqual None
+      }
+
+    }
   }
 
 }
