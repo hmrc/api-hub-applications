@@ -38,8 +38,8 @@ object DbApi {
     DbApi(
       id = api.id,
       title = api.title match {
-        case title => Some(title)
         case API_NAME_UNKNOWN => None
+        case title => Some(title)
       },
       endpoints = api.endpoints,
     )
