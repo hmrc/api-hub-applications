@@ -128,14 +128,8 @@ class DeploymentsService @Inject()(
   }
 
   def removeOwningTeamFromApi(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    integrationCatalogueConnector.findById(apiId) flatMap {
-      case Right(apiDetail) =>
-            integrationCatalogueConnector.removeApiTeam(apiId) flatMap {
-              case Right(()) => Future.successful(Right(()))
-              case Left(e) => Future.successful(Left(e))
-            }
-          case Left(e) => Future.successful(Left(e))
-
+    integrationCatalogueConnector.removeApiTeam(apiId) flatMap {
+      case Right(()) => Future.successful(Right(()))
       case Left(e) => Future.successful(Left(e))
     }
   }
