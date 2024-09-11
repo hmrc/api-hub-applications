@@ -40,7 +40,7 @@ object RepositoryHelpers {
     id.flatMap(stringToObjectId)
   }
 
-  def sensitiveStringFormat(implicit crypto: Encrypter with Decrypter): Format[SensitiveString] =
+  def sensitiveStringFormat(implicit crypto: Encrypter & Decrypter): Format[SensitiveString] =
     JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
 
   def buildAndFilter(filters: Option[Bson]*): Bson = {

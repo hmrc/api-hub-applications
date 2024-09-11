@@ -36,7 +36,7 @@ object SensitiveDeleted {
     SensitiveDeleted(deleted.deleted, SensitiveString(deleted.deletedBy))
   }
 
-  implicit def formatSensitiveDeleted(implicit crypto: Encrypter with Decrypter): Format[SensitiveDeleted] = {
+  implicit def formatSensitiveDeleted(implicit crypto: Encrypter & Decrypter): Format[SensitiveDeleted] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveDeleted]
   }

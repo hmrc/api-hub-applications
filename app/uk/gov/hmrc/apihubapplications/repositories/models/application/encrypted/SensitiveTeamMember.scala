@@ -34,7 +34,7 @@ object SensitiveTeamMember {
     SensitiveTeamMember(email = SensitiveString(teamMember.email))
   }
 
-  implicit def formatSensitiveTeamMember(implicit crypto: Encrypter with Decrypter): Format[SensitiveTeamMember] = {
+  implicit def formatSensitiveTeamMember(implicit crypto: Encrypter & Decrypter): Format[SensitiveTeamMember] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveTeamMember]
   }

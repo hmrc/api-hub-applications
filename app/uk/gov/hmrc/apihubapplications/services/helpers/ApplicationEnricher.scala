@@ -83,7 +83,6 @@ object ApplicationEnrichers {
       results.map {
         case Right(clientResponse) => Right(Right(clientResponse))
         case Left(e: IdmsException) => Right(Left(Issues.secondaryCredentialNotFound(e)))
-        case Left(e) => Left(e)
       }
     }
 
@@ -139,7 +138,6 @@ object ApplicationEnrichers {
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
             case Left(e: IdmsException) => Right(buildIssuesEnricher(e))
-            case Left(e) => Left(e)
           }
       case None => Future.successful(Right(noOpApplicationEnricher))
     }
@@ -171,7 +169,6 @@ object ApplicationEnrichers {
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
             case Left(e: IdmsException) => Right(buildIssuesEnricher(e))
-            case Left(e) => Left(e)
           }
       case None => Future.successful(Right(noOpApplicationEnricher))
     }
