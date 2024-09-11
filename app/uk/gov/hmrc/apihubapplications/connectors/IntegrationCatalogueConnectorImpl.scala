@@ -78,4 +78,17 @@ class IntegrationCatalogueConnectorImpl @Inject()(
       }
   }
 
+
+  override def removeApiTeam(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    httpClient.delete(url"$baseUrl/integration-catalogue/apis/$apiId/teams")
+      .setHeader((ACCEPT, JSON))
+      .setHeader(AUTHORIZATION -> appAuthToken)
+      .execute[Either[UpstreamErrorResponse, Unit]]
+      .map {
+        case Right(()) => Right(())
+        case Left(e) if e.statusCode == NOT_FOUND => Left(raiseApiNotFoundException.forId(apiId))
+        case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
+      }
+  }
+
 }

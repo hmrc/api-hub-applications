@@ -40,6 +40,8 @@ trait ApplicationsApiService {
 
   def changeOwningTeam(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
+  def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+
 }
 
 @Singleton
@@ -132,11 +134,23 @@ class ApplicationsApiServiceImpl @Inject()(
     }
   }
 
+  override def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    searchService.findById(applicationId, enrich = true, includeDeleted = true).flatMap {
+      case Right(application) if application.teamId.isDefined => repository.update(application.copy(
+        teamName = None, 
+        teamId = None,
+        teamMembers = Seq.empty))
+      case Right(application) => Future.successful(Right(()))
+      case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
   private def sendNotificationOnOwningTeamChange(
-    application: Application,
-    updated: Application,
-    newTeam: Team,
-  )(implicit hc: HeaderCarrier) =
+                                                  application: Application,
+                                                  updated: Application,
+                                                  newTeam: Team,
+                                                )(implicit hc: HeaderCarrier) =
     (application.teamId, updated.teamId) match {
       case (Some(oldTeamId), Some(newTeamId)) if oldTeamId != newTeamId =>
         (for {
@@ -146,4 +160,5 @@ class ApplicationsApiServiceImpl @Inject()(
         } yield ()).value
       case _ => Future.successful(Right(()))
     }
+
 }

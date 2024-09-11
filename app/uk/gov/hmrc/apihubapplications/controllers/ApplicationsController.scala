@@ -185,4 +185,13 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
+  def removeTeam(applicationId: String): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      applicationsService.removeOwningTeamFromApplication(applicationId).map {
+        case Right(()) => NoContent
+        case Left(e: ApplicationNotFoundException) => NotFound
+        case Left(e: TeamNotFoundException) => NotFound
+        case Left(_) => InternalServerError
+      }
+  }
 }

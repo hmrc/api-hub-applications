@@ -115,4 +115,13 @@ class DeploymentsController @Inject()(
       }
   }
 
+  def removeTeam(apiId: String): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      deploymentsService.removeOwningTeamFromApi(apiId).map {
+        case Right(()) => NoContent
+        case Left(e: ApiNotFoundException) => NotFound
+        case Left(_) => InternalServerError
+      }
+  }
+
 }

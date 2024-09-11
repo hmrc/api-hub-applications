@@ -10,6 +10,7 @@ POST       /applications/:id/delete                                             
 PUT        /applications/:id/apis                                                   uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addApi(id)
 DELETE     /applications/:applicationId/apis/:apiId                                 uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.removeApi(applicationId: String, apiId: String)
 PUT        /applications/:applicationId/teams/:teamId                               uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.changeOwningTeam(applicationId: String, teamId: String)
+DELETE     /applications/:applicationId/teams                                       uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.removeTeam(applicationId: String)
 POST       /applications/:id/team-members                                           uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addTeamMember(id: String)
 GET        /applications/using-api/:id                                              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplicationsUsingApi(id: String, includeDeleted: Boolean ?= false)
 
@@ -37,5 +38,6 @@ PUT        /teams/:id                                                           
 
 GET        /apis/:publisherRef/deployment-status                                    uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatus(publisherRef: String)
 PUT        /apis/:apiId/teams/:teamId                                               uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.updateApiTeam(apiId: String, teamId: String)
+DELETE     /apis/:apiId/teams                                                       uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.removeTeam(apiId: String)
 
 GET        /users                                                                   uk.gov.hmrc.apihubapplications.controllers.UsersController.findAll()
