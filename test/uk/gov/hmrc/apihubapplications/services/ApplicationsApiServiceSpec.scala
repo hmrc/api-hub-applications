@@ -28,6 +28,9 @@ import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
+import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.models.team.Team
@@ -51,7 +54,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val testAppId = "test-app-id"
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
+      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
@@ -73,17 +76,20 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         environments = Environments()
       )
 
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-      val updatedApp = app.copy(
-        apis = Seq(Api(api.id, api.endpoints)))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val appWithScopesAdded = app.setSecondaryScopes(Seq(Scope("test-scope-1")))
+      val appWithScopesAndApisAdded = appWithScopesAdded.copy(
+        apis = Seq(Api(api.id, api.title, api.endpoints)))
+      val appWithScopesFixed = appWithScopesAndApisAdded.setSecondaryScopes(Seq(Scope("test-scope-1-fixed")))
 
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(appWithScopesFixed)))
+      when(repository.update(eqTo(appWithScopesFixed))).thenReturn(Future.successful(Right(())))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
-          verify(repository).update(eqTo(updatedApp))
+          verify(scopeFixer).fix(eqTo(appWithScopesAndApisAdded))(any)
+          verify(repository).update(eqTo(appWithScopesFixed))
           actual mustBe Right(())
       }
     }
@@ -92,11 +98,11 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture._
 
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-
+      val api = Api("api_id", "api_title", Seq(Endpoint("GET", "/bar/foo")))
+      val addApiRequest = AddApiRequest(api.id, api.title, api.endpoints, Seq("test-scope-1"))
       val testAppId = "test-app-id"
 
-      val app = Application(
+      val appWithApiAlreadyAdded = Application(
         id = Some(testAppId),
         name = "test-app-name",
         created = LocalDateTime.now(clock),
@@ -105,125 +111,22 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       ).setApis(
-        Seq(
-          Api(api.id, Seq(Endpoint("GET", "/bar/foo")))
-        )
+        Seq(api)
       )
 
-      val updatedApp = app.setApis(Seq(Api(api.id, api.endpoints)))
+      val appWithScopesAdded = appWithApiAlreadyAdded.setSecondaryScopes(Seq(Scope("test-scope-1")))
+      val appWithScopesFixed = appWithScopesAdded.setSecondaryScopes(Seq(Scope("test-scope-1-fixed")))
 
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(appWithScopesFixed)))
+      when(repository.update(eqTo(appWithScopesFixed))).thenReturn(Future.successful(Right(())))
 
-      service.addApi(testAppId, api)(HeaderCarrier()) map {
+      service.addApi(testAppId, addApiRequest)(HeaderCarrier()) map {
         actual =>
-          verify(repository).update(eqTo(updatedApp))
+          verify(scopeFixer).fix(eqTo(appWithScopesAdded))(any)
+          verify(repository).update(eqTo(appWithScopesFixed))
           actual mustBe Right(())
       }
-    }
-
-    "must update idms with new secondary scope when additional scopes are required" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
-      val app = Application(
-        id = Some(testAppId),
-        name = "test-app-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(clock), None, None))))
-      )
-
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right({})))
-
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1", "test-scope-2")))(HeaderCarrier()).map {
-        actual =>
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo("test-scope-1"))(any)
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo("test-scope-2"))(any)
-
-          actual mustBe Right(())
-      }
-    }
-
-    "should update IDMS with new secondary scopes even when they are already present (self-healing)" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val scope1 = "test-scope-1"
-      val scope2 = "test-scope-2"
-
-      val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
-      val app = Application(
-        id = Some(testAppId),
-        name = "test-app-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
-      ).setSecondaryCredentials(
-        Seq(
-          Credential(testClientId, LocalDateTime.now(clock), None, None)
-        )
-      )
-
-      val newApi = AddApiRequest(
-        id = "api_id",
-        endpoints = Seq(Endpoint("GET", "/foo/bar")),
-        scopes = Seq(scope1, scope2)
-      )
-
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
-
-      service.addApi(testAppId, newApi)(HeaderCarrier()) map {
-        actual =>
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo(scope1))(any)
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo(scope2))(any)
-          actual mustBe Right(())
-      }
-
-    }
-
-    "must handle idms fail and return error for secondary scope" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val testScopeId = "test-scope-1"
-
-      val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
-      val app = Application(
-        id = Some(testAppId),
-        name = "test-app-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments().copy(secondary = Environment(Seq.empty, Seq(Credential(testClientId, LocalDateTime.now(clock), None, None))))
-      )
-
-      val exception = IdmsException("Bad thing", CallError)
-
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Left(exception)))
-
-      service.addApi(testAppId, AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
-        actual =>
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(testClientId), eqTo(testScopeId))(any)
-          verify(repository, never).update(any)
-          actual mustBe Left(exception)
-      }
-
     }
 
     "must return ApplicationNotFoundException if application not found whilst updating it with new api" in {
@@ -242,13 +145,13 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         environments = Environments()
       )
 
-      val api = AddApiRequest("api_id", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
       val updatedApp = app.copy(
-        apis = Seq(Api(api.id, api.endpoints)))
+        apis = Seq(Api(api.id, api.title, api.endpoints)))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updatedApp)))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
@@ -261,8 +164,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
   "removeApi" - {
     val applicationId = "test-application-id"
     val apiId = "test-api-id"
+    val apiTitle = "api_title"
 
-    val api = Api(apiId, Seq.empty)
+    val api = Api(apiId, apiTitle, Seq.empty)
 
     val onceUponATime = LocalDateTime.now(clock).minusDays(1)
 
@@ -516,33 +420,30 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
 
   private case class Fixture(
-                              searchService: ApplicationsSearchService,
-                              accessRequestsService: AccessRequestsService,
-                              teamsService: TeamsService,
-                              repository: ApplicationsRepository,
-                              idmsConnector: IdmsConnector,
-                              emailConnector: EmailConnector,
-                              scopeFixer: ScopeFixer,
-                              service: ApplicationsApiService
-                            )
+    searchService: ApplicationsSearchService,
+    accessRequestsService: AccessRequestsService,
+    teamsService: TeamsService,
+    repository: ApplicationsRepository,
+    emailConnector: EmailConnector,
+    scopeFixer: ScopeFixer,
+    service: ApplicationsApiService
+  )
 
   private def buildFixture: Fixture = {
     val searchService = mock[ApplicationsSearchService]
     val accessRequestsService = mock[AccessRequestsService]
     val teamsService = mock[TeamsService]
     val repository = mock[ApplicationsRepository]
-    val idmsConnector = mock[IdmsConnector]
     val emailConnector = mock[EmailConnector]
     val scopeFixer = mock[ScopeFixer]
-    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, idmsConnector, emailConnector, scopeFixer, clock)
-    Fixture(searchService, accessRequestsService, teamsService, repository, idmsConnector, emailConnector, scopeFixer, service)
+    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, clock)
+    Fixture(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, service)
   }
 
+}
 
-  object ApplicationsApiServiceSpec {
+object ApplicationsApiServiceSpec {
 
-    val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-
-  }
+  val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
 
 }

@@ -189,9 +189,10 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       import fixture._
 
       val apiId = "test-api"
+      val apiTitle = "test-api-title"
       val applications = Seq(
-        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId)),
-        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId)),
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId, apiTitle)),
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId, apiTitle)),
       )
 
       when(repository.findAllUsingApi(any, any)).thenReturn(Future.successful(applications))
@@ -210,10 +211,11 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
       val deleted = Deleted(LocalDateTime.now(clock), "test-deleted-by")
       val apiId = "test-api"
+      val apiTitle = "test-api-title"
 
       val applications = Seq(
-        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId)).delete(deleted),
-        Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty).addApi(Api(apiId)).delete(deleted)
+        Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId, apiTitle)).delete(deleted),
+        Application(Some("test-id-2"), "test-name-2", Creator("test-email-2"), Seq.empty).addApi(Api(apiId, apiTitle)).delete(deleted)
       )
 
       when(repository.findAllUsingApi(any, any)).thenReturn(Future.successful(applications))
@@ -239,8 +241,9 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       )
 
       val apiId = "test-api"
-      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty).addApi(Api(apiId))
-      val application2 = Application(Some("test-id-2"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId))
+      val apiTitle = "test-api-title"
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty).addApi(Api(apiId, apiTitle))
+      val application2 = Application(Some("test-id-2"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId, apiTitle))
 
       val applications = Seq(application1, application2)
 
@@ -265,8 +268,9 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val teamId = "test-team-id"
 
       val apiId = "test-api"
-      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty).addApi(Api(apiId))
-      val application2 = Application(Some("test-id-2"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId))
+      val apiTitle = "test-api-title"
+      val application1 = Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Some(teamId), Seq.empty).addApi(Api(apiId, apiTitle))
+      val application2 = Application(Some("test-id-2"), "test-name-1", Creator("test-email-1"), Seq.empty).addApi(Api(apiId, apiTitle))
 
       val applications = Seq(application1, application2)
 

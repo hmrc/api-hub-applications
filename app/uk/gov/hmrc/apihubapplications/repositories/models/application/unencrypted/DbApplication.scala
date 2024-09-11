@@ -30,7 +30,7 @@ case class DbApplication(
   teamId: Option[String],
   teamMembers: Seq[TeamMember],
   environments: DbEnvironments,
-  apis: Option[Seq[Api]],
+  apis: Option[Seq[DbApi]],
   deleted: Option[Deleted],
 ) {
 
@@ -45,7 +45,10 @@ case class DbApplication(
       teamMembers = teamMembers,
       environments = environments.toModel(this),
       issues = Seq.empty,
-      apis = apis.getOrElse(Seq.empty),
+      apis = apis match {
+        case Some(apis) => apis.map(_.toModel)
+        case None => Seq.empty
+      },
       deleted = deleted,
       teamName = None,
     )
@@ -64,7 +67,10 @@ object DbApplication {
       teamId = application.teamId,
       teamMembers = application.teamId.map(_ => Seq.empty).getOrElse(application.teamMembers),
       environments = DbEnvironments(application.environments),
-      apis = Some(application.apis),
+      apis = application.apis match {
+        case apis if apis.nonEmpty => Some(apis.map(DbApi.apply))
+        case _ => None
+      },
       deleted = application.deleted,
     )
 

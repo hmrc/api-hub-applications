@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
+import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, ExceptionRaising}
@@ -50,36 +50,20 @@ class ApplicationsApiServiceImpl @Inject()(
   accessRequestsService: AccessRequestsService,
   teamsService: TeamsService,
   repository: ApplicationsRepository,
-  idmsConnector: IdmsConnector,
   emailConnector: EmailConnector,
   scopeFixer: ScopeFixer,
   clock: Clock
 )(implicit ec: ExecutionContext) extends ApplicationsApiService with Logging with ExceptionRaising {
 
-  override def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-
-    def doRepositoryUpdate(application: Application, newApi: AddApiRequest): Future[Either[ApplicationsException, Unit]] = {
-      repository.update(
-        application
-          .removeApi(newApi.id)
-          .addApi(Api(newApi.id, newApi.endpoints))
-          .updated(clock)
-      )
-    }
+  override def addApi(applicationId: String, addApiRequest: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
     searchService.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
-        val updated = application.removeApi(newApi.id)
-        ApplicationEnrichers.process(
-          updated,
-          newApi.scopes.distinct.map(scope => ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, updated, idmsConnector, scope))
-        ) flatMap {
-          case Right(_) => doRepositoryUpdate(application, newApi) map {
-            case Right(_) => Right(())
-            case Left(e) => Left(e)
-          }
-          case Left(e) => Future.successful(Left(e))
-        }
+        val updated = application.replaceApi(Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints)).updated(clock)
+        (for {
+          fixedApplication <- EitherT(scopeFixer.fix(updated))
+          _ <- EitherT(repository.update(fixedApplication))
+        } yield ()).value
       case Left(e) => Future.successful(Left(e))
     }
 

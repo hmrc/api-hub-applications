@@ -89,6 +89,7 @@ class ApplicationsRepositorySpec
            |"apis": [
            |    {
            |      "id": "63bebf8bbbeccc26c12294e6",
+           |      "title": "my-api",
            |      "endpoints": [
            |        {
            |          "httpMethod": "GET",
@@ -104,7 +105,7 @@ class ApplicationsRepositorySpec
       result mustBe a[JsSuccess[?]]
 
       val anEndpoint = Endpoint("GET", "/foo/bar")
-      val anApi = Api("63bebf8bbbeccc26c12294e6", Seq(anEndpoint))
+      val anApi = Api("63bebf8bbbeccc26c12294e6", "my-api", Seq(anEndpoint))
 
       val expected = Application(
         Some("63bebf8bbbeccc26c12294e5"),
