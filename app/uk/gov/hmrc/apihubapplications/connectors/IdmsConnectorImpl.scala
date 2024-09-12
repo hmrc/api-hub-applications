@@ -25,7 +25,7 @@ import uk.gov.hmrc.apihubapplications.models.application.{Application, Environme
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{ignoreClientNotFound, useFirstException}
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -37,19 +37,26 @@ import scala.concurrent.{ExecutionContext, Future}
 class IdmsConnectorImpl @Inject()(
   servicesConfig: ServicesConfig,
   httpClient: HttpClientV2
-)(implicit ec: ExecutionContext) extends IdmsConnector with Logging with ExceptionRaising with ProxySupport {
+)(implicit ec: ExecutionContext) extends IdmsConnector
+  with Logging
+  with ExceptionRaising
+  with ProxySupport
+  with CorrelationIdSupport {
 
-  import ProxySupport._
+  import ProxySupport.*
+  import CorrelationIdSupport.*
 
   override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients"
     val context = Seq("environmentName" -> environmentName, "client" -> client)
+      .withCorrelationId()
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName)*)
       .withBody(Json.toJson(client))
       .withProxyIfRequired(environmentName)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, ClientResponse]]
       .map {
         case Right(clientResponse) => Right(clientResponse)
@@ -64,11 +71,13 @@ class IdmsConnectorImpl @Inject()(
   override def fetchClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-secret"
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+      .withCorrelationId()
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
         case Right(secret) => Right(ClientResponse(clientId, secret.secret))
@@ -86,10 +95,12 @@ class IdmsConnectorImpl @Inject()(
   override def deleteClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId"
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+      .withCorrelationId()
 
     httpClient.delete(url)
       .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
         case Right(()) => Right(())
@@ -147,11 +158,13 @@ class IdmsConnectorImpl @Inject()(
   override def newSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-secret"
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+      .withCorrelationId()
 
     httpClient.post(url)
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, Secret]]
       .map {
         case Right(secret) => Right(secret)
@@ -170,10 +183,12 @@ class IdmsConnectorImpl @Inject()(
   override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
+      .withCorrelationId()
 
     httpClient.put(url)
       .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
         case Right(_) => Right(())
@@ -196,10 +211,12 @@ class IdmsConnectorImpl @Inject()(
 
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes/$scopeId"
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
+      .withCorrelationId()
 
     httpClient.delete(url)
       .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {
         case Right(_) => Right(())
@@ -219,11 +236,13 @@ class IdmsConnectorImpl @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]] = {
     val url = url"${baseUrlForEnvironment(environmentName)}/identity/clients/$clientId/client-scopes"
     val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+      .withCorrelationId()
 
     httpClient.get(url)
       .setHeader(("Accept", "application/json"))
       .setHeader(headersForEnvironment(environmentName)*)
       .withProxyIfRequired(environmentName)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, Seq[ClientScope]]]
       .map {
         case Right(scopes) => Right(scopes)
