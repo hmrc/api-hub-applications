@@ -53,7 +53,7 @@ object SensitiveTeam {
     )
   }
 
-  implicit def formatSensitiveTeam(implicit crypto: Encrypter with Decrypter): Format[SensitiveTeam] = {
+  implicit def formatSensitiveTeam(implicit crypto: Encrypter & Decrypter): Format[SensitiveTeam] = {
     Json.format[SensitiveTeam]
   }
 

@@ -44,7 +44,7 @@ object SensitiveAccessRequestDecision {
       rejectedReason = decision.rejectedReason
     )
 
-  implicit def formatSensitiveAccessRequestDecision(implicit crypto: Encrypter with Decrypter): Format[SensitiveAccessRequestDecision] = {
+  implicit def formatSensitiveAccessRequestDecision(implicit crypto: Encrypter & Decrypter): Format[SensitiveAccessRequestDecision] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveAccessRequestDecision]
   }

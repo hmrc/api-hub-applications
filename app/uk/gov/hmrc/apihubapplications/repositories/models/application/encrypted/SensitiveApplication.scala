@@ -70,7 +70,7 @@ object SensitiveApplication {
     )
   }
 
-  implicit def formatSensitiveApplication(implicit crypto: Encrypter with Decrypter): Format[SensitiveApplication] = {
+  implicit def formatSensitiveApplication(implicit crypto: Encrypter & Decrypter): Format[SensitiveApplication] = {
     Json.format[SensitiveApplication]
   }
 

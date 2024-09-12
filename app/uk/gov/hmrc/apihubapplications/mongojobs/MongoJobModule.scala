@@ -50,9 +50,11 @@ class MongoJobModule extends play.api.inject.Module with Logging {
     if (workToDo) {
       configuration.getOptional[String]("mongoJob.className").map(
         className =>
+          val `class` = environment.classLoader.loadClass(className)
+          logger.info(s"Preparing job '${`class`.getSimpleName}'")
           Seq(
             bindz(classOf[LockClient]).toSelf.eagerly(),
-            bindz(classOf[MongoJob]).to(environment.classLoader.loadClass(className).asSubclass(classOf[MongoJob])).eagerly()
+            bindz(classOf[MongoJob]).to(`class`.asSubclass(classOf[MongoJob])).eagerly()
           )
       ).getOrElse(Seq.empty)
     }

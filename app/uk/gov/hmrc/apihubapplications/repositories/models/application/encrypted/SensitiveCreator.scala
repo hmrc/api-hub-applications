@@ -34,7 +34,7 @@ object SensitiveCreator {
     SensitiveCreator(email = SensitiveString(creator.email))
   }
 
-  implicit def formatSensitiveCreator(implicit crypto: Encrypter with Decrypter): Format[SensitiveCreator] = {
+  implicit def formatSensitiveCreator(implicit crypto: Encrypter & Decrypter): Format[SensitiveCreator] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveCreator]
   }
