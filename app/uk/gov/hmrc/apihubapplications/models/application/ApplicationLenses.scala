@@ -312,8 +312,16 @@ object ApplicationLenses {
       application.copy(teamId = Some(teamId))
     }
 
+    def unsetTeamId(): Application = {
+      application.copy(teamId = None)
+    }
+
     def setTeamName(teamName: String): Application = {
       application.copy(teamName = Some(teamName))
+    }
+
+    def unsetTeamName(): Application = {
+      application.copy(teamName = None)
     }
 
     def hasTeamMember(email: String): Boolean =
@@ -402,6 +410,14 @@ object ApplicationLenses {
 
     def isDeleted: Boolean = {
       application.deleted.isDefined
+    }
+    
+    def removeTeam(clock: Clock): Application = {
+      unsetTeamName().
+        setTeamMembers(Seq.empty).
+        unsetTeamName()
+        .unsetTeamId()
+        .updated(clock)
     }
   }
 

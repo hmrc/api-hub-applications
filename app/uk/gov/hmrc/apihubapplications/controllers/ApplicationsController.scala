@@ -190,7 +190,6 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       applicationsService.removeOwningTeamFromApplication(applicationId).map {
         case Right(()) => NoContent
         case Left(e: ApplicationNotFoundException) => NotFound
-        case Left(e: TeamNotFoundException) => NotFound
         case Left(_) => InternalServerError
       }
   }
