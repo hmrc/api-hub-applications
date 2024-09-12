@@ -127,6 +127,13 @@ class DeploymentsService @Inject()(
     }
   }
 
+  def removeOwningTeamFromApi(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    integrationCatalogueConnector.removeApiTeam(apiId) flatMap {
+      case Right(()) => Future.successful(Right(()))
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
   private def sendApiOwnershipChangedEmailToNewTeam(apiDetail: ApiDetail, newTeam: Team)(implicit hc: HeaderCarrier) =
     emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(newTeam, apiDetail) flatMap (_ => Future.successful(()))
 

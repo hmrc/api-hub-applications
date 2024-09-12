@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.mockito.Mockito.when
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT}
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.apihubapplications.connectors.{IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
@@ -171,6 +171,58 @@ class IntegrationCatalogueConnectorSpec
     }
   }
 
+  "removeApiTeam" - {
+    val teamId = "team1"
+    val apiId = "apiId"
+    val apiDetails = sampleApiDetail().copy(id = apiId, teamId = Some(teamId))
+
+    "must place the correct request and return an ApiDetail" in {
+      stubFor(
+        delete(urlEqualTo(s"/integration-catalogue/apis/$apiId/teams"))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("Authorization", equalTo(appAuthToken))
+          .willReturn(
+            aResponse()
+              .withStatus(OK)
+          )
+      )
+
+      buildConnector().removeApiTeam(apiId)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Right(())
+      }
+    }
+
+    "must fail with an exception when integration catalogue returns a failure response" in {
+      stubFor(
+        delete(urlEqualTo(s"/integration-catalogue/apis/${apiDetails.id}/teams"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector().removeApiTeam(apiDetails.id)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(IntegrationCatalogueException.unexpectedResponse(500))
+      }
+    }
+
+    "must handle and return 404 not found when 404 returned from integrations catalogue call" in {
+      stubFor(
+        delete(urlEqualTo(s"/integration-catalogue/apis/${apiDetails.id}/teams"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector().removeApiTeam(apiDetails.id)(HeaderCarrier()) map {
+        actual =>
+          actual mustBe Left(ApiNotFoundException.forId(s"${apiDetails.id}"))
+      }
+    }
+  }
 
   private def buildConnector(): IntegrationCatalogueConnector = {
     val servicesConfig = new ServicesConfig(

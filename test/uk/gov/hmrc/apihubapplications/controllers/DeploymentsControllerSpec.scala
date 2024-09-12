@@ -536,6 +536,42 @@ class DeploymentsControllerSpec
 
   }
 
+  "removeApiTeam" - {
+    val apiId = "apiId"
+    "must return 200 Ok" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.removeOwningTeamFromApi(eqTo(apiId))(any))
+        .thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.removeTeam(apiId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+
+        verify(fixture.deploymentsService).removeOwningTeamFromApi(eqTo(apiId))(any)
+      }
+    }
+
+    "must return 404 Not found when service returns not found " in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.removeOwningTeamFromApi(eqTo(apiId))(any))
+        .thenReturn(Future.successful(Left(ApiNotFoundException.forId(apiId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.removeTeam(apiId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+
+        verify(fixture.deploymentsService).removeOwningTeamFromApi(eqTo(apiId))(any)
+      }
+    }
+
+  }
+
 }
 
 

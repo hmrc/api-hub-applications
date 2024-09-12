@@ -21,7 +21,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Secondary}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.models.team.Team
@@ -29,7 +29,7 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, ScopeFixer}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.Clock
+import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationsApiService {
@@ -39,6 +39,8 @@ trait ApplicationsApiService {
   def removeApi(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
   def changeOwningTeam(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+
+  def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
 }
 
@@ -116,11 +118,20 @@ class ApplicationsApiServiceImpl @Inject()(
     }
   }
 
+  override def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    searchService.findById(applicationId, enrich = false, includeDeleted = true).flatMap {
+      case Right(application) if application.teamId.isDefined => repository.update(application.removeTeam(clock))
+      case Right(application) => Future.successful(Right(()))
+      case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
   private def sendNotificationOnOwningTeamChange(
-    application: Application,
-    updated: Application,
-    newTeam: Team,
-  )(implicit hc: HeaderCarrier) =
+                                                  application: Application,
+                                                  updated: Application,
+                                                  newTeam: Team,
+                                                )(implicit hc: HeaderCarrier) =
     (application.teamId, updated.teamId) match {
       case (Some(oldTeamId), Some(newTeamId)) if oldTeamId != newTeamId =>
         (for {
@@ -130,4 +141,5 @@ class ApplicationsApiServiceImpl @Inject()(
         } yield ()).value
       case _ => Future.successful(Right(()))
     }
+
 }

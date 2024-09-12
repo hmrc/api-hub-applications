@@ -48,6 +48,10 @@ class ApplicationsService @Inject()(
     apiService.changeOwningTeam(applicationId, teamId)
   }
 
+  override def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.removeOwningTeamFromApplication(applicationId)
+  }
+
   override def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     credentialsService.addCredential(applicationId, environmentName)
   }

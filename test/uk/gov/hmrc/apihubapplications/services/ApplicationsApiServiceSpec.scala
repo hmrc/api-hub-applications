@@ -16,12 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{never, verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.libs.json.Json
+import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
 import uk.gov.hmrc.apihubapplications.models.application._
@@ -193,7 +199,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
           verify(scopeFixer).fix(eqTo(updated))(any)
           verify(repository).update(eqTo(updated))
           verify(accessRequestsService).cancelAccessRequests(eqTo(applicationId), eqTo(apiId))
-          result.value mustBe ()
+          result.value mustBe()
       }
     }
 
@@ -289,7 +295,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
           verify(teamsService).findById(eqTo(teamId))
           verify(emailConnector).sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any)
           verify(emailConnector).sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any)
-          result.value mustBe ()
+          result.value mustBe()
       }
     }
 
@@ -340,6 +346,78 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       }
     }
   }
+
+  "removeTeamFromApplication" - {
+    val applicationId = "test-application-id"
+    val oldTeamId = "test-old-team-id"
+
+    val onceUponATime = LocalDateTime.now(clock).minusDays(1)
+
+    val baseApplication = Application(
+      id = Some(applicationId),
+      name = "test-app-name",
+      created = onceUponATime,
+      createdBy = Creator("test-email"),
+      lastUpdated = onceUponATime,
+      teamMembers = Seq(TeamMember(email = "test-email")),
+      environments = Environments()
+    )
+
+    "must update the application in MongoDb" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val application = baseApplication.setTeamId(oldTeamId)
+      val updated = application
+        .updated(clock)
+        .copy(teamId = None, teamName = None, teamMembers = Seq.empty)
+
+      when(searchService.findById(eqTo(applicationId), eqTo(false), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      val captor = ArgumentCaptor.forClass(classOf[Application])
+      when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      service.removeOwningTeamFromApplication(applicationId)(HeaderCarrier()).map {
+        result =>
+          verify(repository).update(captor.capture())
+          val actual: Application = captor.getValue
+          actual.teamId mustBe None
+          actual.teamMembers mustBe Seq.empty
+          actual.teamName mustBe None
+          result.value mustBe()
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application cannot be found" in {
+      val fixture = buildFixture
+      import fixture._
+
+      when(searchService.findById(eqTo(applicationId), eqTo(false), eqTo(true))(any))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      service.removeOwningTeamFromApplication(applicationId)(HeaderCarrier()).map {
+        result =>
+          verifyNoInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any)
+          result mustBe Left(ApplicationNotFoundException.forId(applicationId))
+      }
+    }
+
+    "must return any exceptions encountered" in {
+      val fixture = buildFixture
+      import fixture._
+
+      val expected = IdmsException.clientNotFound("test-client-id")
+
+      when(searchService.findById(eqTo(applicationId), eqTo(false), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
+
+      service.removeOwningTeamFromApplication(applicationId)(HeaderCarrier()).map {
+        result =>
+          verifyNoInteractions(fixture.accessRequestsService)
+          verify(repository, never).update(any)
+          result mustBe Left(expected)
+      }
+    }
+  }
+
 
   private case class Fixture(
     searchService: ApplicationsSearchService,

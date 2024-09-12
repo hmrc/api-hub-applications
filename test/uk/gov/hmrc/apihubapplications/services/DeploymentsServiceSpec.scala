@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
@@ -26,7 +26,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
-import uk.gov.hmrc.apihubapplications.models.apim._
+import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, EmailException, IntegrationCatalogueException}
 import uk.gov.hmrc.apihubapplications.models.team.Team
@@ -288,6 +288,37 @@ class DeploymentsServiceSpec
           verify(fixture.emailConnector, times(0)).sendApiOwnershipChangedEmailToOldTeamMembers(any,any,any)(any)
           verify(fixture.emailConnector, times(0)).sendApiOwnershipChangedEmailToNewTeamMembers(any,any)(any)
           succeed
+      }
+    }
+
+    "removeApiTeam" - {
+      "must pass the correct request to Integrations Catalogue and return the response" in {
+        val fixture = buildFixture()
+        val apiDetail = sampleApiDetail().copy(teamId = Some("team1"))
+        when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
+        when(fixture.integrationCatalogueConnector.removeApiTeam(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(())))
+
+        fixture.deploymentsService.removeOwningTeamFromApi("apiId")(HeaderCarrier()).map {
+          actual =>
+            actual mustBe Right(())
+            verify(fixture.integrationCatalogueConnector).removeApiTeam(eqTo("apiId"))(any)
+            succeed
+        }
+      }
+
+      "must propagate errors from call to integrationCatalogueConnector.removeApiTeam" in {
+        val fixture = buildFixture()
+        val apiDetail = sampleApiDetail().copy(teamId = None)
+
+        val apiNotFoundException = ApiNotFoundException.forId("apiId")
+        when(fixture.integrationCatalogueConnector.removeApiTeam(eqTo("apiId"))(any)).thenReturn(Future.successful(Left(apiNotFoundException)))
+
+        fixture.deploymentsService.removeOwningTeamFromApi("apiId")(HeaderCarrier()).map {
+          actual =>
+            actual mustBe Left(apiNotFoundException)
+            verify(fixture.integrationCatalogueConnector).removeApiTeam(eqTo("apiId"))(any)
+            succeed
+        }
       }
     }
   }
