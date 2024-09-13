@@ -19,16 +19,16 @@ package uk.gov.hmrc.apihubapplications.connectors
 import com.google.inject.Inject
 import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
-import play.api.http.Status._
+import play.api.http.Status.*
 import play.api.libs.json.{JsPath, Json, JsonValidationError}
 import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSBodyWritables.bodyWritableOf_Multipart
 import play.api.mvc.MultipartFormData.DataPart
-import uk.gov.hmrc.apihubapplications.models.apim._
+import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising}
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -39,14 +39,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class APIMConnectorImpl @Inject()(
                                    servicesConfig: ServicesConfig,
                                    httpClient: HttpClientV2
-                                 )(implicit ec: ExecutionContext) extends APIMConnector with Logging with ExceptionRaising with HttpErrorFunctions with ProxySupport {
+                                 )(implicit ec: ExecutionContext) extends APIMConnector
+  with Logging
+  with ExceptionRaising
+  with HttpErrorFunctions
+  with ProxySupport
+  with CorrelationIdSupport {
 
   import ProxySupport._
+  import CorrelationIdSupport._
 
   override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
     httpClient.post(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationForEnvironment(Primary))
       .setHeader("Content-Type" -> "application/yaml")
+      .withCorrelationId()
       .withBody(oas)
       .execute[HttpResponse]
       .map(
@@ -67,11 +74,13 @@ class APIMConnectorImpl @Inject()(
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
     val metadata = Json.toJson(CreateMetadata(request))
     val context = Seq("metadata" -> Json.prettyPrint(metadata))
+      .withCorrelationId()
 
     httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
       .setHeader(headersForEnvironment(Secondary)*)
       .withProxyIfRequired(Secondary, useProxyForSecondary)
       .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
       .withBody(
         Source(
           Seq(
@@ -99,11 +108,13 @@ class APIMConnectorImpl @Inject()(
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
     val metadata = Json.toJson(UpdateMetadata(request))
     val context = Seq("publisherReference" -> publisherReference, "metadata" -> Json.prettyPrint(metadata))
+      .withCorrelationId()
 
     httpClient.put(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
       .setHeader(headersForEnvironment(Secondary)*)
       .withProxyIfRequired(Secondary, useProxyForSecondary)
       .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
       .withBody(
         Source(
           Seq(
@@ -165,10 +176,12 @@ class APIMConnectorImpl @Inject()(
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
     val url = url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/$publisherReference"
     val context = Seq("publisherReference" -> publisherReference, "environment" -> environment)
+      .withCorrelationId()
 
     httpClient.get(url)
       .setHeader(headersForEnvironment(environment)*)
       .withProxyIfRequired(environment, useProxyForSecondary)
+      .withCorrelationId()
       .execute[Either[UpstreamErrorResponse, SuccessfulDeploymentResponse]]
       .map {
         case Right(deployment) => Right(Some(deployment))
@@ -183,10 +196,12 @@ class APIMConnectorImpl @Inject()(
   override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
     val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
     val context = Seq("publisherReference" -> publisherReference)
+      .withCorrelationId()
 
     httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
       .setHeader(headersForEnvironment(Secondary)*)
       .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
       .withProxyIfRequired(Secondary, useProxyForSecondary)
       .execute[Either[UpstreamErrorResponse, DetailsResponse]]
       .map {
@@ -198,6 +213,7 @@ class APIMConnectorImpl @Inject()(
 
   override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     val context = Seq("publisherReference" -> publisherReference)
+      .withCorrelationId()
     val deploymentFrom = DeploymentFrom(
       env = "env/test",
       serviceId = publisherReference
@@ -207,6 +223,7 @@ class APIMConnectorImpl @Inject()(
       .setHeader("Authorization" -> authorizationForEnvironment(Primary))
       .setHeader("Content-Type" -> "application/json")
       .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
       .withBody(Json.toJson(deploymentFrom))
       .execute[HttpResponse]
       .map(

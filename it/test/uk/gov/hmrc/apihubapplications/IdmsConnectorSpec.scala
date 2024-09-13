@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.matching.StringValuePattern
 import org.scalatest.EitherValues
@@ -29,11 +29,11 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
@@ -48,6 +48,9 @@ class IdmsConnectorSpec
   with EitherValues {
 
   import IdmsConnectorSpec._
+  
+  private val correlationId = "correlation-id"
+  private val requestId = Some(RequestId(correlationId))
 
   "IdmsConnector.createClient" - {
     "must place the correct request per environment to IDMS and return the ClientResponse" in {
@@ -58,6 +61,7 @@ class IdmsConnectorSpec
             .withHeader("Content-Type", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("X-Correlation-Id", equalTo(correlationId))
             .withRequestBody(
               equalToJson(Json.toJson(testClient).toString())
             )
@@ -67,7 +71,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).createClient(environmentName, testClient)(HeaderCarrier()) map {
+        buildConnector(this).createClient(environmentName, testClient)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Right(testClientResponse)
         }
@@ -75,12 +79,17 @@ class IdmsConnectorSpec
     }
 
     "must return IdmsException for any non-2xx response" in {
-      val context = Seq("environmentName" -> Primary, "client" -> testClient)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "client" -> testClient,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
           post(urlEqualTo(s"/primary/identity/clients"))
             .withHeader("Content-Type", equalTo("application/json"))
+            .withHeader("X-Correlation-Id", equalTo(correlationId))
             .withRequestBody(
               equalToJson(Json.toJson(testClient).toString())
             )
@@ -90,7 +99,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
+        buildConnector(this).createClient(Primary, testClient)(HeaderCarrier(requestId = requestId)) map {
           result =>
             result mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -110,7 +119,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).createClient(Primary, testClient)(HeaderCarrier()) map {
+      buildConnector(this).createClient(Primary, testClient)(HeaderCarrier(requestId = requestId)) map {
         result =>
           result.left.value mustBe a [IdmsException]
           result.left.value.issue mustBe CallError
@@ -126,13 +135,14 @@ class IdmsConnectorSpec
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
                 .withBody(Json.toJson(testSecret).toString())
             )
         )
 
-        buildConnector(this).fetchClient(environmentName, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).fetchClient(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Right(testClientResponse)
         }
@@ -148,14 +158,18 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
     "must return IdmsException for any non-2xx response" in {
-      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "clientId" -> testClientId,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
@@ -166,7 +180,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -182,7 +196,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse.left.value mustBe a [IdmsException]
           clientResponse.left.value.issue mustBe CallError
@@ -202,7 +216,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).deleteClient(environmentName, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).deleteClient(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Right(())
         }
@@ -218,14 +232,18 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
     "must return IdmsException for any non-2xx or 404 response" in {
-      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "clientId" -> testClientId,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
@@ -236,7 +254,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -252,7 +270,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
           actual.left.value.issue mustBe CallError
@@ -268,13 +286,14 @@ class IdmsConnectorSpec
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
                 .withBody(Json.toJson(testSecret).toString())
             )
         )
 
-        buildConnector(this).newSecret(environmentName, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).newSecret(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
           secretResponse =>
             secretResponse mustBe Right(testSecret)
         }
@@ -290,14 +309,18 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
     "must return IdmsException for any non-2xx response" in {
-      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "clientId" -> testClientId,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
@@ -308,7 +331,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -324,7 +347,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse.left.value mustBe a[IdmsException]
           clientResponse.left.value.issue mustBe CallError
@@ -339,13 +362,14 @@ class IdmsConnectorSpec
           put(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
                 .withStatus(200)
             )
         )
 
-        buildConnector(this).addClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier()) map {
+        buildConnector(this).addClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response => response mustBe Right(())
         }
       }
@@ -360,14 +384,19 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
     "must return IdmsException for any non-2xx response" in {
-      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId, "scopeId" -> testScopeId)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "clientId" -> testClientId,
+        "scopeId" -> testScopeId,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
@@ -378,7 +407,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+        buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response =>
             response mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -394,7 +423,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response.left.value mustBe a[IdmsException]
           response.left.value.issue mustBe CallError
@@ -415,7 +444,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).deleteClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier()) map {
+        buildConnector(this).deleteClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response => response mustBe Right(())
         }
       }
@@ -430,14 +459,19 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
     "must return IdmsException for any non-2xx response" in {
-      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId, "scopeId" -> testScopeId)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "clientId" -> testClientId,
+        "scopeId" -> testScopeId,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
@@ -448,7 +482,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+        buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response =>
             response mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -464,7 +498,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier()) map {
+      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response.left.value mustBe a[IdmsException]
           response.left.value.issue mustBe CallError
@@ -482,13 +516,14 @@ class IdmsConnectorSpec
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
                 .withBody(Json.toJson(scopes).toString())
             )
         )
 
-        buildConnector(this).fetchClientScopes(environmentName, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).fetchClientScopes(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Right(scopes)
         }
@@ -499,32 +534,38 @@ class IdmsConnectorSpec
       stubFor(
         get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
           .withHeader("Accept", equalTo("application/json"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
             aResponse()
               .withStatus(404)
           )
       )
 
-      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual mustBe Left(IdmsException.clientNotFound(testClientId))
       }
     }
 
     "must return IdmsException for any non-2xx response" in {
-      val context = Seq("environmentName" -> Primary, "clientId" -> testClientId)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "clientId" -> testClientId,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
           get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
             .withHeader("Accept", equalTo("application/json"))
+            .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
                 .withStatus(status)
             )
         )
 
-        buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
+        buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -535,13 +576,14 @@ class IdmsConnectorSpec
       stubFor(
         get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
           .withHeader("Accept", equalTo("application/json"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
           )
       )
 
-      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier()) map {
+      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
           actual.left.value.issue mustBe CallError
@@ -558,6 +600,7 @@ class IdmsConnectorSpec
         delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
           .withHeader("Authorization", equalTo(authorizationHeaderFor(Primary)))
           .withHeader("x-api-key", apiKeyHeaderPatternFor(Primary))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(aResponse()))
 
       stubFor(
@@ -570,7 +613,7 @@ class IdmsConnectorSpec
       val id = "test-id"
       val application = buildApplication(clientId1, clientId2, id)
 
-      buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           verify(deleteRequestedFor(urlEqualTo(s"/$Primary/identity/clients/$clientId1")))
           verify(deleteRequestedFor(urlEqualTo(s"/$Secondary/identity/clients/$clientId2")))
@@ -581,7 +624,11 @@ class IdmsConnectorSpec
     "must ignore IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
-      val context = Seq("environmentName" -> Secondary, "clientId" -> clientId2)
+      val context = Seq(
+        "environmentName" -> Secondary,
+        "clientId" -> clientId2,
+        "X-Correlation-Id" -> correlationId
+      )
 
       stubFor(
         delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
@@ -603,7 +650,7 @@ class IdmsConnectorSpec
       val id = "test-id"
       val application = buildApplication(clientId1, clientId2, id)
 
-      buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           verify(deleteRequestedFor(urlEqualTo(s"/$Primary/identity/clients/$clientId1")))
           verify(deleteRequestedFor(urlEqualTo(s"/$Secondary/identity/clients/$clientId2")))
@@ -614,7 +661,11 @@ class IdmsConnectorSpec
     "must return IdmsException for any non-success response apart from 404" in {
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
-      val context = Seq("environmentName" -> Primary, "clientId" -> clientId1)
+      val context = Seq(
+        "environmentName" -> Primary,
+        "clientId" -> clientId1,
+        "X-Correlation-Id" -> correlationId
+      )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
@@ -628,7 +679,7 @@ class IdmsConnectorSpec
         val id = "test-id"
         val application = buildApplication(clientId1, clientId2, id)
 
-        buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+        buildConnector(this).deleteAllClients(application)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -649,7 +700,7 @@ class IdmsConnectorSpec
       val id = "test-id"
       val application = buildApplication(clientId1, clientId2, id)
 
-      buildConnector(this).deleteAllClients(application)(HeaderCarrier()) map {
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
           actual.left.value.issue mustBe CallError
