@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{verify, verifyNoInteractions, verifyNoMoreInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
-import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses._
+import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Primary, Scope, Secondary, Endpoint => ApplicationEndpoint}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Primary, Scope, Secondary, Endpoint as ApplicationEndpoint}
+import uk.gov.hmrc.apihubapplications.models.exception.ApiNotFoundException
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.LocalDateTime
@@ -228,6 +229,38 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
           verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
+          result.value mustBe expected
+      }
+    }
+
+    "must handle a missing API, treating it like an API with no scopes" in {
+      val apiDetail1 = baseApi(apiId1)
+        .addEndpoint(endpointForScope1)
+
+      val apiDetail2 = baseApi(apiId2)
+        .addEndpoint(endpointForScope2)
+
+      val application = applicationWithCredentials
+        .addPrimaryScope(scope1)
+        .addPrimaryScope(scope2)
+        .addSecondaryScope(scope1)
+        .addSecondaryScope(scope2)
+        .addApi(buildApi(apiDetail1))
+        .addApi(buildApi(apiDetail2))
+
+      val expected = application
+        .removePrimaryScope(scopeName2)
+        .removeSecondaryScope(scopeName2)
+
+      val fixture = buildFixture()
+
+      when(fixture.integrationCatalogueConnector.findById(eqTo(apiId1))(any)).thenReturn(Future.successful(Right(apiDetail1)))
+      when(fixture.integrationCatalogueConnector.findById(eqTo(apiId2))(any)).thenReturn(Future.successful(Left(ApiNotFoundException.forId(apiId2))))
+      when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+        result =>
           result.value mustBe expected
       }
     }

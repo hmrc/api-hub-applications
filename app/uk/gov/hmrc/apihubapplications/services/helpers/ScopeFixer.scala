@@ -19,10 +19,10 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
-import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses._
+import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName, Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, IdmsException}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationsException, IdmsException}
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -56,6 +56,13 @@ class ScopeFixer @Inject()(
           api =>
             integrationCatalogueConnector.findById(api.id)
         )
+      )
+      .map(
+        maybeApis =>
+          maybeApis.filter {
+            case Left(_: ApiNotFoundException) => false
+            case _ => true
+          }
       )
       .map(useFirstApplicationsException)
       .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
