@@ -165,7 +165,7 @@ class ApplicationsRepository @Inject()(
             .toFuture()
         } map (
           result =>
-            if (result.getModifiedCount > 0) {
+            if (result.getMatchedCount > 0) {
               Right(())
             }
             else {
