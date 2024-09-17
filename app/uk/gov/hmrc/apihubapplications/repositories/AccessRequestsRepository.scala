@@ -115,6 +115,9 @@ class AccessRequestsRepository @Inject()(
         } map {
           result =>
             if (result.getMatchedCount > 0) {
+              if (result.getModifiedCount == 0) {
+                logger.warn(s"AccessRequest with id $id was found, but was not updated.")
+              }
               Right(())
             }
             else {
