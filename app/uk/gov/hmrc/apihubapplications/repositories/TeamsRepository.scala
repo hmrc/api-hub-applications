@@ -139,7 +139,10 @@ class TeamsRepository @Inject()(
             .toFuture()
         } map (
           result =>
-            if (result.getModifiedCount > 0) {
+            if (result.getMatchedCount > 0) {
+              if (result.getModifiedCount == 0) {
+                logger.warn(s"Updating Team: Team with id $id was found, but was not updated.")
+              }
               Right(())
             }
             else {
