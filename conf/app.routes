@@ -41,3 +41,5 @@ PUT        /apis/:apiId/teams/:teamId                                           
 DELETE     /apis/:apiId/teams                                                       uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.removeTeam(apiId: String)
 
 GET        /users                                                                   uk.gov.hmrc.apihubapplications.controllers.UsersController.findAll()
+
+GET        /stats/apis-in-production                                                uk.gov.hmrc.apihubapplications.controllers.StatsController.apisInProduction()
