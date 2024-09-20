@@ -18,15 +18,15 @@ package uk.gov.hmrc.apihubapplications.connectors
 
 import com.google.inject.Inject
 import play.api.Logging
-import play.api.http.HeaderNames._
+import play.api.http.HeaderNames.*
 import play.api.http.MimeTypes.JSON
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.apihubapplications.config.AppConfig
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam, IntegrationResponse}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -87,6 +87,18 @@ class IntegrationCatalogueConnectorImpl @Inject()(
       .map {
         case Right(()) => Right(())
         case Left(e) if e.statusCode == NOT_FOUND => Left(raiseApiNotFoundException.forId(apiId))
+        case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
+      }
+  }
+
+  override def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
+    httpClient.get(url"$baseUrl/integration-catalogue/integrations?integrationType=api")
+      .transform(wsRq => wsRq.withQueryStringParameters(queryParams*))
+      .setHeader((ACCEPT, JSON))
+      .setHeader(AUTHORIZATION -> appAuthToken)
+      .execute[Either[UpstreamErrorResponse, IntegrationResponse]]
+      .map {
+        case Right(response) => Right(response.results)
         case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
       }
   }
