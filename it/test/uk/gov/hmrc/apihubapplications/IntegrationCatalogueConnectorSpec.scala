@@ -27,7 +27,7 @@ import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_C
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.apihubapplications.connectors.{IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
-import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
+import uk.gov.hmrc.apihubapplications.models.api.{ApiTeam, IntegrationResponse}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, IntegrationCatalogueException}
 import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.http.HeaderCarrier
@@ -220,6 +220,43 @@ class IntegrationCatalogueConnectorSpec
       buildConnector().removeApiTeam(apiDetails.id)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApiNotFoundException.forId(s"${apiDetails.id}"))
+      }
+    }
+  }
+
+  "findApis" - {
+    "must place the correct request and return the list of ApiDetail" in {
+      val apis = (1 to 3).map(_ => sampleApiDetail())
+      val response = IntegrationResponse(count = apis.size, pagedCount = None, results = apis)
+
+      stubFor(
+        get(urlEqualTo("/integration-catalogue/integrations?integrationType=api&platformFilter=HIP"))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("Authorization", equalTo(appAuthToken))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(response).toString())
+          )
+      )
+
+      buildConnector().findHipApis()(HeaderCarrier()).map {
+        result =>
+          result.value mustBe apis
+      }
+    }
+
+    "must fail with an exception when integration catalogue returns a failure response" in {
+      stubFor(
+        get(urlEqualTo("/integration-catalogue/integrations?integrationType=api&platformFilter=HIP"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector().findHipApis()(HeaderCarrier()).map {
+        result =>
+          result.left.value mustBe IntegrationCatalogueException.unexpectedResponse(INTERNAL_SERVER_ERROR)
       }
     }
   }

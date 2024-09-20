@@ -32,4 +32,14 @@ trait IntegrationCatalogueConnector {
 
   def removeApiTeam(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
+  def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]]
+
+  def findApis(platformFilter: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
+    findApis(Seq(("platformFilter", platformFilter)))
+  }
+
+  def findHipApis()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
+    findApis("HIP")
+  }
+
 }
