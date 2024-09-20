@@ -243,6 +243,24 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
+  override def getDeployments(environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]] = {
+    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
+
+    val context = Seq("environment" -> environment)
+      .withCorrelationId()
+
+    httpClient.get(url"${baseUrlForEnvironment(environment)}/v1/oas-deployments")
+      .setHeader(headersForEnvironment(environment) *)
+      .withProxyIfRequired(environment, useProxyForSecondary)
+      .withCorrelationId()
+      .setHeader("Accept" -> "application/json")
+      .execute[Either[UpstreamErrorResponse, Seq[ApiDeployment]]]
+      .map {
+        case Right(apiDeployments) => Right(apiDeployments)
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+  }
+
   private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
     val baseUrl = servicesConfig.baseUrl(s"apim-$environmentName")
     val path = servicesConfig.getConfString(s"apim-$environmentName.path", "")

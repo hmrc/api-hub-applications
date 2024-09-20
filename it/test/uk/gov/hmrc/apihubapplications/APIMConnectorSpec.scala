@@ -31,6 +31,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.time.Instant
 import java.util.Base64
 
 class APIMConnectorSpec
@@ -619,6 +620,52 @@ class APIMConnectorSpec
       )
 
       buildConnector().promoteToProduction(serviceId)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
+      }
+    }
+  }
+
+  "APIMConnector.getDeployments" - {
+    "must place the correct request and return the ApiDeployments on success" in {
+      val deployments = Seq(
+        ApiDeployment("test-id-1", Some(Instant.now())),
+        ApiDeployment("test-id-2", None)
+      )
+
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(deployments).toString)
+          )
+      )
+
+      buildConnector().getDeployments(Secondary)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual.value mustBe deployments
+      }
+    }
+
+    "must return UnexpectedResponse when APIM returns one" in {
+      val context = Seq(
+        "environment" -> Secondary,
+        "X-Correlation-Id" -> correlationId
+      )
+
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector().getDeployments(Secondary)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
       }
