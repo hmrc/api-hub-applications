@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 
 import org.scalacheck.rng.Seed
 import org.scalacheck.{Arbitrary, Gen}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestApi, AccessRequestEndpoint, AccessRequestRequest, AccessRequestDecision, AccessRequestStatus, Approved, Cancelled, Pending, Rejected}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestApi, AccessRequestCancelled, AccessRequestDecision, AccessRequestEndpoint, AccessRequestRequest, AccessRequestStatus, Approved, Cancelled, Pending, Rejected}
 
 import java.time.{LocalDateTime, ZoneId}
 
@@ -80,6 +80,16 @@ trait AccessRequestGenerator {
     )
   }
 
+  private def genAccessRequestCancelled: Gen[AccessRequestCancelled] = {
+    for {
+      cancelled <- genLocalDateTime
+      cancelledBy <- sensiblySizedAlphaNumStr
+    } yield AccessRequestCancelled(
+      cancelled = cancelled,
+      cancelledBy = cancelledBy
+    )
+  }
+
   private def genAccessRequest: Gen[AccessRequest] = Gen.sized {size =>
     for {
       id <- Gen.uuid
@@ -92,6 +102,7 @@ trait AccessRequestGenerator {
       requested <- genLocalDateTime
       requestedBy <- sensiblySizedAlphaNumStr
       decision <- Gen.option(genAccessRequestDecision)
+      cancelled <- Gen.option(genAccessRequestCancelled)
     } yield AccessRequest(
       id = Some(id.toString),
       applicationId = applicationId,
@@ -102,7 +113,8 @@ trait AccessRequestGenerator {
       supportingInformation = supportingInformation,
       requested = requested,
       requestedBy = requestedBy,
-      decision = decision
+      decision = decision,
+      cancelled = cancelled
     )
   }
 
