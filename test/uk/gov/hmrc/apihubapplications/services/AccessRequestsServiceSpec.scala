@@ -16,19 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{never, verify, verifyNoInteractions, verifyNoMoreInteractions, when}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.Mockito.{verify, verifyNoInteractions, verifyNoMoreInteractions, when}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
+import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
-import uk.gov.hmrc.apihubapplications.models.accessRequest._
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Environments, TeamMember}
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
 import uk.gov.hmrc.http.HeaderCarrier
@@ -37,6 +36,8 @@ import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
 class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator with TableDrivenPropertyChecks with OptionValues with EitherValues {
+
+  import AccessRequestsServiceSpec.*
 
   "createAccessRequest" - {
     "must pass the correct requests to the accessRequestsRepository" in {
@@ -59,7 +60,6 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.searchService.findById(any())(any)).thenReturn(Future.successful(Right(app)))
       when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(any(), any())(any())).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendNewAccessRequestEmailToApprovers(any(), any())(any())).thenReturn(Future.successful(Right(())))
-
 
       fixture.accessRequestsService.createAccessRequest(request)(HeaderCarrier()).map {
         result =>
@@ -190,7 +190,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val updated = accessRequest
@@ -227,7 +228,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val app = Application(
@@ -274,7 +276,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val app = Application(
@@ -321,7 +324,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val app = Application(
@@ -353,7 +357,6 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       }
     }
 
-
     "must return AccessRequestStatusInvalidException if the access request's status in not Pending" in {
       val fixture = buildFixture()
       val id = "test-id"
@@ -369,7 +372,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
@@ -410,7 +414,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val app = Application(
@@ -455,7 +460,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
@@ -495,7 +501,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val app = Application(
@@ -542,7 +549,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val app = Application(
@@ -589,7 +597,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
-        decision = None
+        decision = None,
+        cancelled = None
       )
 
       val app = Application(
@@ -622,40 +631,103 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
     }
   }
 
+  "cancelAccessRequest" - {
+    "must correctly update a Pending access request to Cancelled" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val accessRequest = buildPendingAccessRequest(applicationId, 1)
+      val cancelRequest = AccessRequestCancelRequest("test-requested-by")
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+
+      val expected = accessRequest.cancel(cancelRequest.toCancelled(fixture.clock))
+
+      fixture.accessRequestsService.cancelAccessRequest(accessRequest.id.value, cancelRequest).map {
+        result =>
+          verify(fixture.accessRequestsRepository).findById(eqTo(accessRequest.id.value))
+          verify(fixture.accessRequestsRepository).update(expected)
+          result.value mustBe ()
+      }
+    }
+
+    "must return AccessRequestStatusInvalidException if the access request is not Pending" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val accessRequest = buildApprovedAccessRequest(applicationId, 1)
+      val cancelRequest = AccessRequestCancelRequest("test-requested-by")
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+
+      fixture.accessRequestsService.cancelAccessRequest(accessRequest.id.value, cancelRequest).map {
+        result =>
+          verify(fixture.accessRequestsRepository).findById(eqTo(accessRequest.id.value))
+          verifyNoMoreInteractions(fixture.accessRequestsRepository)
+          result.left.value mustBe AccessRequestStatusInvalidException.forAccessRequest(accessRequest)
+      }
+    }
+
+    "must return AccessRequestNotFoundException if the access request if not found" in {
+      val fixture = buildFixture()
+      val accessRequestId = "test-access-request-id"
+      val cancelRequest = AccessRequestCancelRequest("test-requested-by")
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(None))
+
+      fixture.accessRequestsService.cancelAccessRequest(accessRequestId, cancelRequest).map {
+        result =>
+          verify(fixture.accessRequestsRepository).findById(eqTo(accessRequestId))
+          verifyNoMoreInteractions(fixture.accessRequestsRepository)
+          result.left.value mustBe AccessRequestNotFoundException.forId(accessRequestId)
+      }
+    }
+  }
+
   "cancelAccessRequests" - {
     "must cancel all pending access requests for the application and API" in {
       val fixture = buildFixture()
 
       val applicationId = "test-application-id"
-      val apiId = "test-api-id"
 
-      val request1 = AccessRequest(
-        id = Some("test-request-id-1"),
-        applicationId = applicationId,
-        apiId = apiId,
-        apiName = "test-api-name",
-        status = Pending,
-        endpoints = Seq.empty,
-        supportingInformation = "test-supporting-information",
-        requested = LocalDateTime.now(),
-        requestedBy = "test-requested-by",
-        decision = None
-      )
-
-      val request2 = request1.copy(id = Some("test-request-id-2"))
-      val request3 = request1.copy(id = Some("test-request-id-3"), apiId = "another-api-id")
+      val request1 = buildPendingAccessRequest(applicationId, 1, Some(1))
+      val request2 = buildPendingAccessRequest(applicationId, 2, Some(1))
+      val request3 = buildPendingAccessRequest(applicationId, 3, Some(2))
 
       val requests = Seq(request1, request2, request3)
 
       when(fixture.accessRequestsRepository.find(any(), any())).thenReturn(Future.successful(requests))
-
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
 
-      fixture.accessRequestsService.cancelAccessRequests(applicationId, apiId).map {
+      val cancelled = AccessRequestCancelled(LocalDateTime.now(fixture.clock), "system")
+
+      fixture.accessRequestsService.cancelAccessRequests(applicationId, request1.apiId).map {
         result =>
           verify(fixture.accessRequestsRepository).find(eqTo(Some(applicationId)), eqTo(Some(Pending)))
-          verify(fixture.accessRequestsRepository).update(eqTo(request1.copy(status = Cancelled)))
-          verify(fixture.accessRequestsRepository).update(eqTo(request2.copy(status = Cancelled)))
+          verify(fixture.accessRequestsRepository).update(eqTo(request1.cancel(cancelled)))
+          verify(fixture.accessRequestsRepository).update(eqTo(request2.cancel(cancelled)))
+          verifyNoMoreInteractions(fixture.accessRequestsRepository)
+          result.value mustBe ()
+      }
+    }
+
+    "must cancel all pending access requests for an application" in {
+      val fixture = buildFixture()
+
+      val applicationId = "test-application-id"
+
+      val pending1 = buildPendingAccessRequest(applicationId, 1)
+      val pending2 = buildPendingAccessRequest(applicationId, 2)
+
+      when(fixture.accessRequestsRepository.find(any(), any())).thenReturn(Future.successful(Seq(pending1, pending2)))
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+
+      val cancelled = AccessRequestCancelled(LocalDateTime.now(fixture.clock), "system")
+
+      fixture.accessRequestsService.cancelAccessRequests(applicationId).map {
+        result =>
+          verify(fixture.accessRequestsRepository).find(eqTo(Some(applicationId)), eqTo(Some(Pending)))
+          verify(fixture.accessRequestsRepository).update(eqTo(pending1.cancel(cancelled)))
+          verify(fixture.accessRequestsRepository).update(eqTo(pending2.cancel(cancelled)))
           verifyNoMoreInteractions(fixture.accessRequestsRepository)
           result.value mustBe ()
       }
@@ -663,22 +735,56 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
   }
 
   private case class Fixture(
-      clock: Clock,
-      accessRequestsRepository: AccessRequestsRepository,
-      searchService: ApplicationsSearchService,
-      credentialsService: ApplicationsCredentialsService,
-      accessRequestsService: AccessRequestsService,
-      emailConnector: EmailConnector
+    clock: Clock,
+    accessRequestsRepository: AccessRequestsRepository,
+    searchService: ApplicationsSearchService,
+    credentialsService: ApplicationsCredentialsService,
+    accessRequestsService: AccessRequestsService,
+    emailConnector: EmailConnector
   )
 
   private def buildFixture(): Fixture = {
-    val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
     val accessRequestsRepository = mock[AccessRequestsRepository]
     val searchService = mock[ApplicationsSearchService]
     val credentialsService = mock[ApplicationsCredentialsService]
     val emailConnector = mock[EmailConnector]
     val accessRequestsService = new AccessRequestsService(accessRequestsRepository, searchService, credentialsService, clock, emailConnector)
     Fixture(clock, accessRequestsRepository, searchService, credentialsService, accessRequestsService, emailConnector)
+  }
+
+}
+
+object AccessRequestsServiceSpec {
+
+  private val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+  private implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
+
+  private def buildPendingAccessRequest(applicationId: String, accessRequestId: Int, apiId: Option[Int] = None): AccessRequest = {
+    AccessRequest(
+      id = Some(s"test-access-request-id-$accessRequestId"),
+      applicationId = applicationId,
+      apiId = s"test-api-id-${apiId.getOrElse(accessRequestId)}",
+      apiName = "test-api-name",
+      status = Pending,
+      endpoints = Seq.empty,
+      supportingInformation = "test-supporting-information",
+      requested = LocalDateTime.now(),
+      requestedBy = "test-requested-by",
+      decision = None,
+      cancelled = None
+    )
+  }
+
+  private def buildApprovedAccessRequest(applicationId: String, accessRequestId: Int, apiId: Option[Int] = None): AccessRequest = {
+    buildPendingAccessRequest(applicationId, accessRequestId, apiId)
+      .setDecision(
+        AccessRequestDecision(
+          decided = LocalDateTime.now(clock),
+          decidedBy = "test-decided-by",
+          rejectedReason = None
+        )
+      )
+      .setStatus(Approved)
   }
 
 }

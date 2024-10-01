@@ -30,7 +30,8 @@ case class AccessRequest(
   supportingInformation: String,
   requested: LocalDateTime,
   requestedBy: String,
-  decision: Option[AccessRequestDecision]
+  decision: Option[AccessRequestDecision],
+  cancelled: Option[AccessRequestCancelled]
 )
 
 object AccessRequest {
@@ -44,8 +45,7 @@ object AccessRequest {
     requested: LocalDateTime,
     requestedBy: String,
   ): AccessRequest = {
-    AccessRequest(
-      id = None,
+    apply(
       applicationId = applicationId,
       apiId = apiId,
       apiName = apiName,
@@ -53,8 +53,32 @@ object AccessRequest {
       endpoints = Seq.empty,
       supportingInformation = supportingInformation,
       requested = requested,
+      requestedBy = requestedBy
+    )
+  }
+
+  def apply(
+    applicationId: String,
+    apiId: String,
+    apiName: String,
+    status: AccessRequestStatus,
+    endpoints: Seq[AccessRequestEndpoint],
+    supportingInformation: String,
+    requested: LocalDateTime,
+    requestedBy: String,
+  ): AccessRequest = {
+    AccessRequest(
+      id = None,
+      applicationId = applicationId,
+      apiId = apiId,
+      apiName = apiName,
+      status = status,
+      endpoints = endpoints,
+      supportingInformation = supportingInformation,
+      requested = requested,
       requestedBy = requestedBy,
-      decision = None
+      decision = None,
+      cancelled = None
     )
   }
 

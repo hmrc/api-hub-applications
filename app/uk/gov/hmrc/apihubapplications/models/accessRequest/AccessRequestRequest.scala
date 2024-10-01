@@ -31,7 +31,6 @@ case class AccessRequestRequest(
     apis.map(
       api =>
         AccessRequest(
-          id = None,
           applicationId = applicationId,
           apiId = api.apiId,
           apiName = api.apiName,
@@ -39,8 +38,7 @@ case class AccessRequestRequest(
           endpoints = api.endpoints,
           supportingInformation = supportingInformation,
           requested = LocalDateTime.now(clock),
-          requestedBy = requestedBy,
-          decision = None
+          requestedBy = requestedBy
         )
     )
   }

@@ -19,14 +19,14 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
-import uk.gov.hmrc.apihubapplications.models.accessRequest._
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
+import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.Clock
+import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -126,12 +126,26 @@ class AccessRequestsService @Inject()(
     }
   }
 
+  def cancelAccessRequest(id: String, cancelRequest: AccessRequestCancelRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    accessRequestsRepository.findById(id).flatMap {
+      case Some(accessRequest) if accessRequest.status == Pending =>
+        accessRequestsRepository.update(
+          accessRequest
+            .cancel(cancelRequest.toCancelled(clock))
+        )
+      case Some(accessRequest) =>
+        Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
+      case _ =>
+        Future.successful(Left(raiseAccessRequestNotFoundException.forId(id)))
+    }
+  }
+
   def cancelAccessRequests(applicationId: String): Future[Either[ApplicationsException, Unit]] = {
     getAccessRequests(Some(applicationId), Some(Pending)).flatMap(
       accessRequests => {
         Future.sequence(accessRequests.map(pendingAccessRequest => accessRequestsRepository.update(
           pendingAccessRequest
-            .setStatus(Cancelled)
+            .cancel(cancelled = LocalDateTime.now(clock), cancelledBy = "system")
         ))).map(useFirstApplicationsException).map {
           case Right(_) => Right(())
           case Left(e) => Left(e)
@@ -148,7 +162,9 @@ class AccessRequestsService @Inject()(
             .sequence(
               accessRequests.map(
                 accessRequest =>
-                  accessRequestsRepository.update(accessRequest.setStatus(Cancelled))
+                  accessRequestsRepository.update(
+                    accessRequest.cancel(cancelled = LocalDateTime.now(clock), cancelledBy = "system")
+                  )
               )
             )
             .map(useFirstApplicationsException)

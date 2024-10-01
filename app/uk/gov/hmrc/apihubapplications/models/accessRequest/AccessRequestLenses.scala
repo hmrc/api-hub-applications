@@ -40,6 +40,12 @@ object AccessRequestLenses {
       set = (accessRequest, decision) => accessRequest.copy(decision = decision)
     )
 
+  val accessRequestCancelled: Lens[AccessRequest, Option[AccessRequestCancelled]] =
+    Lens[AccessRequest, Option[AccessRequestCancelled]](
+      get = _.cancelled,
+      set = (accessRequest, cancelled) => accessRequest.copy(cancelled = cancelled)
+    )
+
   val accessRequestStatus: Lens[AccessRequest, AccessRequestStatus] =
     Lens[AccessRequest, AccessRequestStatus](
       get = _.status,
@@ -95,6 +101,16 @@ object AccessRequestLenses {
           rejectedReason = decisionRequest.rejectedReason
         )
       )
+    }
+
+    def cancel(cancelled: AccessRequestCancelled): AccessRequest = {
+      accessRequestCancelled
+        .set(accessRequest, Some(cancelled))
+        .setStatus(Cancelled)
+    }
+
+    def cancel(cancelled: LocalDateTime, cancelledBy: String): AccessRequest = {
+      cancel(AccessRequestCancelled(cancelled, cancelledBy))
     }
 
     def setStatus(status: AccessRequestStatus): AccessRequest = {

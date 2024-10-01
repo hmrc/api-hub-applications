@@ -16,24 +16,23 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{never, verify, when}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.Mockito.{verify, when}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
-import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
+import play.api.Application as PlayApplication
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
-import play.api.{Application => PlayApplication}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestDecisionRequest, AccessRequestRequest, AccessRequestStatus, Pending}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.exception.{AccessRequestNotFoundException, AccessRequestStatusInvalidException, ApplicationNotFoundException}
 import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
 import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
@@ -299,6 +298,73 @@ class AccessRequestsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(PUT, routes.AccessRequestsController.rejectAccessRequest(id).url)
           .withJsonBody(Json.toJson(decisionRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+  }
+
+  "cancelAccessRequest" - {
+    "must process a valid request and return No Content" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val cancelRequest = AccessRequestCancelRequest("test-cancelled-by")
+
+      when(fixture.accessRequestsService.cancelAccessRequest(any(), any())(any()))
+        .thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.AccessRequestsController.cancelAccessRequest(id))
+          .withJsonBody(Json.toJson(cancelRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.accessRequestsService).cancelAccessRequest(eqTo(id), eqTo(cancelRequest))(any())
+      }
+    }
+
+    "must return 404 Not Found when the access request does not exist" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val cancelRequest = AccessRequestCancelRequest("test-cancelled-by")
+
+      when(fixture.accessRequestsService.cancelAccessRequest(any(), any())(any()))
+        .thenReturn(Future.successful(Left(AccessRequestNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.AccessRequestsController.cancelAccessRequest(id))
+          .withJsonBody(Json.toJson(cancelRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 409 Conflict when the access request's status is not pending" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val cancelRequest = AccessRequestCancelRequest("test-cancelled-by")
+
+      when(fixture.accessRequestsService.cancelAccessRequest(any(), any())(any()))
+        .thenReturn(Future.successful(Left(AccessRequestStatusInvalidException("test-message"))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.AccessRequestsController.cancelAccessRequest(id))
+          .withJsonBody(Json.toJson(cancelRequest))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CONFLICT
+      }
+    }
+
+    "must return 400 Bad Request when the request body is not valid" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.AccessRequestsController.cancelAccessRequest(id))
+          .withJsonBody(Json.obj())
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST

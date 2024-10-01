@@ -27,6 +27,7 @@ import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestApi, AccessRequestRequest, Pending}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
@@ -239,7 +240,6 @@ class EmailConnectorSpec
   "EmailConnector.sendAccessApprovedEmailToTeam" - {
     "must place the correct requests" in {
       val accessRequest = AccessRequest(
-        id = Some("test-id"),
         applicationId = application.id.get,
         apiId = "test-api-id",
         apiName = "test-api-name",
@@ -247,9 +247,8 @@ class EmailConnectorSpec
         endpoints = Seq.empty,
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
-        requestedBy = "test-requested-by",
-        decision = None
-      )
+        requestedBy = "test-requested-by"
+      ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
         application.teamMembers.map(teamMember => teamMember.email),
@@ -280,7 +279,6 @@ class EmailConnectorSpec
 
     "must handle non-2xx responses" in {
       val accessRequest = AccessRequest(
-        id = Some("test-id"),
         applicationId = application.id.get,
         apiId = "test-api-id",
         apiName = "test-api-name",
@@ -288,9 +286,8 @@ class EmailConnectorSpec
         endpoints = Seq.empty,
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
-        requestedBy = "test-requested-by",
-        decision = None
-      )
+        requestedBy = "test-requested-by"
+      ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
         application.teamMembers.map(teamMember => teamMember.email),
@@ -467,7 +464,6 @@ class EmailConnectorSpec
   "EmailConnector.sendAccessRejectedEmailToTeam" - {
     "must place the correct requests" in {
       val accessRequest = AccessRequest(
-        id = Some("test-id"),
         applicationId = application.id.get,
         apiId = "test-api-id",
         apiName = "test-api-name",
@@ -475,9 +471,8 @@ class EmailConnectorSpec
         endpoints = Seq.empty,
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
-        requestedBy = "test-requested-by",
-        decision = None
-      )
+        requestedBy = "test-requested-by"
+      ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
         application.teamMembers.map(teamMember => teamMember.email),
@@ -508,7 +503,6 @@ class EmailConnectorSpec
 
     "must handle non-2xx responses" in {
       val accessRequest = AccessRequest(
-        id = Some("test-id"),
         applicationId = application.id.get,
         apiId = "test-api-id",
         apiName = "test-api-name",
@@ -516,9 +510,8 @@ class EmailConnectorSpec
         endpoints = Seq.empty,
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
-        requestedBy = "test-requested-by",
-        decision = None
-      )
+        requestedBy = "test-requested-by"
+      ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
         application.teamMembers.map(teamMember => teamMember.email),

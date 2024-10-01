@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestDecisionRequest, AccessRequestRequest, AccessRequestStatus}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequestCancelRequest, AccessRequestDecisionRequest, AccessRequestRequest, AccessRequestStatus}
 import uk.gov.hmrc.apihubapplications.models.exception.{AccessRequestNotFoundException, AccessRequestStatusInvalidException, ApplicationNotFoundException}
 import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -90,6 +90,22 @@ class AccessRequestsController @Inject()(
         case JsSuccess(_, _) =>
           logger.warn("No rejected reason")
           Future.successful(BadRequest)
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+  }
+
+  def cancelAccessRequest(id: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
+    implicit request =>
+      request.body.validate[AccessRequestCancelRequest] match {
+        case JsSuccess(cancelRequest, _) =>
+          accessRequestsService.cancelAccessRequest(id, cancelRequest).map {
+            case Right(_) => NoContent
+            case Left(_: AccessRequestNotFoundException) => NotFound
+            case Left(_: AccessRequestStatusInvalidException) => Conflict
+            case Left(e) => throw e
+          }
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
