@@ -439,7 +439,7 @@ class APIMConnectorSpec
       )
     }
 
-    "must correctly handle null egressPrefix and prefixesToRemove values" in {
+    "must correctly handle null egressMappings and prefixesToRemove values" in {
       val detailsResponseWithNullValues =
         """
           |{
@@ -450,7 +450,7 @@ class APIMConnectorSpec
           |    "backends": [
           |        "EMS"
           |    ],
-          |    "egressPrefix": null,
+          |    "egressMappings": null,
           |    "prefixesToRemove": null
           |}
           |""".stripMargin
@@ -474,7 +474,7 @@ class APIMConnectorSpec
       )
     }
 
-    "must correctly handle missing egressPrefix and prefixesToRemove values" in {
+    "must correctly handle missing egressMappings and prefixesToRemove values" in {
       val detailsResponseWithMissingValues =
         """
           |{
