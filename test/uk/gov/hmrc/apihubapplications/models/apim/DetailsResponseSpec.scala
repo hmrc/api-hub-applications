@@ -25,21 +25,6 @@ import uk.gov.hmrc.apihubapplications.models.apim.DetailsResponseSpec.buildDetai
 class DetailsResponseSpec extends AnyFreeSpec with Matchers {
   "DetailsResponse.toDeploymentDetails" - {
 
-    "must correctly handle egressPrefix values" in {
-      forAll(Table(
-        ("egressPrefix", "Expected DeploymentDetails value"),
-        (Some("test-egress-prefix"), Some("test-egress-prefix")),
-        (Some(""), None),
-        (Some("    "), None),
-        (None, None)
-      )) { (egressPrefix, expectedDeploymentDetailsValue) =>
-        val response = buildDetailsResponse(egressPrefix, None)
-        val deploymentDetails = response.toDeploymentDetails
-
-        deploymentDetails.egressPrefix mustBe expectedDeploymentDetailsValue
-      }
-    }
-
     "must correctly handle prefixesToRemove values" in {
       forAll(Table(
         ("prefixesToRemove", "Expected DeploymentDetails value"),
@@ -47,7 +32,7 @@ class DetailsResponseSpec extends AnyFreeSpec with Matchers {
         (Some(Seq.empty), Seq.empty),
         (None, Seq.empty),
       )) { (prefixesToRemove, expectedDeploymentDetailsValue) =>
-        val response = buildDetailsResponse(None, prefixesToRemove)
+        val response = buildDetailsResponse(prefixesToRemove)
         val deploymentDetails = response.toDeploymentDetails
 
         deploymentDetails.prefixesToRemove mustBe expectedDeploymentDetailsValue
@@ -57,14 +42,14 @@ class DetailsResponseSpec extends AnyFreeSpec with Matchers {
 }
 
 object DetailsResponseSpec{
-  def buildDetailsResponse(egressPrefix: Option[String], prefixesToRemove: Option[Seq[String]]): DetailsResponse = {
+  def buildDetailsResponse(prefixesToRemove: Option[Seq[String]]): DetailsResponse = {
     DetailsResponse(
       description = "test-description",
       status = "test-status",
       domain = "test-domain",
       subdomain = "test-subdomain",
       backends = Seq("test-backend"),
-      egressPrefix = egressPrefix,
+      egressMappings = None,
       prefixesToRemove = prefixesToRemove
     )
   }

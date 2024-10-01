@@ -405,7 +405,7 @@ class DeploymentsControllerSpec
         domain = "test-domain",
         subDomain = "test-dub-domain",
         hods = Seq("test-backend-1", "test-backend-2"),
-        egressPrefix = Some("test-egress-prefix"),
+        egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
         prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
       )
 
@@ -609,7 +609,7 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoS
     subDomain = "a different subdomain",
     hods = Seq("a different hod"),
     prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
-    egressPrefix = Some("test-egress-prefix")
+    egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix")))
   )
 
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
