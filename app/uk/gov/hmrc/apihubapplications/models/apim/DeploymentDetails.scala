@@ -24,7 +24,7 @@ case class DeploymentDetails (
   domain: String,
   subDomain: String,
   hods: Seq[String],
-  egressPrefix: Option[String],
+  egressMappings: Option[Seq[EgressMapping]],
   prefixesToRemove: Seq[String]
 )
 

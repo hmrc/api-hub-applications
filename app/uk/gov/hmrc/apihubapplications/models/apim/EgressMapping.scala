@@ -18,30 +18,13 @@ package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
 
-case class UpdateMetadata(
-  description: String,
-  status: String,
-  domain: String,
-  subdomain: String,
-  backends: Seq[String],
-  prefixesToRemove: Seq[String],
-  egressMappings: Option[Seq[EgressMapping]],
+case class EgressMapping(
+    prefix: String,
+    egressPrefix: String
 )
 
-object UpdateMetadata {
+object EgressMapping {
 
-  def apply(request: RedeploymentRequest): UpdateMetadata = {
-    UpdateMetadata(
-      description = request.description,
-      status = request.status,
-      domain = request.domain,
-      subdomain = request.subDomain,
-      backends = request.hods,
-      prefixesToRemove = request.prefixesToRemove,
-      egressMappings = request.egressMappings
-    )
-  }
-
-  implicit val formatUpdateMetadata: Format[UpdateMetadata] = Json.format[UpdateMetadata]
+  implicit val formatEgressMapping: Format[EgressMapping] = Json.format[EgressMapping]
 
 }

@@ -24,7 +24,7 @@ case class DetailsResponse(
   domain: String,
   subdomain: String,
   backends: Seq[String],
-  egressPrefix: Option[String],
+  egressMappings: Option[Seq[EgressMapping]],
   prefixesToRemove: Option[Seq[String]]
 ) {
 
@@ -35,16 +35,9 @@ case class DetailsResponse(
       domain = domain,
       subDomain = subdomain,
       hods = backends,
-      egressPrefix = mapEgressPrefix,
+      egressMappings = egressMappings,
       prefixesToRemove = mapPrefixesToRemove
     )
-  }
-
-  private def mapEgressPrefix: Option[String] = {
-    egressPrefix.map(_.trim) match {
-      case Some(s) if s.nonEmpty => Some(s)
-      case _ => None
-    }
   }
 
   private def mapPrefixesToRemove: Seq[String] = {

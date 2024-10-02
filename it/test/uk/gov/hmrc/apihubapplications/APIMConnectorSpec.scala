@@ -439,7 +439,7 @@ class APIMConnectorSpec
       )
     }
 
-    "must correctly handle null egressPrefix and prefixesToRemove values" in {
+    "must correctly handle null egressMappings and prefixesToRemove values" in {
       val detailsResponseWithNullValues =
         """
           |{
@@ -450,7 +450,7 @@ class APIMConnectorSpec
           |    "backends": [
           |        "EMS"
           |    ],
-          |    "egressPrefix": null,
+          |    "egressMappings": null,
           |    "prefixesToRemove": null
           |}
           |""".stripMargin
@@ -474,7 +474,7 @@ class APIMConnectorSpec
       )
     }
 
-    "must correctly handle missing egressPrefix and prefixesToRemove values" in {
+    "must correctly handle missing egressMappings and prefixesToRemove values" in {
       val detailsResponseWithMissingValues =
         """
           |{
@@ -731,7 +731,7 @@ object APIMConnectorSpec {
     subDomain = "a subdomain",
     hods = Seq("a hod"),
     Seq("test-prefix-1", "test-prefix-2"),
-    Some("test-egress-prefix")
+    Some(Seq(EgressMapping("prefix", "egress-prefix")))
   )
 
   private val redeploymentRequest = RedeploymentRequest(
@@ -742,7 +742,7 @@ object APIMConnectorSpec {
     subDomain = "a subdomain",
     hods = Seq("a hod"),
     prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
-    egressPrefix = Some("test-egress-prefix")
+    egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix")))
   )
 
   private val deploymentFrom = DeploymentFrom(
@@ -775,7 +775,7 @@ object APIMConnectorSpec {
     domain = "test-domain",
     subdomain = "test-sub-domain",
     backends = Seq("test-backend-1", "test-backend-2"),
-    egressPrefix = Some("test-egress-prefix"),
+    egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
     prefixesToRemove = Some(Seq("test-prefix-1", "test-prefix-2"))
   )
 
@@ -785,7 +785,7 @@ object APIMConnectorSpec {
     domain = "8",
     subDomain = "8.16",
     hods = Seq("EMS"),
-    egressPrefix = None,
+    egressMappings = None,
     prefixesToRemove = Seq.empty
   )
 
