@@ -2,7 +2,7 @@ import play.sbt.routes.RoutesKeys
 import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "3.4.2"
+ThisBuild / scalaVersion := "3.5.0"
 
 lazy val microservice = Project("api-hub-applications", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
@@ -26,7 +26,8 @@ lazy val microservice = Project("api-hub-applications", file("."))
     Test / unmanagedSourceDirectories += baseDirectory.value / "test-common"
   )
   .settings(scalacOptions ++= Seq("-deprecation", "-feature"))
-  .settings(scalacOptions := scalacOptions.value.diff(Seq("-Wunused:all")))
+  .settings(scalacOptions := scalacOptions.value.diff(Seq("-Wunused:all").distinct))
+  .settings(scalacOptions += "-Wconf:msg=Flag.*repeatedly:s")
 
 lazy val it = (project in file("it"))
   .enablePlugins(PlayScala)
@@ -34,3 +35,4 @@ lazy val it = (project in file("it"))
   .settings(DefaultBuildSettings.itSettings())
   .settings(libraryDependencies ++= AppDependencies.it)
   .settings(scalacOptions := scalacOptions.value.diff(Seq("-Wunused:all")))
+  .settings(scalacOptions += "-Wconf:msg=Flag.*repeatedly:s")
