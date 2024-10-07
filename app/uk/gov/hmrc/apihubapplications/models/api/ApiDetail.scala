@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.api
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
+import uk.gov.hmrc.apihubapplications.utils.EnumFormat
 
 sealed trait ApiStatus
 
@@ -35,6 +36,9 @@ object ApiStatus extends Enumerable.Implicits {
 
 }
 
+enum ApiType derives EnumFormat:
+  case SIMPLE, ADVANCED
+
 case class ApiDetail(
   id: String,
   publisherReference: String,
@@ -48,7 +52,8 @@ case class ApiDetail(
   teamId: Option[String] = None,
   domain: Option[String] = None,
   subDomain: Option[String] = None,
-  hods: Seq[String] = List.empty
+  hods: Seq[String] = List.empty,
+  apiType: Option[ApiType] = None,
 )
 
 object ApiDetail {
