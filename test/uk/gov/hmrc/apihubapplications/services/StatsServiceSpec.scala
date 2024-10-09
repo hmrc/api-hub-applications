@@ -49,7 +49,7 @@ class StatsServiceSpec
 
       val apis = (3 to 7).map(
         i =>
-          sampleApiDetail().copy(publisherReference = s"test-id-$i")
+          sampleApiDetailWithoutOAS().copy(publisherReference = s"test-id-$i")
       )
 
       when(fixture.apimConnector.getDeployments(eqTo(Primary))(any)).thenReturn(Future.successful(Right(deployments)))

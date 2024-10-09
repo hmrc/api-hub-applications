@@ -24,7 +24,7 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.apihubapplications.config.AppConfig
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam, IntegrationResponse}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiDetailWithoutOAS, ApiTeam, IntegrationResponse}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -91,7 +91,7 @@ class IntegrationCatalogueConnectorImpl @Inject()(
       }
   }
 
-  override def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
+  override def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetailWithoutOAS]]] = {
     httpClient.get(url"$baseUrl/integration-catalogue/integrations?integrationType=api")
       .transform(wsRq => wsRq.withQueryStringParameters(queryParams*))
       .setHeader((ACCEPT, JSON))
