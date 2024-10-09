@@ -70,3 +70,25 @@ object ApiDetail {
   implicit val formatApiDetail: Format[ApiDetail] = Json.format[ApiDetail]
 
 }
+
+case class ApiDetailWithoutOAS(
+                                id: String,
+                                publisherReference: String,
+                                title: String,
+                                description: String,
+                                version: String,
+                                endpoints: Seq[Endpoint],
+                                shortDescription: Option[String],
+                                apiStatus: ApiStatus,
+                                teamId: Option[String] = None,
+                                domain: Option[String] = None,
+                                subDomain: Option[String] = None,
+                                hods: Seq[String] = List.empty,
+                                apiType: Option[ApiType] = None,
+                              )
+
+object ApiDetailWithoutOAS {
+
+  implicit val formatApiDetailWithoutOAS: Format[ApiDetailWithoutOAS] = Json.format[ApiDetailWithoutOAS]
+
+}

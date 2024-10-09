@@ -226,7 +226,7 @@ class IntegrationCatalogueConnectorSpec
 
   "findApis" - {
     "must place the correct request and return the list of ApiDetail" in {
-      val apis = (1 to 3).map(_ => sampleApiDetail())
+      val apis = (1 to 3).map(_ => sampleApiDetailWithoutOAS())
       val response = IntegrationResponse(count = apis.size, pagedCount = None, results = apis)
 
       stubFor(

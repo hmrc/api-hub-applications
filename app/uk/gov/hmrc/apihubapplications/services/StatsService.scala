@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
-import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
+import uk.gov.hmrc.apihubapplications.models.api.ApiDetailWithoutOAS
 import uk.gov.hmrc.apihubapplications.models.apim.ApiDeployment
 import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
@@ -44,7 +44,7 @@ class StatsService @Inject()(
     } yield buildApisInProductionStatistic(deployments, apis)).value
   }
 
-  private def buildApisInProductionStatistic(deployments: Seq[ApiDeployment], apis: Seq[ApiDetail]): ApisInProductionStatistic = {
+  private def buildApisInProductionStatistic(deployments: Seq[ApiDeployment], apis: Seq[ApiDetailWithoutOAS]): ApisInProductionStatistic = {
     val ids = deployments.map(_.id).toSet
     val publisherRefs = apis.map(_.publisherReference).toSet
     val totalInProduction = ids.intersect(publisherRefs).size

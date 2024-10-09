@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 
 import org.scalacheck.rng.Seed
 import org.scalacheck.{Arbitrary, Gen}
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiStatus, ApiType, Endpoint, EndpointMethod}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiDetailWithoutOAS, ApiStatus, ApiType, Endpoint, EndpointMethod}
 
 import java.time.Instant
 
@@ -93,10 +93,50 @@ trait ApiDetailGenerators {
       Gen.nonEmptyListOf(arbitraryApiDetail.arbitrary)
     }
 
+  private def genApiDetailWithoutOAS: Gen[ApiDetailWithoutOAS] = Gen.sized { size =>
+    for {
+      id <- Gen.uuid
+      title <- sensiblySizedAlphaNumStr
+      description <- sensiblySizedAlphaNumStr
+      publisherReference <- sensiblySizedAlphaNumStr
+      version <- sensiblySizedAlphaNumStr
+      endpoints <- Gen.listOfN(size / listSizeQuota, arbitraryEndpoint.arbitrary).suchThat(_.nonEmpty)
+      shortDescription <- sensiblySizedAlphaNumStr
+      apiStatus <- Gen.oneOf(ApiStatus.values)
+      domain <- sensiblySizedAlphaNumStr
+      subDomain <- sensiblySizedAlphaNumStr
+      hods <- Gen.listOfN(size/ listSizeQuota, sensiblySizedAlphaNumStr).suchThat(_.nonEmpty)
+      apiType <- Gen.oneOf(ApiType.values.toIndexedSeq)
+    } yield ApiDetailWithoutOAS(
+      id.toString,
+      publisherReference,
+      title,
+      description,
+      version,
+      endpoints,
+      Some(shortDescription),
+      apiStatus,
+      domain = Some(domain),
+      subDomain = Some(subDomain),
+      hods = hods,
+      apiType = Some(apiType),
+    )
+  }
+
+  implicit lazy val arbitraryApiDetailWithoutOAS: Arbitrary[ApiDetailWithoutOAS] = Arbitrary(genApiDetailWithoutOAS)
+
+  implicit val arbitraryApiDetailsWithoutOAS: Arbitrary[Seq[ApiDetailWithoutOAS]] =
+    Arbitrary {
+      Gen.nonEmptyListOf(arbitraryApiDetailWithoutOAS.arbitrary)
+    }
+
   private val parameters = Gen.Parameters.default
 
   def sampleApiDetail(): ApiDetail =
     genApiDetail.pureApply(parameters, Seed.random())
+
+  def sampleApiDetailWithoutOAS(): ApiDetailWithoutOAS =
+    genApiDetailWithoutOAS.pureApply(parameters, Seed.random())
 
   def sampleOas: String =
     """openapi: 3.0.3
