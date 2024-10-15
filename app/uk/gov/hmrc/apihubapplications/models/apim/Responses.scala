@@ -20,7 +20,9 @@ import play.api.libs.json.{Format, Json}
 
 sealed trait ValidateResponse
 
-case object SuccessfulValidateResponse extends ValidateResponse
+case object SuccessfulValidateResponse extends ValidateResponse {
+  implicit val soasr: Format[SuccessfulValidateResponse.type] = Json.format[SuccessfulValidateResponse.type]
+}
 
 sealed trait DeploymentsResponse
 
@@ -48,4 +50,12 @@ object SuccessfulDeploymentResponse {
 
   implicit val formatDeploymentResponse: Format[SuccessfulDeploymentResponse] = Json.format[SuccessfulDeploymentResponse]
 
+}
+
+object ValidateResponse {
+  implicit val formatValidateResponse: Format[ValidateResponse] = {
+    implicit val ioasr: Format[InvalidOasResponse] = InvalidOasResponse.formatInvalidOasResponse
+    implicit val soasr: Format[SuccessfulValidateResponse.type] = SuccessfulValidateResponse.soasr
+    Json.format[ValidateResponse]
+  }
 }
