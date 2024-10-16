@@ -19,11 +19,10 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{Format, JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.apim.{InvalidOasResponse, SuccessfulValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.apim.ValidateResponse
-import uk.gov.hmrc.apihubapplications.models.requests.OASValidationRequest
 import uk.gov.hmrc.apihubapplications.services.OASService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -38,24 +37,20 @@ class OASController @Inject()(
 
   private implicit val formatValidateResponse: Format[ValidateResponse] = ValidateResponse.formatValidateResponse
 
-  def validateOAS(): Action[JsValue] = identify.compose(Action(parse.json)).async {
+  def validateOAS(): Action[AnyContent] = identify.async {
     implicit request =>
-      request.body.validate[OASValidationRequest] match {
-        case JsSuccess(oasValidationRequest, _) =>
-          oasService.validateInPrimary(oasValidationRequest.oas)
-            .map(_.fold(
-              e => InternalServerError(e.message),
-              {
-                case invalidResponse: InvalidOasResponse =>
-                  BadRequest(Json.toJson(invalidResponse)(formatValidateResponse))
-                case validResponse =>
-                  Ok(Json.toJson(validResponse))
-              }
-            ))
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
+      request.body.asText.map(oasYaml =>
+        oasService.validateInPrimary(oasYaml)
+          .map(_.fold(
+            e => InternalServerError(e.message),
+            {
+              case invalidResponse: InvalidOasResponse =>
+                BadRequest(Json.toJson(invalidResponse)(formatValidateResponse))
+              case validResponse =>
+                Ok(Json.toJson(validResponse))
+            }
+          ))
+      ).getOrElse(Future.successful(BadRequest))
   }
 
 }
