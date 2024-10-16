@@ -34,7 +34,6 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction,
 import uk.gov.hmrc.apihubapplications.models.apim.{FailuresResponse, InvalidOasResponse, SuccessfulValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.apim.ValidateResponse.formatValidateResponse
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
-import uk.gov.hmrc.apihubapplications.models.requests.OASValidationRequest
 import uk.gov.hmrc.apihubapplications.services.OASService
 
 import scala.concurrent.Future
@@ -56,7 +55,7 @@ class OASControllerSpec
 
       running(fixture.application) {
         val request = FakeRequest(routes.OASController.validateOAS())
-          .withBody(Json.toJson(OASValidationRequest(oas)))
+          .withBody(oas)
 
         val result = route(fixture.application, request).value
 
@@ -76,7 +75,7 @@ class OASControllerSpec
 
       running(fixture.application) {
         val request = FakeRequest(routes.OASController.validateOAS())
-          .withBody(Json.toJson(OASValidationRequest(oas)))
+          .withBody(oas)
 
         val result = route(fixture.application, request).value
 
@@ -94,7 +93,7 @@ class OASControllerSpec
 
       running(fixture.application) {
         val request = FakeRequest(routes.OASController.validateOAS())
-          .withBody(Json.toJson(OASValidationRequest(oas)))
+          .withBody(oas)
 
         val result = route(fixture.application, request).value
 
