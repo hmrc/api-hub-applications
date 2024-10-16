@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
-import play.api.libs.json.{JsError, JsPath, JsonValidationError}
+import play.api.libs.json.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ApimIssue
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
