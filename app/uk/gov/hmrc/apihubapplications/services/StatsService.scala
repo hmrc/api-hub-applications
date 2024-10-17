@@ -20,7 +20,6 @@ import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
-import uk.gov.hmrc.apihubapplications.models.apim.ApiDeployment
 import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.stats.ApisInProductionStatistic
@@ -34,22 +33,37 @@ class StatsService @Inject()(
   integrationCatalogueConnector: IntegrationCatalogueConnector
 )(implicit ec: ExecutionContext) {
 
+  import StatsService.*
+
   def apisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApisInProductionStatistic]] = {
+    buildApisInProduction()
+      .map(
+        _.map(data => ApisInProductionStatistic(data.apis.size, data.apisInProduction.size))
+      )
+  }
+
+  def listApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
+    buildApisInProduction().map(_.map(_.apisInProduction))
+  }
+
+  private def buildApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApisInProduction]] = {
     val futureDeployments = apimConnector.getDeployments(Primary)
     val futureApis = integrationCatalogueConnector.findHipApis()
 
     (for {
       deployments <- EitherT(futureDeployments)
       apis <- EitherT(integrationCatalogueConnector.findHipApis())
-    } yield buildApisInProductionStatistic(deployments, apis)).value
+    } yield {
+      val serviceIds = deployments.map(_.id).toSet
+      val apisInProduction = apis.filter(api => serviceIds.exists(_.equals(api.publisherReference)))
+      ApisInProduction(apis, apisInProduction)
+    }).value
   }
 
-  private def buildApisInProductionStatistic(deployments: Seq[ApiDeployment], apis: Seq[ApiDetail]): ApisInProductionStatistic = {
-    val ids = deployments.map(_.id).toSet
-    val publisherRefs = apis.map(_.publisherReference).toSet
-    val totalInProduction = ids.intersect(publisherRefs).size
+}
 
-    ApisInProductionStatistic(apis.size, totalInProduction)
-  }
+object StatsService {
+
+  private case class ApisInProduction(apis: Seq[ApiDetail], apisInProduction: Seq[ApiDetail])
 
 }

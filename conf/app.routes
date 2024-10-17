@@ -44,5 +44,6 @@ DELETE     /apis/:apiId/teams                                                   
 GET        /users                                                                   uk.gov.hmrc.apihubapplications.controllers.UsersController.findAll()
 
 GET        /stats/apis-in-production                                                uk.gov.hmrc.apihubapplications.controllers.StatsController.apisInProduction()
+GET        /stats/list-apis-in-production                                           uk.gov.hmrc.apihubapplications.controllers.StatsController.listApisInProduction()
 
 POST       /oas/validate                                                            uk.gov.hmrc.apihubapplications.controllers.OASController.validateOAS()

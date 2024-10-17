@@ -20,6 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
+import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.services.StatsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -36,6 +37,14 @@ class StatsController @Inject()(
     implicit request =>
       statsService.apisInProduction().map {
         case Right(statistic) => Ok(Json.toJson(statistic))
+        case Left(e) => throw e
+      }
+  }
+
+  def listApisInProduction(): Action[AnyContent] = identify.async {
+    implicit request =>
+      statsService.listApisInProduction().map {
+        case Right(apis) => Ok(Json.toJson(apis))
         case Left(e) => throw e
       }
   }

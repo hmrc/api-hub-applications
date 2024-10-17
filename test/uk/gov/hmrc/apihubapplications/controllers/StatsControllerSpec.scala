@@ -32,6 +32,7 @@ import play.api.test.Helpers.*
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.stats.ApisInProductionStatistic
 import uk.gov.hmrc.apihubapplications.services.StatsService
+import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 
 import scala.concurrent.Future
 
@@ -39,7 +40,8 @@ class StatsControllerSpec
   extends AnyFreeSpec
     with Matchers
     with MockitoSugar
-    with OptionValues {
+    with OptionValues
+    with ApiDetailGenerators {
 
   "apisInProduction" - {
     "must return Ok and the statistic" in {
@@ -54,6 +56,23 @@ class StatsControllerSpec
 
         status(result) mustBe OK
         contentAsJson(result) mustBe Json.toJson(statistic)
+      }
+    }
+  }
+
+  "listApisInProduction" - {
+    "must return Ok and the list of APIs" in {
+      val fixture = buildFixture()
+      val apis = sampleApiDetails()
+
+      when(fixture.statsService.listApisInProduction()(any)).thenReturn(Future.successful(Right(apis)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.StatsController.listApisInProduction())
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(apis)
       }
     }
   }
