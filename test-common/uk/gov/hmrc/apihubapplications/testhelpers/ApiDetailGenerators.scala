@@ -86,17 +86,19 @@ trait ApiDetailGenerators {
     )
   }
 
+  private def genApiDetails = Gen.nonEmptyListOf(genApiDetail)
+
   implicit lazy val arbitraryApiDetail: Arbitrary[ApiDetail] = Arbitrary(genApiDetail)
 
-  implicit val arbitraryApiDetails: Arbitrary[Seq[ApiDetail]] =
-    Arbitrary {
-      Gen.nonEmptyListOf(arbitraryApiDetail.arbitrary)
-    }
+  implicit val arbitraryApiDetails: Arbitrary[Seq[ApiDetail]] = Arbitrary(genApiDetails)
 
   private val parameters = Gen.Parameters.default
 
   def sampleApiDetail(): ApiDetail =
     genApiDetail.pureApply(parameters, Seed.random())
+
+  def sampleApiDetails(): Seq[ApiDetail] =
+    genApiDetails.pureApply(parameters, Seed.random())
 
   def sampleOas: String =
     """openapi: 3.0.3

@@ -64,6 +64,32 @@ class StatsServiceSpec
     }
   }
 
+  "listApisInProduction" - {
+    "must return the list of APIs in production" in {
+      val fixture = buildFixture()
+
+      val deployments = (1 to 5).map(
+        i =>
+          ApiDeployment(s"test-id-$i", None)
+      )
+
+      val apis = (3 to 7).map(
+        i =>
+          sampleApiDetail().copy(publisherReference = s"test-id-$i")
+      )
+
+      when(fixture.apimConnector.getDeployments(eqTo(Primary))(any)).thenReturn(Future.successful(Right(deployments)))
+      when(fixture.integrationCatalogueConnector.findHipApis()(any)).thenReturn(Future.successful(Right(apis)))
+
+      val expected = apis.take(3)
+
+      fixture.statsService.listApisInProduction()(HeaderCarrier()).map {
+        result =>
+          result.value must contain theSameElementsAs expected
+      }
+    }
+  }
+
   private case class Fixture(
     apimConnector: APIMConnector,
     integrationCatalogueConnector: IntegrationCatalogueConnector,
