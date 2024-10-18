@@ -63,7 +63,7 @@ class StatsControllerSpec
   "listApisInProduction" - {
     "must return Ok and the list of APIs" in {
       val fixture = buildFixture()
-      val apis = sampleApiDetails()
+      val apis = sampleApiDetails().map(_.toSummary)
 
       when(fixture.statsService.listApisInProduction()(any)).thenReturn(Future.successful(Right(apis)))
 

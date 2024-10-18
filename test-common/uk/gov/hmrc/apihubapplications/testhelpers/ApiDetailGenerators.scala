@@ -58,6 +58,7 @@ trait ApiDetailGenerators {
       id <- Gen.uuid
       title <- sensiblySizedAlphaNumStr
       description <- sensiblySizedAlphaNumStr
+      platform <- Gen.const("HIP")
       publisherReference <- sensiblySizedAlphaNumStr
       version <- sensiblySizedAlphaNumStr
       endpoints <- Gen.listOfN(size / listSizeQuota, arbitraryEndpoint.arbitrary).suchThat(_.nonEmpty)
@@ -74,6 +75,7 @@ trait ApiDetailGenerators {
       publisherReference,
       title,
       description,
+      platform,
       version,
       endpoints,
       Some(shortDescription),

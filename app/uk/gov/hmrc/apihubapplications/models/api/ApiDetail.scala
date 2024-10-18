@@ -53,6 +53,7 @@ case class ApiDetail(
   publisherReference: String,
   title: String,
   description: String,
+  platform: String,
   version: String,
   endpoints: Seq[Endpoint],
   shortDescription: Option[String],
@@ -63,7 +64,11 @@ case class ApiDetail(
   subDomain: Option[String] = None,
   hods: Seq[String] = List.empty,
   apiType: Option[ApiType] = None,
-)
+) {
+
+  def toSummary: ApiDetailSummary = ApiDetailSummary(this)
+
+}
 
 object ApiDetail {
 

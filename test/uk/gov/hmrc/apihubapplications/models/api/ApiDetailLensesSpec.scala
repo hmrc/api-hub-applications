@@ -66,7 +66,7 @@ object ApiDetailLensesSpec {
   private val apiId1: String = "test-api-id-1"
   private val apiId2: String = "test-api-id-2"
 
-  def baseApiDetail(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
+  def baseApiDetail(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-platform", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
   val baseApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq.empty)
 
   def buildEndpoint(index: Int, methods: Int, scopes: Int): Endpoint = {

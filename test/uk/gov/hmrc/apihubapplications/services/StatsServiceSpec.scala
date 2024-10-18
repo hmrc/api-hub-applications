@@ -81,7 +81,7 @@ class StatsServiceSpec
       when(fixture.apimConnector.getDeployments(eqTo(Primary))(any)).thenReturn(Future.successful(Right(deployments)))
       when(fixture.integrationCatalogueConnector.findHipApis()(any)).thenReturn(Future.successful(Right(apis)))
 
-      val expected = apis.take(3)
+      val expected = apis.take(3).map(_.toSummary)
 
       fixture.statsService.listApisInProduction()(HeaderCarrier()).map {
         result =>

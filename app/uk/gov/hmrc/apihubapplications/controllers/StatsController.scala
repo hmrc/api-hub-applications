@@ -20,7 +20,6 @@ import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.services.StatsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
