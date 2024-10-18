@@ -24,13 +24,13 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live, Maintainer}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Primary, Scope, Secondary, Endpoint as ApplicationEndpoint}
 import uk.gov.hmrc.apihubapplications.models.exception.ApiNotFoundException
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.LocalDateTime
+import java.time.{LocalDateTime,Instant}
 import scala.concurrent.Future
 
 class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with EitherValues {
@@ -299,7 +299,7 @@ object ScopeFixerSpec {
     .addPrimaryCredential(credential1)
     .addSecondaryCredential(credential2)
 
-  private def baseApi(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
+  private def baseApi(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty, Instant.now, "platform", Maintainer("test-name", "test-slack", List.empty), None)
 
   private val apiId1: String = "test-api-id-1"
   private val apiId2: String = "test-api-id-2"

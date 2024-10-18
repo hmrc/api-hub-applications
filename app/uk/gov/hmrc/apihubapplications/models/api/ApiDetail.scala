@@ -16,8 +16,14 @@
 
 package uk.gov.hmrc.apihubapplications.models.api
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, JsString, JsSuccess, Json, OFormat, Reads, Writes, __}
 import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
+
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
+
+import java.time.{Instant, ZoneOffset}
+import java.time.format.DateTimeFormatter
 
 sealed trait ApiStatus
 
@@ -62,11 +68,55 @@ case class ApiDetail(
   domain: Option[String] = None,
   subDomain: Option[String] = None,
   hods: Seq[String] = List.empty,
+  reviewedDate: Instant,
+  platform: String,
+  maintainer: Maintainer,
   apiType: Option[ApiType] = None,
 )
 
 object ApiDetail {
+  private val instantDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+  implicit val customInstantFormat: Format[Instant] = Format(
+    Reads(js => JsSuccess(instantDateFormatter.parse(js.as[String], Instant.from))),
+    Writes(d => JsString(instantDateFormatter.format(d.atOffset(ZoneOffset.UTC))))
+  )
+  implicit val formatApiDetail: OFormat[ApiDetail] = {
+    Json.format[ApiDetail]
+  }
 
-  implicit val formatApiDetail: Format[ApiDetail] = Json.format[ApiDetail]
+  private val apiDetailSummaryReads: Reads[ApiDetail] =
+    ( (__ \ "id").read[String]
+      ~ (__ \ "publisherReference").read[String]
+      ~ (__ \ "title").read[String]
+      ~ (__ \ "description").read[String]
+      ~ (__ \ "version").read[String]
+      ~ (__ \ "endpoints").read[Seq[Endpoint]]
+      ~ (__ \ "shortDescription").readNullable[String]
+      ~ Reads.pure("")
+      ~ (__ \ "apiStatus").read[ApiStatus]
+      ~ (__ \ "teamId").readNullable[String]
+      ~ (__ \ "domain").readNullable[String]
+      ~ (__ \ "subDomain").readNullable[String]
+      ~ (__ \ "hods").readWithDefault[Seq[String]](List.empty)
+      ~ (__ \ "reviewedDate").read[Instant]
+      ~ (__ \ "platform").read[String]
+      ~ (__ \ "maintainer").read[Maintainer]
+      ~ (__ \ "apiType").readNullable[ApiType]
+      )(ApiDetail.apply)
+  val formatApiDetailSummary: OFormat[ApiDetail] = OFormat[ApiDetail](
+    apiDetailSummaryReads,
+    Json.writes[ApiDetail]
+  )
+}
 
+case class Maintainer(name: String, slackChannel: String, contactInfo: List[ContactInformation] = List.empty)
+
+object Maintainer {
+  implicit val formatMaintainer: OFormat[Maintainer] = Json.format[Maintainer]
+}
+
+case class ContactInformation(name: Option[String], emailAddress: Option[String])
+
+object ContactInformation {
+  implicit val formatContactInformation: OFormat[ContactInformation] = Json.format[ContactInformation]
 }
