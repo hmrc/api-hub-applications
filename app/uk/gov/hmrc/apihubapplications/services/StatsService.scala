@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
-import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiDetailSummary}
 import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.stats.ApisInProductionStatistic
@@ -42,8 +42,8 @@ class StatsService @Inject()(
       )
   }
 
-  def listApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
-    buildApisInProduction().map(_.map(_.apisInProduction))
+  def listApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetailSummary]]] = {
+    buildApisInProduction().map(_.map(_.apisInProduction.map(_.toSummary)))
   }
 
   private def buildApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApisInProduction]] = {

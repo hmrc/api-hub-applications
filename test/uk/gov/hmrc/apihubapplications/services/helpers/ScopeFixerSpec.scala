@@ -299,7 +299,7 @@ object ScopeFixerSpec {
     .addPrimaryCredential(credential1)
     .addSecondaryCredential(credential2)
 
-  private def baseApi(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
+  private def baseApi(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-platform", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
 
   private val apiId1: String = "test-api-id-1"
   private val apiId2: String = "test-api-id-2"
