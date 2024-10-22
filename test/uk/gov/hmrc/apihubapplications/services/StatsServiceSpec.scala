@@ -49,7 +49,7 @@ class StatsServiceSpec
 
       val apis = (3 to 7).map(
         i =>
-          sampleApiDetail().copy(publisherReference = s"test-id-$i")
+          sampleApiDetail().toSummary.copy(publisherReference = s"test-id-$i")
       )
 
       when(fixture.apimConnector.getDeployments(eqTo(Primary))(any)).thenReturn(Future.successful(Right(deployments)))
@@ -75,13 +75,13 @@ class StatsServiceSpec
 
       val apis = (3 to 7).map(
         i =>
-          sampleApiDetail().copy(publisherReference = s"test-id-$i")
+          sampleApiDetail().toSummary.copy(publisherReference = s"test-id-$i")
       )
 
       when(fixture.apimConnector.getDeployments(eqTo(Primary))(any)).thenReturn(Future.successful(Right(deployments)))
       when(fixture.integrationCatalogueConnector.findHipApis()(any)).thenReturn(Future.successful(Right(apis)))
 
-      val expected = apis.take(3).map(_.toSummary)
+      val expected = apis.take(3)
 
       fixture.statsService.listApisInProduction()(HeaderCarrier()).map {
         result =>
