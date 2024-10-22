@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiDetailSummary, ApiTeam}
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -32,13 +32,13 @@ trait IntegrationCatalogueConnector {
 
   def removeApiTeam(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
-  def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]]
+  def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetailSummary]]]
 
-  def findApis(platformFilter: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
+  def findApis(platformFilter: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetailSummary]]] = {
     findApis(Seq(("platformFilter", platformFilter)))
   }
 
-  def findHipApis()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
+  def findHipApis()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetailSummary]]] = {
     findApis("HIP")
   }
 

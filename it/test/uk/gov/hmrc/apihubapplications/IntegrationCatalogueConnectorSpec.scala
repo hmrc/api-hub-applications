@@ -23,11 +23,11 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK}
+import play.api.http.Status.*
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
 import uk.gov.hmrc.apihubapplications.connectors.{IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
-import uk.gov.hmrc.apihubapplications.models.api.{ApiTeam, IntegrationResponse}
+import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, IntegrationCatalogueException}
 import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.http.HeaderCarrier
@@ -43,7 +43,7 @@ class IntegrationCatalogueConnectorSpec
     with ApiDetailGenerators
     with EitherValues {
 
-  import IntegrationCatalogueConnectorSpec._
+  import IntegrationCatalogueConnectorSpec.*
 
   "IntegrationCatalogueConnector.linkApiToTeam" - {
     "must place the correct request to Integration Catalogue and return success" in {
@@ -225,17 +225,16 @@ class IntegrationCatalogueConnectorSpec
   }
 
   "findApis" - {
-    "must place the correct request and return the list of ApiDetail" in {
-      val apis = (1 to 3).map(_ => sampleApiDetail())
-      val response = IntegrationResponse(count = apis.size, pagedCount = None, results = apis)
+    "must place the correct request and return the list of ApiDetailSummary" in {
+      val apis = (1 to 3).map(_ => sampleApiDetail().toSummary)
 
       stubFor(
-        get(urlEqualTo("/integration-catalogue/integrations?integrationType=api&platformFilter=HIP"))
+        get(urlEqualTo("/integration-catalogue/integrations/summaries?platformFilter=HIP"))
           .withHeader("Accept", equalTo("application/json"))
           .withHeader("Authorization", equalTo(appAuthToken))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(response).toString())
+              .withBody(Json.toJson(apis).toString())
           )
       )
 
@@ -247,7 +246,7 @@ class IntegrationCatalogueConnectorSpec
 
     "must fail with an exception when integration catalogue returns a failure response" in {
       stubFor(
-        get(urlEqualTo("/integration-catalogue/integrations?integrationType=api&platformFilter=HIP"))
+        get(urlEqualTo("/integration-catalogue/integrations/summaries?platformFilter=HIP"))
           .willReturn(
             aResponse()
               .withStatus(INTERNAL_SERVER_ERROR)

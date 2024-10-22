@@ -24,7 +24,7 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.apihubapplications.config.AppConfig
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam, IntegrationResponse}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiDetailSummary, ApiTeam}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -91,14 +91,14 @@ class IntegrationCatalogueConnectorImpl @Inject()(
       }
   }
 
-  override def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetail]]] = {
-    httpClient.get(url"$baseUrl/integration-catalogue/integrations?integrationType=api")
+  override def findApis(queryParams: Seq[(String,String)])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[ApiDetailSummary]]] = {
+    httpClient.get(url"$baseUrl/integration-catalogue/integrations/summaries")
       .transform(wsRq => wsRq.withQueryStringParameters(queryParams*))
       .setHeader((ACCEPT, JSON))
       .setHeader(AUTHORIZATION -> appAuthToken)
-      .execute[Either[UpstreamErrorResponse, IntegrationResponse]]
+      .execute[Either[UpstreamErrorResponse, Seq[ApiDetailSummary]]]
       .map {
-        case Right(response) => Right(response.results)
+        case Right(response) => Right(response)
         case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
       }
   }
