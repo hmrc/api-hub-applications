@@ -35,6 +35,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class APIMConnectorImpl @Inject()(
                                    servicesConfig: ServicesConfig,
@@ -188,8 +189,13 @@ class APIMConnectorImpl @Inject()(
         case Left(e) if e.statusCode == 404 => Right(None)
         case Left(e) if e.statusCode == 403 =>
           logger.warn(s"Received 403 back from APIM ${environment.toString} whilst looking up publisher reference: $publisherReference and useProxyForSecondary: $useProxyForSecondary. Full url: ${url.toString}")
-          Right(None)
+          Left(raiseApimException.unexpectedResponse(e.statusCode, context))
         case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+      . recover {
+        case NonFatal(e) =>
+          logger.warn(s"Error occurred while retrieving APIM deployments", e)
+          Left(raiseApimException.unexpectedResponse(500, context))
       }
   }
 
