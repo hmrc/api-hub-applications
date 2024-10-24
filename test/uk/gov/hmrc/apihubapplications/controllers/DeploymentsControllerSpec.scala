@@ -23,7 +23,7 @@ import org.mockito.Mockito.{verify, when}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor2, TableFor3}
+import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor2}
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status
 import play.api.inject.bind
@@ -37,7 +37,8 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction,
 import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
-import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
+import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}
+import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.*
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
@@ -356,42 +357,17 @@ class DeploymentsControllerSpec
 
         val publisherRef = "publisher_ref"
 
-        forAll(successResponses) { (primaryResponse, secondaryResponse, expected) =>
+        val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
+        val response = Seq(Deployed(Primary, "1"), Deployed(Secondary, "1"))
 
-          val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
+        when(fixture.deploymentsService.getDeployments(eqTo(publisherRef))(any()))
+          .thenReturn(Future.successful(response))
+        val result = route(fixture.application, request).value
 
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Primary))(any()))
-            .thenReturn(Future.successful(Right(primaryResponse)))
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Secondary))(any()))
-            .thenReturn(Future.successful(Right(secondaryResponse)))
-          val result = route(fixture.application, request).value
-
-          status(result) mustBe Status.OK
-          contentAsJson(result) mustBe Json.toJson(expected)
-        }
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson[DeploymentStatuses](DeploymentStatuses(response))
       }
 
-    }
-
-    "must return Bad Gateway" in {
-      val fixture = DeploymentsControllerSpec.buildFixture()
-      running(fixture.application) {
-
-        val publisherRef = "publisher_ref"
-
-        forAll(failResponses) { (primaryResponse, secondaryResponse) =>
-
-          val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
-
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Primary))(any()))
-            .thenReturn(Future.successful(primaryResponse))
-          when(fixture.deploymentsService.getDeployment(eqTo(publisherRef), eqTo(Secondary))(any()))
-            .thenReturn(Future.successful(secondaryResponse))
-          val result = route(fixture.application, request).value
-
-          status(result) mustBe Status.BAD_GATEWAY
-        }
-      }
     }
   }
 
@@ -626,14 +602,6 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoS
         )
       ))
     )
-  )
-
-  val successResponses: TableFor3[Option[SuccessfulDeploymentResponse], Option[SuccessfulDeploymentResponse], DeploymentStatus] = Table(
-    ("primary", "secondary", "expected"),
-    (Some(deploymentResponse), Some(deploymentResponse), DeploymentStatus(Some("1"), Some("1"))),
-    (Some(deploymentResponse), None, DeploymentStatus(Some("1"), None)),
-    (None, Some(deploymentResponse), DeploymentStatus(None, Some("1"))),
-    (None, None, DeploymentStatus(None,None))
   )
 
   private val exception: ApimException = ApimException.unexpectedResponse(500)

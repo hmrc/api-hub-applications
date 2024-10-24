@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{Format, JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.apim.{InvalidOasResponse, SuccessfulValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.apim.ValidateResponse
