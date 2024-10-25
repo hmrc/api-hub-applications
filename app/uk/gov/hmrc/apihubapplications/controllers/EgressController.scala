@@ -21,11 +21,10 @@ import play.api.Logging
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.apim.{InvalidOasResponse, ValidateResponse}
-import uk.gov.hmrc.apihubapplications.services.{EgressService, OASService}
+import uk.gov.hmrc.apihubapplications.services.EgressService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class EgressController @Inject()(
@@ -33,8 +32,6 @@ class EgressController @Inject()(
   identify: IdentifierAction,
   egressService: EgressService
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
-
-  private implicit val formatValidateResponse: Format[ValidateResponse] = ValidateResponse.formatValidateResponse
 
   def listEgressGateways(): Action[AnyContent] = identify.async {
     implicit request =>
