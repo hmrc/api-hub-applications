@@ -681,7 +681,7 @@ class APIMConnectorSpec
       }
 
       stubFor(
-        get(urlEqualTo(s"/$secondaryPath/v1/oas-deployments"))
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/egress-gateways"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
