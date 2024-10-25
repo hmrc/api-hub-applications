@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications.models.apim
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.json.{Format, JsPath, Json, Reads, Writes}
 
 sealed trait ValidateResponse
 
@@ -48,7 +49,14 @@ case class SuccessfulDeploymentResponse(id: String, oasVersion: String) extends 
 
 object SuccessfulDeploymentResponse {
 
-  implicit val formatDeploymentResponse: Format[SuccessfulDeploymentResponse] = Json.format[SuccessfulDeploymentResponse]
+  private val readsWithDefaultOasVersion: Reads[SuccessfulDeploymentResponse] = (
+    (JsPath \ "id").read[String] and
+      (JsPath \ "oasVersion").readNullable[String]
+  )((id, oasVersion) => SuccessfulDeploymentResponse(id, oasVersion.getOrElse("unknown")))
+
+  private val writes: Writes[SuccessfulDeploymentResponse] = Json.writes[SuccessfulDeploymentResponse]
+
+  implicit val formatDeploymentResponse: Format[SuccessfulDeploymentResponse] = Format(readsWithDefaultOasVersion, writes)
 
 }
 

@@ -417,6 +417,26 @@ class APIMConnectorSpec
       }
     }
 
+    "must default OAS version to 'unknown' when not returned by APIM" in {
+      val expected = SuccessfulDeploymentResponse(
+        id = successfulDeploymentResponse.id,
+        oasVersion = "unknown"
+      )
+
+      stubFor(
+        get(urlEqualTo(s"/$primaryPath/v1/oas-deployments/publisher_ref"))
+          .willReturn(
+            aResponse()
+              .withBody(s"""{"id": "${expected.id}"}""")
+              .withStatus(200)
+          )
+      )
+
+      buildConnector().getDeployment("publisher_ref", Primary)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Right(Some(expected))
+      }
+    }
   }
 
   "APIMConnector.getDeploymentDetails" - {
