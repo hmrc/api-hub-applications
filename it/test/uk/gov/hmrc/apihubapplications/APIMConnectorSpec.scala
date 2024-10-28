@@ -24,6 +24,7 @@ import play.api.Configuration
 import play.api.http.Status.*
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
+import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
@@ -688,6 +689,32 @@ class APIMConnectorSpec
       buildConnector().getDeployments(Secondary)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
+      }
+    }
+  }
+
+  "APIMConnector.listEgressGateways" - {
+    "must place the correct request and return the egress gateways on success" in {
+
+      val expectedResponse = {
+        1 until 10 map (i => EgressGateway(s"fake-egress-id-$i", s"Egress Friendly Name $i"))
+      }
+
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/egress-gateways"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(expectedResponse).toString)
+          )
+      )
+
+      buildConnector().listEgressGateways()(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual.value mustBe expectedResponse
       }
     }
   }

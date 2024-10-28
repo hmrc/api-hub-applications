@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import uk.gov.hmrc.apihubapplications.models.apim._
+import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
+import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.http.HeaderCarrier
@@ -38,5 +39,7 @@ trait APIMConnector {
   def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
   def getDeployments(environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]]
+
+  def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]]
 
 }

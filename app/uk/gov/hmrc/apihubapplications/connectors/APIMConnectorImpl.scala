@@ -25,6 +25,7 @@ import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSBodyWritables.bodyWritableOf_Multipart
 import play.api.mvc.MultipartFormData.DataPart
+import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising}
@@ -289,4 +290,20 @@ class APIMConnectorImpl @Inject()(
     s"Basic $encoded"
   }
 
+  override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
+    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
+    
+    val context = Seq.empty.withCorrelationId()
+    
+    httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/egress-gateways")
+      .setHeader(headersForEnvironment(Secondary) *)
+      .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
+      .withProxyIfRequired(Secondary, useProxyForSecondary)
+      .execute[Either[UpstreamErrorResponse, Seq[EgressGateway]]]
+      .map {
+        case Right(egressGateways) => Right(egressGateways)
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+  }
 }
