@@ -187,15 +187,10 @@ class APIMConnectorImpl @Inject()(
       .map {
         case Right(deployment) => Right(Some(deployment))
         case Left(e) if e.statusCode == 404 => Right(None)
-        case Left(e) if e.statusCode == 403 =>
-          logger.warn(s"Received 403 back from APIM ${environment.toString} whilst looking up publisher reference: $publisherReference and useProxyForSecondary: $useProxyForSecondary. Full url: ${url.toString}")
-          Left(raiseApimException.unexpectedResponse(e.statusCode, context))
         case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
       . recover {
-        case NonFatal(e) =>
-          logger.warn(s"Error occurred while retrieving APIM deployments", e)
-          Left(raiseApimException.unexpectedResponse(500, context))
+        case NonFatal(e) => Left(raiseApimException.error(e, context))
       }
   }
 

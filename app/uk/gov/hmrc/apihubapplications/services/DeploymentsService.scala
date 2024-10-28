@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import cats.implicits.toTraverseOps
+import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
+import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
 import uk.gov.hmrc.apihubapplications.models.apim._
@@ -37,7 +38,8 @@ class DeploymentsService @Inject()(
                                     emailConnector: EmailConnector,
                                     teamsService: TeamsService,
                                     metricsService: MetricsService,
-                                  )(implicit ec: ExecutionContext) {
+                                  )(implicit ec: ExecutionContext) extends Logging {
+  private[services] val customUnknownDeploymentStatusMessage = "UNKNOWN_APIM_DEPLOYMENT_STATUS"
 
   def deployToSecondary(
                          request: DeploymentsRequest
@@ -70,27 +72,21 @@ class DeploymentsService @Inject()(
     }
   }
 
-  def getDeployment(
-                     publisherRef: String,
-                     environmentName: EnvironmentName
-                   )(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
-    apimConnector.getDeployment(publisherRef, environmentName)
-  }
-
   def getDeployments(
                      publisherRef: String,
                    )(implicit hc: HeaderCarrier): Future[Seq[DeploymentStatus]] = {
-    Seq(Primary, Secondary)
-      .traverse(environmentName =>
+    Future.sequence(Seq(Primary, Secondary)
+      .map(environmentName =>
         apimConnector.getDeployment(publisherRef, environmentName)
           .map {
             case Right(Some(SuccessfulDeploymentResponse(_, version))) => Deployed(environmentName, version)
             case Right(None) => NotDeployed(environmentName)
-            case _ =>
+            case Left(exception) =>
+              logger.warn(customUnknownDeploymentStatusMessage, exception)
               metricsService.apimUnknownFailure()
               Unknown(environmentName)
           }
-      )
+      ))
   }
 
   def getDeploymentDetails(publisherRef: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {

@@ -23,10 +23,10 @@ import uk.gov.hmrc.apihubapplications.services.MetricsService.MetricsKeys
 @Singleton
 class MetricsService @Inject()(metricRegistry: MetricRegistry) {
 
-  private lazy val apimUnknownFailureMetric: Meter = metricRegistry.meter(MetricsKeys.APIM.unknownFailure)
+  private lazy val apimDeploymentStatusUnknownMetric: Meter = metricRegistry.meter(MetricsKeys.APIM.apimDeploymentStatusUnknown)
 
   def apimUnknownFailure(): Unit = {
-    apimUnknownFailureMetric.mark()
+    apimDeploymentStatusUnknownMetric.mark()
   }
 
 }
@@ -37,7 +37,7 @@ object MetricsService {
 
     object APIM {
 
-      val unknownFailure: String = "apim-unknown-failure"
+      val apimDeploymentStatusUnknown: String = "apim-deployment-status-unknown"
 
     }
 

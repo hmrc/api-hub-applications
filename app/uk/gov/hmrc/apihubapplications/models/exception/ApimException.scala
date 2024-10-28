@@ -29,6 +29,7 @@ object ApimException {
   case object UnexpectedResponse extends ApimIssue
   case object InvalidResponse extends ApimIssue
   case object ServiceNotFound extends ApimIssue
+  case object CallError extends ApimIssue
 
   def apply(message: String, issue: ApimIssue): ApimException = {
     ApimException(message, null, issue)
@@ -59,6 +60,14 @@ object ApimException {
 
   def serviceNotFound(serviceId: String): ApimException = {
     ApimException(s"Cannot find service with serviceId: $serviceId", ServiceNotFound)
+  }
+
+  def error(throwable: Throwable, context: Seq[(String, AnyRef)]): ApimException = {
+    ApimException(
+      ApplicationsException.addContext("Error calling APIM", context),
+      throwable,
+      CallError
+    )
   }
 
 }

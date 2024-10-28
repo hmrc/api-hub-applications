@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models.requests
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, Json, JsonConfiguration, JsonNaming}
 import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 
 sealed trait DeploymentStatus {
@@ -30,6 +30,9 @@ object DeploymentStatus {
   case class NotDeployed(override val environmentName: EnvironmentName) extends DeploymentStatus
 
   case class Unknown(override val environmentName: EnvironmentName) extends DeploymentStatus
+
+  private implicit val jsonConfiguration: JsonConfiguration =
+    JsonConfiguration(typeNaming = JsonNaming { fullName => fullName.split('.').last })
 
   implicit val formatDeployed: Format[Deployed] = Json.format[Deployed]
   implicit val formatNotDeployed: Format[NotDeployed] = Json.format[NotDeployed]

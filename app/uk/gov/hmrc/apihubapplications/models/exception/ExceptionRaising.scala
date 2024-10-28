@@ -178,6 +178,10 @@ trait ExceptionRaising {
     def serviceNotFound(serviceId: String): ApimException = {
       log(ApimException.serviceNotFound(serviceId))
     }
+
+    def error(throwable: Throwable, context: Seq[(String, AnyRef)] = Seq.empty): ApimException = {
+      log(ApimException.error(throwable, context))
+    }
   }
 
   object raiseTeamNotFoundException {
