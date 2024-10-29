@@ -25,7 +25,7 @@ import uk.gov.hmrc.apihubapplications.models.apim._
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
-import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
+import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DeploymentsController @Inject()(
                                        identify: IdentifierAction,
                                        cc: ControllerComponents,
-                                       deploymentsService: DeploymentsService
+                                       deploymentsService: DeploymentsService,
                                      )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -70,21 +70,10 @@ class DeploymentsController @Inject()(
 
   def getDeploymentStatus(publisherRef: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
-      val eventualSecondary = deploymentsService.getDeployment(publisherRef, Secondary)
-      val eventualPrimary = deploymentsService.getDeployment(publisherRef, Primary)
-      for {
-        secondaryDeployment <- eventualSecondary
-        primaryDeployment <- eventualPrimary
-      } yield (primaryDeployment, secondaryDeployment) match {
-        case (Right(maybePrimaryDeployment), Right(maybeSecondaryDeployment)) =>
-          Ok(Json.toJson(DeploymentStatus(getOasVersion(maybePrimaryDeployment), getOasVersion(maybeSecondaryDeployment))))
-        case _ => BadGateway
-      }
-  }
-
-  private def getOasVersion(response: Option[DeploymentResponse]): Option[String] = response match {
-    case Some(SuccessfulDeploymentResponse(_, oasVersion)) => Some(oasVersion)
-    case _ => None
+      deploymentsService.getDeployments(publisherRef)
+        .map(response =>
+          Ok(Json.toJson(DeploymentStatuses(response)))
+        )
   }
 
   def getDeploymentDetails(publisherRef: String): Action[AnyContent] = identify.async {

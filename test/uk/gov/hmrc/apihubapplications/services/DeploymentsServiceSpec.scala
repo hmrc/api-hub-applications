@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
@@ -27,8 +27,10 @@ import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
 import uk.gov.hmrc.apihubapplications.models.apim.*
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException.unexpectedResponse
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, EmailException, IntegrationCatalogueException}
+import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.{Deployed, NotDeployed, Unknown}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
 import uk.gov.hmrc.http.HeaderCarrier
@@ -125,7 +127,7 @@ class DeploymentsServiceSpec
     }
   }
 
-  "getDeployment" - {
+  "getDeployments" - {
     "must pass the request to the APIM connector and return the response" in {
       val fixture = buildFixture()
       val publisherRef = "test-publisher-ref"
@@ -133,10 +135,44 @@ class DeploymentsServiceSpec
 
       when(fixture.apimConnector.getDeployment(any, any)(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
 
-      fixture.deploymentsService.getDeployment(publisherRef, Primary)(HeaderCarrier()).map {
+      fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
-          result mustBe Right(Some(deploymentResponse))
+          result mustBe Seq(Deployed(Primary, "1"), Deployed(Secondary, "1"))
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
+          succeed
+      }
+    }
+    "must handle missing valid responses and return NotDeployed" in {
+      val fixture = buildFixture()
+      val publisherRef = "test-publisher-ref"
+      val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
+
+      when(fixture.apimConnector.getDeployment(any, eqTo(Primary))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(Secondary))(any)).thenReturn(Future.successful(Right(None)))
+
+      fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
+        result =>
+          result mustBe Seq(Deployed(Primary, "1"), NotDeployed(Secondary))
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
+          succeed
+      }
+    }
+    "must handle response failures, return Unknown and record the failure on a metric" in {
+      val fixture = buildFixture()
+      val publisherRef = "test-publisher-ref"
+      val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
+
+      when(fixture.apimConnector.getDeployment(any, eqTo(Primary))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(Secondary))(any)).thenReturn(Future.successful(Left(unexpectedResponse(500))))
+
+      fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
+        result =>
+          result mustBe Seq(Deployed(Primary, "1"), Unknown(Secondary))
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
+          verify(fixture.metricsService).apimUnknownFailure()
           succeed
       }
     }
@@ -328,7 +364,8 @@ class DeploymentsServiceSpec
                               integrationCatalogueConnector: IntegrationCatalogueConnector,
                               deploymentsService: DeploymentsService,
                               teamsService: TeamsService,
-                              emailConnector: EmailConnector
+                              emailConnector: EmailConnector,
+                              metricsService: MetricsService,
                             )
 
   private def buildFixture(): Fixture = {
@@ -336,9 +373,10 @@ class DeploymentsServiceSpec
     val integrationCatalogueConnector = mock[IntegrationCatalogueConnector]
     val emailConnector = mock[EmailConnector]
     val teamsService = mock[TeamsService]
-    val deploymentsService = new DeploymentsService(apimConnector, integrationCatalogueConnector, emailConnector, teamsService)
+    val metricsService = mock[MetricsService]
+    val deploymentsService = new DeploymentsService(apimConnector, integrationCatalogueConnector, emailConnector, teamsService, metricsService)
 
-    Fixture(apimConnector, integrationCatalogueConnector, deploymentsService, teamsService, emailConnector)
+    Fixture(apimConnector, integrationCatalogueConnector, deploymentsService, teamsService, emailConnector, metricsService)
   }
 
 }
