@@ -82,8 +82,8 @@ class AccessRequestsService @Inject()(
   def approveAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
-        credentialsService.addPrimaryAccess(accessRequest).flatMap(
-          _ => {
+        credentialsService.addPrimaryAccess(accessRequest).flatMap {
+          case Right(_) =>
             accessRequestsRepository.update(
               accessRequest
                 .setStatus(Approved)
@@ -95,9 +95,8 @@ class AccessRequestsService @Inject()(
                 }
               case Left(exception) => Future.successful(Left(exception))
             }
-          }
-
-        )
+          case Left(exception) => Future.successful(Left(exception))
+        }
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
       case _ =>
