@@ -51,9 +51,6 @@ class APIMConnectorImpl @Inject()(
   import ProxySupport._
   import CorrelationIdSupport._
 
-  private val accessDenialStatusCodes = Seq(UNAUTHORIZED, FORBIDDEN)
-  private val customAccessDenialMessage = "APIM_ACCESS_DENIAL"
-
   override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
     httpClient.post(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationForEnvironment(Primary))
@@ -70,7 +67,6 @@ class APIMConnectorImpl @Inject()(
             handleBadRequest(response)
           }
           else {
-            logAlertIfAccessDenial(response.status.intValue)
             Left(raiseApimException.unexpectedResponse(response.status.intValue))
           }
       )
@@ -105,7 +101,6 @@ class APIMConnectorImpl @Inject()(
             handleBadRequest(response)
           }
           else {
-            logAlertIfAccessDenial(response.status.intValue)
             Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
           }
       )
@@ -143,7 +138,6 @@ class APIMConnectorImpl @Inject()(
             Left(raiseApimException.serviceNotFound(publisherReference))
           }
           else {
-            logAlertIfAccessDenial(response.status.intValue)
             Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
           }
       )
@@ -194,9 +188,7 @@ class APIMConnectorImpl @Inject()(
       .map {
         case Right(deployment) => Right(Some(deployment))
         case Left(e) if e.statusCode == 404 => Right(None)
-        case Left(e) =>
-          logAlertIfAccessDenial(e.statusCode)
-          Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
       . recover {
         case NonFatal(e) => Left(raiseApimException.error(e, context))
@@ -217,9 +209,7 @@ class APIMConnectorImpl @Inject()(
       .map {
         case Right(detailsResponse) => Right(detailsResponse.toDeploymentDetails)
         case Left(e) if e.statusCode == 404 => Left(raiseApimException.serviceNotFound(publisherReference))
-        case Left(e) =>
-          logAlertIfAccessDenial(e.statusCode)
-          Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
   }
 
@@ -250,7 +240,6 @@ class APIMConnectorImpl @Inject()(
             Left(raiseApimException.serviceNotFound(publisherReference))
           }
           else {
-            logAlertIfAccessDenial(response.status.intValue)
             Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
           }
       )
@@ -270,9 +259,7 @@ class APIMConnectorImpl @Inject()(
       .execute[Either[UpstreamErrorResponse, Seq[ApiDeployment]]]
       .map {
         case Right(apiDeployments) => Right(apiDeployments)
-        case Left(e) =>
-          logAlertIfAccessDenial(e.statusCode)
-          Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
   }
 
@@ -317,14 +304,7 @@ class APIMConnectorImpl @Inject()(
       .execute[Either[UpstreamErrorResponse, Seq[EgressGateway]]]
       .map {
         case Right(egressGateways) => Right(egressGateways)
-        case Left(e) =>
-          logAlertIfAccessDenial(e.statusCode)
-          Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
   }
-
-  private def logAlertIfAccessDenial(status: Int): Unit =
-    if (accessDenialStatusCodes.contains(status))
-      logger.warn(customAccessDenialMessage)
-
 }

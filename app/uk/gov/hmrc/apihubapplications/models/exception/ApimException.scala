@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
+import play.api.http.Status.{FORBIDDEN, UNAUTHORIZED}
 import play.api.libs.json.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ApimIssue
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -30,6 +31,7 @@ object ApimException {
   case object InvalidResponse extends ApimIssue
   case object ServiceNotFound extends ApimIssue
   case object CallError extends ApimIssue
+  case object InvalidCredential extends ApimIssue
 
   def apply(message: String, issue: ApimIssue): ApimException = {
     ApimException(message, null, issue)
@@ -39,12 +41,19 @@ object ApimException {
     unexpectedResponse(statusCode, Seq.empty)
   }
 
-  def unexpectedResponse(statusCode: Int, context: Seq[(String, AnyRef)]): ApimException = {
-    ApimException(
-      ApplicationsException.addContext(s"Unexpected response $statusCode returned from APIM", context),
-      UnexpectedResponse
-    )
-  }
+  def unexpectedResponse(statusCode: Int, context: Seq[(String, AnyRef)]): ApimException =
+    if (statusCode == UNAUTHORIZED || statusCode == FORBIDDEN) {
+      ApimException(
+        ApplicationsException.addContext(s"Invalid credential response $statusCode", context),
+        InvalidCredential
+      )
+    }
+    else {
+      ApimException(
+        ApplicationsException.addContext(s"Unexpected response $statusCode returned from APIM", context),
+        UnexpectedResponse
+      )
+    }
 
   def unexpectedResponse(response: UpstreamErrorResponse): ApimException = {
     unexpectedResponse(response.statusCode, Seq.empty)

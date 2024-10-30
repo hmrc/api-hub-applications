@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import com.github.tomakehurst.wiremock.client.WireMock.{stubFor, *}
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -27,7 +27,8 @@ import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorIm
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
-import uk.gov.hmrc.apihubapplications.models.exception.ApimException
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidCredential
+import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -94,6 +95,42 @@ class APIMConnectorSpec
       buildConnector().validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
+      }
+    }
+
+    "must return an invalid credential response on a 401 response from APIM" in {
+      stubFor(
+        post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
+          .willReturn(
+            aResponse()
+              .withStatus(401)
+          )
+      )
+
+      buildConnector().validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Left(ApimException(
+            ApplicationsException.addContext(s"Invalid credential response 401", Seq.empty),
+            InvalidCredential
+          ))
+      }
+    }
+
+    "must return an invalid credential response on a 403 response from APIM" in {
+      stubFor(
+        post(urlEqualTo(s"/$primaryPath/v1/simple-api-deployment/validate"))
+          .willReturn(
+            aResponse()
+              .withStatus(403)
+          )
+      )
+
+      buildConnector().validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Left(ApimException(
+            ApplicationsException.addContext(s"Invalid credential response 403", Seq.empty),
+            InvalidCredential
+          ))
       }
     }
 
