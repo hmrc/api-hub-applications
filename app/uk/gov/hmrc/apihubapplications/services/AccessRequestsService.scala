@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
+import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
@@ -82,21 +83,15 @@ class AccessRequestsService @Inject()(
   def approveAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
-        credentialsService.addPrimaryAccess(accessRequest).flatMap {
-          case Right(_) =>
-            accessRequestsRepository.update(
-              accessRequest
-                .setStatus(Approved)
-                .setDecision(decisionRequest.copy(rejectedReason = None), clock)
-            ) flatMap {
-              case Right(_) =>
-                sendAccessApprovedEmails(accessRequest).flatMap {
-                  _ => Future.successful(Right(()))
-                }
-              case Left(exception) => Future.successful(Left(exception))
-            }
-          case Left(exception) => Future.successful(Left(exception))
-        }
+        (for {
+          _ <- EitherT(credentialsService.addPrimaryAccess(accessRequest))
+          approvedAccessRequest = accessRequest
+              .setStatus(Approved)
+              .setDecision(decisionRequest.copy(rejectedReason = None), clock)
+          _ <- EitherT(accessRequestsRepository.update(approvedAccessRequest))
+          _ <- EitherT(sendAccessApprovedEmails(accessRequest)).orElse(EitherT.rightT(())) // ignore email errors
+        } yield ()).value
+
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
       case _ =>
