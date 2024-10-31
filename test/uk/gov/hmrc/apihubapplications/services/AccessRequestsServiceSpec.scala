@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{verify, verifyNoInteractions, verifyNoMoreInteractions, when}
+import org.mockito.Mockito.{never, verify, verifyNoInteractions, verifyNoMoreInteractions, when}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -30,7 +30,7 @@ import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, 
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
@@ -394,6 +394,53 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
           result mustBe Left(AccessRequestNotFoundException.forId(id))
+      }
+    }
+
+    "must return an exception if call to the credentials service fails" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", None)
+      val applicationId = "test-application-id"
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None,
+        cancelled = None
+      )
+
+      val app = Application(
+        id = Some(applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        environments = Environments()
+      )
+
+      val updated = accessRequest
+        .setStatus(Approved)
+        .setDecision(LocalDateTime.now(fixture.clock), decisionRequest.decidedBy)
+      
+      val exception = IdmsException.unexpectedResponse(UpstreamErrorResponse("nope", 500), Seq.empty)
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.credentialsService.addPrimaryAccess(any())(any())).thenReturn(Future.successful(Left(exception)))
+
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
+        result =>
+          verifyNoInteractions(fixture.emailConnector)
+          verify(fixture.accessRequestsRepository, never).update(any())
+          result mustBe Left(exception)
       }
     }
   }
