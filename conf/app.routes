@@ -49,3 +49,5 @@ GET        /stats/list-apis-in-production                                       
 POST       /oas/validate                                                            uk.gov.hmrc.apihubapplications.controllers.OASController.validateOAS()
 
 GET        /egresses/gateways                                                       uk.gov.hmrc.apihubapplications.controllers.EgressController.listEgressGateways()
+
+GET        /status                                                                 uk.gov.hmrc.apihubapplications.controllers.StatusController.status()
