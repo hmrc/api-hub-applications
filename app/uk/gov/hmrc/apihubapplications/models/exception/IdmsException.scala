@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
+import play.api.http.Status.{FORBIDDEN, UNAUTHORIZED}
+import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ApimIssue
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.IdmsIssue
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
@@ -28,6 +30,7 @@ object IdmsException {
   case object ClientNotFound extends IdmsIssue
   case object UnexpectedResponse extends IdmsIssue
   case object CallError extends IdmsIssue
+  case object InvalidCredential extends IdmsIssue
 
   def apply(message: String, issue: IdmsIssue): IdmsException = {
     IdmsException(message, null, issue)
@@ -40,7 +43,13 @@ object IdmsException {
     unexpectedResponse(statusCode, Seq.empty)
   }
 
-  def unexpectedResponse(statusCode: Int, context: Seq[(String, AnyRef)]): IdmsException = {
+  def unexpectedResponse(statusCode: Int, context: Seq[(String, AnyRef)]): IdmsException =
+    if (statusCode == UNAUTHORIZED || statusCode == FORBIDDEN) {
+      IdmsException(
+        ApplicationsException.addContext(s"Invalid credential response $statusCode", context),
+        InvalidCredential
+      )
+    } else {
     IdmsException(
       ApplicationsException.addContext(s"Unexpected response $statusCode returned from IDMS", context),
       UnexpectedResponse
