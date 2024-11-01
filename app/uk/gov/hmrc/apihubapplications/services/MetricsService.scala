@@ -24,9 +24,19 @@ import uk.gov.hmrc.apihubapplications.services.MetricsService.MetricsKeys
 class MetricsService @Inject()(metricRegistry: MetricRegistry) {
 
   private lazy val apimDeploymentStatusUnknownMetric: Meter = metricRegistry.meter(MetricsKeys.APIM.apimDeploymentStatusUnknown)
+  private lazy val apimCircuitBreakerOpenMetric: Meter = metricRegistry.meter(MetricsKeys.APIM.apimCircuitBreakerOpen)
+  private lazy val idmsCircuitBreakerOpenMetric: Meter = metricRegistry.meter(MetricsKeys.APIM.idmsCircuitBreakerOpen)
 
   def apimUnknownFailure(): Unit = {
     apimDeploymentStatusUnknownMetric.mark()
+  }
+
+  def apimCircuitBreakerOpen(): Unit = {
+    apimCircuitBreakerOpenMetric.mark()
+  }
+
+  def idmsCircuitBreakerOpen(): Unit = {
+    idmsCircuitBreakerOpenMetric.mark()
   }
 
 }
@@ -38,6 +48,8 @@ object MetricsService {
     object APIM {
 
       val apimDeploymentStatusUnknown: String = "apim-deployment-status-unknown"
+      val apimCircuitBreakerOpen: String = "apim-circuit-breaker-open"
+      val idmsCircuitBreakerOpen: String = "idms-circuit-breaker-open"
 
     }
 
