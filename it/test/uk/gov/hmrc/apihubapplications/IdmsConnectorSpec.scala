@@ -31,7 +31,7 @@ import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.{CallError, InvalidCredential}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
@@ -704,6 +704,48 @@ class IdmsConnectorSpec
         actual =>
           actual.left.value mustBe a[IdmsException]
           actual.left.value.issue mustBe CallError
+      }
+    }
+
+    "must return InvalidCredential for 401 errors" in {
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
+          .willReturn(
+            aResponse()
+              .withStatus(401)
+          )
+      )
+
+      val id = "test-id"
+      val application = buildApplication(clientId1, clientId2, id)
+
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier(requestId = requestId)) map {
+        actual =>
+          actual.left.value mustBe a[IdmsException]
+          actual.left.value.issue mustBe InvalidCredential
+      }
+    }
+
+    "must return InvalidCredential for 403 errors" in {
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      stubFor(
+        delete(urlEqualTo(s"/$Primary/identity/clients/$clientId1"))
+          .willReturn(
+            aResponse()
+              .withStatus(403)
+          )
+      )
+
+      val id = "test-id"
+      val application = buildApplication(clientId1, clientId2, id)
+
+      buildConnector(this).deleteAllClients(application)(HeaderCarrier(requestId = requestId)) map {
+        actual =>
+          actual.left.value mustBe a[IdmsException]
+          actual.left.value.issue mustBe InvalidCredential
       }
     }
   }
