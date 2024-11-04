@@ -18,8 +18,9 @@ package uk.gov.hmrc.apihubapplications.config
 
 import play.api.inject.{Binding, bind => bindz}
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl, IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, CircuitBreakerAPIMConnectorImpl, CircuitBreakerIdmsConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl, IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.schedulers.SyntheticMonitoringScheduler
 import uk.gov.hmrc.apihubapplications.services.{ApplicationsApiService, ApplicationsApiServiceImpl, ApplicationsCredentialsService, ApplicationsCredentialsServiceImpl, ApplicationsLifecycleService, ApplicationsLifecycleServiceImpl, ApplicationsSearchService, ApplicationsSearchServiceImpl}
 import uk.gov.hmrc.apihubapplications.tasks.DatabaseStatisticMetricOrchestratorTask
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
@@ -34,16 +35,17 @@ class Module extends play.api.inject.Module {
       bindz(classOf[AppConfig]).toSelf.eagerly(),
       bindz(classOf[Clock]).toInstance(Clock.systemUTC()),
       bindz(classOf[IdentifierAction]).to(classOf[AuthenticatedIdentifierAction]).eagerly(),
-      bindz(classOf[IdmsConnector]).to(classOf[IdmsConnectorImpl]).eagerly(),
+      bindz(classOf[IdmsConnector]).to(classOf[CircuitBreakerIdmsConnectorImpl]).eagerly(),
       bindz(classOf[MetricOrchestrator]).toProvider(classOf[DatabaseStatisticsMetricOrchestratorProvider]).eagerly(),
       bindz(classOf[DatabaseStatisticMetricOrchestratorTask]).toSelf.eagerly(),
       bindz(classOf[EmailConnector]).to(classOf[EmailConnectorImpl]).eagerly(),
-      bindz(classOf[APIMConnector]).to(classOf[APIMConnectorImpl]).eagerly(),
+      bindz(classOf[APIMConnector]).to(classOf[CircuitBreakerAPIMConnectorImpl]).eagerly(),
       bindz(classOf[IntegrationCatalogueConnector]).to(classOf[IntegrationCatalogueConnectorImpl]).eagerly(),
       bindz(classOf[ApplicationsApiService]).to(classOf[ApplicationsApiServiceImpl]).eagerly(),
       bindz(classOf[ApplicationsCredentialsService]).to(classOf[ApplicationsCredentialsServiceImpl]).eagerly(),
       bindz(classOf[ApplicationsLifecycleService]).to(classOf[ApplicationsLifecycleServiceImpl]).eagerly(),
-      bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly()
+      bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly(),
+      bindz(classOf[SyntheticMonitoringScheduler]).toSelf.eagerly()
     )
 
     val authTokenInitialiserBindings: Seq[Binding[?]] = if (configuration.get[Boolean]("create-internal-auth-token-on-start")) {
