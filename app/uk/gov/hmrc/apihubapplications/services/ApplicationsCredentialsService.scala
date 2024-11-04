@@ -20,13 +20,12 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Credential, EnvironmentName, Primary}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationsException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.ApplicationsCredentialsServiceImpl.NewCredential
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -41,6 +40,8 @@ trait ApplicationsCredentialsService {
 
   def addPrimaryAccess(accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
+  def fetchEnvironmentScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]]
+
 }
 
 @Singleton
@@ -50,6 +51,8 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   idmsConnector: IdmsConnector,
   clock: Clock
 )(implicit ec: ExecutionContext) extends ApplicationsCredentialsService with Logging with ExceptionRaising {
+
+  import ApplicationsCredentialsServiceImpl.*
 
   override def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     searchService.findById(applicationId, enrich = true).map {
@@ -183,10 +186,33 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
+  override def fetchEnvironmentScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
+    searchService.findById(applicationId, enrich = false).flatMap {
+      case Right(application) =>
+        Future.sequence(
+          Seq(Primary, Secondary).flatMap(
+            environmentName =>
+              application.getCredentialsFor(environmentName).map(
+                credential =>
+                  idmsConnector
+                    .fetchClientScopes(environmentName, credential.clientId)
+                    .map(_.map(
+                      scopes =>
+                        CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                    ))
+                  )
+          )
+        )
+          .map(useFirstException)
+          .map(_.map(_.sorted))
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
+
 }
 
 object ApplicationsCredentialsServiceImpl {
 
-  case class NewCredential(application: Application, credential: Credential, wasHidden: Boolean)
+  private case class NewCredential(application: Application, credential: Credential, wasHidden: Boolean)
 
 }

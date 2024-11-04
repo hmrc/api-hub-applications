@@ -941,6 +941,47 @@ class ApplicationsControllerSpec
     }
   }
 
+  "fetchEnvironmentScopes" - {
+    "must return 200 OK and the list of credential scopes on success" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val credentialScopes = (1 to 2).map(
+        i =>
+          CredentialScopes(
+            environmentName = Primary,
+            clientId = s"test-client-id-$i",
+            created = LocalDateTime.now(),
+            scopes = Seq(s"test-scope-$i-1", s"test-scope-$i-2")
+          )
+      )
+
+      when(fixture.applicationsService.fetchEnvironmentScopes(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(credentialScopes)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.fetchEnvironmentScopes(applicationId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(credentialScopes)
+      }
+    }
+
+    "must return 404 Not Found when the application does not exist" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+
+      when(fixture.applicationsService.fetchEnvironmentScopes(eqTo(applicationId))(any))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.fetchEnvironmentScopes(applicationId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
 }
 
 object ApplicationsControllerSpec extends MockitoSugar {
