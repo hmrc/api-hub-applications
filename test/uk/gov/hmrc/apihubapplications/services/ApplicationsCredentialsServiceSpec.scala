@@ -526,7 +526,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     }
   }
 
-  "fetchEnvironmentScopes" - {
+  "fetchAllScopes" - {
     "must return the correct credential scopes in order" in {
       val fixture = buildFixture
       import fixture.*
@@ -556,7 +556,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         buildCredentialScopes(Secondary, clientId4)
       )
 
-      service.fetchEnvironmentScopes(application.safeId)(HeaderCarrier()).map {
+      service.fetchAllScopes(application.safeId)(HeaderCarrier()).map {
         result =>
           result mustBe Right(expected)
       }
@@ -572,7 +572,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any))
         .thenReturn(Future.successful(Left(expected)))
 
-      service.fetchEnvironmentScopes(applicationId)(HeaderCarrier()).map {
+      service.fetchAllScopes(applicationId)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }
@@ -596,7 +596,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId1))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId1))))
       when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId2))(any)).thenReturn(Future.successful(Left(expected)))
 
-      service.fetchEnvironmentScopes(application.safeId)(HeaderCarrier()).map {
+      service.fetchAllScopes(application.safeId)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }

@@ -40,7 +40,7 @@ trait ApplicationsCredentialsService {
 
   def addPrimaryAccess(accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
-  def fetchEnvironmentScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]]
+  def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]]
 
 }
 
@@ -186,7 +186,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  override def fetchEnvironmentScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
+  override def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
     searchService.findById(applicationId, enrich = false).flatMap {
       case Right(application) =>
         Future.sequence(

@@ -941,7 +941,7 @@ class ApplicationsControllerSpec
     }
   }
 
-  "fetchEnvironmentScopes" - {
+  "fetchAllScopes" - {
     "must return 200 OK and the list of credential scopes on success" in {
       val fixture = buildFixture()
       val applicationId = "test-application-id"
@@ -955,10 +955,10 @@ class ApplicationsControllerSpec
           )
       )
 
-      when(fixture.applicationsService.fetchEnvironmentScopes(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(credentialScopes)))
+      when(fixture.applicationsService.fetchAllScopes(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(credentialScopes)))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.ApplicationsController.fetchEnvironmentScopes(applicationId))
+        val request = FakeRequest(routes.ApplicationsController.fetchAllScopes(applicationId))
         val result = route(fixture.application, request).value
 
         status(result) mustBe OK
@@ -970,11 +970,11 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
       val applicationId = "test-application-id"
 
-      when(fixture.applicationsService.fetchEnvironmentScopes(eqTo(applicationId))(any))
+      when(fixture.applicationsService.fetchAllScopes(eqTo(applicationId))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.ApplicationsController.fetchEnvironmentScopes(applicationId))
+        val request = FakeRequest(routes.ApplicationsController.fetchAllScopes(applicationId))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
