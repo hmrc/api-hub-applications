@@ -197,7 +197,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
   def fetchAllScopes(applicationId: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
       applicationsService.fetchAllScopes(applicationId).map {
-        case Right(environmentScopes) => Ok(Json.toJson(environmentScopes))
+        case Right(allScopes) => Ok(Json.toJson(allScopes))
         case Left(e: ApplicationNotFoundException) => NotFound
         case Left(e) => throw e
       }

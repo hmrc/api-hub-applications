@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
+import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -36,7 +37,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.*
 import scala.concurrent.Future
 
-class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with TableDrivenPropertyChecks {
+class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with TableDrivenPropertyChecks with EitherValues {
 
   import ApplicationsCredentialsServiceSpec.*
 
@@ -527,7 +528,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
   }
 
   "fetchAllScopes" - {
-    "must return the correct credential scopes in order" in {
+    "must return the correct credential scopes" in {
       val fixture = buildFixture
       import fixture.*
 
@@ -558,7 +559,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       service.fetchAllScopes(application.safeId)(HeaderCarrier()).map {
         result =>
-          result mustBe Right(expected)
+          result.value must contain theSameElementsAs expected
       }
     }
 

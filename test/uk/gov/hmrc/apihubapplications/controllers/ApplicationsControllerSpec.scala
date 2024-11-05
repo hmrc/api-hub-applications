@@ -945,7 +945,7 @@ class ApplicationsControllerSpec
     "must return 200 OK and the list of credential scopes on success" in {
       val fixture = buildFixture()
       val applicationId = "test-application-id"
-      val credentialScopes = (1 to 2).map(
+      val allScopes = (1 to 2).map(
         i =>
           CredentialScopes(
             environmentName = Primary,
@@ -955,14 +955,14 @@ class ApplicationsControllerSpec
           )
       )
 
-      when(fixture.applicationsService.fetchAllScopes(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(credentialScopes)))
+      when(fixture.applicationsService.fetchAllScopes(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(allScopes)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.fetchAllScopes(applicationId))
         val result = route(fixture.application, request).value
 
         status(result) mustBe OK
-        contentAsJson(result) mustBe Json.toJson(credentialScopes)
+        contentAsJson(result) mustBe Json.toJson(allScopes)
       }
     }
 

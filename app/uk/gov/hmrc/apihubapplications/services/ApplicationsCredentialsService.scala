@@ -204,7 +204,6 @@ class ApplicationsCredentialsServiceImpl @Inject()(
           )
         )
           .map(useFirstException)
-          .map(_.map(_.sorted))
       case Left(e) => Future.successful(Left(e))
     }
   }
