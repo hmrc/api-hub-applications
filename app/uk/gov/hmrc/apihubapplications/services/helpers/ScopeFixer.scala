@@ -20,10 +20,10 @@ import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
-import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, CredentialScopes, EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationsException, IdmsException}
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{useFirstApplicationsException, useFirstException}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,11 +38,15 @@ class ScopeFixer @Inject()(
   def fix(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     requiredScopes(application).flatMap {
       case Right(requiredScopes) =>
-        minimiseScopesInEnvironment(application, requiredScopes, Primary).flatMap {
-          case Right(application) => minimiseScopesInEnvironment(application, requiredScopes, Secondary).flatMap {
-            case Right(application) => addScopesToSecondary(application, requiredScopes)
-            case Left(e) => Future.successful(Left(e))
-          }
+        allScopes(application).flatMap {
+          case Right(allScopes) =>
+            minimiseScopesInEnvironment(application, requiredScopes, Primary).flatMap {
+              case Right(application) => minimiseScopesInEnvironment(application, requiredScopes, Secondary).flatMap {
+                case Right(application) => addScopesToSecondary(application, requiredScopes)
+                case Left(e) => Future.successful(Left(e))
+              }
+              case Left(e) => Future.successful(Left(e))
+            }
           case Left(e) => Future.successful(Left(e))
         }
       case Left(e) => Future.successful(Left(e))
@@ -68,6 +72,23 @@ class ScopeFixer @Inject()(
       .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
   }
 
+  private def allScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[CredentialScopes]]] = {
+    Future.sequence(
+      Seq(Primary, Secondary).flatMap(
+        environmentName =>
+          application.getCredentialsFor(environmentName).map(
+            credential =>
+              idmsConnector
+                .fetchClientScopes(environmentName, credential.clientId)
+                .map(_.map(
+                  scopes =>
+                    CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                ))
+          )
+      )
+    ).map(useFirstException)
+  }
+
   private def currentScopes(application: Application, environmentName: EnvironmentName): Set[String] = {
     environmentName match {
       case Primary => application.getPrimaryScopeNames
@@ -84,7 +105,6 @@ class ScopeFixer @Inject()(
     requiredScopes: Set[String],
     environmentName: EnvironmentName
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
-
     ApplicationEnrichers.process(
       application,
       scopesToRemove(application, requiredScopes, environmentName)
@@ -94,7 +114,6 @@ class ScopeFixer @Inject()(
             ApplicationEnrichers.scopeRemovingApplicationEnricher(environmentName, application, idmsConnector, scopeName)
         )
     )
-
   }
 
   private def addScopesToSecondary(
