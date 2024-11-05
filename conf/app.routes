@@ -13,6 +13,7 @@ PUT        /applications/:applicationId/teams/:teamId                           
 DELETE     /applications/:applicationId/teams                                       uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.removeTeam(applicationId: String)
 POST       /applications/:id/team-members                                           uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addTeamMember(id: String)
 GET        /applications/using-api/:id                                              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getApplicationsUsingApi(id: String, includeDeleted: Boolean ?= false)
+GET        /applications/:id/all-scopes                                             uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.fetchAllScopes(id: String)
 
 POST       /access-requests                                                         uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.createAccessRequest()
 PUT        /access-requests/:id/approve                                             uk.gov.hmrc.apihubapplications.controllers.AccessRequestsController.approveAccessRequest(id: String)

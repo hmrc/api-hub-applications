@@ -92,4 +92,8 @@ class ApplicationsService @Inject()(
     searchService.findByTeamId(id, includeDeleted)
   }
 
+  override def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
+    credentialsService.fetchAllScopes(applicationId)
+  }
+
 }

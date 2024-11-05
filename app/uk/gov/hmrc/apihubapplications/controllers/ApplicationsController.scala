@@ -193,4 +193,14 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Left(_) => InternalServerError
       }
   }
+
+  def fetchAllScopes(applicationId: String): Action[AnyContent] = identify.compose(Action).async {
+    implicit request =>
+      applicationsService.fetchAllScopes(applicationId).map {
+        case Right(allScopes) => Ok(Json.toJson(allScopes))
+        case Left(e: ApplicationNotFoundException) => NotFound
+        case Left(e) => throw e
+      }
+  }
+
 }

@@ -16,35 +16,36 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{never, times, verify, verifyNoMoreInteractions, when}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
+import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Rejected}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationNotFoundException, CredentialNotFoundException, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time._
+import java.time.*
 import scala.concurrent.Future
 
-class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with TableDrivenPropertyChecks {
+class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with TableDrivenPropertyChecks with EitherValues {
 
-  import ApplicationsCredentialsServiceSpec._
+  import ApplicationsCredentialsServiceSpec.*
 
   "addCredential" - {
 
     "must create a new secondary credential and copy the previous secondary master scopes" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val testAppId = "test-app-id"
       val oldTestClientId = "test-client-id"
@@ -90,7 +91,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must create a new primary credential and copy the previous primary master scopes where the existing credential is not hidden" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val testAppId = "test-app-id"
       val oldTestClientId = "test-client-id"
@@ -135,7 +136,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must update existing primary credential and set a secret fragment where the existing credential is hidden" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val testAppId = "test-app-id"
       val testClientId = "test-client-id"
@@ -174,7 +175,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must return ApplicationCredentialLimitException if there are already 5 credentials" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-id"
 
@@ -213,7 +214,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       forAll(environmentNames) {(environmentName: EnvironmentName) =>
         val fixture = buildFixture
-        import fixture._
+        import fixture.*
 
         val application = Application(
           id = Some(applicationId),
@@ -241,7 +242,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must update the application in the repository" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-id"
       val clientId = "test-client-id"
@@ -275,7 +276,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must succeed when IDMS returns ClientNotFound" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-id"
       val clientId = "test-client-id"
@@ -304,7 +305,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must return ApplicationNotFoundException when the application does not exist" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-id"
       val clientId = "test-client-id"
@@ -319,7 +320,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must return CredentialNotFoundException when the credential does not exist in the application" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-id"
       val clientId = "test-client-id"
@@ -345,7 +346,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must return IdmsException when this is returned from IDMS" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-id"
       val clientId = "test-client-id"
@@ -373,7 +374,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must return ApplicationCredentialLimitException when an attempt is made to delete the last credential" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-id"
       val clientId = "test-client-id"
@@ -401,7 +402,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
   "addPrimaryAccess" - {
     "must add the new scopes to all primary credentials" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-application-id"
       val clientId1 = "test-client-id-1"
@@ -455,7 +456,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must return an IdmsException if any IDMS call fails but others succeed" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
@@ -501,7 +502,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
     "must return application not found exception when it does not exist" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applicationId = "test-application-id"
 
@@ -526,6 +527,83 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     }
   }
 
+  "fetchAllScopes" - {
+    "must return the correct credential scopes" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+      val clientId3 = "test-client-id-3"
+      val clientId4 = "test-client-id-4"
+
+      val application = baseApplication
+        .addPrimaryCredential(buildCredential(clientId1))
+        .addPrimaryCredential(buildCredential(clientId2))
+        .addSecondaryCredential(buildCredential(clientId3))
+        .addSecondaryCredential(buildCredential(clientId4))
+
+      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+
+      when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId1))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId1))))
+      when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId2))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId2))))
+      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(clientId3))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId3))))
+      when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(clientId4))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId4))))
+
+      val expected = Seq(
+        buildCredentialScopes(Primary, clientId1),
+        buildCredentialScopes(Primary, clientId2),
+        buildCredentialScopes(Secondary, clientId3),
+        buildCredentialScopes(Secondary, clientId4)
+      )
+
+      service.fetchAllScopes(application.safeId)(HeaderCarrier()).map {
+        result =>
+          result.value must contain theSameElementsAs expected
+      }
+    }
+
+    "must return application not found exception when it does not exist" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val applicationId = "test-application-id"
+      val expected = ApplicationNotFoundException.forId(applicationId)
+
+      when(searchService.findById(eqTo(applicationId), eqTo(false))(any))
+        .thenReturn(Future.successful(Left(expected)))
+
+      service.fetchAllScopes(applicationId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(expected)
+      }
+    }
+
+    "must return an IdmsException if any IDMS call fails but others succeed" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val clientId1 = "test-client-id-1"
+      val clientId2 = "test-client-id-2"
+
+      val application = baseApplication
+        .addPrimaryCredential(buildCredential(clientId1))
+        .addPrimaryCredential(buildCredential(clientId2))
+
+      val expected = IdmsException.unexpectedResponse(500)
+
+      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+
+      when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId1))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId1))))
+      when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId2))(any)).thenReturn(Future.successful(Left(expected)))
+
+      service.fetchAllScopes(application.safeId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(expected)
+      }
+    }
+  }
+
   private def buildFixture: Fixture = {
     val searchService =  mock[ApplicationsSearchService]
     val repository = mock[ApplicationsRepository]
@@ -546,5 +624,32 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 object ApplicationsCredentialsServiceSpec {
 
   val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+
+  val baseApplication: Application = Application(
+    id = Some("test-application-id"),
+    name = "test-application-name",
+    createdBy = Creator("test-creator-email"),
+    teamId = "test-team-id"
+  )
+
+  def buildCredential(clientId: String): Credential = {
+    Credential(clientId = clientId, created = LocalDateTime.now(clock), clientSecret = None, secretFragment = None)
+  }
+
+  def buildClientScopes(clientId: String): Seq[ClientScope] = {
+    Seq(
+      ClientScope(s"$clientId-scope-1"),
+      ClientScope(s"$clientId-scope-2")
+    )
+  }
+
+  def buildCredentialScopes(environmentName: EnvironmentName, clientId: String): CredentialScopes = {
+    CredentialScopes(
+      environmentName = environmentName,
+      clientId = clientId,
+      created = LocalDateTime.now(clock),
+      scopes = buildClientScopes(clientId).map(_.clientScopeId)
+    )
+  }
 
 }
