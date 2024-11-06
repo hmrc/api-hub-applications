@@ -38,10 +38,10 @@ class ScopeFixer @Inject()(
   def fix(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     requiredScopes(application).flatMap {
       case Right(requiredScopes) =>
-        allScopes(application).flatMap {
-          case Right(allScopes) =>
-            minimiseScopesInEnvironment(application, requiredScopes, Primary).flatMap {
-              case Right(application) => minimiseScopesInEnvironment(application, requiredScopes, Secondary).flatMap {
+        allCredentials(application).flatMap {
+          case Right(credentials) =>
+            minimiseScopesInEnvironment(Primary, application, credentials, requiredScopes).flatMap {
+              case Right(application) => minimiseScopesInEnvironment(Secondary, application, credentials, requiredScopes).flatMap {
                 case Right(application) => addScopesToSecondary(application, requiredScopes)
                 case Left(e) => Future.successful(Left(e))
               }
@@ -72,7 +72,7 @@ class ScopeFixer @Inject()(
       .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
   }
 
-  private def allScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[CredentialScopes]]] = {
+  private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[CredentialScopes]]] = {
     Future.sequence(
       Seq(Primary, Secondary).flatMap(
         environmentName =>
@@ -89,29 +89,26 @@ class ScopeFixer @Inject()(
     ).map(useFirstException)
   }
 
-  private def currentScopes(application: Application, environmentName: EnvironmentName): Set[String] = {
-    environmentName match {
-      case Primary => application.getPrimaryScopeNames
-      case Secondary => application.getSecondaryScopeNames
-    }
-  }
-
-  private def scopesToRemove(application: Application, requiredScopes: Set[String], environmentName: EnvironmentName): Set[String] = {
-    currentScopes(application, environmentName) -- requiredScopes
+  private def scopesToRemove(credential: CredentialScopes, requiredScopes: Set[String]): Set[String] = {
+    credential.scopes.toSet -- requiredScopes
   }
 
   private def minimiseScopesInEnvironment(
+    environmentName: EnvironmentName,
     application: Application,
-    requiredScopes: Set[String],
-    environmentName: EnvironmentName
+    credentials: Seq[CredentialScopes],
+    requiredScopes: Set[String]
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
     ApplicationEnrichers.process(
       application,
-      scopesToRemove(application, requiredScopes, environmentName)
-        .toSeq
-        .map(
-          scopeName =>
-            ApplicationEnrichers.scopeRemovingApplicationEnricher(environmentName, application, idmsConnector, scopeName)
+      credentials
+        .filter(_.environmentName == environmentName)
+        .flatMap(
+          credential =>
+            scopesToRemove(credential, requiredScopes).map(
+              scopeName =>
+                ApplicationEnrichers.scopeRemovingApplicationEnricher(environmentName, application, idmsConnector, scopeName, Some(credential.clientId))
+            )
         )
     )
   }
@@ -120,7 +117,6 @@ class ScopeFixer @Inject()(
     application: Application,
     requiredScopes: Set[String]
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
-
     ApplicationEnrichers.process(
       application,
       requiredScopes
