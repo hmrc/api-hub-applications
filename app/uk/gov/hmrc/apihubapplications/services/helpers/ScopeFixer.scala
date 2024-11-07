@@ -44,11 +44,28 @@ class ScopeFixer @Inject()(
       requiredScopes <- EitherT(requiredScopes(application))
       credentials <- EitherT(allCredentials(application))
       accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(application.id, Some(Approved)))
-      application <- EitherT(minimiseScopesInEnvironment(Primary, application, credentials, requiredScopes))
+      application <- EitherT(minimiseScopesInEnvironment(Primary, application, credentials, allowedProductionScopes(requiredScopes, accessRequests)))
       application <- EitherT(minimiseScopesInEnvironment(Secondary, application, credentials, requiredScopes))
-      application <- EitherT(addScopesToEnvironment(Primary, application, allowedScopes(requiredScopes, accessRequests)))
+      application <- EitherT(addScopesToEnvironment(Primary, application, allowedProductionScopes(requiredScopes, accessRequests)))
       application <- EitherT(addScopesToEnvironment(Secondary, application, requiredScopes))
     } yield application).value
+  }
+
+  private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
+    Future.sequence(
+      Seq(Primary, Secondary).flatMap(
+        environmentName =>
+          application.getCredentialsFor(environmentName).map(
+            credential =>
+              idmsConnector
+                .fetchClientScopes(environmentName, credential.clientId)
+                .map(_.map(
+                  scopes =>
+                    CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                ))
+          )
+      )
+    ).map(useFirstException)
   }
 
   private def requiredScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Set[String]]] = {
@@ -70,28 +87,11 @@ class ScopeFixer @Inject()(
       .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
   }
 
-  private def allowedScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest]): Set[String] = {
+  private def allowedProductionScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest]): Set[String] = {
     accessRequests
       .flatMap(_.endpoints.flatMap(_.scopes))
       .toSet
       .intersect(requiredScopes)
-  }
-
-  private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
-    Future.sequence(
-      Seq(Primary, Secondary).flatMap(
-        environmentName =>
-          application.getCredentialsFor(environmentName).map(
-            credential =>
-              idmsConnector
-                .fetchClientScopes(environmentName, credential.clientId)
-                .map(_.map(
-                  scopes =>
-                    CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
-                ))
-          )
-      )
-    ).map(useFirstException)
   }
 
   private def scopesToRemove(credential: CredentialScopes, requiredScopes: Set[String]): Set[String] = {
@@ -102,7 +102,7 @@ class ScopeFixer @Inject()(
     environmentName: EnvironmentName,
     application: Application,
     credentials: Seq[CredentialScopes],
-    requiredScopes: Set[String]
+    allowedScopes: Set[String]
   )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     ApplicationEnrichers.process(
       application,
@@ -110,7 +110,7 @@ class ScopeFixer @Inject()(
         .filter(_.environmentName == environmentName)
         .flatMap(
           credential =>
-            scopesToRemove(credential, requiredScopes).map(
+            scopesToRemove(credential, allowedScopes).map(
               scopeName =>
                 ApplicationEnrichers.scopeRemovingApplicationEnricher(environmentName, application, idmsConnector, scopeName, Some(credential.clientId))
             )
