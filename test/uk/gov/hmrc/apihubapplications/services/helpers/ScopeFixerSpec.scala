@@ -171,7 +171,48 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must always add all scopes (self-healing)" in {
+    "must handle disparity when adding scopes (use each credential's scopes and not a master list)" in {
+      val api = baseApi(apiId1)
+        .addEndpoint(endpointForScope1)
+
+      val application = applicationWithCredentials
+        .addPrimaryCredential(credential3)
+        .addSecondaryCredential(credential4)
+        .addApi(buildApi(api))
+
+      val expected = application
+        .addPrimaryScope(scope1)
+        .addSecondaryScope(scope1)
+
+      val fixture = buildFixture()
+
+      when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
+
+      stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1, clientId2, clientId3, clientId4))
+
+      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
+        .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, api))))
+
+      when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
+          verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
+
+          verifyIdmsFetchClientScopes(application, fixture)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId3), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId4), eqTo(scopeName1))(any)
+          verifyNoMoreInteractions(fixture.idmsConnector)
+
+          result.value mustBe expected
+      }
+    }
+
+    "must always grant all allowed scopes (self-healing)" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)
         .addEndpoint(endpointForScope2)
@@ -187,7 +228,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
-      stubIdmsFetchClientScopes(application, fixture)
+      stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1, clientId2))
 
       when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
         .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, api))))
@@ -270,7 +311,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
-      stubIdmsFetchClientScopes(application, fixture, ignoreClientIds = Set(clientId1))
+      stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1))
 
       when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
         .thenReturn(Future.successful(Seq.empty))
@@ -312,7 +353,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       when(fixture.integrationCatalogueConnector.findById(eqTo(api1.id))(any)).thenReturn(Future.successful(Right(api1)))
       when(fixture.integrationCatalogueConnector.findById(eqTo(api2.id))(any)).thenReturn(Future.successful(Right(api2)))
 
-      stubIdmsFetchClientScopes(application, fixture, ignoreClientIds = Set(clientId1))
+      stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1))
 
       when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
         .thenReturn(Future.successful(Seq.empty))
@@ -372,6 +413,46 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           result.value mustBe expected
       }
     }
+
+    "must not grant scopes for production credential with missing but unapproved scope" in {
+      val api = baseApi(apiId1)
+        .addEndpoint(endpointForScope1)
+        .addEndpoint(endpointForScope2)
+
+      val application = applicationWithCredentials
+        .addPrimaryScope(scope1)
+        .addPrimaryScope(scope2)
+        .addSecondaryScope(scope1)
+        .addSecondaryScope(scope2)
+        .addApi(buildApi(api))
+
+      val approved = buildApprovedAccessRequest(application, api.removeEndpoint(endpointForScope2.path))
+
+      val fixture = buildFixture()
+
+      when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
+
+      stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1, clientId2))
+
+      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
+        .thenReturn(Future.successful(Seq(approved)))
+
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
+          verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
+
+          verifyIdmsFetchClientScopes(application, fixture)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verifyNoMoreInteractions(fixture.idmsConnector)
+
+          result.value mustBe application
+      }
+    }
   }
 
   private case class Fixture(
@@ -389,12 +470,12 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
     Fixture(integrationCatalogueConnector, idmsConnector, accessRequestsService, scopeFixer)
   }
 
-  private def stubIdmsFetchClientScopes(application: Application, fixture: Fixture, ignoreClientIds: Set[String] = Set.empty): Unit = {
+  private def stubIdmsFetchClientScopes(application: Application, fixture: Fixture, noScopesFor: Set[String] = Set.empty): Unit = {
     EnvironmentName.values.foreach(
       environmentName =>
         application
           .getCredentialsFor(environmentName)
-          .filterNot(credential => ignoreClientIds.contains(credential.clientId))
+          .filterNot(credential => noScopesFor.contains(credential.clientId))
           .foreach(
             credential =>
               when(fixture.idmsConnector.fetchClientScopes(eqTo(environmentName), eqTo(credential.clientId))(any))
@@ -408,7 +489,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
     EnvironmentName.values.foreach(
       environmentName =>
-        ignoreClientIds.foreach(
+        noScopesFor.foreach(
           clientId =>
             when(fixture.idmsConnector.fetchClientScopes(eqTo(environmentName), eqTo(clientId))(any))
               .thenReturn(Future.successful(Right(Seq.empty)))
@@ -436,9 +517,11 @@ object ScopeFixerSpec {
   private val clientId1: String = "test-client-id-1"
   private val clientId2: String = "test-client-id-2"
   private val clientId3: String = "test-client-id-3"
+  private val clientId4: String = "test-client-id-4"
   private val credential1: Credential = Credential(clientId1, LocalDateTime.now(), None, None)
   private val credential2: Credential = Credential(clientId2, LocalDateTime.now(), None, None)
   private val credential3: Credential = Credential(clientId3, LocalDateTime.now(), None, None)
+  private val credential4: Credential = Credential(clientId4, LocalDateTime.now(), None, None)
   private val scopeName1: String = "test-scope-name-1"
   private val scopeName2: String = "test-scope-name-2"
   private val scopeName3: String = "test-scope-name-3"
