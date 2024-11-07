@@ -18,11 +18,13 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.{Application, CredentialScopes, EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationsException, IdmsException}
+import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{useFirstApplicationsException, useFirstException}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -31,7 +33,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ScopeFixer @Inject()(
   integrationCatalogueConnector: IntegrationCatalogueConnector,
-  idmsConnector: IdmsConnector
+  idmsConnector: IdmsConnector,
+  accessRequestsService: AccessRequestsService
 )(implicit ec: ExecutionContext) {
 
   // Manipulate the model first, adding and removing APIs and endpoints, THEN call this method to fix scopes
@@ -40,12 +43,18 @@ class ScopeFixer @Inject()(
       case Right(requiredScopes) =>
         allCredentials(application).flatMap {
           case Right(credentials) =>
-            minimiseScopesInEnvironment(Primary, application, credentials, requiredScopes).flatMap {
-              case Right(application) => minimiseScopesInEnvironment(Secondary, application, credentials, requiredScopes).flatMap {
-                case Right(application) => addScopesToSecondary(application, requiredScopes)
-                case Left(e) => Future.successful(Left(e))
-              }
-              case Left(e) => Future.successful(Left(e))
+            accessRequestsService.getAccessRequests(application.id, Some(Approved)).flatMap {
+              accessRequests =>
+                minimiseScopesInEnvironment(Primary, application, credentials, requiredScopes).flatMap {
+                  case Right(application) => minimiseScopesInEnvironment(Secondary, application, credentials, requiredScopes).flatMap {
+                    case Right(application) => addScopesToEnvironment(Secondary, application, requiredScopes).flatMap {
+                      case Right(application) => addScopesToEnvironment(Primary, application, allowedScopes(requiredScopes, accessRequests))
+                      case Left(e) => Future.successful(Left(e))
+                    }
+                    case Left(e) => Future.successful(Left(e))
+                  }
+                  case Left(e) => Future.successful(Left(e))
+                }
             }
           case Left(e) => Future.successful(Left(e))
         }
@@ -70,6 +79,13 @@ class ScopeFixer @Inject()(
       )
       .map(useFirstApplicationsException)
       .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
+  }
+
+  private def allowedScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest]): Set[String] = {
+    accessRequests
+      .flatMap(_.endpoints.flatMap(_.scopes))
+      .toSet
+      .intersect(requiredScopes)
   }
 
   private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[CredentialScopes]]] = {
@@ -113,17 +129,18 @@ class ScopeFixer @Inject()(
     )
   }
 
-  private def addScopesToSecondary(
+  private def addScopesToEnvironment(
+    environmentName: EnvironmentName,
     application: Application,
-    requiredScopes: Set[String]
+    allowedScopes: Set[String]
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Application]] = {
     ApplicationEnrichers.process(
       application,
-      requiredScopes
+      allowedScopes
         .toSeq
         .map(
           scopeName =>
-            ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scopeName)
+            ApplicationEnrichers.scopeAddingApplicationEnricher(environmentName, application, idmsConnector, scopeName)
         )
     )
   }
