@@ -43,11 +43,9 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
   "fix" - {
     "must process an application with no APIs or Scopes efficiently" in {
       val fixture = buildFixture()
+      val accessRequests = Seq.empty
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(baseApplication.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq.empty))
-
-      fixture.scopeFixer.fix(baseApplication)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(baseApplication, accessRequests)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.integrationCatalogueConnector)
           verifyNoInteractions(fixture.idmsConnector)
@@ -64,15 +62,13 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addSecondaryScope(scope3)
 
       val fixture = buildFixture()
+      val accessRequests = Seq.empty
 
       stubIdmsFetchClientScopes(application, fixture)
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq.empty))
-
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.integrationCatalogueConnector)
           verifyIdmsFetchClientScopes(application, fixture)
@@ -103,19 +99,18 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .removePrimaryScope(scopeName2)
         .removeSecondaryScope(scopeName2)
 
+      val accessRequests = Seq(buildApprovedAccessRequest(application, api))
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
       stubIdmsFetchClientScopes(application, fixture)
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, api))))
-
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -141,6 +136,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addSecondaryScope(scope1)
         .addApi(buildApi(api))
 
+      val accessRequests = Seq(buildApprovedAccessRequest(application, api))
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
@@ -149,13 +146,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       when(fixture.idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId3))(any))
         .thenReturn(Future.successful(Right(Seq(ClientScope(scopeName1), ClientScope(scopeName2)))))
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, api))))
-
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -184,19 +178,18 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addPrimaryScope(scope1)
         .addSecondaryScope(scope1)
 
+      val accessRequests = Seq(buildApprovedAccessRequest(application, api))
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
       stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1, clientId2, clientId3, clientId4))
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, api))))
-
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -224,18 +217,17 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addSecondaryScope(scope2)
         .addApi(buildApi(api))
 
+      val accessRequests = Seq(buildApprovedAccessRequest(application, api))
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
       stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1, clientId2))
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, api))))
-
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -266,19 +258,18 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .removePrimaryScope(scopeName1)
         .removeSecondaryScope(scopeName3)
 
+      val accessRequests = Seq(buildApprovedAccessRequest(application, api))
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
       stubIdmsFetchClientScopes(application, fixture)
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, api))))
-
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -307,18 +298,17 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       val expected = application
         .addSecondaryScope(scope2)
 
+      val accessRequests = Seq.empty
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
       stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1))
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq.empty))
-
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -348,6 +338,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       val expected = application
         .addSecondaryScope(scope2)
 
+      val accessRequests = Seq.empty
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(eqTo(api1.id))(any)).thenReturn(Future.successful(Right(api1)))
@@ -355,12 +347,9 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1))
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq.empty))
-
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api1.id))(any)
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api2.id))(any)
@@ -394,6 +383,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .removePrimaryScope(scopeName2)
         .removeSecondaryScope(scopeName2)
 
+      val accessRequests = Seq(buildApprovedAccessRequest(application, apiDetail1))
+
       val fixture = buildFixture()
 
       when(fixture.integrationCatalogueConnector.findById(eqTo(apiId1))(any)).thenReturn(Future.successful(Right(apiDetail1)))
@@ -401,13 +392,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       stubIdmsFetchClientScopes(application, fixture)
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq(buildApprovedAccessRequest(application, apiDetail1))))
-
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verifyIdmsFetchClientScopes(application, fixture)
           result.value mustBe expected
@@ -426,7 +414,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addSecondaryScope(scope2)
         .addApi(buildApi(api))
 
-      val approved = buildApprovedAccessRequest(application, api.removeEndpoint(endpointForScope2.path))
+      val accessRequests = Seq(buildApprovedAccessRequest(application, api.removeEndpoint(endpointForScope2.path)))
 
       val fixture = buildFixture()
 
@@ -434,12 +422,9 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       stubIdmsFetchClientScopes(application, fixture, noScopesFor = Set(clientId1, clientId2))
 
-      when(fixture.accessRequestsService.getAccessRequests(eqTo(application.id), eqTo(Some(Approved))))
-        .thenReturn(Future.successful(Seq(approved)))
-
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -458,16 +443,14 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
   private case class Fixture(
     integrationCatalogueConnector: IntegrationCatalogueConnector,
     idmsConnector: IdmsConnector,
-    accessRequestsService: AccessRequestsService,
     scopeFixer: ScopeFixer
   )
 
   private def buildFixture(): Fixture = {
     val integrationCatalogueConnector = mock[IntegrationCatalogueConnector]
     val idmsConnector = mock[IdmsConnector]
-    val accessRequestsService = mock[AccessRequestsService]
-    val scopeFixer = new ScopeFixer(integrationCatalogueConnector, idmsConnector, accessRequestsService)
-    Fixture(integrationCatalogueConnector, idmsConnector, accessRequestsService, scopeFixer)
+    val scopeFixer = new ScopeFixer(integrationCatalogueConnector, idmsConnector)
+    Fixture(integrationCatalogueConnector, idmsConnector, scopeFixer)
   }
 
   private def stubIdmsFetchClientScopes(application: Application, fixture: Fixture, noScopesFor: Set[String] = Set.empty): Unit = {

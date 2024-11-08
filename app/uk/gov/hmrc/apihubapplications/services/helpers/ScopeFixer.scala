@@ -25,7 +25,6 @@ import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationsException}
-import uk.gov.hmrc.apihubapplications.services.AccessRequestsService
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{useFirstApplicationsException, useFirstException}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -34,16 +33,15 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ScopeFixer @Inject()(
   integrationCatalogueConnector: IntegrationCatalogueConnector,
-  idmsConnector: IdmsConnector,
-  accessRequestsService: AccessRequestsService
+  idmsConnector: IdmsConnector
 )(implicit ec: ExecutionContext) {
 
   // Manipulate the model first, adding and removing APIs and endpoints, THEN call this method to fix scopes
-  def fix(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+  // The application does not have to be enriched
+  def fix(application: Application, accessRequests: Seq[AccessRequest])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
     (for {
       requiredScopes <- EitherT(requiredScopes(application))
       credentials <- EitherT(allCredentials(application))
-      accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(application.id, Some(Approved)))
       application <- EitherT(minimiseScopesInEnvironment(Primary, application, credentials, allowedProductionScopes(requiredScopes, accessRequests)))
       application <- EitherT(minimiseScopesInEnvironment(Secondary, application, credentials, requiredScopes))
       application <- EitherT(addScopesToEnvironment(Primary, application, allowedProductionScopes(requiredScopes, accessRequests)))
@@ -89,6 +87,7 @@ class ScopeFixer @Inject()(
 
   private def allowedProductionScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest]): Set[String] = {
     accessRequests
+      .filter(_.status == Approved)
       .flatMap(_.endpoints.flatMap(_.scopes))
       .toSet
       .intersect(requiredScopes)

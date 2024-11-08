@@ -42,6 +42,8 @@ trait ApplicationsApiService {
 
   def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
+  def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
+
 }
 
 @Singleton
@@ -59,10 +61,14 @@ class ApplicationsApiServiceImpl @Inject()(
 
     searchService.findById(applicationId, enrich = true).flatMap {
       case Right(application) =>
-        val updated = application.replaceApi(Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints)).updated(clock)
+        val updated = application
+          .replaceApi(Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints))
+          .updated(clock)
+
         (for {
-          fixedApplication <- EitherT(scopeFixer.fix(updated))
-          _ <- EitherT(repository.update(fixedApplication))
+          _ <- EitherT(repository.update(updated))
+          accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(applicationId), None))
+          _ <- EitherT(scopeFixer.fix(updated, accessRequests))
         } yield ()).value
       case Left(e) => Future.successful(Left(e))
     }
@@ -83,15 +89,12 @@ class ApplicationsApiServiceImpl @Inject()(
       .removeApi(apiId)
       .updated(clock)
 
-    scopeFixer.fix(updated).flatMap {
-      case Right(fixed) =>
-        accessRequestsService.cancelAccessRequests(fixed.safeId, apiId).flatMap {
-          case Right(_) => repository.update(fixed)
-          case Left(e) => Future.successful(Left(e))
-        }
-      case Left(e) =>
-        Future.successful(Left(e))
-    }
+    (for {
+      _ <- EitherT(accessRequestsService.cancelAccessRequests(application.safeId, apiId))
+      _ <- EitherT(repository.update(updated))
+      accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(application.safeId), None))
+      fixed <- EitherT(scopeFixer.fix(updated, accessRequests))
+    } yield ()).value
   }
 
   override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -101,7 +104,6 @@ class ApplicationsApiServiceImpl @Inject()(
       case Left(e) => Future.successful(Left(e))
     }
   }
-
 
   private def changeOwningTeam(application: Application, teamId: String)(implicit hc: HeaderCarrier) = {
     val updated = application
@@ -141,5 +143,13 @@ class ApplicationsApiServiceImpl @Inject()(
         } yield ()).value
       case _ => Future.successful(Right(()))
     }
+
+  override def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    (for {
+      application <- EitherT(searchService.findById(applicationId))
+      accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(applicationId), None))
+      application <- EitherT(scopeFixer.fix(application, accessRequests))
+    } yield application).value
+  }
 
 }
