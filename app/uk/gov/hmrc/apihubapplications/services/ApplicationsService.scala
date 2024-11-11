@@ -17,9 +17,8 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
-import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -62,10 +61,6 @@ class ApplicationsService @Inject()(
 
   override def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     credentialsService.deleteCredential(applicationId, environmentName, clientId)
-  }
-
-  override def addPrimaryAccess(accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    credentialsService.addPrimaryAccess(accessRequest)
   }
 
   override def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {

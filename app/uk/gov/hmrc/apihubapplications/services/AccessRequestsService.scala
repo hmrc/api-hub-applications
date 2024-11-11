@@ -22,9 +22,11 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
+import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
@@ -34,9 +36,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class AccessRequestsService @Inject()(
                                        accessRequestsRepository: AccessRequestsRepository,
                                        searchService: ApplicationsSearchService,
-                                       credentialsService: ApplicationsCredentialsService,
                                        clock: Clock,
-                                       emailConnector: EmailConnector
+                                       emailConnector: EmailConnector,
+                                       scopeFixer: ScopeFixer
                                      )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
@@ -66,11 +68,8 @@ class AccessRequestsService @Inject()(
     accessRequestsRepository.findById(id)
   }
 
-  private def sendAccessApprovedEmails(accessRequest: AccessRequest)(implicit hc: HeaderCarrier) = {
-    searchService.findById(accessRequest.applicationId).flatMap {
-      case Right(application) => emailConnector.sendAccessApprovedEmailToTeam(application, accessRequest)
-      case Left(exception) => Future.successful(Left(exception))
-    }
+  private def sendAccessApprovedEmails(accessRequest: AccessRequest, application: Application)(implicit hc: HeaderCarrier) = {
+    emailConnector.sendAccessApprovedEmailToTeam(application, accessRequest)
   }
 
   private def sendAccessRejectedEmails(accessRequest: AccessRequest)(implicit hc: HeaderCarrier) = {
@@ -83,13 +82,16 @@ class AccessRequestsService @Inject()(
   def approveAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
+        val approved = accessRequest
+          .setStatus(Approved)
+          .setDecision(decisionRequest.copy(rejectedReason = None), clock)
+
         (for {
-          _ <- EitherT(credentialsService.addPrimaryAccess(accessRequest))
-          approvedAccessRequest = accessRequest
-              .setStatus(Approved)
-              .setDecision(decisionRequest.copy(rejectedReason = None), clock)
-          _ <- EitherT(accessRequestsRepository.update(approvedAccessRequest))
-          _ <- EitherT(sendAccessApprovedEmails(accessRequest)).orElse(EitherT.rightT(())) // ignore email errors
+          application <- EitherT(searchService.findById(accessRequest.applicationId))
+          _ <- EitherT(accessRequestsRepository.update(approved))
+          _ <- EitherT(sendAccessApprovedEmails(accessRequest, application)).orElse(EitherT.rightT(())) // ignore email errors
+          accessRequests <- EitherT.right(getAccessRequests(Some(accessRequest.applicationId), None))
+          _ <- EitherT(scopeFixer.fix(application, accessRequests))
         } yield ()).value
 
       case Some(accessRequest) =>
