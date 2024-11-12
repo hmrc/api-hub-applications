@@ -23,33 +23,29 @@ import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.application.*
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
+import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
 
-class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with EitherValues {
+class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with EitherValues with AccessRequestGenerator {
 
-  import ApplicationsApiServiceSpec._
+  import ApplicationsApiServiceSpec.*
 
   "addApi" - {
 
     "must return ApplicationNotFoundException if application not initially found" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val testAppId = "test-app-id"
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
@@ -62,7 +58,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must update the application with the new Api" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val testAppId = "test-app-id"
 
@@ -80,23 +76,23 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val appWithScopesAdded = app.setSecondaryScopes(Seq(Scope("test-scope-1")))
       val appWithScopesAndApisAdded = appWithScopesAdded.copy(
         apis = Seq(Api(api.id, api.title, api.endpoints)))
-      val appWithScopesFixed = appWithScopesAndApisAdded.setSecondaryScopes(Seq(Scope("test-scope-1-fixed")))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(appWithScopesFixed)))
-      when(repository.update(eqTo(appWithScopesFixed))).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(appWithScopesAndApisAdded)))
+      when(repository.update(eqTo(appWithScopesAndApisAdded))).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
-          verify(scopeFixer).fix(eqTo(appWithScopesAndApisAdded))(any)
-          verify(repository).update(eqTo(appWithScopesFixed))
+          verify(scopeFixer).fix(eqTo(appWithScopesAndApisAdded), eqTo(Seq.empty))(any)
+          verify(repository).update(eqTo(appWithScopesAndApisAdded))
           actual mustBe Right(())
       }
     }
 
     "must update the application when it has already had the API added (add endpoints)" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val api = Api("api_id", "api_title", Seq(Endpoint("GET", "/bar/foo")))
       val addApiRequest = AddApiRequest(api.id, api.title, api.endpoints, Seq("test-scope-1"))
@@ -115,23 +111,23 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       )
 
       val appWithScopesAdded = appWithApiAlreadyAdded.setSecondaryScopes(Seq(Scope("test-scope-1")))
-      val appWithScopesFixed = appWithScopesAdded.setSecondaryScopes(Seq(Scope("test-scope-1-fixed")))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(appWithScopesFixed)))
-      when(repository.update(eqTo(appWithScopesFixed))).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
+      when(repository.update(eqTo(appWithScopesAdded))).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       service.addApi(testAppId, addApiRequest)(HeaderCarrier()) map {
         actual =>
-          verify(scopeFixer).fix(eqTo(appWithScopesAdded))(any)
-          verify(repository).update(eqTo(appWithScopesFixed))
+          verify(scopeFixer).fix(eqTo(appWithScopesAdded), eqTo(Seq.empty))(any)
+          verify(repository).update(eqTo(appWithScopesAdded))
           actual mustBe Right(())
       }
     }
 
     "must return ApplicationNotFoundException if application not found whilst updating it with new api" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val testAppId = "test-app-id"
 
@@ -151,7 +147,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updatedApp)))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(updatedApp)))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
@@ -182,7 +178,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val application = baseApplication.addApi(api)
       val updated = application
@@ -190,13 +186,14 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         .updated(clock)
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Right(updated)))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(updated)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(any, any)).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
         result =>
-          verify(scopeFixer).fix(eqTo(updated))(any)
+          verify(scopeFixer).fix(eqTo(updated), eqTo(Seq.empty))(any)
           verify(repository).update(eqTo(updated))
           verify(accessRequestsService).cancelAccessRequests(eqTo(applicationId), eqTo(apiId))
           result.value mustBe()
@@ -205,7 +202,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return ApplicationNotFoundException when the application cannot be found" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
@@ -221,7 +218,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return ApiNotFoundException when the API has not been linked with the application" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
 
@@ -236,18 +233,24 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return any exceptions encountered" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val application = baseApplication.addApi(api)
+
+      val updated = application
+        .removeApi(api.id)
+        .updated(clock)
+
       val expected = IdmsException.clientNotFound("test-client-id")
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
-      when(scopeFixer.fix(any)(any)).thenReturn(Future.successful(Left(expected)))
+      when(searchService.findById(eqTo(application.safeId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(accessRequestsService.cancelAccessRequests(any, any)).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(repository.update(eqTo(updated))).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Left(expected)))
 
-      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+      service.removeApi(application.safeId, apiId)(HeaderCarrier()).map {
         result =>
-          verifyNoInteractions(fixture.accessRequestsService)
-          verify(repository, never).update(any)
           result mustBe Left(expected)
       }
     }
@@ -274,7 +277,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must remove scopes, cancel any pending access requests, send emails to both the old and new team and update the application in MongoDb" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val application = baseApplication.setTeamId(oldTeamId)
       val updated = application
@@ -285,9 +288,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
       when(emailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
-        .thenReturn(Future.successful((Right(()))))
+        .thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any))
-        .thenReturn(Future.successful((Right(()))))
+        .thenReturn(Future.successful(Right(())))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
         result =>
@@ -301,7 +304,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return ApplicationNotFoundException when the application cannot be found" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
@@ -316,7 +319,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return TeamNotFoundException when the team is not found" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
       when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException(""))))
@@ -331,7 +334,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return any exceptions encountered" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val expected = IdmsException.clientNotFound("test-client-id")
 
@@ -365,7 +368,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must update the application in MongoDb" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val application = baseApplication.setTeamId(oldTeamId)
       val updated = application
@@ -388,7 +391,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return ApplicationNotFoundException when the application cannot be found" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       when(searchService.findById(eqTo(applicationId), eqTo(false), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
@@ -403,7 +406,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
     "must return any exceptions encountered" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val expected = IdmsException.clientNotFound("test-client-id")
 
@@ -418,6 +421,51 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     }
   }
 
+  "fixScopes" - {
+    val applicationId = "test-application-id"
+
+    val baseApplication = Application(
+      id = Some(applicationId),
+      name = "test-app-name",
+      created = LocalDateTime.now(clock),
+      createdBy = Creator("test-email"),
+      lastUpdated = LocalDateTime.now(clock),
+      teamMembers = Seq(TeamMember(email = "test-email")),
+      environments = Environments()
+    )
+
+    "must pass the correct request to ScopeFixer and return the result" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val fixed = baseApplication.copy(name = "fixed")
+      val accessRequests = Seq(sampleAccessRequest())
+
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(baseApplication)))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(applicationId)), eqTo(None))).thenReturn(Future.successful(accessRequests))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(fixed)))
+
+      service.fixScopes(applicationId)(HeaderCarrier()).map {
+        result =>
+          verify(scopeFixer).fix(eqTo(baseApplication), eqTo(accessRequests))(any)
+          result.value mustBe fixed
+      }
+    }
+
+    "must return ApplicationNotFoundException when the application cannot be found" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val expected = ApplicationNotFoundException.forId(applicationId)
+
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Left(expected)))
+
+      service.fixScopes(applicationId)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(expected)
+      }
+    }
+  }
 
   private case class Fixture(
     searchService: ApplicationsSearchService,

@@ -17,21 +17,19 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
+import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Rejected}
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationNotFoundException, CredentialNotFoundException, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.*
@@ -43,7 +41,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
   "addCredential" - {
 
-    "must create a new secondary credential and copy the previous secondary master scopes" in {
+    "must create a new secondary credential and call ScopeFixer" in {
       val fixture = buildFixture
       import fixture.*
 
@@ -70,26 +68,25 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       val expectedClient = Client(app.name, app.name)
       when(idmsConnector.createClient(eqTo(Secondary), any)(any)).thenReturn(Future.successful(Right(newClientResponse)))
-      when(idmsConnector.addClientScope(eqTo(Secondary), eqTo(newTestClientId), eqTo(scopeName))(any)).thenReturn(Future.successful(Right(())))
-
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       val updatedApp = app
         .addSecondaryCredential(expectedCredential)
         .copy(lastUpdated = LocalDateTime.now(clock))
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(eqTo(updatedApp), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(updatedApp)))
 
       service.addCredential(testAppId, Secondary)(HeaderCarrier()) map {
         newCredential =>
           verify(idmsConnector).createClient(eqTo(Secondary), eqTo(expectedClient))(any)
-          verify(idmsConnector).addClientScope(eqTo(Secondary), eqTo(newTestClientId), eqTo(scopeName))(any)
           verify(repository).update(updatedApp)
           newCredential mustBe Right(expectedCredential)
       }
     }
 
-    "must create a new primary credential and copy the previous primary master scopes where the existing credential is not hidden" in {
+    "must create a new primary credential and call ScopeFixer where the existing credential is not hidden" in {
       val fixture = buildFixture
       import fixture.*
 
@@ -115,8 +112,6 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       val expectedClient = Client(app.name, app.name)
 
       when(idmsConnector.createClient(eqTo(Primary), any)(any)).thenReturn(Future.successful(Right(newClientResponse)))
-      when(idmsConnector.addClientScope(eqTo(Primary), eqTo(newTestClientId), eqTo(scopeName))(any)).thenReturn(Future.successful(Right(())))
-
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
 
       val updatedApp = app
@@ -124,11 +119,12 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .copy(lastUpdated = LocalDateTime.now(clock))
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(scopeFixer.fix(eqTo(updatedApp), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(updatedApp)))
 
       service.addCredential(testAppId, Primary)(HeaderCarrier()) map {
         newCredential =>
           verify(idmsConnector).createClient(eqTo(Primary), eqTo(expectedClient))(any)
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(newTestClientId), eqTo(scopeName))(any)
           verify(repository).update(updatedApp)
           newCredential mustBe Right(expectedCredential)
       }
@@ -163,11 +159,12 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       val updatedApp = app.setPrimaryCredentials(Seq(expectedCredential))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(scopeFixer.fix(eqTo(updatedApp), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(updatedApp)))
 
       service.addCredential(testAppId, Primary)(HeaderCarrier()) map {
         newCredential =>
           verify(idmsConnector, times(0)).createClient(eqTo(Primary), any)(any)
-          verify(idmsConnector, times(0)).addClientScope(eqTo(Primary), any, any)(any)
           verify(repository).update(updatedApp)
           newCredential mustBe Right(expectedCredential)
       }
@@ -399,134 +396,6 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     }
   }
 
-  "addPrimaryAccess" - {
-    "must add the new scopes to all primary credentials" in {
-      val fixture = buildFixture
-      import fixture.*
-
-      val applicationId = "test-application-id"
-      val clientId1 = "test-client-id-1"
-      val clientId2 = "test-client-id-2"
-      val scope1 = "test-scope-1"
-      val scope2 = "test-scope-2"
-      val scope3 = "test-scope-3"
-
-      val accessRequest = AccessRequest(
-        applicationId = applicationId,
-        apiId = "test-api-id",
-        apiName = "test-api-name",
-        status = Rejected,
-        supportingInformation = "test-supporting-information",
-        requested = LocalDateTime.now(clock),
-        requestedBy = "test-requested-by"
-      )
-        .addEndpoint("test-method-1", "test-path-1", Seq(scope1, scope2))
-        .addEndpoint("test-method-2", "test-path-2", Seq(scope2, scope3))
-
-      val application = Application(
-        id = Some(applicationId),
-        name = "test-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
-      ).setPrimaryCredentials(
-        Seq(
-          Credential(clientId1, LocalDateTime.now(clock), None, None),
-          Credential(clientId2, LocalDateTime.now(clock), None, None)
-        )
-      )
-
-      when(searchService.findById(any, any)(any)).thenReturn(Future.successful(Right(application)))
-      when(idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
-
-      service.addPrimaryAccess(accessRequest)(HeaderCarrier()).map {
-        result =>
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1) ,eqTo(scope1))(any)
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1) ,eqTo(scope2))(any)
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1) ,eqTo(scope3))(any)
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId2) ,eqTo(scope1))(any)
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId2) ,eqTo(scope2))(any)
-          verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId2) ,eqTo(scope3))(any)
-          verifyNoMoreInteractions(idmsConnector)
-          result mustBe Right(())
-      }
-    }
-
-    "must return an IdmsException if any IDMS call fails but others succeed" in {
-      val fixture = buildFixture
-      import fixture.*
-
-      val applicationId = "test-application-id"
-      val clientId = "test-client-id"
-      val scope1 = "test-scope-1"
-      val scope2 = "test-scope-2"
-
-      val accessRequest = AccessRequest(
-        applicationId = applicationId,
-        apiId = "test-api-id",
-        apiName = "test-api-name",
-        status = Rejected,
-        supportingInformation = "test-supporting-information",
-        requested = LocalDateTime.now(clock),
-        requestedBy = "test-requested-by"
-      )
-        .addEndpoint("test-method-1", "test-path-1", Seq(scope1, scope2))
-
-      val application = Application(
-        id = Some(applicationId),
-        name = "test-name",
-        created = LocalDateTime.now(clock),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
-      ).setPrimaryCredentials(
-        Seq(
-          Credential(clientId, LocalDateTime.now(clock), None, None)
-        )
-      )
-
-      val exception = IdmsException("test-message", CallError)
-
-      when(searchService.findById(any, any)(any)).thenReturn(Future.successful(Right(application)))
-      when(idmsConnector.addClientScope(any, any, eqTo(scope1))(any)).thenReturn(Future.successful(Right(())))
-      when(idmsConnector.addClientScope(any, any, eqTo(scope2))(any)).thenReturn(Future.successful(Left(exception)))
-
-      service.addPrimaryAccess(accessRequest)(HeaderCarrier()).map {
-        result =>
-          result mustBe Left(exception)
-      }
-    }
-
-    "must return application not found exception when it does not exist" in {
-      val fixture = buildFixture
-      import fixture.*
-
-      val applicationId = "test-application-id"
-
-      val accessRequest = AccessRequest(
-        applicationId = applicationId,
-        apiId = "test-api-id",
-        apiName = "test-api-name",
-        status = Rejected,
-        supportingInformation = "test-supporting-information",
-        requested = LocalDateTime.now(clock),
-        requestedBy = "test-requested-by"
-      )
-
-      val exception = ApplicationNotFoundException.forId(applicationId)
-
-      when(searchService.findById(any, any)(any)).thenReturn(Future.successful(Left(exception)))
-
-      service.addPrimaryAccess(accessRequest)(HeaderCarrier()).map {
-        result =>
-          result mustBe Left(exception)
-      }
-    }
-  }
-
   "fetchAllScopes" - {
     "must return the correct credential scopes" in {
       val fixture = buildFixture
@@ -608,14 +477,18 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     val searchService =  mock[ApplicationsSearchService]
     val repository = mock[ApplicationsRepository]
     val idmsConnector = mock[IdmsConnector]
-    val service = new ApplicationsCredentialsServiceImpl(searchService, repository, idmsConnector, clock)
-    Fixture(searchService, repository, idmsConnector, service)
+    val accessRequestsService = mock[AccessRequestsService]
+    val scopeFixer = mock[ScopeFixer]
+    val service = new ApplicationsCredentialsServiceImpl(searchService, repository, idmsConnector, clock, accessRequestsService, scopeFixer)
+    Fixture(searchService, repository, idmsConnector, accessRequestsService, scopeFixer, service)
   }
 
   private case class Fixture (
     searchService: ApplicationsSearchService,
     repository: ApplicationsRepository,
     idmsConnector: IdmsConnector,
+    accessRequestsService: AccessRequestsService,
+    scopeFixer: ScopeFixer,
     service: ApplicationsCredentialsService
   )
 

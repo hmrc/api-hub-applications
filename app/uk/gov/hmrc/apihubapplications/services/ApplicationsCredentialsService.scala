@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
+import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationsException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
+import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
@@ -38,8 +39,6 @@ trait ApplicationsCredentialsService {
 
   def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
-  def addPrimaryAccess(accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
-
   def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]]
 
 }
@@ -49,7 +48,9 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   searchService: ApplicationsSearchService,
   repository: ApplicationsRepository,
   idmsConnector: IdmsConnector,
-  clock: Clock
+  clock: Clock,
+  accessRequestsService: AccessRequestsService,
+  scopeFixer: ScopeFixer
 )(implicit ec: ExecutionContext) extends ApplicationsCredentialsService with Logging with ExceptionRaising {
 
   import ApplicationsCredentialsServiceImpl.*
@@ -65,7 +66,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
       case Right(newCredential: NewCredential) => updateRepository(newCredential)
       case Left(e) => Future.successful(Left(e))
     } flatMap {
-      case Right(newCredential: NewCredential) => copyScopes(newCredential, environmentName)
+      case Right(newCredential: NewCredential) => copyScopes(newCredential)
       case Left(e) => Future.successful(Left(e))
     } map {
       case Right(newCredential) => Right(newCredential.credential)
@@ -115,25 +116,11 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  private def copyScopes(newCredential: NewCredential, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
-    if (!newCredential.wasHidden) {
-      Future.sequence(
-        newCredential.application
-          .getScopesFor(environmentName)
-          .map(
-            scope =>
-              idmsConnector.addClientScope(environmentName, newCredential.credential.clientId, scope.name)
-          )
-      )
-        .map(useFirstException)
-        .map {
-          case Right(_) => Right(newCredential)
-          case Left(e) => Left(e)
-        }
-    }
-    else {
-      Future.successful(Right(newCredential))
-    }
+  private def copyScopes(newCredential: NewCredential)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
+    (for {
+      accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(newCredential.application.safeId), None))
+      fixed <- EitherT(scopeFixer.fix(newCredential.application, accessRequests))
+    } yield newCredential).value
   }
 
   override def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -163,27 +150,6 @@ class ApplicationsCredentialsServiceImpl @Inject()(
         .removeCredential(clientId, environmentName)
         .copy(lastUpdated = LocalDateTime.now(clock))
     )
-  }
-
-  override def addPrimaryAccess(accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    searchService.findById(accessRequest.applicationId, enrich = false).flatMap {
-      case Right(application) =>
-        Future.sequence(
-          application.getPrimaryCredentials.flatMap(
-            credential =>
-              accessRequest.endpoints.flatMap(_.scopes).distinct.map(
-                scope =>
-                  idmsConnector.addClientScope(Primary, credential.clientId, scope)
-              )
-          )
-        )
-          .map(useFirstException)
-          .map {
-            case Right(_) => Right(())
-            case Left(e) => Left(e)
-          }
-      case Left(e) => Future.successful(Left(e))
-    }
   }
 
   override def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {

@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
@@ -582,6 +582,48 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       ApplicationEnrichers.scopeRemovingApplicationEnricher(Primary, application, idmsConnector, testScopeName1).map {
         actual =>
           actual mustBe Left(IdmsException.unexpectedResponse(500))
+      }
+    }
+
+    "must only process a single credential when asked to (master credential)" in {
+      val expected = testApplication
+        .addPrimaryCredential(Credential(testClientId1, LocalDateTime.now(clock), None, None))
+        .addPrimaryCredential(Credential(testClientId2, LocalDateTime.now(clock).plusMinutes(1), None, None))
+        .addPrimaryScope(Scope(testScopeName2))
+        .addSecondaryScope(Scope(testScopeName3))
+
+      val application = expected
+        .addPrimaryScope(Scope(testScopeName1))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.deleteClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      ApplicationEnrichers.scopeRemovingApplicationEnricher(Primary, application, idmsConnector, testScopeName1, Some(testClientId2)).map {
+        result =>
+          verify(idmsConnector).deleteClientScope(eqTo(Primary), eqTo(testClientId2), eqTo(testScopeName1))(any())
+          verifyNoMoreInteractions(idmsConnector)
+          result.value.enrich(application) mustBe expected
+      }
+    }
+
+    "must only process a single credential when asked to (not master credential)" in {
+      val application = testApplication
+        .addPrimaryCredential(Credential(testClientId1, LocalDateTime.now(clock), None, None))
+        .addPrimaryCredential(Credential(testClientId2, LocalDateTime.now(clock).plusMinutes(1), None, None))
+        .addPrimaryScope(Scope(testScopeName1))
+        .addPrimaryScope(Scope(testScopeName2))
+        .addSecondaryScope(Scope(testScopeName3))
+
+      val idmsConnector = mock[IdmsConnector]
+
+      when(idmsConnector.deleteClientScope(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+
+      ApplicationEnrichers.scopeRemovingApplicationEnricher(Primary, application, idmsConnector, testScopeName1, Some(testClientId1)).map {
+        result =>
+          verify(idmsConnector).deleteClientScope(eqTo(Primary), eqTo(testClientId1), eqTo(testScopeName1))(any())
+          verifyNoMoreInteractions(idmsConnector)
+          result.value.enrich(application) mustBe application
       }
     }
   }

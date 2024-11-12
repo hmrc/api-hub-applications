@@ -36,7 +36,7 @@ trait ApplicationEnricher {
 
 object ApplicationEnrichers {
 
-  type EnricherProvider = (Application, IdmsConnector) => Future[Either[IdmsException, ApplicationEnricher]]
+  private type EnricherProvider = (Application, IdmsConnector) => Future[Either[IdmsException, ApplicationEnricher]]
 
   def process(
                application: Application,
@@ -250,13 +250,15 @@ object ApplicationEnrichers {
     environmentName: EnvironmentName,
     original: Application,
     idmsConnector: IdmsConnector,
-    scopeName: String
+    scopeName: String,
+    clientId: Option[String] = None
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
 
     Future
       .sequence(
         original
           .getCredentialsFor(environmentName)
+          .filter(credential => clientId.isEmpty || clientId.contains(credential.clientId))
           .map(
             credential =>
               idmsConnector
@@ -271,13 +273,29 @@ object ApplicationEnrichers {
       .map(useFirstException)
       .map(_.map(_ =>
         (application: Application) => {
-          environmentName match {
-            case Primary => application.removePrimaryScope(scopeName)
-            case Secondary => application.removeSecondaryScope(scopeName)
+          if (updateScopes(environmentName, application, clientId)) {
+            environmentName match {
+              case Primary => application.removePrimaryScope(scopeName)
+              case Secondary => application.removeSecondaryScope(scopeName)
+            }
+          }
+          else {
+            application
           }
         }
       ))
 
+  }
+
+  private def updateScopes(environmentName: EnvironmentName, application: Application, clientId: Option[String]) = {
+    clientId match {
+      case Some(clientId) =>
+        application
+          .getMasterCredentialFor(environmentName)
+          .map(_.clientId)
+          .contains(clientId)
+      case _ => true
+    }
   }
 
 }
