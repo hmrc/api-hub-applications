@@ -19,11 +19,11 @@ package uk.gov.hmrc.apihubapplications.models.apim
 import play.api.libs.json.{Format, Json}
 
 case class DeploymentDetails (
-  description: String,
-  status: String,
-  domain: String,
-  subDomain: String,
-  hods: Seq[String],
+  description: Option[String],
+  status: Option[String],
+  domain: Option[String],
+  subDomain: Option[String],
+  hods: Option[Seq[String]],
   egressMappings: Option[Seq[EgressMapping]],
   prefixesToRemove: Seq[String]
 )

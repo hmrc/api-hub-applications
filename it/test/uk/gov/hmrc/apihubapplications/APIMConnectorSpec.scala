@@ -565,6 +565,25 @@ class APIMConnectorSpec
       )
     }
 
+    "must process a response with no details" in {
+      stubFor(
+        get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(detailsResponseWithoutDetails).toString())
+          )
+      )
+
+      buildConnector().getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+        actual =>
+          actual.value mustBe detailsResponseWithoutDetails.toDeploymentDetails
+      )
+    }
+
     "must return ServiceNotFound when APIM returns a 404 Not Found" in {
       stubFor(
         get(urlEqualTo(s"/$secondaryPath/v1/simple-api-deployment/deployments/$serviceId"))
@@ -854,21 +873,31 @@ object APIMConnectorSpec {
     )
 
   private val detailsResponse = DetailsResponse(
-    description = "test-description",
-    status = "test-status",
-    domain = "test-domain",
-    subdomain = "test-sub-domain",
-    backends = Seq("test-backend-1", "test-backend-2"),
+    description = Some("test-description"),
+    status = Some("test-status"),
+    domain = Some("test-domain"),
+    subdomain = Some("test-sub-domain"),
+    backends = Some(Seq("test-backend-1", "test-backend-2")),
     egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
     prefixesToRemove = Some(Seq("test-prefix-1", "test-prefix-2"))
   )
 
+  private val detailsResponseWithoutDetails = DetailsResponse(
+    description = None,
+    status = None,
+    domain = None,
+    subdomain = None,
+    backends = None,
+    egressMappings = None,
+    prefixesToRemove = None
+  )
+
   private val deploymentDetailsWithoutEgressOrPrefixes = DeploymentDetails(
-    description = "Keying Service API",
-    status = "ALPHA",
-    domain = "8",
-    subDomain = "8.16",
-    hods = Seq("EMS"),
+    description = Some("Keying Service API"),
+    status = Some("ALPHA"),
+    domain = Some("8"),
+    subDomain = Some("8.16"),
+    hods = Some(Seq("EMS")),
     egressMappings = None,
     prefixesToRemove = Seq.empty
   )

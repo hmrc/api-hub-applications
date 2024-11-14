@@ -44,11 +44,11 @@ class DetailsResponseSpec extends AnyFreeSpec with Matchers {
 object DetailsResponseSpec{
   def buildDetailsResponse(prefixesToRemove: Option[Seq[String]]): DetailsResponse = {
     DetailsResponse(
-      description = "test-description",
-      status = "test-status",
-      domain = "test-domain",
-      subdomain = "test-subdomain",
-      backends = Seq("test-backend"),
+      description = Some("test-description"),
+      status = Some("test-status"),
+      domain = Some("test-domain"),
+      subdomain = Some("test-subdomain"),
+      backends = Some(Seq("test-backend")),
       egressMappings = None,
       prefixesToRemove = prefixesToRemove
     )
