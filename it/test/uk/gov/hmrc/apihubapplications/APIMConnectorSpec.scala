@@ -864,13 +864,13 @@ object APIMConnectorSpec {
   )
 
   private val deploymentDetailsWithoutEgressOrPrefixes = DeploymentDetails(
-    description = "Keying Service API",
-    status = "ALPHA",
-    domain = "8",
-    subDomain = "8.16",
-    hods = Seq("EMS"),
+    description = Some("Keying Service API"),
+    status = Some("ALPHA"),
+    domain = Some("8"),
+    subDomain = Some("8.16"),
+    hods = Some(Seq("EMS")),
     egressMappings = None,
-    prefixesToRemove = Seq.empty
+    prefixesToRemove = Some(Seq.empty)
   )
 
 }

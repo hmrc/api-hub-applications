@@ -35,7 +35,7 @@ class DetailsResponseSpec extends AnyFreeSpec with Matchers {
         val response = buildDetailsResponse(prefixesToRemove)
         val deploymentDetails = response.toDeploymentDetails
 
-        deploymentDetails.prefixesToRemove mustBe expectedDeploymentDetailsValue
+        deploymentDetails.prefixesToRemove mustBe Some(expectedDeploymentDetailsValue)
       }
     }
   }

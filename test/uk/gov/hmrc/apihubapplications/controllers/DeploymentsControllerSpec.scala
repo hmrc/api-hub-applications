@@ -376,13 +376,13 @@ class DeploymentsControllerSpec
       val fixture = buildFixture()
 
       val deploymentDetails = DeploymentDetails(
-        description = "test-description",
-        status = "test-status",
-        domain = "test-domain",
-        subDomain = "test-dub-domain",
-        hods = Seq("test-backend-1", "test-backend-2"),
+        description = Some("test-description"),
+        status = Some("test-status"),
+        domain = Some("test-domain"),
+        subDomain = Some("test-dub-domain"),
+        hods = Some(Seq("test-backend-1", "test-backend-2")),
         egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
-        prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
+        prefixesToRemove = Some(Seq("test-prefix-1", "test-prefix-2"))
       )
 
       when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef))(any()))

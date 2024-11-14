@@ -30,13 +30,13 @@ case class DetailsResponse(
 
   def toDeploymentDetails: DeploymentDetails = {
     DeploymentDetails(
-      description = description,
-      status = status,
-      domain = domain,
-      subDomain = subdomain,
-      hods = backends,
+      description = Some(description),
+      status = Some(status),
+      domain = Some(domain),
+      subDomain = Some(subdomain),
+      hods = Some(backends),
       egressMappings = egressMappings,
-      prefixesToRemove = mapPrefixesToRemove
+      prefixesToRemove = Some(mapPrefixesToRemove)
     )
   }
 
