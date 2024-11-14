@@ -19,24 +19,24 @@ package uk.gov.hmrc.apihubapplications.models.apim
 import play.api.libs.json.{Format, Json}
 
 case class DetailsResponse(
-  description: String,
-  status: String,
-  domain: String,
-  subdomain: String,
-  backends: Seq[String],
+  description: Option[String],
+  status: Option[String],
+  domain: Option[String],
+  subdomain: Option[String],
+  backends: Option[Seq[String]],
   egressMappings: Option[Seq[EgressMapping]],
   prefixesToRemove: Option[Seq[String]]
 ) {
 
   def toDeploymentDetails: DeploymentDetails = {
     DeploymentDetails(
-      description = Some(description),
-      status = Some(status),
-      domain = Some(domain),
-      subDomain = Some(subdomain),
-      hods = Some(backends),
+      description = description,
+      status = status,
+      domain = domain,
+      subDomain = subdomain,
+      hods = backends,
       egressMappings = egressMappings,
-      prefixesToRemove = Some(mapPrefixesToRemove)
+      prefixesToRemove = mapPrefixesToRemove
     )
   }
 
