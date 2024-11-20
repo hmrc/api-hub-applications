@@ -243,7 +243,11 @@ class APIMConnectorParityImpl @Inject()(
   }
 
   override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(Secondary)
+    listEgressGateways(Secondary)
+  }
+
+  def listEgressGateways(environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
+    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
 
     val context = Seq.empty.withCorrelationId()
 
