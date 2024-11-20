@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.config
 
-import play.api.inject.{Binding, bind => bindz}
+import play.api.inject.{Binding, bind as bindz}
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl, IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl, EmailConnector, EmailConnectorImpl, IdmsConnector, IdmsConnectorImpl, IdmsConnectorParityImpl, IntegrationCatalogueConnector, IntegrationCatalogueConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.services.{ApplicationsApiService, ApplicationsApiServiceImpl, ApplicationsCredentialsService, ApplicationsCredentialsServiceImpl, ApplicationsLifecycleService, ApplicationsLifecycleServiceImpl, ApplicationsSearchService, ApplicationsSearchServiceImpl}
 import uk.gov.hmrc.apihubapplications.tasks.DatabaseStatisticMetricOrchestratorTask
@@ -34,7 +34,7 @@ class Module extends play.api.inject.Module {
       bindz(classOf[AppConfig]).toSelf.eagerly(),
       bindz(classOf[Clock]).toInstance(Clock.systemUTC()),
       bindz(classOf[IdentifierAction]).to(classOf[AuthenticatedIdentifierAction]).eagerly(),
-      bindz(classOf[IdmsConnector]).to(classOf[IdmsConnectorImpl]).eagerly(),
+      bindz(classOf[IdmsConnector]).to(idmsConnectorBinding(configuration)).eagerly(),
       bindz(classOf[MetricOrchestrator]).toProvider(classOf[DatabaseStatisticsMetricOrchestratorProvider]).eagerly(),
       bindz(classOf[DatabaseStatisticMetricOrchestratorTask]).toSelf.eagerly(),
       bindz(classOf[EmailConnector]).to(classOf[EmailConnectorImpl]).eagerly(),
@@ -43,7 +43,8 @@ class Module extends play.api.inject.Module {
       bindz(classOf[ApplicationsApiService]).to(classOf[ApplicationsApiServiceImpl]).eagerly(),
       bindz(classOf[ApplicationsCredentialsService]).to(classOf[ApplicationsCredentialsServiceImpl]).eagerly(),
       bindz(classOf[ApplicationsLifecycleService]).to(classOf[ApplicationsLifecycleServiceImpl]).eagerly(),
-      bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly()
+      bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly(),
+      bindz(classOf[HipEnvironments]).to(classOf[HipEnvironmentsImpl]).eagerly()
     )
 
     val authTokenInitialiserBindings: Seq[Binding[?]] = if (configuration.get[Boolean]("create-internal-auth-token-on-start")) {
@@ -53,6 +54,16 @@ class Module extends play.api.inject.Module {
     }
 
     bindings ++ authTokenInitialiserBindings
+  }
+
+
+  private def idmsConnectorBinding(configuration: Configuration): Class[? <: IdmsConnector] = {
+    if (configuration.get[Boolean]("features.environment-parity")) {
+      classOf[IdmsConnectorParityImpl]
+    }
+    else {
+      classOf[IdmsConnectorImpl]
+    }
   }
 
 }
