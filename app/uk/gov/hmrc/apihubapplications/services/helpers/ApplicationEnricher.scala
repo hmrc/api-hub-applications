@@ -99,7 +99,7 @@ object ApplicationEnrichers {
     }
 
     Future.sequence(
-        original.getSecondaryCredentials.map {
+        original.getCredentials(Secondary).map {
           credential =>
             idmsConnector.fetchClient(Secondary, credential.clientId)
         }

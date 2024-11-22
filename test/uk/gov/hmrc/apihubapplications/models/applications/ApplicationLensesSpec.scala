@@ -245,7 +245,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationCredentialsGetterFunction(
           applicationPrimaryCredentials,
-          application => ApplicationLensOps(application).getPrimaryCredentials
+          application => ApplicationLensOps(application).getCredentials(Primary)
         )
       }
     }
@@ -285,7 +285,7 @@ class ApplicationLensesSpec extends LensBehaviours {
 
         val application = testApplication.setPrimaryCredentials(Seq(credential1, credential2, credential3))
 
-        val credential = application.getPrimaryCredentials(1)
+        val credential = application.getCredentials(Primary)
 
         val updatedCredential = credential.copy(
           created = credential.created.plusDays(1),
@@ -530,7 +530,7 @@ class ApplicationLensesSpec extends LensBehaviours {
 
         val application = testApplication.setPrimaryCredentials(Seq(hidden, visible))
 
-        application.makePublic().getPrimaryCredentials mustBe Seq(visible)
+        application.makePublic().getCredentials(Primary) mustBe Seq(visible)
       }
     }
     

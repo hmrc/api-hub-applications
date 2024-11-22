@@ -204,27 +204,24 @@ object ApplicationLenses {
         .sortWith((a, b) => a.created.isAfter(b.created))
         .headOption
 
-    def getPrimaryCredentials: Seq[Credential] =
-      applicationPrimaryCredentials.get(application)
-
     def setPrimaryCredentials(credentials: Seq[Credential]): Application =
       applicationPrimaryCredentials.set(application, credentials)
 
     def removePrimaryCredential(clientId: String): Application =
       applicationPrimaryCredentials.set(
         application,
-        application.getPrimaryCredentials.filterNot(_.clientId == clientId)
+        application.getCredentials(Primary).filterNot(_.clientId == clientId)
       )
 
     def updatePrimaryCredential(clientId: String, secret: String): Application = {
-      if (!application.getPrimaryCredentials.exists(_.clientId == clientId)) {
+      if (!application.getCredentials(Primary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
         )
       }
 
       application.setPrimaryCredentials(
-        application.getPrimaryCredentials.map {
+        application.getCredentials(Primary).map {
           case credential@Credential(id, _, _, _) if id == clientId =>
             credential.copy(
               clientSecret = Some(secret),
@@ -236,7 +233,7 @@ object ApplicationLenses {
     }
     
     def replacePrimaryCredential(credential: Credential): Application = {
-      val index = application.getPrimaryCredentials.indexWhere(_.clientId == credential.clientId)
+      val index = application.getCredentials(Primary).indexWhere(_.clientId == credential.clientId)
       if (index < 0 ) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
@@ -244,7 +241,7 @@ object ApplicationLenses {
       }
 
       application.setPrimaryCredentials(
-        application.getPrimaryCredentials.updated(index, credential)
+        application.getCredentials(Primary).updated(index, credential)
       )
     }
 
@@ -286,27 +283,24 @@ object ApplicationLenses {
         .sortWith((a, b) => a.created.isAfter(b.created))
         .headOption
 
-    def getSecondaryCredentials: Seq[Credential] =
-      applicationSecondaryCredentials.get(application)
-
     def setSecondaryCredentials(credentials: Seq[Credential]): Application =
       applicationSecondaryCredentials.set(application, credentials)
 
     def removeSecondaryCredential(clientId: String): Application =
       applicationSecondaryCredentials.set(
         application,
-        application.getSecondaryCredentials.filterNot(_.clientId == clientId)
+        application.getCredentials(Secondary).filterNot(_.clientId == clientId)
       )
 
     def updateSecondaryCredential(clientId: String, secret: String): Application = {
-      if (!application.getSecondaryCredentials.exists(_.clientId == clientId)) {
+      if (!application.getCredentials(Secondary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
         )
       }
 
       application.setSecondaryCredentials(
-          application.getSecondaryCredentials.map {
+          application.getCredentials(Secondary).map {
             case credential @ Credential(id, _, _, _) if id == clientId =>
               credential.copy(
                 clientSecret = Some(secret),
@@ -318,7 +312,7 @@ object ApplicationLenses {
     }
 
     def replaceSecondaryCredential(credential: Credential): Application = {
-      val index = application.getSecondaryCredentials.indexWhere(_.clientId == credential.clientId)
+      val index = application.getCredentials(Secondary).indexWhere(_.clientId == credential.clientId)
       if (index < 0 ) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
@@ -326,7 +320,7 @@ object ApplicationLenses {
       }
 
       application.setSecondaryCredentials(
-        application.getSecondaryCredentials.updated(index, credential)
+        application.getCredentials(Secondary).updated(index, credential)
       )
     }
 
@@ -342,8 +336,8 @@ object ApplicationLenses {
 
     def getCredentials(environmentName: EnvironmentName): Seq[Credential] = {
       environmentName match {
-        case Primary => application.getPrimaryCredentials
-        case Secondary => application.getSecondaryCredentials
+        case Primary => applicationPrimaryCredentials.get(application)
+        case Secondary => applicationSecondaryCredentials.get(application)
       }
     }
 
@@ -452,7 +446,7 @@ object ApplicationLenses {
 
     def makePublic(): Application = {
       application.setPrimaryCredentials(
-        application.getPrimaryCredentials.filter(!_.isHidden)
+        application.getCredentials(Primary).filter(!_.isHidden)
       )
     }
 

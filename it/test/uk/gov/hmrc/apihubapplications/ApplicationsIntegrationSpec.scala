@@ -219,7 +219,7 @@ class ApplicationsIntegrationSpec
         val expected = storedApplication
           .setSecondaryCredentials(
             storedApplication
-              .getSecondaryCredentials.map(
+              .getCredentials(Secondary).map(
                 credential => credential.copy(
                   clientSecret = Some(FakeIdmsConnector.fakeSecret),
                   secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
