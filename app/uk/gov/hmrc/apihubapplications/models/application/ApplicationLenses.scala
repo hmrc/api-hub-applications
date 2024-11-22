@@ -129,8 +129,14 @@ object ApplicationLenses {
 
     def removeScope(environmentName: EnvironmentName, scopeName: String): Application =
       environmentName match {
-        case Primary => removePrimaryScope(scopeName)
-        case Secondary => removeSecondaryScope(scopeName)
+        case Primary => applicationPrimaryScopes.set(
+          application,
+          applicationPrimaryScopes.get(application).filterNot(_.name.equals(scopeName))
+        )
+        case Secondary => applicationSecondaryScopes.set(
+          application,
+          applicationSecondaryScopes.get(application).filterNot(_.name.equals(scopeName))
+        )
       }
 
     def removeScope(hipEnvironment: HipEnvironment, scopeName: String): Application =
@@ -177,12 +183,6 @@ object ApplicationLenses {
         application
       }
     }
-
-    def removePrimaryScope(scopeName: String): Application =
-      applicationPrimaryScopes.set(
-        application,
-        applicationPrimaryScopes.get(application).filterNot(_.name.equals(scopeName))
-      )
 
     def setPrimaryCredentials(credentials: Seq[Credential]): Application =
       applicationPrimaryCredentials.set(application, credentials)
@@ -233,12 +233,6 @@ object ApplicationLenses {
         application
       }
     }
-
-    def removeSecondaryScope(scopeName: String): Application =
-      applicationSecondaryScopes.set(
-        application,
-        applicationSecondaryScopes.get(application).filterNot(_.name.equals(scopeName))
-      )
 
     def setSecondaryCredentials(credentials: Seq[Credential]): Application =
       applicationSecondaryCredentials.set(application, credentials)

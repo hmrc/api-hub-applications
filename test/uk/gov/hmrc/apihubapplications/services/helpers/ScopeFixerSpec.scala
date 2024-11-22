@@ -96,8 +96,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api.removeEndpoint(endpointForScope2.path)))
 
       val expected = application
-        .removePrimaryScope(scopeName2)
-        .removeSecondaryScope(scopeName2)
+        .removeScope(Primary, scopeName2)
+        .removeScope(Secondary, scopeName2)
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
 
@@ -255,8 +255,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api))
 
       val expected = application
-        .removePrimaryScope(scopeName1)
-        .removeSecondaryScope(scopeName3)
+        .removeScope(Primary, scopeName1)
+        .removeScope(Secondary, scopeName3)
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
 
@@ -380,8 +380,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(apiDetail2))
 
       val expected = application
-        .removePrimaryScope(scopeName2)
-        .removeSecondaryScope(scopeName2)
+        .removeScope(Primary, scopeName2)
+        .removeScope(Secondary, scopeName2)
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, apiDetail1))
 

@@ -267,8 +267,8 @@ object ApplicationEnrichers {
         (application: Application) => {
           if (updateScopes(environmentName, application, clientId)) {
             environmentName match {
-              case Primary => application.removePrimaryScope(scopeName)
-              case Secondary => application.removeSecondaryScope(scopeName)
+              case Primary => application.removeScope(Primary, scopeName)
+              case Secondary => application.removeScope(Secondary, scopeName)
             }
           }
           else {
