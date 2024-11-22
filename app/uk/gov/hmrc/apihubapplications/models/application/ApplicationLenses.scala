@@ -113,10 +113,7 @@ object ApplicationLenses {
       addScopes(hipEnvironment.environmentName, scopes)
 
     def hasScope(environmentName: EnvironmentName, scopeName: String): Boolean =
-      environmentName match {
-        case Primary => hasPrimaryScope(scopeName)
-        case Secondary => hasSecondaryScope(scopeName)
-      }
+      application.getScopes(environmentName).exists(_.name.equals(scopeName))
 
     def hasScope(hipEnvironment: HipEnvironment, scopeName: String): Boolean =
       hasScope(hipEnvironment.environmentName, scopeName)
@@ -165,15 +162,12 @@ object ApplicationLenses {
       
     def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application =
       updateCredential(hipEnvironment.environmentName, clientId, secret)
-    
-    def hasPrimaryScope(scopeName: String): Boolean =
-      application.getScopes(Primary).exists(_.name.equals(scopeName))
 
     def setPrimaryScopes(scopes: Seq[Scope]): Application =
       applicationPrimaryScopes.set(application, scopes)
 
     private def addPrimaryScope(scope: Scope): Application = {
-      if (!application.hasPrimaryScope(scope.name)) {
+      if (!application.hasScope(Primary, scope.name)) {
         applicationPrimaryScopes.set(
           application,
           applicationPrimaryScopes.get(application) :+ scope
@@ -231,14 +225,11 @@ object ApplicationLenses {
       )
     }
 
-    def hasSecondaryScope(scopeName: String): Boolean =
-      application.getScopes(Secondary).exists(_.name.equals(scopeName))
-
     def setSecondaryScopes(scopes: Seq[Scope]): Application =
       applicationSecondaryScopes.set(application, scopes)
 
     private def addSecondaryScope(scope: Scope): Application = {
-      if (!application.hasSecondaryScope(scope.name)) {
+      if (!application.hasScope(Secondary, scope.name)) {
         applicationSecondaryScopes.set(
           application,
           applicationSecondaryScopes.get(application) :+ scope
