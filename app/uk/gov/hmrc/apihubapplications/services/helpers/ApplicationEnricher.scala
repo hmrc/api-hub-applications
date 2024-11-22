@@ -131,7 +131,7 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getSecondaryMasterCredential match {
+    original.getMasterCredential(Secondary) match {
       case Some(credential) =>
         idmsConnector
           .fetchClientScopes(Secondary, credential.clientId)
@@ -162,7 +162,7 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getPrimaryMasterCredential match {
+    original.getMasterCredential(Primary) match {
       case Some(credential) =>
         idmsConnector
           .fetchClientScopes(Primary, credential.clientId)

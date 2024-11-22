@@ -47,8 +47,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           )
 
         DbApplication(application) mustBe expected
-        DbApplication(application).toModel.getPrimaryMasterCredential.value.clientSecret mustBe None
-        DbApplication(application).toModel.getSecondaryMasterCredential.value.clientSecret mustBe None
+        DbApplication(application).toModel.getMasterCredential(Primary).value.clientSecret mustBe None
+        DbApplication(application).toModel.getMasterCredential(Secondary).value.clientSecret mustBe None
       }
 
       "must remove team members when the application has a team Id" in {

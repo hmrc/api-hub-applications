@@ -199,11 +199,6 @@ object ApplicationLenses {
         .map(_.name)
         .toSet
 
-    def getPrimaryMasterCredential: Option[Credential] =
-      applicationPrimaryCredentials.get(application)
-        .sortWith((a, b) => a.created.isAfter(b.created))
-        .headOption
-
     def setPrimaryCredentials(credentials: Seq[Credential]): Application =
       applicationPrimaryCredentials.set(application, credentials)
 
@@ -278,11 +273,6 @@ object ApplicationLenses {
         .map(_.name)
         .toSet
 
-    def getSecondaryMasterCredential: Option[Credential] =
-      applicationSecondaryCredentials.get(application)
-        .sortWith((a, b) => a.created.isAfter(b.created))
-        .headOption
-
     def setSecondaryCredentials(credentials: Seq[Credential]): Application =
       applicationSecondaryCredentials.set(application, credentials)
 
@@ -325,10 +315,9 @@ object ApplicationLenses {
     }
 
     def getMasterCredential(environmentName: EnvironmentName): Option[Credential] = {
-      environmentName match {
-        case Primary => getPrimaryMasterCredential
-        case Secondary => getSecondaryMasterCredential
-      }
+      application.getCredentials(environmentName)
+        .sortWith((a, b) => a.created.isAfter(b.created))
+        .headOption
     }
 
     def getMasterCredential(hipEnvironment: HipEnvironment): Option[Credential] =
