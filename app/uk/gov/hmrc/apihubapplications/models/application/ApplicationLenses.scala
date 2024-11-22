@@ -175,7 +175,7 @@ object ApplicationLenses {
     def setPrimaryScopes(scopes: Seq[Scope]): Application =
       applicationPrimaryScopes.set(application, scopes)
 
-    def addPrimaryScope(scope: Scope): Application = {
+    private def addPrimaryScope(scope: Scope): Application = {
       if (!application.hasPrimaryScope(scope.name)) {
         applicationPrimaryScopes.set(
           application,
@@ -257,7 +257,7 @@ object ApplicationLenses {
     def setSecondaryScopes(scopes: Seq[Scope]): Application =
       applicationSecondaryScopes.set(application, scopes)
 
-    def addSecondaryScope(scope: Scope): Application = {
+    private def addSecondaryScope(scope: Scope): Application = {
       if (!application.hasSecondaryScope(scope.name)) {
         applicationSecondaryScopes.set(
           application,

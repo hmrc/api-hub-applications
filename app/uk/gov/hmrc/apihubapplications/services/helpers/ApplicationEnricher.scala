@@ -233,15 +233,7 @@ object ApplicationEnrichers {
       )
       .map(useFirstException)
       .map {
-        case Right(_) =>
-          Right(
-            (application: Application) => {
-              environmentName match {
-                case Primary => application.addPrimaryScope(Scope(scopeName))
-                case Secondary => application.addSecondaryScope(Scope(scopeName))
-              }
-            }
-          )
+        case Right(_) => Right(_.addScope(environmentName, scopeName))
         case Left(e) => Left(e)
       }
   }
