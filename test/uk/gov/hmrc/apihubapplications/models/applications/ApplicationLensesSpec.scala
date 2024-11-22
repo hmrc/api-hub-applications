@@ -263,7 +263,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationAddCredentialFunction(
           applicationPrimaryCredentials,
-          (application, credential) => ApplicationLensOps(application).addPrimaryCredential(credential)
+          (application, credential) => ApplicationLensOps(application).addCredential(credential, Primary)
         )
       }
     }

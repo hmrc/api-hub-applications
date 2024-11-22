@@ -210,12 +210,6 @@ object ApplicationLenses {
     def setPrimaryCredentials(credentials: Seq[Credential]): Application =
       applicationPrimaryCredentials.set(application, credentials)
 
-    def addPrimaryCredential(credential: Credential): Application =
-      applicationPrimaryCredentials.set(
-        application,
-        applicationPrimaryCredentials.get(application) :+ credential
-      )
-
     def removePrimaryCredential(clientId: String): Application =
       applicationPrimaryCredentials.set(
         application,
@@ -298,12 +292,6 @@ object ApplicationLenses {
     def setSecondaryCredentials(credentials: Seq[Credential]): Application =
       applicationSecondaryCredentials.set(application, credentials)
 
-    def addSecondaryCredential(credential: Credential): Application =
-      applicationSecondaryCredentials.set(
-        application,
-        applicationSecondaryCredentials.get(application) :+ credential
-      )
-
     def removeSecondaryCredential(clientId: String): Application =
       applicationSecondaryCredentials.set(
         application,
@@ -374,8 +362,8 @@ object ApplicationLenses {
 
     def addCredential(credential: Credential, environmentName: EnvironmentName): Application = {
       environmentName match {
-        case Primary => application.addPrimaryCredential(credential)
-        case Secondary => application.addSecondaryCredential(credential)
+        case Primary => applicationPrimaryCredentials.set(application, applicationPrimaryCredentials.get(application) :+ credential)
+        case Secondary => applicationSecondaryCredentials.set(application, applicationSecondaryCredentials.get(application) :+ credential)
       }
     }
 

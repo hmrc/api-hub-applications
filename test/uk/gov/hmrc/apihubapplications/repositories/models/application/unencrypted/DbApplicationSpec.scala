@@ -35,8 +35,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val dbCredential = DbCredential(credential.clientId, Some(credential.created), credential.secretFragment)
 
         val application = testApplication
-          .addPrimaryCredential(credential)
-          .addSecondaryCredential(credential)
+          .addCredential(credential, Primary)
+          .addCredential(credential, Secondary)
 
         val expected = testDbApplication
           .copy(

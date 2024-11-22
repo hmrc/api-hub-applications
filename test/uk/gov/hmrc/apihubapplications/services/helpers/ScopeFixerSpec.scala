@@ -131,7 +131,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope1)
 
       val application = applicationWithCredentials
-        .addPrimaryCredential(credential3)
+        .addCredential(credential3, Primary)
         .addPrimaryScope(scope1)
         .addSecondaryScope(scope1)
         .addApi(buildApi(api))
@@ -170,8 +170,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope1)
 
       val application = applicationWithCredentials
-        .addPrimaryCredential(credential3)
-        .addSecondaryCredential(credential4)
+        .addCredential(credential3, Primary)
+        .addCredential(credential4, Secondary)
         .addApi(buildApi(api))
 
       val expected = application
@@ -514,8 +514,8 @@ object ScopeFixerSpec {
 
   private val baseApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq.empty)
   private val applicationWithCredentials: Application = baseApplication
-    .addPrimaryCredential(credential1)
-    .addSecondaryCredential(credential2)
+    .addCredential(credential1, Primary)
+    .addCredential(credential2, Secondary)
 
   private def baseApi(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-platform", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
 

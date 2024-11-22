@@ -72,7 +72,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       val updatedApp = app
-        .addSecondaryCredential(expectedCredential)
+        .addCredential(expectedCredential, Secondary)
         .copy(lastUpdated = LocalDateTime.now(clock))
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
@@ -115,7 +115,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
 
       val updatedApp = app
-        .addPrimaryCredential(expectedCredential)
+        .addCredential(expectedCredential, Primary)
         .copy(lastUpdated = LocalDateTime.now(clock))
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
@@ -253,9 +253,9 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       )
-        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
-        .addPrimaryCredential(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None))
-        .addSecondaryCredential(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None))
+        .addCredential(Credential(clientId, LocalDateTime.now(clock), None, None), Primary)
+        .addCredential(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None), Primary)
+        .addCredential(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None), Secondary)
 
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Right(())))
@@ -287,8 +287,8 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       )
-        .addPrimaryCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None))
-        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+        .addCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None), Primary)
+        .addCredential(Credential(clientId, LocalDateTime.now(clock), None, None), Primary)
 
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Left(IdmsException.clientNotFound(clientId))))
@@ -331,7 +331,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       )
-        .addPrimaryCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None))
+        .addCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None), Primary)
 
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
 
@@ -357,8 +357,8 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       )
-        .addPrimaryCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None))
-        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+        .addCredential(Credential("other-credential-id", LocalDateTime.now(clock), None, None), Primary)
+        .addCredential(Credential(clientId, LocalDateTime.now(clock), None, None), Primary)
 
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
@@ -385,7 +385,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
       )
-        .addPrimaryCredential(Credential(clientId, LocalDateTime.now(clock), None, None))
+        .addCredential(Credential(clientId, LocalDateTime.now(clock), None, None), Primary)
 
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
 
@@ -407,10 +407,10 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       val clientId4 = "test-client-id-4"
 
       val application = baseApplication
-        .addPrimaryCredential(buildCredential(clientId1))
-        .addPrimaryCredential(buildCredential(clientId2))
-        .addSecondaryCredential(buildCredential(clientId3))
-        .addSecondaryCredential(buildCredential(clientId4))
+        .addCredential(buildCredential(clientId1), Primary)
+        .addCredential(buildCredential(clientId2), Primary)
+        .addCredential(buildCredential(clientId3), Secondary)
+        .addCredential(buildCredential(clientId4), Secondary)
 
       when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
 
@@ -456,8 +456,8 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       val clientId2 = "test-client-id-2"
 
       val application = baseApplication
-        .addPrimaryCredential(buildCredential(clientId1))
-        .addPrimaryCredential(buildCredential(clientId2))
+        .addCredential(buildCredential(clientId1), Primary)
+        .addCredential(buildCredential(clientId2), Primary)
 
       val expected = IdmsException.unexpectedResponse(500)
 

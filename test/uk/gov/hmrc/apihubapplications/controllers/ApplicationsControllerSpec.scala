@@ -77,8 +77,8 @@ class ApplicationsControllerSpec
           .withBody(json)
 
         val expected = Application(newApplication)
-          .addPrimaryCredential(Credential("test-client-id-1", LocalDateTime.now(), None, None))
-          .addSecondaryCredential(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment")))
+          .addCredential(Credential("test-client-id-1", LocalDateTime.now(), None, None), Primary)
+          .addCredential(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment")), Secondary)
           .copy(id = Some("test-id"))
 
         when(fixture.applicationsService.registerApplication(eqTo(newApplication))(any()))
