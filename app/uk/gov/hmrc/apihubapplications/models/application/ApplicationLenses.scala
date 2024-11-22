@@ -105,8 +105,8 @@ object ApplicationLenses {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
-        case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_))).distinct)
-        case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_))).distinct)
+        case Primary => setPrimaryScopes((getScopes(Primary) ++ scopes.map(Scope(_))).distinct)
+        case Secondary => setSecondaryScopes((getScopes(Secondary) ++ scopes.map(Scope(_))).distinct)
       }
 
     def addScopes(hipEnvironment: HipEnvironment, scopes: Seq[String]): Application =
@@ -165,12 +165,9 @@ object ApplicationLenses {
       
     def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application =
       updateCredential(hipEnvironment.environmentName, clientId, secret)
-      
-    def getPrimaryScopes: Seq[Scope] =
-      applicationPrimaryScopes.get(application)
-
+    
     def hasPrimaryScope(scopeName: String): Boolean =
-      application.getPrimaryScopes.exists(_.name.equals(scopeName))
+      application.getScopes(Primary).exists(_.name.equals(scopeName))
 
     def setPrimaryScopes(scopes: Seq[Scope]): Application =
       applicationPrimaryScopes.set(application, scopes)
@@ -234,11 +231,8 @@ object ApplicationLenses {
       )
     }
 
-    def getSecondaryScopes: Seq[Scope] =
-      applicationSecondaryScopes.get(application)
-
     def hasSecondaryScope(scopeName: String): Boolean =
-      application.getSecondaryScopes.exists(_.name.equals(scopeName))
+      application.getScopes(Secondary).exists(_.name.equals(scopeName))
 
     def setSecondaryScopes(scopes: Seq[Scope]): Application =
       applicationSecondaryScopes.set(application, scopes)
@@ -323,8 +317,8 @@ object ApplicationLenses {
 
     def getScopes(environmentName: EnvironmentName): Seq[Scope] = {
       environmentName match {
-        case Primary => getPrimaryScopes
-        case Secondary => getSecondaryScopes
+        case Primary => applicationPrimaryScopes.get(application)
+        case Secondary => applicationSecondaryScopes.get(application)
       }
     }
 
