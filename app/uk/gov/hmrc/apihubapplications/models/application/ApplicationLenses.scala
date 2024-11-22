@@ -193,12 +193,6 @@ object ApplicationLenses {
         applicationPrimaryScopes.get(application).filterNot(_.name.equals(scopeName))
       )
 
-    def getPrimaryScopeNames: Set[String] =
-      applicationPrimaryScopes
-        .get(application)
-        .map(_.name)
-        .toSet
-
     def setPrimaryCredentials(credentials: Seq[Credential]): Application =
       applicationPrimaryCredentials.set(application, credentials)
 
@@ -266,12 +260,6 @@ object ApplicationLenses {
         application,
         applicationSecondaryScopes.get(application).filterNot(_.name.equals(scopeName))
       )
-
-    def getSecondaryScopeNames: Set[String] =
-      applicationSecondaryScopes
-        .get(application)
-        .map(_.name)
-        .toSet
 
     def setSecondaryCredentials(credentials: Seq[Credential]): Application =
       applicationSecondaryCredentials.set(application, credentials)
