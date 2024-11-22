@@ -269,35 +269,35 @@ object ApplicationLenses {
       )
     }
 
-    def getMasterCredentialFor(environmentName: EnvironmentName): Option[Credential] = {
+    def getMasterCredential(environmentName: EnvironmentName): Option[Credential] = {
       environmentName match {
         case Primary => getPrimaryMasterCredential
         case Secondary => getSecondaryMasterCredential
       }
     }
 
-    def getMasterCredentialFor(hipEnvironment: HipEnvironment): Option[Credential] =
-      getMasterCredentialFor(hipEnvironment.environmentName)
+    def getMasterCredential(hipEnvironment: HipEnvironment): Option[Credential] =
+      getMasterCredential(hipEnvironment.environmentName)
 
-    def getCredentialsFor(environmentName: EnvironmentName): Seq[Credential] = {
+    def getCredentials(environmentName: EnvironmentName): Seq[Credential] = {
       environmentName match {
         case Primary => application.getPrimaryCredentials
         case Secondary => application.getSecondaryCredentials
       }
     }
 
-    def getCredentialsFor(hipEnvironment: HipEnvironment): Seq[Credential] =
-      getCredentialsFor(hipEnvironment.environmentName)
+    def getCredentials(hipEnvironment: HipEnvironment): Seq[Credential] =
+      getCredentials(hipEnvironment.environmentName)
 
-    def getScopesFor(environmentName: EnvironmentName): Seq[Scope] = {
+    def getScopes(environmentName: EnvironmentName): Seq[Scope] = {
       environmentName match {
         case Primary => getPrimaryScopes
         case Secondary => getSecondaryScopes
       }
     }
 
-    def getScopesFor(hipEnvironment: HipEnvironment): Seq[Scope] =
-      getScopesFor(hipEnvironment.environmentName)
+    def getScopes(hipEnvironment: HipEnvironment): Seq[Scope] =
+      getScopes(hipEnvironment.environmentName)
 
     def addCredential(credential: Credential, environmentName: EnvironmentName): Application = {
       environmentName match {

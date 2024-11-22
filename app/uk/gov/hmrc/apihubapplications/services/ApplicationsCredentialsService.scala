@@ -75,7 +75,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   }
 
   private def addCredentialValidation(application: Application, environmentName: EnvironmentName): Either[ApplicationsException, Application] = {
-    if (application.getCredentialsFor(environmentName).size < 5) {
+    if (application.getCredentials(environmentName).size < 5) {
       Right(application)
     }
     else {
@@ -84,7 +84,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   }
 
   private def updateOrAddCredential(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
-    (environmentName, application.getMasterCredentialFor(environmentName)) match {
+    (environmentName, application.getMasterCredential(environmentName)) match {
       case (Primary, Some(credential)) if credential.isHidden =>
         idmsConnector.newSecret(environmentName, credential.clientId).map {
           case Right(secret) =>
@@ -126,9 +126,9 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   override def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId, enrich = false).flatMap {
       case Right(application) =>
-        application.getCredentialsFor(environmentName).find(_.clientId == clientId) match {
+        application.getCredentials(environmentName).find(_.clientId == clientId) match {
           case Some(_) =>
-            if (application.getCredentialsFor(environmentName).size > 1) {
+            if (application.getCredentials(environmentName).size > 1) {
               idmsConnector.deleteClient(environmentName, clientId).flatMap {
                 case Right(_) => deleteCredential(application, environmentName, clientId)
                 case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, environmentName, clientId)
@@ -158,7 +158,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
         Future.sequence(
           Seq(Primary, Secondary).flatMap(
             environmentName =>
-              application.getCredentialsFor(environmentName).map(
+              application.getCredentials(environmentName).map(
                 credential =>
                   idmsConnector
                     .fetchClientScopes(environmentName, credential.clientId)

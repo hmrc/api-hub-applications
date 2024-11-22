@@ -457,14 +457,14 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
     EnvironmentName.values.foreach(
       environmentName =>
         application
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .filterNot(credential => noScopesFor.contains(credential.clientId))
           .foreach(
             credential =>
               when(fixture.idmsConnector.fetchClientScopes(eqTo(environmentName), eqTo(credential.clientId))(any))
                 .thenReturn(Future.successful(Right(
                   application
-                    .getScopesFor(environmentName)
+                    .getScopes(environmentName)
                     .map(scope => ClientScope(scope.name))
                 )))
           )
@@ -484,7 +484,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
     EnvironmentName.values.map(
       environmentName =>
         application
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .filterNot(credential => ignoreClientIds.contains(credential.clientId))
           .foreach(
             credential =>

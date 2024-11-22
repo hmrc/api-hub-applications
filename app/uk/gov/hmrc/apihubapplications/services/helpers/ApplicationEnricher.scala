@@ -225,7 +225,7 @@ object ApplicationEnrichers {
                                     )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     Future.sequence(
         original
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .map(
             credential =>
               idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
@@ -257,7 +257,7 @@ object ApplicationEnrichers {
     Future
       .sequence(
         original
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .filter(credential => clientId.isEmpty || clientId.contains(credential.clientId))
           .map(
             credential =>
@@ -291,7 +291,7 @@ object ApplicationEnrichers {
     clientId match {
       case Some(clientId) =>
         application
-          .getMasterCredentialFor(environmentName)
+          .getMasterCredential(environmentName)
           .map(_.clientId)
           .contains(clientId)
       case _ => true
