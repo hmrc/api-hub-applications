@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.models.application
 
 import uk.gov.hmrc.apihubapplications.models.Lens
-
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import java.time.{Clock, LocalDateTime}
 
 object ApplicationLenses {
@@ -108,6 +108,9 @@ object ApplicationLenses {
         case Primary => setPrimaryScopes((getPrimaryScopes ++ scopes.map(Scope(_))).distinct)
         case Secondary => setSecondaryScopes((getSecondaryScopes ++ scopes.map(Scope(_))).distinct)
       }
+
+    def addScopes(hipEnvironment: HipEnvironment, scopes: Seq[String]): Application =
+      addScopes(hipEnvironment.environmentName, scopes)
 
     def getPrimaryScopes: Seq[Scope] =
       applicationPrimaryScopes.get(application)
@@ -273,12 +276,18 @@ object ApplicationLenses {
       }
     }
 
+    def getMasterCredentialFor(hipEnvironment: HipEnvironment): Option[Credential] =
+      getMasterCredentialFor(hipEnvironment.environmentName)
+
     def getCredentialsFor(environmentName: EnvironmentName): Seq[Credential] = {
       environmentName match {
         case Primary => application.getPrimaryCredentials
         case Secondary => application.getSecondaryCredentials
       }
     }
+
+    def getCredentialsFor(hipEnvironment: HipEnvironment): Seq[Credential] =
+      getCredentialsFor(hipEnvironment.environmentName)
 
     def getScopesFor(environmentName: EnvironmentName): Seq[Scope] = {
       environmentName match {
@@ -287,12 +296,18 @@ object ApplicationLenses {
       }
     }
 
+    def getScopesFor(hipEnvironment: HipEnvironment): Seq[Scope] =
+      getScopesFor(hipEnvironment.environmentName)
+
     def addCredential(credential: Credential, environmentName: EnvironmentName): Application = {
       environmentName match {
         case Primary => application.addPrimaryCredential(credential)
         case Secondary => application.addSecondaryCredential(credential)
       }
     }
+
+    def addCredential(credential: Credential, hipEnvironment: HipEnvironment): Application =
+      addCredential(credential, hipEnvironment.environmentName)
 
     def replaceCredential(credential: Credential, environmentName: EnvironmentName): Application = {
       environmentName match {
@@ -301,12 +316,18 @@ object ApplicationLenses {
       }
     }
 
+    def replaceCredential(credential: Credential, hipEnvironment: HipEnvironment): Application =
+      replaceCredential(credential, hipEnvironment.environmentName)
+
     def removeCredential(clientId: String, environmentName: EnvironmentName): Application = {
       environmentName match {
         case Primary => application.removePrimaryCredential(clientId)
         case Secondary => application.removeSecondaryCredential(clientId)
       }
     }
+
+    def removeCredential(clientId: String, hipEnvironment: HipEnvironment): Application =
+      removeCredential(clientId, hipEnvironment.environmentName)
 
     def setTeamId(teamId: String): Application = {
       application.copy(teamId = Some(teamId))
