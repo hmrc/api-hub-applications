@@ -112,6 +112,60 @@ object ApplicationLenses {
     def addScopes(hipEnvironment: HipEnvironment, scopes: Seq[String]): Application =
       addScopes(hipEnvironment.environmentName, scopes)
 
+    def hasScope(environmentName: EnvironmentName, scopeName: String): Boolean =
+      environmentName match {
+        case Primary => hasPrimaryScope(scopeName)
+        case Secondary => hasSecondaryScope(scopeName)
+      }
+
+    def hasScope(hipEnvironment: HipEnvironment, scopeName: String): Boolean =
+      hasScope(hipEnvironment.environmentName, scopeName)
+
+    def addScope(environmentName: EnvironmentName, scopeName: String): Application =
+      environmentName match {
+        case Primary => addPrimaryScope(Scope(scopeName))
+        case Secondary => addSecondaryScope(Scope(scopeName))
+      }
+
+    def addScope(hipEnvironment: HipEnvironment, scopeName: String): Application =
+      addScope(hipEnvironment.environmentName, scopeName)
+
+    def removeScope(environmentName: EnvironmentName, scopeName: String): Application =
+      environmentName match {
+        case Primary => removePrimaryScope(scopeName)
+        case Secondary => removeSecondaryScope(scopeName)
+      }
+
+    def removeScope(hipEnvironment: HipEnvironment, scopeName: String): Application =
+      removeScope(hipEnvironment.environmentName, scopeName)
+
+    def setScopes(environmentName: EnvironmentName, scopes: Seq[Scope]): Application =
+      environmentName match {
+        case Primary => setPrimaryScopes(scopes)
+        case Secondary => setSecondaryScopes(scopes)
+      }
+
+    def setScopes(hipEnvironment: HipEnvironment, scopes: Seq[Scope]): Application =
+      setScopes(hipEnvironment.environmentName, scopes)
+
+    def setCredentials(environmentName: EnvironmentName, credentials: Seq[Credential]): Application =
+      environmentName match {
+        case Primary => setPrimaryCredentials(credentials)
+        case Secondary => setSecondaryCredentials(credentials)
+      }
+
+    def setCredentials(hipEnvironment: HipEnvironment, credentials: Seq[Credential]): Application =
+      setCredentials(hipEnvironment.environmentName, credentials)
+
+    def updateCredential(environmentName: EnvironmentName, clientId: String, secret: String): Application =
+      environmentName match {
+        case Primary => updatePrimaryCredential(clientId, secret)
+        case Secondary => updateSecondaryCredential(clientId, secret)
+      }
+      
+    def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application =
+      updateCredential(hipEnvironment.environmentName, clientId, secret)
+      
     def getPrimaryScopes: Seq[Scope] =
       applicationPrimaryScopes.get(application)
 
@@ -168,6 +222,25 @@ object ApplicationLenses {
         application.getPrimaryCredentials.filterNot(_.clientId == clientId)
       )
 
+    def updatePrimaryCredential(clientId: String, secret: String): Application = {
+      if (!application.getPrimaryCredentials.exists(_.clientId == clientId)) {
+        throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
+        )
+      }
+
+      application.setPrimaryCredentials(
+        application.getPrimaryCredentials.map {
+          case credential@Credential(id, _, _, _) if id == clientId =>
+            credential.copy(
+              clientSecret = Some(secret),
+              secretFragment = Some(secret.takeRight(4))
+            )
+          case credential => credential
+        }
+      )
+    }
+    
     def replacePrimaryCredential(credential: Credential): Application = {
       val index = application.getPrimaryCredentials.indexWhere(_.clientId == credential.clientId)
       if (index < 0 ) {
