@@ -265,7 +265,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         result =>
           val updated = application
             .copy(lastUpdated = LocalDateTime.now(clock))
-            .removePrimaryCredential(clientId)
+            .removeCredential(clientId, Primary)
           verify(repository).update(eqTo(updated))
           result mustBe Right(())
       }

@@ -187,12 +187,6 @@ object ApplicationLenses {
     def setPrimaryCredentials(credentials: Seq[Credential]): Application =
       applicationPrimaryCredentials.set(application, credentials)
 
-    def removePrimaryCredential(clientId: String): Application =
-      applicationPrimaryCredentials.set(
-        application,
-        application.getCredentials(Primary).filterNot(_.clientId == clientId)
-      )
-
     def updatePrimaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Primary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
@@ -248,12 +242,6 @@ object ApplicationLenses {
 
     def setSecondaryCredentials(credentials: Seq[Credential]): Application =
       applicationSecondaryCredentials.set(application, credentials)
-
-    def removeSecondaryCredential(clientId: String): Application =
-      applicationSecondaryCredentials.set(
-        application,
-        application.getCredentials(Secondary).filterNot(_.clientId == clientId)
-      )
 
     def updateSecondaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Secondary).exists(_.clientId == clientId)) {
@@ -338,8 +326,14 @@ object ApplicationLenses {
 
     def removeCredential(clientId: String, environmentName: EnvironmentName): Application = {
       environmentName match {
-        case Primary => application.removePrimaryCredential(clientId)
-        case Secondary => application.removeSecondaryCredential(clientId)
+        case Primary => applicationPrimaryCredentials.set(
+          application,
+          application.getCredentials(Primary).filterNot(_.clientId == clientId)
+        )
+        case Secondary => applicationSecondaryCredentials.set(
+          application,
+          application.getCredentials(Secondary).filterNot(_.clientId == clientId)
+        )
       }
     }
 
