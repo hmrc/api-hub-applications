@@ -91,7 +91,7 @@ object ApplicationEnrichers {
         issuesOrResponses.foldLeft(application)(
           (app, issueOrResponse) =>
             issueOrResponse match {
-              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.clientId, clientResponse.secret)
+              case Right(clientResponse) => app.updateCredential(Secondary, clientResponse.clientId, clientResponse.secret)
               case Left(issue) => app.addIssue(issue)
             }
         )

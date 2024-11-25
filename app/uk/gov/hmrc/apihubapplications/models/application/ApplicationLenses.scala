@@ -181,7 +181,7 @@ object ApplicationLenses {
       }
     }
 
-    def updatePrimaryCredential(clientId: String, secret: String): Application = {
+    private def updatePrimaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Primary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
@@ -230,7 +230,7 @@ object ApplicationLenses {
     def setSecondaryCredentials(credentials: Seq[Credential]): Application =
       applicationSecondaryCredentials.set(application, credentials)
 
-    def updateSecondaryCredential(clientId: String, secret: String): Application = {
+    private def updateSecondaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Secondary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"

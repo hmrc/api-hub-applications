@@ -149,8 +149,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
         )
 
       val expected = application
-        .updateSecondaryCredential(testClientResponse1.clientId, testClientResponse1.secret)
-        .updateSecondaryCredential(testClientResponse2.clientId, testClientResponse2.secret)
+        .updateCredential(Secondary, testClientResponse1.clientId, testClientResponse1.secret)
+        .updateCredential(Secondary, testClientResponse2.clientId, testClientResponse2.secret)
 
       val idmsConnector = mock[IdmsConnector]
 
@@ -214,7 +214,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
         )
 
       val expected = application
-        .updateSecondaryCredential(testClientResponse1.clientId, testClientResponse1.secret)
+        .updateCredential(Secondary, testClientResponse1.clientId, testClientResponse1.secret)
         .addIssue(Issues.secondaryCredentialNotFound(IdmsException.clientNotFound(testClientId2)))
 
       val idmsConnector = mock[IdmsConnector]
