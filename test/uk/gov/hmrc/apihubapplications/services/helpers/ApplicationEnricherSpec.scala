@@ -51,8 +51,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       ApplicationEnrichers.process(
         testApplication,
         Seq(
-          successfulEnricher(_.addScope(Primary, scope1)),
-          successfulEnricher(_.addScope(Primary, scope2))
+          successfulEnricher(_.addScope(Primary, scope1.name)),
+          successfulEnricher(_.addScope(Primary, scope2.name))
         )
       ).map {
         actual =>
@@ -141,7 +141,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
     "must enrich an application with secondary credentials" in {
       val application = testApplication
         .setCredentials(
-          Secondary, 
+          Secondary,
           Seq(
             testClientResponse1.asNewCredential(clock),
             testClientResponse2.asNewCredential(clock)
@@ -175,7 +175,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
     "must not return IdmsException if any call to IDMS fails" in {
       val application = testApplication
         .setCredentials(
-          Secondary, 
+          Secondary,
           Seq(
             testClientResponse1.asNewCredential(clock),
             testClientResponse2.asNewCredential(clock)
@@ -206,7 +206,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
     "must add an application issue if a credential cannot be found" in {
       val application = testApplication
         .setCredentials(
-          Secondary, 
+          Secondary,
           Seq(
             testClientResponse1.asNewCredential(clock),
             testClientResponse2.asNewCredential(clock)
@@ -241,7 +241,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       val expected = application
         .setScopes(
-          Secondary, 
+          Secondary,
           Seq(
             Scope(testClientScope1.clientScopeId),
             Scope(testClientScope2.clientScopeId)
@@ -459,7 +459,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val clientId2 = "test-client-id-2"
 
       val application = testApplication.setCredentials(
-        Primary, 
+        Primary,
         Seq(
           Credential(clientId1, LocalDateTime.now(clock), None, None),
           Credential(clientId2, LocalDateTime.now(clock), None, None)
@@ -474,7 +474,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       ApplicationEnrichers.scopeAddingApplicationEnricher(Primary, application, idmsConnector, scope).map {
         case Right(enricher) =>
-          enricher.enrich(application) mustBe application.addScope(Primary, Scope(scope))
+          enricher.enrich(application) mustBe application.addScope(Primary, scope)
           verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scope))(any())
           verify(idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId2), eqTo(scope))(any())
           succeed
@@ -493,7 +493,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
       ApplicationEnrichers.scopeAddingApplicationEnricher(Secondary, application, idmsConnector, scope).map {
         case Right(enricher) =>
-          enricher.enrich(application) mustBe application.addScope(Secondary, Scope(scope))
+          enricher.enrich(application) mustBe application.addScope(Secondary, scope)
         case Left(e) => fail("Unexpected Left response", e)
       }
     }
@@ -517,11 +517,11 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val expected = testApplication
         .addCredential(Credential(testClientId1, LocalDateTime.now(), None, None), Primary)
         .addCredential(Credential(testClientId2, LocalDateTime.now(), None, None), Primary)
-        .addScope(Primary, Scope(testScopeName2))
-        .addScope(Secondary, Scope(testScopeName3))
+        .addScope(Primary, testScopeName2)
+        .addScope(Secondary, testScopeName3)
 
       val application = expected
-        .addScope(Primary, Scope(testScopeName1))
+        .addScope(Primary, testScopeName1)
 
       val idmsConnector = mock[IdmsConnector]
 
@@ -539,11 +539,11 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val expected = testApplication
         .addCredential(Credential(testClientId1, LocalDateTime.now(), None, None), Secondary)
         .addCredential(Credential(testClientId2, LocalDateTime.now(), None, None), Secondary)
-        .addScope(Primary, Scope(testScopeName2))
-        .addScope(Secondary, Scope(testScopeName3))
+        .addScope(Primary, testScopeName2)
+        .addScope(Secondary, testScopeName3)
 
       val application = expected
-        .addScope(Secondary, Scope(testScopeName1))
+        .addScope(Secondary, testScopeName1)
 
       val idmsConnector = mock[IdmsConnector]
 
@@ -562,7 +562,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
         .addCredential(Credential(testClientId1, LocalDateTime.now(), None, None), Primary)
 
       val application = expected
-        .addScope(Primary, Scope(testScopeName1))
+        .addScope(Primary, testScopeName1)
 
       val idmsConnector = mock[IdmsConnector]
 
@@ -594,11 +594,11 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val expected = testApplication
         .addCredential(Credential(testClientId1, LocalDateTime.now(clock), None, None), Primary)
         .addCredential(Credential(testClientId2, LocalDateTime.now(clock).plusMinutes(1), None, None), Primary)
-        .addScope(Primary, Scope(testScopeName2))
-        .addScope(Secondary, Scope(testScopeName3))
+        .addScope(Primary, testScopeName2)
+        .addScope(Secondary, testScopeName3)
 
       val application = expected
-        .addScope(Primary, Scope(testScopeName1))
+        .addScope(Primary, testScopeName1)
 
       val idmsConnector = mock[IdmsConnector]
 
@@ -616,9 +616,9 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val application = testApplication
         .addCredential(Credential(testClientId1, LocalDateTime.now(clock), None, None), Primary)
         .addCredential(Credential(testClientId2, LocalDateTime.now(clock).plusMinutes(1), None, None), Primary)
-        .addScope(Primary, Scope(testScopeName1))
-        .addScope(Primary, Scope(testScopeName2))
-        .addScope(Secondary, Scope(testScopeName3))
+        .addScope(Primary, testScopeName1)
+        .addScope(Primary, testScopeName2)
+        .addScope(Secondary, testScopeName3)
 
       val idmsConnector = mock[IdmsConnector]
 

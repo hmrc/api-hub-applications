@@ -305,8 +305,8 @@ object ApplicationLenses {
 
     def replaceCredential(credential: Credential, environmentName: EnvironmentName): Application = {
       environmentName match {
-        case Primary => application.replacePrimaryCredential(credential)
-        case Secondary => application.replaceSecondaryCredential(credential)
+        case Primary => replacePrimaryCredential(credential)
+        case Secondary => replaceSecondaryCredential(credential)
       }
     }
 
