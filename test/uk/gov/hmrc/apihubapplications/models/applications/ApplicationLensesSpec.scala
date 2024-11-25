@@ -201,121 +201,34 @@ class ApplicationLensesSpec extends LensBehaviours {
   }
 
   "ApplicationLensOps" - {
-    "getPrimaryScopes" - {
+    "getScopes(Primary)" - {
       "must" - {
         behave like applicationScopesGetterFunction(
           applicationPrimaryScopes,
-          application => ApplicationLensOps(application).getPrimaryScopes
+          application => ApplicationLensOps(application).getScopes(Primary)
         )
       }
     }
 
-    "setPrimaryScopes" - {
-      "must" - {
-        behave like applicationScopesSetterFunction(
-          applicationPrimaryScopes,
-          (application, scopes) => ApplicationLensOps(application).setPrimaryScopes(scopes)
-        )
-      }
-    }
-
-    "addPrimaryScope" - {
-      "must" - {
-        behave like applicationAddScopeFunction(
-          applicationPrimaryScopes,
-          (application, scope) => ApplicationLensOps(application).addPrimaryScope(scope)
-        )
-      }
-    }
-
-    "getPrimaryMasterCredential" - {
-      "must return the most recently created credential" in {
-        val master = randomCredential().copy(created = LocalDateTime.now())
-        val credential1 = randomCredential().copy(created = LocalDateTime.now().minusDays(1))
-        val credential2 = randomCredential().copy(created = LocalDateTime.now().minusDays(2))
-
-        val application = testApplication
-          .setPrimaryCredentials(Seq(credential1, master, credential2))
-
-        application.getPrimaryMasterCredential mustBe Some(master)
-      }
-    }
-
-    "getPrimaryCredentials" - {
-      "must" - {
-        behave like applicationCredentialsGetterFunction(
-          applicationPrimaryCredentials,
-          application => ApplicationLensOps(application).getCredentials(Primary)
-        )
-      }
-    }
-
-    "setPrimaryCredentials" - {
-      "must" - {
-        behave like applicationCredentialsSetterFunction(
-          applicationPrimaryCredentials,
-          (application, credentials) => ApplicationLensOps(application).setPrimaryCredentials(credentials)
-        )
-      }
-    }
-
-    "addPrimaryCredential" - {
-      "must" - {
-        behave like applicationAddCredentialFunction(
-          applicationPrimaryCredentials,
-          (application, credential) => ApplicationLensOps(application).addCredential(credential, Primary)
-        )
-      }
-    }
-
-    "removePrimaryCredential" - {
-      "must" - {
-        behave like applicationRemoveCredentialFunction(
-          applicationPrimaryCredentials,
-          (application, clientId) => ApplicationLensOps(application).removePrimaryCredential(clientId)
-        )
-      }
-    }
-
-    "replacePrimaryCredential" - {
-      "must replace the correct credential" in {
-        val credential1 = randomCredential()
-        val credential2 = randomCredential()
-        val credential3 = randomCredential()
-
-        val application = testApplication.setPrimaryCredentials(Seq(credential1, credential2, credential3))
-
-        val credential = application.getCredentials(Primary)
-
-        val updatedCredential = credential.copy(
-          created = credential.created.plusDays(1),
-          clientSecret = Some("updated-secret")
-        )
-
-        val expected = application.setPrimaryCredentials(Seq(credential1, updatedCredential, credential3))
-        val actual = application.replacePrimaryCredential(updatedCredential)
-
-        actual mustBe expected
-      }
-
-      "must throw IllegalArgumentException if the credential does not exist" in {
-        val credential = randomCredential()
-        val application = testApplication
-
-        an[IllegalArgumentException] mustBe thrownBy (application.replacePrimaryCredential(credential))
-      }
-    }
-
-    "getSecondaryScopes" - {
+    "getScopes(Secondary)" - {
       "must" - {
         behave like applicationScopesGetterFunction(
           applicationSecondaryScopes,
-          application => ApplicationLensOps(application).getSecondaryScopes
+          application => ApplicationLensOps(application).getScopes(Secondary)
         )
       }
     }
 
-    "setSecondaryScopes" - {
+    "setScopes(Primary)" - {
+      "must" - {
+        behave like applicationScopesSetterFunction(
+          applicationPrimaryScopes,
+          (application, scopes) => ApplicationLensOps(application).setScopes(Primary, scopes)
+        )
+      }
+    }
+
+    "setScopes(Secondary)" - {
       "must" - {
         behave like applicationScopesSetterFunction(
           applicationSecondaryScopes,
@@ -324,105 +237,130 @@ class ApplicationLensesSpec extends LensBehaviours {
       }
     }
 
-    "addSecondaryScope" - {
+    "addScope(Primary)" - {
       "must" - {
         behave like applicationAddScopeFunction(
-          applicationSecondaryScopes,
-          (application, scope) => ApplicationLensOps(application).addSecondaryScope(scope)
+          applicationPrimaryScopes,
+          (application, scope) => ApplicationLensOps(application).addScope(Primary, scope.name)
         )
       }
     }
 
-    "getSecondaryMasterCredential" - {
+    "addScope(Secondary)" - {
+      "must" - {
+        behave like applicationAddScopeFunction(
+          applicationSecondaryScopes,
+          (application, scope) => ApplicationLensOps(application).addScope(Secondary, scope.name)
+        )
+      }
+    }
+
+    "getMasterCredential(Primary)" - {
       "must return the most recently created credential" in {
         val master = randomCredential().copy(created = LocalDateTime.now())
         val credential1 = randomCredential().copy(created = LocalDateTime.now().minusDays(1))
         val credential2 = randomCredential().copy(created = LocalDateTime.now().minusDays(2))
 
         val application = testApplication
-          .setSecondaryCredentials(Seq(credential1, master, credential2))
+          .setCredentials(Primary, Seq(credential1, master, credential2))
 
-        application.getSecondaryMasterCredential mustBe Some(master)
+        application.getMasterCredential(Primary) mustBe Some(master)
       }
     }
 
-    "getSecondaryCredentials" - {
+    "getMasterCredential(Secondary)" - {
+      "must return the most recently created credential" in {
+        val master = randomCredential().copy(created = LocalDateTime.now())
+        val credential1 = randomCredential().copy(created = LocalDateTime.now().minusDays(1))
+        val credential2 = randomCredential().copy(created = LocalDateTime.now().minusDays(2))
+
+        val application = testApplication
+          .setCredentials(Secondary, Seq(credential1, master, credential2))
+
+        application.getMasterCredential(Secondary) mustBe Some(master)
+      }
+    }
+
+    "getCredentials(Primary)" - {
+      "must" - {
+        behave like applicationCredentialsGetterFunction(
+          applicationPrimaryCredentials,
+          application => ApplicationLensOps(application).getCredentials(Primary)
+        )
+      }
+    }
+
+    "getCredentials(Secondary)" - {
       "must" - {
         behave like applicationCredentialsGetterFunction(
           applicationSecondaryCredentials,
-          application => ApplicationLensOps(application).getSecondaryCredentials
+          application => ApplicationLensOps(application).getCredentials(Secondary)
         )
       }
     }
 
-    "setSecondaryCredentials" - {
+    "setCredentials(Primary)" - {
+      "must" - {
+        behave like applicationCredentialsSetterFunction(
+          applicationPrimaryCredentials,
+          (application, credentials) => ApplicationLensOps(application).setCredentials(Primary, credentials)
+        )
+      }
+    }
+
+    "setCredentials(Secondary)" - {
       "must" - {
         behave like applicationCredentialsSetterFunction(
           applicationSecondaryCredentials,
-          (application, credentials) => ApplicationLensOps(application).setSecondaryCredentials(credentials)
+          (application, credentials) => ApplicationLensOps(application).setCredentials(Secondary, credentials)
         )
       }
     }
 
-    "addSecondaryCredential" - {
+    "addCredential(Primary)" - {
+      "must" - {
+        behave like applicationAddCredentialFunction(
+          applicationPrimaryCredentials,
+          (application, credential) => ApplicationLensOps(application).addCredential(credential, Primary)
+        )
+      }
+    }
+
+    "addCredential(Secondary)" - {
       "must" - {
         behave like applicationAddCredentialFunction(
           applicationSecondaryCredentials,
-          (application, credential) => ApplicationLensOps(application).addSecondaryCredential(credential)
+          (application, credential) => ApplicationLensOps(application).addCredential(credential, Secondary)
         )
       }
     }
 
-    "removeSecondaryCredential" - {
+    "removeCredential(Primary)" - {
       "must" - {
         behave like applicationRemoveCredentialFunction(
-          applicationSecondaryCredentials,
-          (application, clientId) => ApplicationLensOps(application).removeSecondaryCredential(clientId)
+          applicationPrimaryCredentials,
+          (application, clientId) => ApplicationLensOps(application).removeCredential(clientId, Primary)
         )
       }
     }
 
-    "updateSecondaryCredential" - {
-      "must correctly update a specific credential" in {
-        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None)
-        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None)
-        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None)
-
-        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"))
-
-        val application = testApplication
-          .setSecondaryCredentials(Seq(credential1, credential2, credential3))
-
-        val expected = testApplication
-          .setSecondaryCredentials(Seq(credential1, credential2Updated, credential3))
-
-        application.updateSecondaryCredential(credential2Updated.clientId, "test-secret") mustBe expected
-      }
-
-      "must throw IllegalArgumentException when the credential does not exist" in {
-        an [IllegalArgumentException] mustBe thrownBy(
-          testApplication.updateSecondaryCredential("test-client-id", "test-secret")
-        )
-      }
-    }
-
-    "replaceSecondaryCredential" - {
+    "replaceCredential(Primary)" - {
       "must replace the correct credential" in {
         val credential1 = randomCredential()
         val credential2 = randomCredential()
         val credential3 = randomCredential()
 
-        val application = testApplication.setSecondaryCredentials(Seq(credential1, credential2, credential3))
+        val application = testApplication.setCredentials(Primary, Seq(credential1, credential2, credential3))
 
-        val credential = application.getSecondaryCredentials(1)
+        val credential = application.getCredentials(Primary)(1)
 
         val updatedCredential = credential.copy(
           created = credential.created.plusDays(1),
           clientSecret = Some("updated-secret")
         )
 
-        val expected = application.setSecondaryCredentials(Seq(credential1, updatedCredential, credential3))
-        val actual = application.replaceSecondaryCredential(updatedCredential)
+        val expected = application.setCredentials(Primary, Seq(credential1, updatedCredential, credential3))
+        val actual = application.replaceCredential(updatedCredential, Primary)
 
         actual mustBe expected
       }
@@ -431,10 +369,87 @@ class ApplicationLensesSpec extends LensBehaviours {
         val credential = randomCredential()
         val application = testApplication
 
-        an[IllegalArgumentException] mustBe thrownBy (application.replaceSecondaryCredential(credential))
+        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(credential, Primary))
       }
     }
 
+    "replaceCredential(Secondary)" - {
+      "must replace the correct credential" in {
+        val credential1 = randomCredential()
+        val credential2 = randomCredential()
+        val credential3 = randomCredential()
+
+        val application = testApplication.setCredentials(Secondary, Seq(credential1, credential2, credential3))
+
+        val credential = application.getCredentials(Secondary)(1)
+
+        val updatedCredential = credential.copy(
+          created = credential.created.plusDays(1),
+          clientSecret = Some("updated-secret")
+        )
+
+        val expected = application.setCredentials(Secondary, Seq(credential1, updatedCredential, credential3))
+        val actual = application.replaceCredential(updatedCredential, Secondary)
+
+        actual mustBe expected
+      }
+
+      "must throw IllegalArgumentException if the credential does not exist" in {
+        val credential = randomCredential()
+        val application = testApplication
+
+        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(credential, Secondary))
+      }
+    }
+
+    "updateCredential(Primary)" - {
+      "must correctly update a specific credential" in {
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None)
+        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None)
+
+        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"))
+
+        val application = testApplication
+          .setCredentials(Primary, Seq(credential1, credential2, credential3))
+
+        val expected = testApplication
+          .setCredentials(Primary, Seq(credential1, credential2Updated, credential3))
+
+        application.updateCredential(Primary, credential2Updated.clientId, "test-secret") mustBe expected
+      }
+
+      "must throw IllegalArgumentException when the credential does not exist" in {
+        an [IllegalArgumentException] mustBe thrownBy(
+          testApplication.updateCredential(Primary, "test-client-id", "test-secret")
+        )
+      }
+    }
+    
+    "updateCredential(Secondary)" - {
+      "must correctly update a specific credential" in {
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None)
+        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None)
+
+        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"))
+
+        val application = testApplication
+          .setCredentials(Secondary, Seq(credential1, credential2, credential3))
+
+        val expected = testApplication
+          .setCredentials(Secondary, Seq(credential1, credential2Updated, credential3))
+
+        application.updateCredential(Secondary, credential2Updated.clientId, "test-secret") mustBe expected
+      }
+
+      "must throw IllegalArgumentException when the credential does not exist" in {
+        an [IllegalArgumentException] mustBe thrownBy(
+          testApplication.updateCredential(Secondary, "test-client-id", "test-secret")
+        )
+      }
+    }
+    
     "hasTeamMember" - {
       "must return true when the given email address belongs to a team member" in {
         val application = testApplication.copy(
@@ -528,7 +543,7 @@ class ApplicationLensesSpec extends LensBehaviours {
         val hidden = randomCredential().copy(secretFragment = None)
         val visible = randomCredential()
 
-        val application = testApplication.setPrimaryCredentials(Seq(hidden, visible))
+        val application = testApplication.setCredentials(Primary, Seq(hidden, visible))
 
         application.makePublic().getCredentials(Primary) mustBe Seq(visible)
       }
