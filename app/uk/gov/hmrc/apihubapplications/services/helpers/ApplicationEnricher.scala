@@ -188,9 +188,9 @@ object ApplicationEnrichers {
         Right(
           (application: Application) => {
             environmentName match {
-              case Primary if hiddenPrimary => application.addCredential(clientResponse.asNewHiddenCredential(clock), Primary)
-              case Primary => application.addCredential(clientResponse.asNewCredential(clock), Primary)
-              case Secondary => application.addCredential(clientResponse.asNewCredential(clock), Secondary)
+              case Primary if hiddenPrimary => application.addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
+              case Primary => application.addCredential(Primary, clientResponse.asNewCredential(clock))
+              case Secondary => application.addCredential(Secondary, clientResponse.asNewCredential(clock))
             }
           }
         )

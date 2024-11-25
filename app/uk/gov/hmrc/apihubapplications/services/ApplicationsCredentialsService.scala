@@ -102,7 +102,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
         idmsConnector.createClient(environmentName, Client(application)).map {
           case Right(clientResponse) =>
             val newCredential = clientResponse.asNewCredential(clock)
-            Right(NewCredential(application.addCredential(newCredential, environmentName), newCredential, wasHidden = false))
+            Right(NewCredential(application.addCredential(environmentName, newCredential), newCredential, wasHidden = false))
           case Left(e) => Left(e)
         }
     }

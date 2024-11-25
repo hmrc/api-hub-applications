@@ -293,15 +293,15 @@ object ApplicationLenses {
     def getScopes(hipEnvironment: HipEnvironment): Seq[Scope] =
       getScopes(hipEnvironment.environmentName)
 
-    def addCredential(credential: Credential, environmentName: EnvironmentName): Application = {
+    def addCredential(environmentName: EnvironmentName, credential: Credential): Application = {
       environmentName match {
         case Primary => applicationPrimaryCredentials.set(application, applicationPrimaryCredentials.get(application) :+ credential)
         case Secondary => applicationSecondaryCredentials.set(application, applicationSecondaryCredentials.get(application) :+ credential)
       }
     }
 
-    def addCredential(credential: Credential, hipEnvironment: HipEnvironment): Application =
-      addCredential(credential, hipEnvironment.environmentName)
+    def addCredential(hipEnvironment: HipEnvironment, credential: Credential): Application =
+      addCredential(hipEnvironment.environmentName, credential)
 
     def replaceCredential(credential: Credential, environmentName: EnvironmentName): Application = {
       environmentName match {
