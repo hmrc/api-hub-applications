@@ -29,7 +29,7 @@ import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -114,9 +114,9 @@ class IdmsConnectorImpl @Inject()(
   }
 
   override def deleteAllClients(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
-    val primaryFutures = application.environments.primary.credentials.map(credential => deleteClient(Primary, credential.clientId))
-    val secondaryFutures = application.environments.secondary.credentials.map(credential => deleteClient(Secondary, credential.clientId))
-    val allFutures = primaryFutures ++ secondaryFutures
+    val allFutures = Seq(Primary, Secondary).flatMap(environmentName => {
+      application.getCredentials(environmentName).map(credential => deleteClient(environmentName, credential.clientId))
+    })
 
     Future.sequence(allFutures)
       .map(ignoreClientNotFound)
