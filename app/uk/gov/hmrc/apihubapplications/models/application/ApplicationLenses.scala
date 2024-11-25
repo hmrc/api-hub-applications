@@ -206,7 +206,7 @@ object ApplicationLenses {
       )
     }
     
-    def replacePrimaryCredential(credential: Credential): Application = {
+    private def replacePrimaryCredential(credential: Credential): Application = {
       val index = application.getCredentials(Primary).indexWhere(_.clientId == credential.clientId)
       if (index < 0 ) {
         throw new IllegalArgumentException(
@@ -256,7 +256,7 @@ object ApplicationLenses {
         )
     }
 
-    def replaceSecondaryCredential(credential: Credential): Application = {
+    private def replaceSecondaryCredential(credential: Credential): Application = {
       val index = application.getCredentials(Secondary).indexWhere(_.clientId == credential.clientId)
       if (index < 0 ) {
         throw new IllegalArgumentException(
