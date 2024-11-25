@@ -105,8 +105,8 @@ object ApplicationLenses {
 
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
-        case Primary => setPrimaryScopes((getScopes(Primary) ++ scopes.map(Scope(_))).distinct)
-        case Secondary => setSecondaryScopes((getScopes(Secondary) ++ scopes.map(Scope(_))).distinct)
+        case Primary => setScopes(Primary, (getScopes(Primary) ++ scopes.map(Scope(_))).distinct)
+        case Secondary => setScopes(Secondary, (getScopes(Secondary) ++ scopes.map(Scope(_))).distinct)
       }
 
     def addScopes(hipEnvironment: HipEnvironment, scopes: Seq[String]): Application =
@@ -144,8 +144,8 @@ object ApplicationLenses {
 
     def setScopes(environmentName: EnvironmentName, scopes: Seq[Scope]): Application =
       environmentName match {
-        case Primary => setPrimaryScopes(scopes)
-        case Secondary => setSecondaryScopes(scopes)
+        case Primary => applicationPrimaryScopes.set(application, scopes)
+        case Secondary => applicationSecondaryScopes.set(application, scopes)
       }
 
     def setScopes(hipEnvironment: HipEnvironment, scopes: Seq[Scope]): Application =
@@ -165,12 +165,9 @@ object ApplicationLenses {
         case Primary => updatePrimaryCredential(clientId, secret)
         case Secondary => updateSecondaryCredential(clientId, secret)
       }
-      
+
     def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application =
       updateCredential(hipEnvironment.environmentName, clientId, secret)
-
-    def setPrimaryScopes(scopes: Seq[Scope]): Application =
-      applicationPrimaryScopes.set(application, scopes)
 
     private def addPrimaryScope(scope: Scope): Application = {
       if (!application.hasScope(Primary, scope.name)) {
@@ -203,7 +200,7 @@ object ApplicationLenses {
         }
       )
     }
-    
+
     private def replacePrimaryCredential(credential: Credential): Application = {
       val index = application.getCredentials(Primary).indexWhere(_.clientId == credential.clientId)
       if (index < 0 ) {
@@ -217,9 +214,6 @@ object ApplicationLenses {
         application.getCredentials(Primary).updated(index, credential)
       )
     }
-
-    def setSecondaryScopes(scopes: Seq[Scope]): Application =
-      applicationSecondaryScopes.set(application, scopes)
 
     private def addSecondaryScope(scope: Scope): Application = {
       if (!application.hasScope(Secondary, scope.name)) {
@@ -244,7 +238,7 @@ object ApplicationLenses {
       }
 
       application.setCredentials(
-          Secondary, 
+          Secondary,
           application.getCredentials(Secondary).map {
             case credential @ Credential(id, _, _, _) if id == clientId =>
               credential.copy(
@@ -265,7 +259,7 @@ object ApplicationLenses {
       }
 
       application.setCredentials(
-        Secondary, 
+        Secondary,
         application.getCredentials(Secondary).updated(index, credential)
       )
     }

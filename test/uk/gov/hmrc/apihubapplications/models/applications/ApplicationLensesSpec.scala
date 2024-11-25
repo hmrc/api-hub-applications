@@ -319,7 +319,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationScopesSetterFunction(
           applicationSecondaryScopes,
-          (application, scopes) => ApplicationLensOps(application).setSecondaryScopes(scopes)
+          (application, scopes) => ApplicationLensOps(application).setScopes(Secondary, scopes)
         )
       }
     }

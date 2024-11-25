@@ -319,8 +319,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
       val expected = application
         .setCredentials(Secondary, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"))))
-        .setSecondaryScopes(Seq(Scope(scope1), Scope(scope2)))
-        .setPrimaryScopes(Seq(Scope(scope3), Scope(scope4)))
+        .setScopes(Secondary, Seq(Scope(scope1), Scope(scope2)))
+        .setScopes(Primary, Seq(Scope(scope3), Scope(scope4)))
 
       service.findById(id, enrich = true)(HeaderCarrier()).map {
         result =>

@@ -119,7 +119,8 @@ object ApplicationEnrichers {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
-        application.setSecondaryScopes(
+        application.setScopes(
+          Secondary, 
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
@@ -150,7 +151,8 @@ object ApplicationEnrichers {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
-        application.setPrimaryScopes(
+        application.setScopes(
+          Primary, 
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }

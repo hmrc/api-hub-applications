@@ -56,7 +56,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
         )
       ).map {
         actual =>
-          actual mustBe Right(testApplication.setPrimaryScopes(Seq(scope1, scope2)))
+          actual mustBe Right(testApplication.setScopes(Primary, Seq(scope1, scope2)))
       }
     }
 
@@ -240,7 +240,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
         .setCredentials(Secondary, Seq(oldCredential, masterCredential))
 
       val expected = application
-        .setSecondaryScopes(
+        .setScopes(
+          Secondary, 
           Seq(
             Scope(testClientScope1.clientScopeId),
             Scope(testClientScope2.clientScopeId)

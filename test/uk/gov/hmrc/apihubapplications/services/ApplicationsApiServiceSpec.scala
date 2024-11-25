@@ -73,7 +73,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       )
 
       val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-      val appWithScopesAdded = app.setSecondaryScopes(Seq(Scope("test-scope-1")))
+      val appWithScopesAdded = app.setScopes(Secondary, Seq(Scope("test-scope-1")))
       val appWithScopesAndApisAdded = appWithScopesAdded.copy(
         apis = Seq(Api(api.id, api.title, api.endpoints)))
 
@@ -110,7 +110,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         Seq(api)
       )
 
-      val appWithScopesAdded = appWithApiAlreadyAdded.setSecondaryScopes(Seq(Scope("test-scope-1")))
+      val appWithScopesAdded = appWithApiAlreadyAdded.setScopes(Secondary, Seq(Scope("test-scope-1")))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))

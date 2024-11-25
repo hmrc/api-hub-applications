@@ -210,7 +210,7 @@ class ApplicationsIntegrationSpec
         insert(
           application
             .setCredentials(Primary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
-            .setPrimaryScopes(Seq.empty)
+            .setScopes(Primary, Seq.empty)
             .setCredentials(Secondary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
         ).futureValue
 
@@ -227,13 +227,15 @@ class ApplicationsIntegrationSpec
                 )
               )
           )
-          .setPrimaryScopes(
+          .setScopes(
+            Primary, 
             Seq(
               Scope(FakeIdmsConnector.fakeClientScopeId1),
               Scope(FakeIdmsConnector.fakeClientScopeId2)
             )
           )
-          .setSecondaryScopes(
+          .setScopes(
+            Secondary, 
             Seq(
               Scope(FakeIdmsConnector.fakeClientScopeId1),
               Scope(FakeIdmsConnector.fakeClientScopeId2)
