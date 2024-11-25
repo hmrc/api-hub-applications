@@ -91,7 +91,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           )
 
         val expected = testApplication
-          .setPrimaryCredentials(
+          .setCredentials(
+            Primary, 
             Seq(Credential(clientId, testApplication.created, None, None))
           )
 

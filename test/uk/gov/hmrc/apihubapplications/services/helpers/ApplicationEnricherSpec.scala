@@ -140,7 +140,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
   "secondaryCredentialApplicationEnricher" - {
     "must enrich an application with secondary credentials" in {
       val application = testApplication
-        .setSecondaryCredentials(
+        .setCredentials(
+          Secondary, 
           Seq(
             testClientResponse1.asNewCredential(clock),
             testClientResponse2.asNewCredential(clock)
@@ -173,7 +174,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
     "must not return IdmsException if any call to IDMS fails" in {
       val application = testApplication
-        .setSecondaryCredentials(
+        .setCredentials(
+          Secondary, 
           Seq(
             testClientResponse1.asNewCredential(clock),
             testClientResponse2.asNewCredential(clock)
@@ -203,7 +205,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
     "must add an application issue if a credential cannot be found" in {
       val application = testApplication
-        .setSecondaryCredentials(
+        .setCredentials(
+          Secondary, 
           Seq(
             testClientResponse1.asNewCredential(clock),
             testClientResponse2.asNewCredential(clock)
@@ -234,7 +237,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val oldCredential = Credential("test-older-client-id", LocalDateTime.now(clock).minusDays(1), None, None)
 
       val application = testApplication
-        .setSecondaryCredentials(Seq(oldCredential, masterCredential))
+        .setCredentials(Secondary, Seq(oldCredential, masterCredential))
 
       val expected = application
         .setSecondaryScopes(
@@ -263,7 +266,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
     "must not return IdmsException if any call to IDMS fails" in {
       val application = testApplication
-        .setSecondaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+        .setCredentials(Secondary, Seq(testClientResponse1.asNewCredential(clock)))
 
       val exception = IdmsException("test-message", CallError)
 
@@ -284,7 +287,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
     "must add an application issue if the secondary credential cannot be found" in {
       val application = testApplication
-        .setSecondaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+        .setCredentials(Secondary, Seq(testClientResponse1.asNewCredential(clock)))
 
       val expected = application
         .addIssue(Issues.secondaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
@@ -310,7 +313,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
     "must return IdmsException if any call to IDMS fails" in {
       val application = testApplication
-        .setPrimaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+        .setCredentials(Primary, Seq(testClientResponse1.asNewCredential(clock)))
 
       val exception = IdmsException("test-message", CallError)
       val applicationWithIssues = application.copy(issues = Seq("Primary scopes not found. test-message"))
@@ -331,7 +334,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
   "must add an application issue if the secondary credential cannot be found" in {
     val application = testApplication
-      .setPrimaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+      .setCredentials(Primary, Seq(testClientResponse1.asNewCredential(clock)))
 
     val expected = application
       .addIssue(Issues.primaryScopesNotFound(IdmsException.clientNotFound(testClientId1)))
@@ -349,7 +352,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
   "credentialCreatingApplicationEnricher" - {
     "must create a credential in the primary environment and enrich the application with it" in {
-      val expected = testApplication.setPrimaryCredentials(Seq(Credential(testClientResponse1.clientId, LocalDateTime.now(clock), None, None)))
+      val expected = testApplication.setCredentials(Primary, Seq(Credential(testClientResponse1.clientId, LocalDateTime.now(clock), None, None)))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(testApplication)))(any()))
@@ -362,7 +365,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
     }
 
     "must create a credential in the secondary environment and enrich the application with it" in {
-      val expected = testApplication.setSecondaryCredentials(Seq(testClientResponse1.asNewCredential(clock)))
+      val expected = testApplication.setCredentials(Secondary, Seq(testClientResponse1.asNewCredential(clock)))
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(testApplication)))(any()))
@@ -454,7 +457,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
 
-      val application = testApplication.setPrimaryCredentials(
+      val application = testApplication.setCredentials(
+        Primary, 
         Seq(
           Credential(clientId1, LocalDateTime.now(clock), None, None),
           Credential(clientId2, LocalDateTime.now(clock), None, None)
@@ -479,7 +483,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
     "must add a scope in the secondary environment and enrich the application with it" in {
       val clientId = "test-client-id"
-      val application = testApplication.setSecondaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+      val application = testApplication.setCredentials(Secondary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
       val scope = "test-scope"
       val idmsConnector = mock[IdmsConnector]
 
@@ -494,7 +498,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
     }
 
     "must return IdmsException if any call to IDMS fails" in {
-      val application = testApplication.setSecondaryCredentials(Seq(Credential("test-client-id", LocalDateTime.now(clock), None, None)))
+      val application = testApplication.setCredentials(Secondary, Seq(Credential("test-client-id", LocalDateTime.now(clock), None, None)))
       val idmsConnector = mock[IdmsConnector]
 
       when(idmsConnector.addClientScope(any(), any(), any())(any()))

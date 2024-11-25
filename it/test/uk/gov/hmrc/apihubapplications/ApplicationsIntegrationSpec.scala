@@ -209,15 +209,16 @@ class ApplicationsIntegrationSpec
 
         insert(
           application
-            .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+            .setCredentials(Primary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
             .setPrimaryScopes(Seq.empty)
-            .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+            .setCredentials(Secondary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
         ).futureValue
 
         val storedApplication = findAll().futureValue.head.decryptedValue.toModel
 
         val expected = storedApplication
-          .setSecondaryCredentials(
+          .setCredentials(
+            Secondary, 
             storedApplication
               .getCredentials(Secondary).map(
                 credential => credential.copy(

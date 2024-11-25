@@ -153,8 +153,8 @@ object ApplicationLenses {
 
     def setCredentials(environmentName: EnvironmentName, credentials: Seq[Credential]): Application =
       environmentName match {
-        case Primary => setPrimaryCredentials(credentials)
-        case Secondary => setSecondaryCredentials(credentials)
+        case Primary => applicationPrimaryCredentials.set(application, credentials)
+        case Secondary => applicationSecondaryCredentials.set(application, credentials)
       }
 
     def setCredentials(hipEnvironment: HipEnvironment, credentials: Seq[Credential]): Application =
@@ -184,9 +184,6 @@ object ApplicationLenses {
       }
     }
 
-    def setPrimaryCredentials(credentials: Seq[Credential]): Application =
-      applicationPrimaryCredentials.set(application, credentials)
-
     def updatePrimaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Primary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
@@ -194,7 +191,8 @@ object ApplicationLenses {
         )
       }
 
-      application.setPrimaryCredentials(
+      application.setCredentials(
+        Primary,
         application.getCredentials(Primary).map {
           case credential@Credential(id, _, _, _) if id == clientId =>
             credential.copy(
@@ -214,7 +212,8 @@ object ApplicationLenses {
         )
       }
 
-      application.setPrimaryCredentials(
+      application.setCredentials(
+        Primary,
         application.getCredentials(Primary).updated(index, credential)
       )
     }
@@ -244,7 +243,8 @@ object ApplicationLenses {
         )
       }
 
-      application.setSecondaryCredentials(
+      application.setCredentials(
+          Secondary, 
           application.getCredentials(Secondary).map {
             case credential @ Credential(id, _, _, _) if id == clientId =>
               credential.copy(
@@ -264,7 +264,8 @@ object ApplicationLenses {
         )
       }
 
-      application.setSecondaryCredentials(
+      application.setCredentials(
+        Secondary, 
         application.getCredentials(Secondary).updated(index, credential)
       )
     }
@@ -395,7 +396,8 @@ object ApplicationLenses {
     }
 
     def makePublic(): Application = {
-      application.setPrimaryCredentials(
+      application.setCredentials(
+        Primary,
         application.getCredentials(Primary).filter(!_.isHidden)
       )
     }

@@ -157,7 +157,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
 
-      val updatedApp = app.setPrimaryCredentials(Seq(expectedCredential))
+      val updatedApp = app.setCredentials(Primary, Seq(expectedCredential))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
       when(scopeFixer.fix(eqTo(updatedApp), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(updatedApp)))
@@ -184,7 +184,8 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
         environments = Environments()
-      ).setPrimaryCredentials(
+      ).setCredentials(
+        Primary, 
         (1 to 5).map(i => Credential(s"test-client-$i", LocalDateTime.now(clock), None, None))
       )
 
