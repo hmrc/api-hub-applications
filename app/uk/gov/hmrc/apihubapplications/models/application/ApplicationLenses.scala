@@ -227,9 +227,6 @@ object ApplicationLenses {
       }
     }
 
-    def setSecondaryCredentials(credentials: Seq[Credential]): Application =
-      applicationSecondaryCredentials.set(application, credentials)
-
     private def updateSecondaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Secondary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
@@ -303,15 +300,15 @@ object ApplicationLenses {
     def addCredential(hipEnvironment: HipEnvironment, credential: Credential): Application =
       addCredential(hipEnvironment.environmentName, credential)
 
-    def replaceCredential(credential: Credential, environmentName: EnvironmentName): Application = {
+    def replaceCredential(environmentName: EnvironmentName, credential: Credential): Application = {
       environmentName match {
         case Primary => replacePrimaryCredential(credential)
         case Secondary => replaceSecondaryCredential(credential)
       }
     }
 
-    def replaceCredential(credential: Credential, hipEnvironment: HipEnvironment): Application =
-      replaceCredential(credential, hipEnvironment.environmentName)
+    def replaceCredential(hipEnvironment: HipEnvironment, credential: Credential): Application =
+      replaceCredential(hipEnvironment.environmentName, credential)
 
     def removeCredential(environmentName: EnvironmentName, clientId: String): Application = {
       environmentName match {

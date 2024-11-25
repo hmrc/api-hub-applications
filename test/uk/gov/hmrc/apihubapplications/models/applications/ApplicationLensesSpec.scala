@@ -360,7 +360,7 @@ class ApplicationLensesSpec extends LensBehaviours {
         )
 
         val expected = application.setCredentials(Primary, Seq(credential1, updatedCredential, credential3))
-        val actual = application.replaceCredential(updatedCredential, Primary)
+        val actual = application.replaceCredential(Primary, updatedCredential)
 
         actual mustBe expected
       }
@@ -369,7 +369,7 @@ class ApplicationLensesSpec extends LensBehaviours {
         val credential = randomCredential()
         val application = testApplication
 
-        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(credential, Primary))
+        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(Primary, credential))
       }
     }
 
@@ -389,7 +389,7 @@ class ApplicationLensesSpec extends LensBehaviours {
         )
 
         val expected = application.setCredentials(Secondary, Seq(credential1, updatedCredential, credential3))
-        val actual = application.replaceCredential(updatedCredential, Secondary)
+        val actual = application.replaceCredential(Secondary, updatedCredential)
 
         actual mustBe expected
       }
@@ -398,7 +398,7 @@ class ApplicationLensesSpec extends LensBehaviours {
         val credential = randomCredential()
         val application = testApplication
 
-        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(credential, Secondary))
+        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(Secondary, credential))
       }
     }
 

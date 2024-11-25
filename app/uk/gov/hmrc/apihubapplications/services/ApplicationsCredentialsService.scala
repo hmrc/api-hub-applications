@@ -95,7 +95,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
               secretFragment = Some(secret.secret.takeRight(4))
             )
 
-            Right(NewCredential(application.replaceCredential(newCredential, Primary), newCredential, wasHidden = true))
+            Right(NewCredential(application.replaceCredential(Primary, newCredential), newCredential, wasHidden = true))
           case Left(e) => Left(e)
         }
       case _ =>
