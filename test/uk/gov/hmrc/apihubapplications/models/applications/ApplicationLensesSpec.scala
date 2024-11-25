@@ -339,7 +339,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationRemoveCredentialFunction(
           applicationPrimaryCredentials,
-          (application, clientId) => ApplicationLensOps(application).removeCredential(clientId, Primary)
+          (application, clientId) => ApplicationLensOps(application).removeCredential(Primary, clientId)
         )
       }
     }

@@ -313,7 +313,7 @@ object ApplicationLenses {
     def replaceCredential(credential: Credential, hipEnvironment: HipEnvironment): Application =
       replaceCredential(credential, hipEnvironment.environmentName)
 
-    def removeCredential(clientId: String, environmentName: EnvironmentName): Application = {
+    def removeCredential(environmentName: EnvironmentName, clientId: String): Application = {
       environmentName match {
         case Primary => applicationPrimaryCredentials.set(
           application,
@@ -326,8 +326,8 @@ object ApplicationLenses {
       }
     }
 
-    def removeCredential(clientId: String, hipEnvironment: HipEnvironment): Application =
-      removeCredential(clientId, hipEnvironment.environmentName)
+    def removeCredential(hipEnvironment: HipEnvironment, clientId: String): Application =
+      removeCredential(hipEnvironment.environmentName, clientId)
 
     def setTeamId(teamId: String): Application = {
       application.copy(teamId = Some(teamId))

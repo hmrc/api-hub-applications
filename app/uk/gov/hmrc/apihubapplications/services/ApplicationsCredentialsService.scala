@@ -147,7 +147,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   private def deleteCredential(application: Application, environmentName: EnvironmentName, clientId: String): Future[Either[ApplicationsException, Unit]] = {
     repository.update(
       application
-        .removeCredential(clientId, environmentName)
+        .removeCredential(environmentName, clientId)
         .copy(lastUpdated = LocalDateTime.now(clock))
     )
   }

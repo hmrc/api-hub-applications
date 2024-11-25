@@ -206,8 +206,8 @@ object ApplicationEnrichers {
     def buildEnricher(): ApplicationEnricher = {
       (application: Application) => {
         environmentName match {
-          case Primary => application.removeCredential(clientId, Primary)
-          case Secondary => application.removeCredential(clientId, Secondary)
+          case Primary => application.removeCredential(Primary, clientId)
+          case Secondary => application.removeCredential(Secondary, clientId)
         }
       }
     }
