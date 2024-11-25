@@ -103,6 +103,16 @@ object ApplicationLenses {
       }
     }
 
+    def getScopes(environmentName: EnvironmentName): Seq[Scope] = {
+      environmentName match {
+        case Primary => applicationPrimaryScopes.get(application)
+        case Secondary => applicationSecondaryScopes.get(application)
+      }
+    }
+
+    def getScopes(hipEnvironment: HipEnvironment): Seq[Scope] =
+      getScopes(hipEnvironment.environmentName)
+
     def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
       environment match {
         case Primary => setScopes(Primary, (getScopes(Primary) ++ scopes.map(Scope(_))).distinct)
@@ -127,6 +137,30 @@ object ApplicationLenses {
     def addScope(hipEnvironment: HipEnvironment, scopeName: String): Application =
       addScope(hipEnvironment.environmentName, scopeName)
 
+    private def addPrimaryScope(scope: Scope): Application = {
+      if (!application.hasScope(Primary, scope.name)) {
+        applicationPrimaryScopes.set(
+          application,
+          applicationPrimaryScopes.get(application) :+ scope
+        )
+      }
+      else {
+        application
+      }
+    }
+
+    private def addSecondaryScope(scope: Scope): Application = {
+      if (!application.hasScope(Secondary, scope.name)) {
+        applicationSecondaryScopes.set(
+          application,
+          applicationSecondaryScopes.get(application) :+ scope
+        )
+      }
+      else {
+        application
+      }
+    }
+    
     def removeScope(environmentName: EnvironmentName, scopeName: String): Application =
       environmentName match {
         case Primary => applicationPrimaryScopes.set(
@@ -169,18 +203,6 @@ object ApplicationLenses {
     def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application =
       updateCredential(hipEnvironment.environmentName, clientId, secret)
 
-    private def addPrimaryScope(scope: Scope): Application = {
-      if (!application.hasScope(Primary, scope.name)) {
-        applicationPrimaryScopes.set(
-          application,
-          applicationPrimaryScopes.get(application) :+ scope
-        )
-      }
-      else {
-        application
-      }
-    }
-
     private def updatePrimaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Primary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
@@ -201,32 +223,6 @@ object ApplicationLenses {
       )
     }
 
-    private def replacePrimaryCredential(credential: Credential): Application = {
-      val index = application.getCredentials(Primary).indexWhere(_.clientId == credential.clientId)
-      if (index < 0 ) {
-        throw new IllegalArgumentException(
-          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
-        )
-      }
-
-      application.setCredentials(
-        Primary,
-        application.getCredentials(Primary).updated(index, credential)
-      )
-    }
-
-    private def addSecondaryScope(scope: Scope): Application = {
-      if (!application.hasScope(Secondary, scope.name)) {
-        applicationSecondaryScopes.set(
-          application,
-          applicationSecondaryScopes.get(application) :+ scope
-        )
-      }
-      else {
-        application
-      }
-    }
-
     private def updateSecondaryCredential(clientId: String, secret: String): Application = {
       if (!application.getCredentials(Secondary).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
@@ -235,29 +231,15 @@ object ApplicationLenses {
       }
 
       application.setCredentials(
-          Secondary,
-          application.getCredentials(Secondary).map {
-            case credential @ Credential(id, _, _, _) if id == clientId =>
-              credential.copy(
-                clientSecret = Some(secret),
-                secretFragment = Some(secret.takeRight(4))
-              )
-            case credential => credential
-          }
-        )
-    }
-
-    private def replaceSecondaryCredential(credential: Credential): Application = {
-      val index = application.getCredentials(Secondary).indexWhere(_.clientId == credential.clientId)
-      if (index < 0 ) {
-        throw new IllegalArgumentException(
-          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
-        )
-      }
-
-      application.setCredentials(
         Secondary,
-        application.getCredentials(Secondary).updated(index, credential)
+        application.getCredentials(Secondary).map {
+          case credential@Credential(id, _, _, _) if id == clientId =>
+            credential.copy(
+              clientSecret = Some(secret),
+              secretFragment = Some(secret.takeRight(4))
+            )
+          case credential => credential
+        }
       )
     }
 
@@ -279,16 +261,10 @@ object ApplicationLenses {
 
     def getCredentials(hipEnvironment: HipEnvironment): Seq[Credential] =
       getCredentials(hipEnvironment.environmentName)
-
-    def getScopes(environmentName: EnvironmentName): Seq[Scope] = {
-      environmentName match {
-        case Primary => applicationPrimaryScopes.get(application)
-        case Secondary => applicationSecondaryScopes.get(application)
-      }
+      
+    def getAllCredentials(): Seq[Credential] = {
+      applicationEnvironments.get(application).primary.credentials ++ applicationEnvironments.get(application).secondary.credentials
     }
-
-    def getScopes(hipEnvironment: HipEnvironment): Seq[Scope] =
-      getScopes(hipEnvironment.environmentName)
 
     def addCredential(environmentName: EnvironmentName, credential: Credential): Application = {
       environmentName match {
@@ -309,6 +285,34 @@ object ApplicationLenses {
 
     def replaceCredential(hipEnvironment: HipEnvironment, credential: Credential): Application =
       replaceCredential(hipEnvironment.environmentName, credential)
+
+    private def replacePrimaryCredential(credential: Credential): Application = {
+      val index = application.getCredentials(Primary).indexWhere(_.clientId == credential.clientId)
+      if (index < 0) {
+        throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
+        )
+      }
+
+      application.setCredentials(
+        Primary,
+        application.getCredentials(Primary).updated(index, credential)
+      )
+    }
+
+    private def replaceSecondaryCredential(credential: Credential): Application = {
+      val index = application.getCredentials(Secondary).indexWhere(_.clientId == credential.clientId)
+      if (index < 0) {
+        throw new IllegalArgumentException(
+          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
+        )
+      }
+
+      application.setCredentials(
+        Secondary,
+        application.getCredentials(Secondary).updated(index, credential)
+      )
+    }
 
     def removeCredential(environmentName: EnvironmentName, clientId: String): Application = {
       environmentName match {
