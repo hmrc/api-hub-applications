@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
@@ -177,25 +178,27 @@ object ApplicationEnrichers {
   }
 
   def credentialCreatingApplicationEnricher(
-                                             environmentName: EnvironmentName,
+                                             hipEnvironments: HipEnvironments,
                                              original: Application,
                                              idmsConnector: IdmsConnector,
                                              clock: Clock,
                                              hiddenPrimary: Boolean = true
-                                           )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
-    idmsConnector.createClient(environmentName, Client(original)).map {
-      case Right(clientResponse) =>
-        Right(
-          (application: Application) => {
-            environmentName match {
-              case Primary if hiddenPrimary => application.addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
-              case Primary => application.addCredential(Primary, clientResponse.asNewCredential(clock))
-              case Secondary => application.addCredential(Secondary, clientResponse.asNewCredential(clock))
+                                           )(implicit ec: ExecutionContext, hc: HeaderCarrier): Seq[Future[Either[IdmsException, ApplicationEnricher]]] = {
+    hipEnvironments.environments.map(hipEnvironment =>
+      idmsConnector.createClient(hipEnvironment.environmentName, Client(original)).map {
+        case Right(clientResponse) =>
+          Right(
+            (application: Application) => {
+              if (hipEnvironment.isProductionLike) then
+                if (hiddenPrimary) then
+                  application.addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
+                else application.addCredential(Primary, clientResponse.asNewCredential(clock))
+              else application.addCredential(Secondary, clientResponse.asNewCredential(clock))
             }
-          }
-        )
-      case Left(e) => Left(e)
-    }
+          )
+        case Left(e) => Left(e)
+      }
+    )
   }
 
   def credentialDeletingApplicationEnricher(
