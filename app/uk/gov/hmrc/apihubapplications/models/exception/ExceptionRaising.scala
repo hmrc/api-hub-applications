@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.exception
 
 import play.api.Logging
 import play.api.libs.json.{JsPath, JsonValidationError}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
 import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
 import uk.gov.hmrc.apihubapplications.models.team.Team
@@ -135,8 +136,8 @@ trait ExceptionRaising {
   }
 
   object raiseApplicationCredentialLimitException {
-    def forApplication(application: Application, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
-      log(ApplicationCredentialLimitException.forApplication(application, environmentName))
+    def forApplication(application: Application, hipEnvironment: HipEnvironment): ApplicationCredentialLimitException = {
+      log(ApplicationCredentialLimitException.forApplication(application, hipEnvironment))
     }
   }
 

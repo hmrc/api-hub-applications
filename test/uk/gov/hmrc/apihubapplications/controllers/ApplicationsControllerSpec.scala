@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{verify, verifyNoInteractions, when}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
@@ -29,16 +29,17 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{ControllerComponents, Request}
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
-import play.api.{Application => PlayApplication}
+import play.api.Application as PlayApplication
 import sttp.model.StatusCode.NoContent
-import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec._
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec.*
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
@@ -675,7 +676,7 @@ class ApplicationsControllerSpec
       val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"))
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Right(credential)))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Right(credential)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -690,7 +691,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -704,7 +705,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -718,7 +719,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(Primary))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
 
@@ -741,7 +742,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(Primary), eqTo(clientId))(any())
+        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(primaryEnvironment), eqTo(clientId))(any())
       }
     }
 
@@ -795,7 +796,7 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, Primary))))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, primaryEnvironment))))
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
@@ -1047,4 +1048,5 @@ object ApplicationsControllerSpec extends MockitoSugar {
 
   case object UnexpectedApplicationsException extends ApplicationsException("unexpected-message", null)
 
+  val primaryEnvironment = HipEnvironment("production", 1, Primary, true, "http://localhost:15026/api-hub-apim-stubs", "apim-stub-client-id", "apim-stub-secret", false, None)
 }

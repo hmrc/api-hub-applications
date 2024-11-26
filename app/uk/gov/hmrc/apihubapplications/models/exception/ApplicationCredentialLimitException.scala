@@ -16,18 +16,19 @@
 
 package uk.gov.hmrc.apihubapplications.models.exception
 
-import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.models.application.Application
 
 case class ApplicationCredentialLimitException(message: String) extends ApplicationsException("message", null)
 
 object ApplicationCredentialLimitException {
 
-  def forApplication(application: Application, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
-    forId(application.id.getOrElse("<none>"), environmentName)
+  def forApplication(application: Application, hipEnvironment: HipEnvironment): ApplicationCredentialLimitException = {
+    forId(application.id.getOrElse("<none>"), hipEnvironment)
   }
 
-  def forId(id: String, environmentName: EnvironmentName): ApplicationCredentialLimitException = {
-    ApplicationCredentialLimitException(s"Application $id has reached its $environmentName credential limit.")
+  def forId(id: String, hipEnvironment: HipEnvironment): ApplicationCredentialLimitException = {
+    ApplicationCredentialLimitException(s"Application $id has reached its ${hipEnvironment.environmentName} credential limit.")
   }
 
 }
