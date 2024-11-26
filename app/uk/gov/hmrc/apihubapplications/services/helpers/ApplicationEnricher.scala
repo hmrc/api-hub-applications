@@ -91,7 +91,7 @@ object ApplicationEnrichers {
         issuesOrResponses.foldLeft(application)(
           (app, issueOrResponse) =>
             issueOrResponse match {
-              case Right(clientResponse) => app.updateSecondaryCredential(clientResponse.clientId, clientResponse.secret)
+              case Right(clientResponse) => app.updateCredential(Secondary, clientResponse.clientId, clientResponse.secret)
               case Left(issue) => app.addIssue(issue)
             }
         )
@@ -99,7 +99,7 @@ object ApplicationEnrichers {
     }
 
     Future.sequence(
-        original.getSecondaryCredentials.map {
+        original.getCredentials(Secondary).map {
           credential =>
             idmsConnector.fetchClient(Secondary, credential.clientId)
         }
@@ -119,7 +119,8 @@ object ApplicationEnrichers {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
-        application.setSecondaryScopes(
+        application.setScopes(
+          Secondary, 
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
@@ -131,7 +132,7 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getSecondaryMasterCredential match {
+    original.getMasterCredential(Secondary) match {
       case Some(credential) =>
         idmsConnector
           .fetchClientScopes(Secondary, credential.clientId)
@@ -150,7 +151,8 @@ object ApplicationEnrichers {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
-        application.setPrimaryScopes(
+        application.setScopes(
+          Primary, 
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
@@ -162,7 +164,7 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getPrimaryMasterCredential match {
+    original.getMasterCredential(Primary) match {
       case Some(credential) =>
         idmsConnector
           .fetchClientScopes(Primary, credential.clientId)
@@ -186,9 +188,9 @@ object ApplicationEnrichers {
         Right(
           (application: Application) => {
             environmentName match {
-              case Primary if hiddenPrimary => application.addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
-              case Primary => application.addPrimaryCredential(clientResponse.asNewCredential(clock))
-              case Secondary => application.addSecondaryCredential(clientResponse.asNewCredential(clock))
+              case Primary if hiddenPrimary => application.addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
+              case Primary => application.addCredential(Primary, clientResponse.asNewCredential(clock))
+              case Secondary => application.addCredential(Secondary, clientResponse.asNewCredential(clock))
             }
           }
         )
@@ -204,8 +206,8 @@ object ApplicationEnrichers {
     def buildEnricher(): ApplicationEnricher = {
       (application: Application) => {
         environmentName match {
-          case Primary => application.removePrimaryCredential(clientId)
-          case Secondary => application.removeSecondaryCredential(clientId)
+          case Primary => application.removeCredential(Primary, clientId)
+          case Secondary => application.removeCredential(Secondary, clientId)
         }
       }
     }
@@ -225,7 +227,7 @@ object ApplicationEnrichers {
                                     )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     Future.sequence(
         original
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .map(
             credential =>
               idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
@@ -233,15 +235,7 @@ object ApplicationEnrichers {
       )
       .map(useFirstException)
       .map {
-        case Right(_) =>
-          Right(
-            (application: Application) => {
-              environmentName match {
-                case Primary => application.addPrimaryScope(Scope(scopeName))
-                case Secondary => application.addSecondaryScope(Scope(scopeName))
-              }
-            }
-          )
+        case Right(_) => Right(_.addScope(environmentName, scopeName))
         case Left(e) => Left(e)
       }
   }
@@ -257,7 +251,7 @@ object ApplicationEnrichers {
     Future
       .sequence(
         original
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .filter(credential => clientId.isEmpty || clientId.contains(credential.clientId))
           .map(
             credential =>
@@ -275,8 +269,8 @@ object ApplicationEnrichers {
         (application: Application) => {
           if (updateScopes(environmentName, application, clientId)) {
             environmentName match {
-              case Primary => application.removePrimaryScope(scopeName)
-              case Secondary => application.removeSecondaryScope(scopeName)
+              case Primary => application.removeScope(Primary, scopeName)
+              case Secondary => application.removeScope(Secondary, scopeName)
             }
           }
           else {
@@ -291,7 +285,7 @@ object ApplicationEnrichers {
     clientId match {
       case Some(clientId) =>
         application
-          .getMasterCredentialFor(environmentName)
+          .getMasterCredential(environmentName)
           .map(_.clientId)
           .contains(clientId)
       case _ => true

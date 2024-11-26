@@ -861,8 +861,8 @@ object IdmsConnectorParityImplSpec extends HttpClientV2Support with TableDrivenP
 
   private def buildApplication(clientId1: String, clientId2: String, id: String) = {
     Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-      .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
-      .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
+      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
+      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
   }
 
 }

@@ -223,7 +223,7 @@ class IdmsConnectorParityImpl @Inject()(
     Future.sequence(
         hipEnvironments.environments.flatMap(
           hipEnvironment =>
-            application.getCredentialsFor(hipEnvironment.environmentName).map(
+            application.getCredentials(hipEnvironment.environmentName).map(
               credential =>
                 deleteClient(hipEnvironment.environmentName, credential.clientId)
             )

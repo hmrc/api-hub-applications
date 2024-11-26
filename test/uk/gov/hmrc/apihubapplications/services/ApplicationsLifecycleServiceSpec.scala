@@ -73,8 +73,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .thenReturn(Future.successful(Right(secondaryClientResponse)))
 
       val applicationWithCreds = application
-        .setPrimaryCredentials(Seq(primaryClientResponse.asNewHiddenCredential(clock)))
-        .setSecondaryCredentials(Seq(secondaryClientResponse.asNewCredential(clock)))
+        .setCredentials(Primary, Seq(primaryClientResponse.asNewHiddenCredential(clock)))
+        .setCredentials(Secondary, Seq(secondaryClientResponse.asNewCredential(clock)))
 
       val saved = applicationWithCreds.copy(id = Some("test-id"))
 
@@ -165,7 +165,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2, TeamMember(creator.email)),
         environments = Environments()
-      ).setSecondaryCredentials(Seq(clientResponse.asNewCredential(clock)))
+      ).setCredentials(Secondary, Seq(clientResponse.asNewCredential(clock)))
 
       when(idmsConnector.createClient(any, any)(any))
         .thenReturn(Future.successful(Right(clientResponse)))
@@ -210,8 +210,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
-        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
+        .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
@@ -247,8 +247,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
-        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
+        .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
@@ -284,8 +284,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = Some("team-id"))
-        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
-        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
+        .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any)).thenReturn(Future.successful(saved))
 
@@ -314,8 +314,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
-        .addPrimaryCredential(clientResponse.asNewHiddenCredential(clock))
-        .addSecondaryCredential(clientResponse.asNewCredential(clock))
+        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
+        .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
@@ -466,7 +466,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
@@ -492,7 +492,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
@@ -533,8 +533,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
@@ -559,8 +559,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setPrimaryCredentials(Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
-        .setSecondaryCredentials(Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))

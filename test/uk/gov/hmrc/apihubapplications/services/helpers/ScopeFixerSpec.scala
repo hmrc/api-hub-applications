@@ -56,10 +56,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
     "must remove all scopes when the application has no remaining APIs" in {
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addPrimaryScope(scope2)
-        .addSecondaryScope(scope2)
-        .addSecondaryScope(scope3)
+        .addScope(Primary, scope1.name)
+        .addScope(Primary, scope2.name)
+        .addScope(Secondary, scope2.name)
+        .addScope(Secondary, scope3.name)
 
       val fixture = buildFixture()
       val accessRequests = Seq.empty
@@ -89,15 +89,15 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addPrimaryScope(scope2)
-        .addSecondaryScope(scope1)
-        .addSecondaryScope(scope2)
+        .addScope(Primary, scope1.name)
+        .addScope(Primary, scope2.name)
+        .addScope(Secondary, scope1.name)
+        .addScope(Secondary, scope2.name)
         .addApi(buildApi(api.removeEndpoint(endpointForScope2.path)))
 
       val expected = application
-        .removePrimaryScope(scopeName2)
-        .removeSecondaryScope(scopeName2)
+        .removeScope(Primary, scopeName2)
+        .removeScope(Secondary, scopeName2)
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
 
@@ -131,9 +131,9 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope1)
 
       val application = applicationWithCredentials
-        .addPrimaryCredential(credential3)
-        .addPrimaryScope(scope1)
-        .addSecondaryScope(scope1)
+        .addCredential(Primary, credential3)
+        .addScope(Primary, scope1.name)
+        .addScope(Secondary, scope1.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -170,13 +170,13 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope1)
 
       val application = applicationWithCredentials
-        .addPrimaryCredential(credential3)
-        .addSecondaryCredential(credential4)
+        .addCredential(Primary, credential3)
+        .addCredential(Secondary, credential4)
         .addApi(buildApi(api))
 
       val expected = application
-        .addPrimaryScope(scope1)
-        .addSecondaryScope(scope1)
+        .addScope(Primary, scope1.name)
+        .addScope(Secondary, scope1.name)
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
 
@@ -211,10 +211,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addPrimaryScope(scope2)
-        .addSecondaryScope(scope1)
-        .addSecondaryScope(scope2)
+        .addScope(Primary, scope1.name)
+        .addScope(Primary, scope2.name)
+        .addScope(Secondary, scope1.name)
+        .addScope(Secondary, scope2.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -248,15 +248,15 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addPrimaryScope(scope2)
-        .addSecondaryScope(scope2)
-        .addSecondaryScope(scope3)
+        .addScope(Primary, scope1.name)
+        .addScope(Primary, scope2.name)
+        .addScope(Secondary, scope2.name)
+        .addScope(Secondary, scope3.name)
         .addApi(buildApi(api))
 
       val expected = application
-        .removePrimaryScope(scopeName1)
-        .removeSecondaryScope(scopeName3)
+        .removeScope(Primary, scopeName1)
+        .removeScope(Secondary, scopeName3)
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
 
@@ -291,12 +291,12 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addSecondaryScope(scope1)
+        .addScope(Primary, scope1.name)
+        .addScope(Secondary, scope1.name)
         .addApi(buildApi(api))
 
       val expected = application
-        .addSecondaryScope(scope2)
+        .addScope(Secondary, scope2.name)
 
       val accessRequests = Seq.empty
 
@@ -330,13 +330,13 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addSecondaryScope(scope1)
+        .addScope(Primary, scope1.name)
+        .addScope(Secondary, scope1.name)
         .addApi(buildApi(api1))
         .addApi(buildApi(api2))
 
       val expected = application
-        .addSecondaryScope(scope2)
+        .addScope(Secondary, scope2.name)
 
       val accessRequests = Seq.empty
 
@@ -372,16 +372,16 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addPrimaryScope(scope2)
-        .addSecondaryScope(scope1)
-        .addSecondaryScope(scope2)
+        .addScope(Primary, scope1.name)
+        .addScope(Primary, scope2.name)
+        .addScope(Secondary, scope1.name)
+        .addScope(Secondary, scope2.name)
         .addApi(buildApi(apiDetail1))
         .addApi(buildApi(apiDetail2))
 
       val expected = application
-        .removePrimaryScope(scopeName2)
-        .removeSecondaryScope(scopeName2)
+        .removeScope(Primary, scopeName2)
+        .removeScope(Secondary, scopeName2)
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, apiDetail1))
 
@@ -408,10 +408,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addPrimaryScope(scope1)
-        .addPrimaryScope(scope2)
-        .addSecondaryScope(scope1)
-        .addSecondaryScope(scope2)
+        .addScope(Primary, scope1.name)
+        .addScope(Primary, scope2.name)
+        .addScope(Secondary, scope1.name)
+        .addScope(Secondary, scope2.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api.removeEndpoint(endpointForScope2.path)))
@@ -457,14 +457,14 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
     EnvironmentName.values.foreach(
       environmentName =>
         application
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .filterNot(credential => noScopesFor.contains(credential.clientId))
           .foreach(
             credential =>
               when(fixture.idmsConnector.fetchClientScopes(eqTo(environmentName), eqTo(credential.clientId))(any))
                 .thenReturn(Future.successful(Right(
                   application
-                    .getScopesFor(environmentName)
+                    .getScopes(environmentName)
                     .map(scope => ClientScope(scope.name))
                 )))
           )
@@ -484,7 +484,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
     EnvironmentName.values.map(
       environmentName =>
         application
-          .getCredentialsFor(environmentName)
+          .getCredentials(environmentName)
           .filterNot(credential => ignoreClientIds.contains(credential.clientId))
           .foreach(
             credential =>
@@ -514,8 +514,8 @@ object ScopeFixerSpec {
 
   private val baseApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq.empty)
   private val applicationWithCredentials: Application = baseApplication
-    .addPrimaryCredential(credential1)
-    .addSecondaryCredential(credential2)
+    .addCredential(Primary, credential1)
+    .addCredential(Secondary, credential2)
 
   private def baseApi(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-platform", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
 

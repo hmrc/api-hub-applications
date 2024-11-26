@@ -53,7 +53,7 @@ class ScopeFixer @Inject()(
     Future.sequence(
       Seq(Primary, Secondary).flatMap(
         environmentName =>
-          application.getCredentialsFor(environmentName).map(
+          application.getCredentials(environmentName).map(
             credential =>
               idmsConnector
                 .fetchClientScopes(environmentName, credential.clientId)

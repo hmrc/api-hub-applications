@@ -77,8 +77,8 @@ class ApplicationsControllerSpec
           .withBody(json)
 
         val expected = Application(newApplication)
-          .addPrimaryCredential(Credential("test-client-id-1", LocalDateTime.now(), None, None))
-          .addSecondaryCredential(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment")))
+          .addCredential(Primary, Credential("test-client-id-1", LocalDateTime.now(), None, None))
+          .addCredential(Secondary, Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment")))
           .copy(id = Some("test-id"))
 
         when(fixture.applicationsService.registerApplication(eqTo(newApplication))(any()))
@@ -167,8 +167,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
-              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+              .setCredentials(Primary, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setCredentials(Secondary, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
         }
 
         val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
@@ -193,8 +193,8 @@ class ApplicationsControllerSpec
 
         val expected_apps = Seq(
           Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments())
-            .setPrimaryCredentials(Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None)))
-            .setSecondaryCredentials(Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"))))
+            .setCredentials(Primary, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None)))
+            .setCredentials(Secondary, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"))))
         )
 
         val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
@@ -224,8 +224,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
-              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+              .setCredentials(Primary, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setCredentials(Secondary, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
         }
 
         val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
@@ -255,8 +255,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
-              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+              .setCredentials(Primary, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setCredentials(Secondary, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
         }
 
         val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
@@ -285,8 +285,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setPrimaryCredentials(Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
-              .setSecondaryCredentials(Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
+              .setCredentials(Primary, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None)))
+              .setCredentials(Secondary, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"))))
         }
 
         val expected_json = Json.toJson(expected_apps.map(_.makePublic()))
@@ -308,8 +308,8 @@ class ApplicationsControllerSpec
       val id = "1"
       val now = LocalDateTime.now()
       val expected = Application(Some(id), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
-        .setPrimaryCredentials(Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None)))
-        .setSecondaryCredentials(Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"))))
+        .setCredentials(Primary, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None)))
+        .setCredentials(Secondary, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"))))
 
       val fixture = buildFixture()
       running(fixture.application) {

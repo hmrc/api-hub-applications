@@ -209,30 +209,33 @@ class ApplicationsIntegrationSpec
 
         insert(
           application
-            .setPrimaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
-            .setPrimaryScopes(Seq.empty)
-            .setSecondaryCredentials(Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+            .setCredentials(Primary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+            .setScopes(Primary, Seq.empty)
+            .setCredentials(Secondary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
         ).futureValue
 
         val storedApplication = findAll().futureValue.head.decryptedValue.toModel
 
         val expected = storedApplication
-          .setSecondaryCredentials(
+          .setCredentials(
+            Secondary, 
             storedApplication
-              .getSecondaryCredentials.map(
+              .getCredentials(Secondary).map(
                 credential => credential.copy(
                   clientSecret = Some(FakeIdmsConnector.fakeSecret),
                   secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
                 )
               )
           )
-          .setPrimaryScopes(
+          .setScopes(
+            Primary, 
             Seq(
               Scope(FakeIdmsConnector.fakeClientScopeId1),
               Scope(FakeIdmsConnector.fakeClientScopeId2)
             )
           )
-          .setSecondaryScopes(
+          .setScopes(
+            Secondary, 
             Seq(
               Scope(FakeIdmsConnector.fakeClientScopeId1),
               Scope(FakeIdmsConnector.fakeClientScopeId2)
