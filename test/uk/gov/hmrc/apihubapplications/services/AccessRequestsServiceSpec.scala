@@ -206,7 +206,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendAccessApprovedEmailToTeam(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
-      when(fixture.scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(application)))
+      when(fixture.scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
@@ -251,7 +251,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendAccessApprovedEmailToTeam(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
-      when(fixture.scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(application)))
+      when(fixture.scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
@@ -290,7 +290,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.searchService.findById(any)(any)).thenReturn(Future.successful(Right(application)))
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
-      when(fixture.scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(application)))
+      when(fixture.scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       when(fixture.emailConnector.sendAccessApprovedEmailToTeam(eqTo(application), eqTo(accessRequest))(any()))
         .thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))

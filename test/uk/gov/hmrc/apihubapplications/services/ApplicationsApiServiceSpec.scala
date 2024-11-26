@@ -78,7 +78,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         apis = Seq(Api(api.id, api.title, api.endpoints)))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
-      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(appWithScopesAndApisAdded)))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithScopesAndApisAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
@@ -113,7 +113,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val appWithScopesAdded = appWithApiAlreadyAdded.setScopes(Secondary, Seq(Scope("test-scope-1")))
 
       when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
-      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithScopesAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
@@ -186,7 +186,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         .updated(clock)
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
-      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(updated)))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(any, any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
@@ -438,17 +438,16 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture.*
 
-      val fixed = baseApplication.copy(name = "fixed")
       val accessRequests = Seq(sampleAccessRequest())
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(baseApplication)))
       when(accessRequestsService.getAccessRequests(eqTo(Some(applicationId)), eqTo(None))).thenReturn(Future.successful(accessRequests))
-      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(fixed)))
+      when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
 
       service.fixScopes(applicationId)(HeaderCarrier()).map {
         result =>
           verify(scopeFixer).fix(eqTo(baseApplication), eqTo(accessRequests))(any)
-          result.value mustBe fixed
+          result.value mustBe ()
       }
     }
 
