@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.services.helpers
 
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
@@ -33,37 +34,18 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ScopeFixer @Inject()(
   integrationCatalogueConnector: IntegrationCatalogueConnector,
-  idmsConnector: IdmsConnector
+  idmsConnector: IdmsConnector,
+  hipEnvironments: HipEnvironments
 )(implicit ec: ExecutionContext) {
 
   // Manipulate the model first, adding and removing APIs and endpoints, THEN call this method to fix scopes
   // The application does not have to be enriched
-  def fix(application: Application, accessRequests: Seq[AccessRequest])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+  def fix(application: Application, accessRequests: Seq[AccessRequest])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     (for {
       requiredScopes <- EitherT(requiredScopes(application))
       credentials <- EitherT(allCredentials(application))
-      application <- EitherT(minimiseScopesInEnvironment(Primary, application, credentials, allowedProductionScopes(requiredScopes, accessRequests)))
-      application <- EitherT(minimiseScopesInEnvironment(Secondary, application, credentials, requiredScopes))
-      application <- EitherT(addScopesToEnvironment(Primary, application, allowedProductionScopes(requiredScopes, accessRequests)))
-      application <- EitherT(addScopesToEnvironment(Secondary, application, requiredScopes))
-    } yield application).value
-  }
-
-  private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
-    Future.sequence(
-      Seq(Primary, Secondary).flatMap(
-        environmentName =>
-          application.getCredentials(environmentName).map(
-            credential =>
-              idmsConnector
-                .fetchClientScopes(environmentName, credential.clientId)
-                .map(_.map(
-                  scopes =>
-                    CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
-                ))
-          )
-      )
-    ).map(useFirstException)
+      _ <- EitherT(processEnvironments(accessRequests, credentials, requiredScopes))
+    } yield ()).value
   }
 
   private def requiredScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Set[String]]] = {
@@ -85,6 +67,54 @@ class ScopeFixer @Inject()(
       .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
   }
 
+  private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
+    Future.sequence(
+      Seq(Primary, Secondary).flatMap(
+        environmentName =>
+          application.getCredentials(environmentName).map(
+            credential =>
+              idmsConnector
+                .fetchClientScopes(environmentName, credential.clientId)
+                .map(_.map(
+                  scopes =>
+                    CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                ))
+          )
+      )
+    ).map(useFirstException)
+  }
+
+  private def processEnvironments(
+    accessRequests: Seq[AccessRequest],
+    credentials: Seq[CredentialScopes],
+    requiredScopes: Set[String]
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    Future.sequence(
+      hipEnvironments.environments.flatMap(
+        hipEnvironment =>
+          Seq(
+            minimiseScopesInEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests)),
+            addScopesToEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests))
+          )
+      )
+    )
+      .map(useFirstApplicationsException)
+      .map(result => result.map(_ => ()))
+  }
+
+  private def allowedScopes(
+    hipEnvironment: HipEnvironment,
+    requiredScopes: Set[String],
+    accessRequests: Seq[AccessRequest]
+  ): Set[String] = {
+    if (hipEnvironment.isProductionLike) {
+      allowedProductionScopes(requiredScopes, accessRequests)
+    }
+    else {
+      requiredScopes
+    }
+  }
+
   private def allowedProductionScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest]): Set[String] = {
     accessRequests
       .filter(_.status == Approved)
@@ -98,39 +128,43 @@ class ScopeFixer @Inject()(
   }
 
   private def minimiseScopesInEnvironment(
-    environmentName: EnvironmentName,
-    application: Application,
+    hipEnvironment: HipEnvironment,
     credentials: Seq[CredentialScopes],
     allowedScopes: Set[String]
-  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    ApplicationEnrichers.process(
-      application,
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    Future.sequence(
       credentials
-        .filter(_.environmentName == environmentName)
+        .filter(_.environmentName == hipEnvironment.environmentName)
         .flatMap(
           credential =>
             scopesToRemove(credential, allowedScopes).map(
               scopeName =>
-                ApplicationEnrichers.scopeRemovingApplicationEnricher(environmentName, application, idmsConnector, scopeName, Some(credential.clientId))
+                idmsConnector.deleteClientScope(credential.environmentName, credential.clientId, scopeName)
             )
         )
     )
+      .map(useFirstApplicationsException)
+      .map(_.map(_ => ()))
   }
 
   private def addScopesToEnvironment(
-    environmentName: EnvironmentName,
-    application: Application,
+    hipEnvironment: HipEnvironment,
+    credentials: Seq[CredentialScopes],
     allowedScopes: Set[String]
-  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    ApplicationEnrichers.process(
-      application,
-      allowedScopes
-        .toSeq
-        .map(
-          scopeName =>
-            ApplicationEnrichers.scopeAddingApplicationEnricher(environmentName, application, idmsConnector, scopeName)
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    Future.sequence(
+      credentials
+        .filter(_.environmentName == hipEnvironment.environmentName)
+        .flatMap(
+          credential =>
+            allowedScopes.map(
+              scopeName =>
+                idmsConnector.addClientScope(credential.environmentName, credential.clientId, scopeName)
+            )
         )
     )
+      .map(useFirstApplicationsException)
+      .map(_.map(_ => ()))
   }
 
 }

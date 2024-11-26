@@ -51,7 +51,7 @@ class ApplicationsService @Inject()(
     apiService.removeOwningTeamFromApplication(applicationId)
   }
 
-  override def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+  override def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     apiService.fixScopes(applicationId)
   }
 
