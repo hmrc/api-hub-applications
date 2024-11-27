@@ -21,7 +21,8 @@ import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+
 import scala.concurrent.Future
 
 @Singleton
@@ -67,8 +68,8 @@ class ApplicationsService @Inject()(
     lifecycleService.registerApplication(newApplication)
   }
 
-  override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    lifecycleService.delete(applicationId, currentUser)
+  override def delete(applicationId: String, currentUser: String, hipEnvironments: HipEnvironments)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    lifecycleService.delete(applicationId, currentUser, hipEnvironments)
   }
 
   override def addTeamMember(applicationId: String, teamMember: TeamMember)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

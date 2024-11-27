@@ -219,24 +219,6 @@ class IdmsConnectorParityImpl @Inject()(
       }
   }
 
-  override def deleteAllClients(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
-    Future.sequence(
-        hipEnvironments.environments.flatMap(
-          hipEnvironment =>
-            application.getCredentials(hipEnvironment.environmentName).map(
-              credential =>
-                deleteClient(hipEnvironment.environmentName, credential.clientId)
-            )
-        )
-      )
-      .map(ignoreClientNotFound)
-      .map(useFirstException)
-      .map {
-        case Right(_) => Right(())
-        case Left(e) => Left(e)
-      }
-  }
-
   private def headersForEnvironment(hipEnvironment: HipEnvironment): Seq[(String, String)] = {
     Seq(
       Some(("Authorization", authorizationForEnvironment(hipEnvironment))),

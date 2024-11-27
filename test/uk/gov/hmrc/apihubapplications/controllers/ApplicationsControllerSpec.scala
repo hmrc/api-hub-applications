@@ -377,7 +377,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), eqTo(userEmail))(any()))
+        when(fixture.applicationsService.delete(eqTo(id), eqTo(userEmail), any)(any()))
           .thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -386,7 +386,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).delete(any(), eqTo(userEmail))(any())
+        verify(fixture.applicationsService).delete(any(), eqTo(userEmail), any)(any())
       }
     }
 
@@ -395,7 +395,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(eqTo(id), any(), any)(any()))
           .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -412,7 +412,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(eqTo(id), any(), any)(any()))
           .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -430,7 +430,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(eqTo(id), any(), any)(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url)
@@ -447,7 +447,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.delete(eqTo(id), any())(any()))
+        when(fixture.applicationsService.delete(eqTo(id), any(), any)(any()))
           .thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.deleteApplication(id).url).withHeaders(CONTENT_TYPE -> "application/json")
