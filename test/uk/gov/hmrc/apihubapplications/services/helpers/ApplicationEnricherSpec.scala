@@ -28,6 +28,7 @@ import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -352,42 +353,41 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
 
 
   "credentialCreatingApplicationEnricher" - {
-    "must create a credential in the primary environment and enrich the application with it" in {
-      val expected = testApplication.setCredentials(Primary, Seq(Credential(testClientResponse1.clientId, LocalDateTime.now(clock), None, None)))
+    "must create a credential in the hip environments and enrich the application with it" in {
+      val expected = Seq(
+        testApplication.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(testClientResponse1.asNewHiddenCredential(clock))),
+        testApplication.setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(testClientResponse2.asNewCredential(clock))),
+      )
 
       val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Right(testClientResponse1)))
-
-      ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector, clock).map {
-        case Right(enricher) => enricher.enrich(testApplication) mustBe expected
-        case Left(e) => fail("Unexpected Left response", e)
-      }
-    }
-
-    "must create a credential in the secondary environment and enrich the application with it" in {
-      val expected = testApplication.setCredentials(Secondary, Seq(testClientResponse1.asNewCredential(clock)))
-
-      val idmsConnector = mock[IdmsConnector]
       when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(testApplication)))(any()))
-        .thenReturn(Future.successful(Right(testClientResponse1)))
+        .thenReturn(Future.successful(Right(testClientResponse2)))
 
-      ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, testApplication, idmsConnector, clock).map {
-        case Right(enricher) => enricher.enrich(testApplication) mustBe expected
-        case Left(e) => fail("Unexpected Left response", e)
-      }
+      val results = Future.sequence(
+        FakeHipEnvironments.environments.map(
+          ApplicationEnrichers.credentialCreatingApplicationEnricher(_, testApplication, idmsConnector, clock)
+        )).map(_.map {
+            case Right(enricher) => enricher.enrich(testApplication)
+            case Left(e) => fail("Unexpected Left response", e)
+          })
+
+      results.map(
+        _ mustBe expected
+      )
     }
 
     "must return IdmsException if any call to IDMS fails" in {
       val expected = IdmsException("test-message", CallError)
 
       val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(testApplication)))(any()))
+      when(idmsConnector.createClient(any, eqTo(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Left(expected)))
 
-      ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, testApplication, idmsConnector, clock).map {
-        actual =>
-          actual mustBe Left(expected)
+      ApplicationEnrichers.credentialCreatingApplicationEnricher(FakeHipEnvironments.environments.head, testApplication, idmsConnector, clock).map {
+        case Right(_) => fail("Unexpected Right response")
+        case Left(e) => e mustBe expected
       }
     }
   }

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{never, times, verify, verifyNoMoreInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
@@ -26,12 +26,13 @@ import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -692,7 +693,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
     val repository = mock[ApplicationsRepository]
     val idmsConnector = mock[IdmsConnector]
     val emailConnector = mock[EmailConnector]
-    val service = new ApplicationsLifecycleServiceImpl(searchService, accessRequestsService, repository, idmsConnector, emailConnector, clock)
+    val service = new ApplicationsLifecycleServiceImpl(searchService, accessRequestsService, repository, idmsConnector, emailConnector, clock, FakeHipEnvironments)
     Fixture(searchService, accessRequestsService, repository, idmsConnector, emailConnector, service)
   }
 

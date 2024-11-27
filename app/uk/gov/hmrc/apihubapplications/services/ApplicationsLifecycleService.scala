@@ -18,9 +18,10 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, NewApplication, Primary, Secondary, TeamMember}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
@@ -46,7 +47,8 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
   repository: ApplicationsRepository,
   idmsConnector: IdmsConnector,
   emailConnector: EmailConnector,
-  clock: Clock
+  clock: Clock,
+  hipEnvironments: HipEnvironments,
 )(implicit ec: ExecutionContext) extends ApplicationsLifecycleService with Logging with ExceptionRaising {
 
   override def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
@@ -55,10 +57,7 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
 
     ApplicationEnrichers.process(
       application,
-      Seq(
-        ApplicationEnrichers.credentialCreatingApplicationEnricher(Primary, application, idmsConnector, clock),
-        ApplicationEnrichers.credentialCreatingApplicationEnricher(Secondary, application, idmsConnector, clock)
-      )
+      hipEnvironments.environments.map(ApplicationEnrichers.credentialCreatingApplicationEnricher(_, application, idmsConnector, clock))
     ).flatMap {
       case Right(enriched) =>
         repository.insert(enriched).flatMap {

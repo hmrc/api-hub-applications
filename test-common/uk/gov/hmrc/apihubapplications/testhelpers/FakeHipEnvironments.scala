@@ -21,29 +21,32 @@ import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 
 object FakeHipEnvironments extends HipEnvironments {
 
+  val primaryEnvironment: HipEnvironment = HipEnvironment(
+    id = "production",
+    rank = 1,
+    environmentName = Primary,
+    isProductionLike = true,
+    apimUrl = "http://apim.test/production",
+    clientId = "test-production-client-id",
+    secret = "test-production-secret",
+    useProxy = false,
+    apiKey = None
+  )
+  val secondaryEnvironment: HipEnvironment = HipEnvironment(
+    id = "test",
+    rank = 2,
+    environmentName = Secondary,
+    isProductionLike = false,
+    apimUrl = "http://apim.test/test",
+    clientId = "test-test-client-id",
+    secret = "test-test-secret",
+    useProxy = false,
+    apiKey = None
+  )
+
   override val environments: Seq[HipEnvironment] = Seq(
-    HipEnvironment(
-      id = "production",
-      rank = 1,
-      environmentName = Primary,
-      isProductionLike = true,
-      apimUrl = "http://apim.test/production",
-      clientId = "test-production-client-id",
-      secret = "test-production-secret",
-      useProxy = false,
-      apiKey = None
-    ),
-    HipEnvironment(
-      id = "test",
-      rank = 2,
-      environmentName = Secondary,
-      isProductionLike = false,
-      apimUrl = "http://apim.test/test",
-      clientId = "test-test-client-id",
-      secret = "test-test-secret",
-      useProxy = false,
-      apiKey = None
-    )
+    primaryEnvironment,
+    secondaryEnvironment
   )
 
 }
