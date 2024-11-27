@@ -198,27 +198,6 @@ object ApplicationEnrichers {
     }
   }
 
-  def credentialDeletingApplicationEnricher(
-                                             environmentName: EnvironmentName,
-                                             clientId: String,
-                                             idmsConnector: IdmsConnector
-                                           )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
-    def buildEnricher(): ApplicationEnricher = {
-      (application: Application) => {
-        environmentName match {
-          case Primary => application.removeCredential(Primary, clientId)
-          case Secondary => application.removeCredential(Secondary, clientId)
-        }
-      }
-    }
-
-    idmsConnector.deleteClient(environmentName, clientId).map {
-      case Right(()) => Right(buildEnricher())
-      case Left(IdmsException(_, _, ClientNotFound)) => Right(buildEnricher())
-      case Left(e) => Left(e)
-    }
-  }
-
   def scopeAddingApplicationEnricher(
                                       environmentName: EnvironmentName,
                                       original: Application,
