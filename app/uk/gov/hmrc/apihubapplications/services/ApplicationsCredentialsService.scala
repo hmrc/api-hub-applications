@@ -157,15 +157,15 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     searchService.findById(applicationId, enrich = false).flatMap {
       case Right(application) =>
         Future.sequence(
-          hipEnvironments.environments.map(
+          hipEnvironments.environments.flatMap(
             hipEnvironment =>
               application.getCredentials(hipEnvironment).map(
                 credential =>
                   idmsConnector
-                    .fetchClientScopes(hipEnvironment, credential.clientId)
+                    .fetchClientScopes(hipEnvironment.environmentName, credential.clientId)
                     .map(_.map(
                       scopes =>
-                        CredentialScopes(hipEnvironment, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                        CredentialScopes(hipEnvironment.environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
                     ))
               )
           )

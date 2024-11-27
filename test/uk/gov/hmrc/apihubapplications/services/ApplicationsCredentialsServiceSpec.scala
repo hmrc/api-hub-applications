@@ -23,7 +23,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
@@ -420,7 +420,9 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId2))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId2))))
       when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(clientId3))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId3))))
       when(idmsConnector.fetchClientScopes(eqTo(Secondary), eqTo(clientId4))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId4))))
-
+      
+      when(hipEnvironments.environments).thenReturn(Seq(primaryEnvironment, secondaryEnvironment))
+      
       val expected = Seq(
         buildCredentialScopes(Primary, clientId1),
         buildCredentialScopes(Primary, clientId2),
@@ -468,6 +470,8 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId1))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId1))))
       when(idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId2))(any)).thenReturn(Future.successful(Left(expected)))
 
+      when(hipEnvironments.environments).thenReturn(Seq(primaryEnvironment, secondaryEnvironment))
+      
       service.fetchAllScopes(application.safeId)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
@@ -481,8 +485,9 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     val idmsConnector = mock[IdmsConnector]
     val accessRequestsService = mock[AccessRequestsService]
     val scopeFixer = mock[ScopeFixer]
-    val service = new ApplicationsCredentialsServiceImpl(searchService, repository, idmsConnector, clock, accessRequestsService, scopeFixer)
-    Fixture(searchService, repository, idmsConnector, accessRequestsService, scopeFixer, service)
+    val hipEnvironments = mock[HipEnvironments]
+    val service = new ApplicationsCredentialsServiceImpl(searchService, repository, idmsConnector, clock, accessRequestsService, scopeFixer, hipEnvironments)
+    Fixture(searchService, repository, idmsConnector, accessRequestsService, scopeFixer, service, hipEnvironments)
   }
 
   private case class Fixture (
@@ -491,7 +496,8 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     idmsConnector: IdmsConnector,
     accessRequestsService: AccessRequestsService,
     scopeFixer: ScopeFixer,
-    service: ApplicationsCredentialsService
+    service: ApplicationsCredentialsService,
+    hipEnvironments: HipEnvironments
   )
 
 }
