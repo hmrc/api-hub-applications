@@ -28,14 +28,15 @@ import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMember
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationsController @Inject()(identify: IdentifierAction,
                                        cc: ControllerComponents,
                                        applicationsService: ApplicationsService,
-                                       crypto: ApplicationCrypto
+                                       crypto: ApplicationCrypto,
+                                       hipEnvironments: HipEnvironments
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
@@ -146,7 +147,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def addCredential(applicationId: String, environmentName: EnvironmentName): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
-      applicationsService.addCredential(applicationId, environmentName).map {
+      applicationsService.addCredential(applicationId, hipEnvironments.forEnvironmentName(environmentName)).map {
         case Right(credential) => Created(Json.toJson(credential))
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: ApplicationCredentialLimitException) => Conflict
@@ -157,7 +158,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
-      applicationsService.deleteCredential(applicationId, environmentName, clientId).map {
+      applicationsService.deleteCredential(applicationId, hipEnvironments.forEnvironmentName(environmentName), clientId).map {
         case Right(_) => NoContent
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: CredentialNotFoundException) => NotFound

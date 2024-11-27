@@ -29,15 +29,15 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.http.HeaderCarrier
-
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationsCredentialsService {
 
-  def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]
+  def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]
 
-  def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+  def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
   def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]]
 
@@ -50,17 +50,18 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   idmsConnector: IdmsConnector,
   clock: Clock,
   accessRequestsService: AccessRequestsService,
-  scopeFixer: ScopeFixer
+  scopeFixer: ScopeFixer,
+  hipEnvironments: HipEnvironments
 )(implicit ec: ExecutionContext) extends ApplicationsCredentialsService with Logging with ExceptionRaising {
 
   import ApplicationsCredentialsServiceImpl.*
 
-  override def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+  override def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     searchService.findById(applicationId, enrich = true).map {
-      case Right(application) => addCredentialValidation(application, environmentName)
+      case Right(application) => addCredentialValidation(application, hipEnvironment)
       case Left(e) => Left(e)
     } flatMap {
-      case Right(application) => updateOrAddCredential(application, environmentName)
+      case Right(application) => updateOrAddCredential(application, hipEnvironment)
       case Left(e) => Future.successful(Left(e))
     } flatMap {
       case Right(newCredential: NewCredential) => updateRepository(newCredential)
@@ -74,19 +75,19 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  private def addCredentialValidation(application: Application, environmentName: EnvironmentName): Either[ApplicationsException, Application] = {
-    if (application.getCredentials(environmentName).size < 5) {
+  private def addCredentialValidation(application: Application, hipEnvironment: HipEnvironment): Either[ApplicationsException, Application] = {
+    if (application.getCredentials(hipEnvironment).size < 5) {
       Right(application)
     }
     else {
-      Left(ApplicationCredentialLimitException.forApplication(application, environmentName))
+      Left(ApplicationCredentialLimitException.forApplication(application, hipEnvironment))
     }
   }
 
-  private def updateOrAddCredential(application: Application, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
-    (environmentName, application.getMasterCredential(environmentName)) match {
-      case (Primary, Some(credential)) if credential.isHidden =>
-        idmsConnector.newSecret(environmentName, credential.clientId).map {
+  private def updateOrAddCredential(application: Application, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
+    application.getMasterCredential(hipEnvironment) match {
+      case Some(credential) if credential.isHidden && hipEnvironment.isProductionLike =>
+        idmsConnector.newSecret(hipEnvironment.environmentName, credential.clientId).map {
           case Right(secret) =>
             val newCredential = Credential(
               clientId = credential.clientId,
@@ -95,14 +96,14 @@ class ApplicationsCredentialsServiceImpl @Inject()(
               secretFragment = Some(secret.secret.takeRight(4))
             )
 
-            Right(NewCredential(application.replaceCredential(Primary, newCredential), newCredential, wasHidden = true))
+            Right(NewCredential(application.replaceCredential(hipEnvironment, newCredential), newCredential, wasHidden = true))
           case Left(e) => Left(e)
         }
       case _ =>
-        idmsConnector.createClient(environmentName, Client(application)).map {
+        idmsConnector.createClient(hipEnvironment.environmentName, Client(application)).map {
           case Right(clientResponse) =>
             val newCredential = clientResponse.asNewCredential(clock)
-            Right(NewCredential(application.addCredential(environmentName, newCredential), newCredential, wasHidden = false))
+            Right(NewCredential(application.addCredential(hipEnvironment, newCredential), newCredential, wasHidden = false))
           case Left(e) => Left(e)
         }
     }
@@ -123,20 +124,20 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     } yield newCredential).value
   }
 
-  override def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId, enrich = false).flatMap {
       case Right(application) =>
-        application.getCredentials(environmentName).find(_.clientId == clientId) match {
+        application.getCredentials(hipEnvironment).find(_.clientId == clientId) match {
           case Some(_) =>
-            if (application.getCredentials(environmentName).size > 1) {
-              idmsConnector.deleteClient(environmentName, clientId).flatMap {
-                case Right(_) => deleteCredential(application, environmentName, clientId)
-                case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, environmentName, clientId)
+            if (application.getCredentials(hipEnvironment).size > 1) {
+              idmsConnector.deleteClient(hipEnvironment.environmentName, clientId).flatMap {
+                case Right(_) => deleteCredential(application, hipEnvironment, clientId)
+                case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, hipEnvironment, clientId)
                 case Left(e) => Future.successful(Left(e))
               }
             }
             else {
-              Future.successful(Left(raiseApplicationCredentialLimitException.forApplication(application, environmentName)))
+              Future.successful(Left(raiseApplicationCredentialLimitException.forApplication(application, hipEnvironment)))
             }
           case _ => Future.successful(Left(raiseCredentialNotFoundException.forClientId(clientId)))
         }
@@ -144,10 +145,10 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  private def deleteCredential(application: Application, environmentName: EnvironmentName, clientId: String): Future[Either[ApplicationsException, Unit]] = {
+  private def deleteCredential(application: Application, hipEnvironment: HipEnvironment, clientId: String): Future[Either[ApplicationsException, Unit]] = {
     repository.update(
       application
-        .removeCredential(environmentName, clientId)
+        .removeCredential(hipEnvironment, clientId)
         .copy(lastUpdated = LocalDateTime.now(clock))
     )
   }
@@ -156,20 +157,19 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     searchService.findById(applicationId, enrich = false).flatMap {
       case Right(application) =>
         Future.sequence(
-          Seq(Primary, Secondary).flatMap(
-            environmentName =>
-              application.getCredentials(environmentName).map(
+          hipEnvironments.environments.flatMap(
+            hipEnvironment =>
+              application.getCredentials(hipEnvironment).map(
                 credential =>
                   idmsConnector
-                    .fetchClientScopes(environmentName, credential.clientId)
+                    .fetchClientScopes(hipEnvironment.environmentName, credential.clientId)
                     .map(_.map(
                       scopes =>
-                        CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                        CredentialScopes(hipEnvironment.environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
                     ))
-                  )
+              )
           )
-        )
-          .map(useFirstException)
+        ).map(useFirstException)
       case Left(e) => Future.successful(Left(e))
     }
   }

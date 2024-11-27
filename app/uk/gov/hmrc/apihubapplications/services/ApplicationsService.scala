@@ -21,7 +21,7 @@ import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.http.HeaderCarrier
-
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import scala.concurrent.Future
 
 @Singleton
@@ -55,12 +55,12 @@ class ApplicationsService @Inject()(
     apiService.fixScopes(applicationId)
   }
 
-  override def addCredential(applicationId: String, environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
-    credentialsService.addCredential(applicationId, environmentName)
+  override def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+    credentialsService.addCredential(applicationId, hipEnvironment)
   }
 
-  override def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    credentialsService.deleteCredential(applicationId, environmentName, clientId)
+  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    credentialsService.deleteCredential(applicationId, hipEnvironment, clientId)
   }
 
   override def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {

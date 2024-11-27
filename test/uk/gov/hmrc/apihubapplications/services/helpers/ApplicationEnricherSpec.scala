@@ -391,68 +391,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       }
     }
   }
-
-  "credentialDeletingApplicationEnricher" - {
-    "must delete a credential from the primary environment and remove it from the application" in {
-      val application = testApplication.addCredential(Primary, Credential(testClientId1, LocalDateTime.now(clock), None, None))
-
-      val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.deleteClient(eqTo(Primary), eqTo(testClientId1))(any()))
-        .thenReturn(Future.successful(Right(())))
-
-      ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
-        case Right(enricher) =>
-          enricher.enrich(application) mustBe testApplication
-          verify(idmsConnector).deleteClient(any(), any())(any())
-          succeed
-        case Left(e) => fail("Unexpected Left response", e)
-      }
-    }
-
-    "must delete a credential from the secondary environment and remove it from the application" in {
-      val application = testApplication.addCredential(Secondary, Credential(testClientId1, LocalDateTime.now(clock), None, None))
-
-      val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.deleteClient(eqTo(Secondary), eqTo(testClientId1))(any()))
-        .thenReturn(Future.successful(Right(())))
-
-      ApplicationEnrichers.credentialDeletingApplicationEnricher(Secondary, testClientId1, idmsConnector).map {
-        case Right(enricher) =>
-          enricher.enrich(application) mustBe testApplication
-          verify(idmsConnector).deleteClient(any(), any())(any())
-          succeed
-        case Left(e) => fail("Unexpected Left response", e)
-      }
-    }
-
-    "must succeed if the client is not found in IDMS" in {
-      val application = testApplication.addCredential(Primary, Credential(testClientId1, LocalDateTime.now(clock), None, None))
-
-      val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.deleteClient(eqTo(Primary), eqTo(testClientId1))(any()))
-        .thenReturn(Future.successful(Left(IdmsException.clientNotFound(testClientId1))))
-
-      ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
-        case Right(enricher) =>
-          enricher.enrich(application) mustBe testApplication
-          verify(idmsConnector).deleteClient(any(), any())(any())
-          succeed
-        case Left(e) => fail("Unexpected Left response", e)
-      }
-    }
-
-    "must return IdmsException if any call to IDMS fails (other than client not found)" in {
-      val idmsConnector = mock[IdmsConnector]
-      when(idmsConnector.deleteClient(any(), any())(any()))
-        .thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
-
-      ApplicationEnrichers.credentialDeletingApplicationEnricher(Primary, testClientId1, idmsConnector).map {
-        actual =>
-          actual mustBe Left(IdmsException.unexpectedResponse(500))
-      }
-    }
-  }
-
+  
   "scopeAddingApplicationEnricher" - {
     "must add a scope in the primary environment and enrich the application with it" in {
       val clientId1 = "test-client-id-1"
