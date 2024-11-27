@@ -29,7 +29,7 @@ import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,7 +50,8 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   idmsConnector: IdmsConnector,
   clock: Clock,
   accessRequestsService: AccessRequestsService,
-  scopeFixer: ScopeFixer
+  scopeFixer: ScopeFixer,
+  hipEnvironments: HipEnvironments
 )(implicit ec: ExecutionContext) extends ApplicationsCredentialsService with Logging with ExceptionRaising {
 
   import ApplicationsCredentialsServiceImpl.*
@@ -156,7 +157,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     searchService.findById(applicationId, enrich = false).flatMap {
       case Right(application) =>
         Future.sequence(
-          Seq(Primary, Secondary).flatMap(
+          hipEnvironments.environments.map(
             hipEnvironment =>
               application.getCredentials(hipEnvironment).map(
                 credential =>
@@ -166,10 +167,9 @@ class ApplicationsCredentialsServiceImpl @Inject()(
                       scopes =>
                         CredentialScopes(hipEnvironment, credential.clientId, credential.created, scopes.map(_.clientScopeId))
                     ))
-                  )
+              )
           )
-        )
-          .map(useFirstException)
+        ).map(useFirstException)
       case Left(e) => Future.successful(Left(e))
     }
   }
