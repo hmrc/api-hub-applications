@@ -86,7 +86,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
       request.body.validate[UserEmail] match {
         case JsSuccess(userEmail, _) =>
-          applicationsService.delete(id, userEmail.userEmail, hipEnvironments).map {
+          applicationsService.delete(id, userEmail.userEmail).map {
             case Right(()) => NoContent
             case Left(_: ApplicationNotFoundException) => NotFound
             case Left(_: IdmsException) => BadGateway

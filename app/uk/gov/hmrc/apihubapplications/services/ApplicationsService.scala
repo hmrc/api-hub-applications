@@ -30,7 +30,7 @@ class ApplicationsService @Inject()(
   apiService: ApplicationsApiService,
   credentialsService: ApplicationsCredentialsService,
   lifecycleService: ApplicationsLifecycleService,
-  searchService: ApplicationsSearchService
+  searchService: ApplicationsSearchService,
 ) extends ApplicationsApiService
   with ApplicationsCredentialsService
   with ApplicationsLifecycleService
@@ -68,8 +68,8 @@ class ApplicationsService @Inject()(
     lifecycleService.registerApplication(newApplication)
   }
 
-  override def delete(applicationId: String, currentUser: String, hipEnvironments: HipEnvironments)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    lifecycleService.delete(applicationId, currentUser, hipEnvironments)
+  override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    lifecycleService.delete(applicationId, currentUser)
   }
 
   override def addTeamMember(applicationId: String, teamMember: TeamMember)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

@@ -35,7 +35,7 @@ trait ApplicationsLifecycleService {
 
   def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
 
-  def delete(applicationId: String, currentUser: String, hipEnvironments: HipEnvironments)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+  def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
   def addTeamMember(applicationId: String, teamMember: TeamMember)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
@@ -80,7 +80,7 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
     }
   }
 
-  override def delete(applicationId: String, currentUser: String, hipEnvironments: HipEnvironments)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId).flatMap {
       case Right(application) =>
         deleteClients(application, hipEnvironments).flatMap {
