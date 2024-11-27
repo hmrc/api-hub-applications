@@ -84,8 +84,8 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   }
 
   private def updateOrAddCredential(application: Application, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
-    (hipEnvironment.environmentName, application.getMasterCredential(hipEnvironment)) match {
-      case (Primary, Some(credential)) if credential.isHidden =>
+    application.getMasterCredential(hipEnvironment) match {
+      case Some(credential) if credential.isHidden && hipEnvironment.isProductionLike =>
         idmsConnector.newSecret(hipEnvironment.environmentName, credential.clientId).map {
           case Right(secret) =>
             val newCredential = Credential(
@@ -95,7 +95,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
               secretFragment = Some(secret.secret.takeRight(4))
             )
 
-            Right(NewCredential(application.replaceCredential(Primary, newCredential), newCredential, wasHidden = true))
+            Right(NewCredential(application.replaceCredential(hipEnvironment, newCredential), newCredential, wasHidden = true))
           case Left(e) => Left(e)
         }
       case _ =>
