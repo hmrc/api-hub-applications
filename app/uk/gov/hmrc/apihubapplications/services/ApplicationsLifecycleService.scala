@@ -57,7 +57,7 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
 
     ApplicationEnrichers.process(
       application,
-      ApplicationEnrichers.credentialCreatingApplicationEnricher(hipEnvironments, application, idmsConnector, clock)
+      hipEnvironments.environments.map(ApplicationEnrichers.credentialCreatingApplicationEnricher(_, application, idmsConnector, clock))
     ).flatMap {
       case Right(enriched) =>
         repository.insert(enriched).flatMap {

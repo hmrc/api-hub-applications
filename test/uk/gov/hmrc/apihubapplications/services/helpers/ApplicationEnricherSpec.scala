@@ -355,8 +355,8 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
   "credentialCreatingApplicationEnricher" - {
     "must create a credential in the hip environments and enrich the application with it" in {
       val expected = Seq(
-        testApplication.setCredentials(Primary, Seq(testClientResponse1.asNewHiddenCredential(clock))),
-        testApplication.setCredentials(Secondary, Seq(testClientResponse2.asNewCredential(clock))),
+        testApplication.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(testClientResponse1.asNewHiddenCredential(clock))),
+        testApplication.setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(testClientResponse2.asNewCredential(clock))),
       )
 
       val idmsConnector = mock[IdmsConnector]
@@ -365,13 +365,16 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Right(testClientResponse2)))
 
-      val results = Future.sequence(ApplicationEnrichers.credentialCreatingApplicationEnricher(FakeHipEnvironments, testApplication, idmsConnector, clock).map(_.map {
-        case Right(enricher) => enricher.enrich(testApplication)
-        case Left(e) => fail("Unexpected Left response", e)
-      }))
+      val results = Future.sequence(
+        FakeHipEnvironments.environments.map(
+          ApplicationEnrichers.credentialCreatingApplicationEnricher(_, testApplication, idmsConnector, clock)
+        )).map(_.map {
+            case Right(enricher) => enricher.enrich(testApplication)
+            case Left(e) => fail("Unexpected Left response", e)
+          })
 
       results.map(
-        _.distinct mustBe expected
+        _ mustBe expected
       )
     }
 
@@ -382,13 +385,10 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
       when(idmsConnector.createClient(any, eqTo(Client(testApplication)))(any()))
         .thenReturn(Future.successful(Left(expected)))
 
-      val results = Future.sequence(
-        ApplicationEnrichers.credentialCreatingApplicationEnricher(FakeHipEnvironments, testApplication, idmsConnector, clock)
-      )
-
-      results.map(
-        _.distinct mustBe Seq(Left(expected))
-      )
+      ApplicationEnrichers.credentialCreatingApplicationEnricher(FakeHipEnvironments.environments.head, testApplication, idmsConnector, clock).map {
+        case Right(_) => fail("Unexpected Right response")
+        case Left(e) => e mustBe expected
+      }
     }
   }
 

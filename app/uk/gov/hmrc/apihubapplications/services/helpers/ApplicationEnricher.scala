@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import uk.gov.hmrc.apihubapplications.config.HipEnvironments
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.*
@@ -178,27 +178,23 @@ object ApplicationEnrichers {
   }
 
   def credentialCreatingApplicationEnricher(
-                                             hipEnvironments: HipEnvironments,
+                                             hipEnvironment: HipEnvironment,
                                              original: Application,
                                              idmsConnector: IdmsConnector,
                                              clock: Clock,
                                              hiddenPrimary: Boolean = true
-                                           )(implicit ec: ExecutionContext, hc: HeaderCarrier): Seq[Future[Either[IdmsException, ApplicationEnricher]]] = {
-    hipEnvironments.environments.map(hipEnvironment =>
+                                           )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
       idmsConnector.createClient(hipEnvironment.environmentName, Client(original)).map {
         case Right(clientResponse) =>
           Right(
             (application: Application) => {
-              if (hipEnvironment.isProductionLike) then
-                if (hiddenPrimary) then
-                  application.addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
-                else application.addCredential(Primary, clientResponse.asNewCredential(clock))
-              else application.addCredential(Secondary, clientResponse.asNewCredential(clock))
+              if hipEnvironment.isProductionLike && hiddenPrimary then
+                  application.addCredential(hipEnvironment.environmentName, clientResponse.asNewHiddenCredential(clock))
+              else application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock))
             }
           )
         case Left(e) => Left(e)
       }
-    )
   }
 
   def credentialDeletingApplicationEnricher(
