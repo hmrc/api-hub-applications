@@ -113,20 +113,6 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-  override def deleteAllClients(application: Application)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
-    val allFutures = Seq(Primary, Secondary).flatMap(environmentName => {
-      application.getCredentials(environmentName).map(credential => deleteClient(environmentName, credential.clientId))
-    })
-
-    Future.sequence(allFutures)
-      .map(ignoreClientNotFound)
-      .map(useFirstException)
-      .map {
-        case Right(_) => Right(())
-        case Left(e) => Left(e)
-      }
-  }
-
   private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
     val baseUrl = servicesConfig.baseUrl(s"idms-$environmentName")
     val path = servicesConfig.getConfString(s"idms-$environmentName.path", "")

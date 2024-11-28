@@ -22,9 +22,10 @@ import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, NewApplication, Primary, Secondary, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{ignoreClientNotFound, useFirstException}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, LocalDateTime}
@@ -82,7 +83,7 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
   override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId).flatMap {
       case Right(application) =>
-        idmsConnector.deleteAllClients(application) flatMap {
+        deleteClients(application, hipEnvironments).flatMap {
           case Right(_) =>
             accessRequestsService.cancelAccessRequests(applicationId) flatMap {
               case Right(_) =>
@@ -107,6 +108,17 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
       case Left(e) => Future.successful(Left(e))
     }
   }
+
+  private def deleteClients(application: Application, hipEnvironments: HipEnvironments)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] =
+    Future.sequence(hipEnvironments.environments.flatMap(hipEnvironment =>
+      application.getCredentials(hipEnvironment.environmentName)
+        .map(credential => idmsConnector.deleteClient(hipEnvironment.environmentName, credential.clientId))
+    )).map(ignoreClientNotFound)
+    .map(useFirstException)
+    .map {
+      case Right(_) => Right(())
+      case Left(e) => Left(e)
+    }
 
   private def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
     val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), currentUser)))

@@ -21,7 +21,8 @@ import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+
 import scala.concurrent.Future
 
 @Singleton
@@ -29,7 +30,7 @@ class ApplicationsService @Inject()(
   apiService: ApplicationsApiService,
   credentialsService: ApplicationsCredentialsService,
   lifecycleService: ApplicationsLifecycleService,
-  searchService: ApplicationsSearchService
+  searchService: ApplicationsSearchService,
 ) extends ApplicationsApiService
   with ApplicationsCredentialsService
   with ApplicationsLifecycleService
