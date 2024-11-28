@@ -81,6 +81,9 @@ trait HipEnvironments {
       .find(_.environmentName == environmentName)
   }
 
+  def forUrlPathParameter(pathParameter: String): Option[HipEnvironment] =  
+    environments.find(hipEnvironment => hipEnvironment.environmentName.toString == pathParameter || hipEnvironment.id == pathParameter)
+
 }
 
 @Singleton

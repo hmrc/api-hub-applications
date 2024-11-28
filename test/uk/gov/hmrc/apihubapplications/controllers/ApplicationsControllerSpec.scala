@@ -23,6 +23,7 @@ import org.mockito.Mockito.{verify, verifyNoInteractions, when}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status
 import play.api.inject.bind
@@ -33,7 +34,7 @@ import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
 import play.api.Application as PlayApplication
 import sttp.model.StatusCode.NoContent
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment,HipEnvironments}
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec.*
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
@@ -54,6 +55,7 @@ class ApplicationsControllerSpec
     with Matchers
     with MockitoSugar
     with OptionValues
+    with TableDrivenPropertyChecks
     with CryptoUtils {
 
   private val userEmail = "me@test.com"
@@ -678,7 +680,7 @@ class ApplicationsControllerSpec
       running(fixture.application) {
         when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Right(credential)))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
@@ -686,6 +688,32 @@ class ApplicationsControllerSpec
       }
     }
 
+    "must return 201 for an environment matching an EnvironmentName or a HipEnvironment Id and 404 otherwise" in {
+      val id = "app-id-1"
+      val fixture = buildFixture()
+      val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"))
+
+      val validEnvironmentNames = Table(
+        ("environment", "status"),
+        ("primary", Status.CREATED),
+        ("secondary", Status.CREATED),
+        ("production", Status.CREATED),
+        ("test", Status.CREATED),
+        ("another one", Status.NOT_FOUND),
+      )
+
+      running(fixture.application) {
+        forAll(validEnvironmentNames) { (environment, expectedStatus) =>
+          when(fixture.applicationsService.addCredential(eqTo(id), any())(any())).thenReturn(Future.successful(Right(credential)))
+
+          val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, environment).url)
+
+          val result = route(fixture.application, request).value
+          status(result) mustBe expectedStatus
+        }
+      }
+    }
+    
     "must return 404 Not Found when adding credential but the application does not exist in the repository" in {
       val id = "id"
       val fixture = buildFixture()
@@ -693,7 +721,7 @@ class ApplicationsControllerSpec
       running(fixture.application) {
         when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.NOT_FOUND
@@ -707,7 +735,7 @@ class ApplicationsControllerSpec
       running(fixture.application) {
         when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.INTERNAL_SERVER_ERROR
@@ -721,7 +749,7 @@ class ApplicationsControllerSpec
       running(fixture.application) {
         when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, Primary).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CONFLICT
@@ -738,7 +766,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
@@ -746,6 +774,32 @@ class ApplicationsControllerSpec
       }
     }
 
+    "must return 204 for an environment matching an EnvironmentName or a HipEnvironment Id and 404 otherwise" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
+
+      val validEnvironmentNames = Table(
+        ("environment", "status"),
+        ("primary", Status.NO_CONTENT),
+        ("secondary", Status.NO_CONTENT),
+        ("production", Status.NO_CONTENT),
+        ("test", Status.NO_CONTENT),
+        ("another one", Status.NOT_FOUND),
+      )
+
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+      
+      running(fixture.application) {
+        forAll(validEnvironmentNames) { (environment, expectedStatus) =>
+          val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, environment, clientId).url)
+          val result = route(fixture.application, request).value
+
+          status(result) mustBe expectedStatus
+        }
+      }
+    }
+    
     "must return 404 Not Found when the application does not exist" in {
       val fixture = buildFixture()
       val applicationId = "test-application-id"
@@ -754,7 +808,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -769,7 +823,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(CredentialNotFoundException.forClientId(clientId))))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -784,7 +838,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_GATEWAY
@@ -799,7 +853,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, primaryEnvironment))))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe CONFLICT
@@ -814,7 +868,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, Primary, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe INTERNAL_SERVER_ERROR

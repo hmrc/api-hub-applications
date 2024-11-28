@@ -20,15 +20,15 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
+import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentAction, HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.apihubapplications.config.HipEnvironments
+
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -36,7 +36,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
                                        cc: ControllerComponents,
                                        applicationsService: ApplicationsService,
                                        crypto: ApplicationCrypto,
-                                       hipEnvironments: HipEnvironments
+                                       hipEnvironment: HipEnvironmentActionProvider
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
@@ -145,9 +145,9 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
-  def addCredential(applicationId: String, environmentName: EnvironmentName): Action[AnyContent] = identify.compose(Action).async {
+  def addCredential(applicationId: String, environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      applicationsService.addCredential(applicationId, hipEnvironments.forEnvironmentName(environmentName)).map {
+      applicationsService.addCredential(applicationId, request.hipEnvironment).map {
         case Right(credential) => Created(Json.toJson(credential))
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: ApplicationCredentialLimitException) => Conflict
@@ -156,9 +156,9 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
       }
   }
 
-  def deleteCredential(applicationId: String, environmentName: EnvironmentName, clientId: String): Action[AnyContent] = identify.compose(Action).async {
+  def deleteCredential(applicationId: String, environmentName: String, clientId: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      applicationsService.deleteCredential(applicationId, hipEnvironments.forEnvironmentName(environmentName), clientId).map {
+      applicationsService.deleteCredential(applicationId, request.hipEnvironment, clientId).map {
         case Right(_) => NoContent
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: CredentialNotFoundException) => NotFound
