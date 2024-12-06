@@ -56,6 +56,10 @@ class ApplicationsService @Inject()(
     apiService.fixScopes(applicationId)
   }
 
+  override def getCredentials(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Credential]]] = {
+    credentialsService.getCredentials(applicationId, hipEnvironment)
+  }
+
   override def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     credentialsService.addCredential(applicationId, hipEnvironment)
   }

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.Mockito.{times, verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -31,6 +31,7 @@ import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLim
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.*
@@ -39,6 +40,120 @@ import scala.concurrent.Future
 class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with TableDrivenPropertyChecks with EitherValues {
 
   import ApplicationsCredentialsServiceSpec.*
+
+  "getCredentials" - {
+    "must return production credentials unchanged without calling IDMS" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val hipEnvironment = FakeHipEnvironments.primaryEnvironment
+
+      val productionCredentials = Seq(
+        buildCredential("test-client-id-1"),
+        buildCredential("test-client-id-2")
+      )
+
+      val testCredentials = Seq(
+        buildCredential("test-client-id-3"),
+        buildCredential("test-client-id-4")
+      )
+
+      val application = baseApplication
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, productionCredentials)
+        .setCredentials(FakeHipEnvironments.secondaryEnvironment, testCredentials)
+
+      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+
+      service.getCredentials(application.safeId, hipEnvironment)(HeaderCarrier()).map(
+        result =>
+          verifyNoInteractions(idmsConnector)
+          result.value mustBe productionCredentials
+      )
+    }
+
+    "must return non-production credentials with secrets" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val hipEnvironment = FakeHipEnvironments.secondaryEnvironment
+
+      val productionCredentials = Seq(
+        buildCredential("test-client-id-1"),
+        buildCredential("test-client-id-2")
+      )
+
+      val testCredentials = Seq(
+        buildCredential("test-client-id-3"),
+        buildCredential("test-client-id-4")
+      )
+
+      val application = baseApplication
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, productionCredentials)
+        .setCredentials(FakeHipEnvironments.secondaryEnvironment, testCredentials)
+
+      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+
+      testCredentials.foreach(
+        credential =>
+          when(idmsConnector.fetchClient(eqTo(hipEnvironment.environmentName), eqTo(credential.clientId))(any))
+            .thenReturn(Future.successful(Right(buildClientResponse(credential))))
+      )
+
+      val expected = testCredentials.map(
+        credential => credential.setSecret(secretForCredential(credential))
+      )
+
+      service.getCredentials(application.safeId, hipEnvironment)(HeaderCarrier()).map(
+        result =>
+          result.value mustBe expected
+      )
+    }
+
+    "must return ApplicationNotFoundException if the application cannot be found" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val expected = ApplicationNotFoundException.forApplication(baseApplication)
+
+      when(searchService.findById(eqTo(baseApplication.safeId), eqTo(false))(any))
+        .thenReturn(Future.successful(Left(expected)))
+
+      service.getCredentials(baseApplication.safeId, FakeHipEnvironments.primaryEnvironment)(HeaderCarrier()).map(
+        result =>
+          result.left.value mustBe expected
+      )
+    }
+
+    "must return the first IdmsException if one is encountered" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val hipEnvironment = FakeHipEnvironments.secondaryEnvironment
+
+      val credential1 = buildCredential("test-client-id-1")
+      val credential2 = buildCredential("test-client-id-2")
+
+      val testCredentials = Seq(credential1, credential2)
+
+      val application = baseApplication
+        .setCredentials(FakeHipEnvironments.secondaryEnvironment, testCredentials)
+
+      val expected = IdmsException.unexpectedResponse(500)
+
+      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+
+      when(idmsConnector.fetchClient(eqTo(hipEnvironment.environmentName), eqTo(credential1.clientId))(any))
+        .thenReturn(Future.successful(Right(buildClientResponse(credential1))))
+
+      when(idmsConnector.fetchClient(eqTo(hipEnvironment.environmentName), eqTo(credential2.clientId))(any))
+        .thenReturn(Future.successful(Left(expected)))
+
+      service.getCredentials(application.safeId, hipEnvironment)(HeaderCarrier()).map(
+        result =>
+          result.left.value mustBe expected
+      )
+    }
+  }
 
   "addCredential" - {
 
@@ -533,7 +648,15 @@ object ApplicationsCredentialsServiceSpec {
     )
   }
 
-  val primaryEnvironment = HipEnvironment("primary", 1, Primary, true, "url", "clientId", "secret", true, Some("apiKey"))
-  val secondaryEnvironment = HipEnvironment("secondary", 2, Secondary, false, "url", "clientId", "secret", true, Some("apiKey"))
+  def secretForCredential(credential: Credential): String = {
+    s"secret-for-${credential.clientId}"
+  }
+
+  def buildClientResponse(credential: Credential): ClientResponse = {
+    ClientResponse(clientId = credential.clientId, secret = secretForCredential(credential))
+  }
+
+  val primaryEnvironment: HipEnvironment = HipEnvironment("primary", 1, Primary, true, "url", "clientId", "secret", true, Some("apiKey"))
+  val secondaryEnvironment: HipEnvironment = HipEnvironment("secondary", 2, Secondary, false, "url", "clientId", "secret", true, Some("apiKey"))
   
 }

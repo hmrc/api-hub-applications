@@ -26,14 +26,17 @@ import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFo
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationsException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.Client
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{useFirstApplicationsException, useFirstException}
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationsCredentialsService {
+
+  def getCredentials(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Credential]]]
 
   def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]
 
@@ -55,6 +58,32 @@ class ApplicationsCredentialsServiceImpl @Inject()(
 )(implicit ec: ExecutionContext) extends ApplicationsCredentialsService with Logging with ExceptionRaising {
 
   import ApplicationsCredentialsServiceImpl.*
+
+  override def getCredentials(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Credential]]] = {
+    searchService.findById(applicationId, enrich = false).flatMap {
+      case Right(application) =>
+        if (!hipEnvironment.isProductionLike) {
+          Future.sequence(
+            application
+              .getCredentials(hipEnvironment)
+              .map(
+                credential =>
+                  idmsConnector
+                    .fetchClient(hipEnvironment.environmentName, credential.clientId)
+                    .map {
+                      case Right(clientResponse) =>
+                        Right(credential.setSecret(clientResponse.secret))
+                      case Left(e) => Left(e)
+                    }
+              )
+          ).map(useFirstApplicationsException)
+        }
+        else {
+          Future.successful(Right(application.getCredentials(hipEnvironment)))
+        }
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
 
   override def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     searchService.findById(applicationId, enrich = true).map {

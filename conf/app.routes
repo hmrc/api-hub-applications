@@ -1,6 +1,8 @@
 # microservice specific routes
 
 POST       /applications                                                            uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.registerApplication()
+
+GET        /applications/:id/environments/:environmentName/credentials              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.getCredentials(id: String, environmentName: String)
 POST       /applications/:id/environments/:environmentName/credentials              uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.addCredential(id: String, environmentName: String)
 DELETE     /applications/:id/environments/:environmentName/credentials/:clientId    uk.gov.hmrc.apihubapplications.controllers.ApplicationsController.deleteCredential(id: String, environmentName: String, clientId: String)
 
