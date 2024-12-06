@@ -39,7 +39,7 @@ object CreateMetadata {
       lineOfBusiness = request.lineOfBusiness,
       name = request.name,
       description = request.description,
-      egress = request.egress,
+      egress = "",
       passthrough = request.passthrough,
       status = Option.apply(request.status),
       domain = request.domain,
