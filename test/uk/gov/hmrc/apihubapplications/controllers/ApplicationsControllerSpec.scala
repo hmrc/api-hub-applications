@@ -25,6 +25,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.Application as PlayApplication
 import play.api.http.Status
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -32,17 +33,17 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
-import play.api.Application as PlayApplication
 import sttp.model.StatusCode.NoContent
-import uk.gov.hmrc.apihubapplications.config.{HipEnvironment,HipEnvironments}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.ApplicationsControllerSpec.*
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.*
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.*
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
 
@@ -671,6 +672,67 @@ class ApplicationsControllerSpec
     }
   }
 
+  "get credentials" - {
+    "must return 200 and credentials when the application exists" in {
+      val fixture = buildFixture()
+
+      val applicationId = "test-app-id"
+      val hipEnvironment = FakeHipEnvironments.primaryEnvironment
+
+      val credentials = (1 to 2).map(
+        i =>
+          Credential(
+            clientId = s"test-client-id$i",
+            created = LocalDateTime.now(),
+            clientSecret = Some(s"test-client-secret-$i"),
+            secretFragment = Some(s"xxx$i")
+          )
+      )
+
+      when(fixture.applicationsService.getCredentials(eqTo(applicationId), eqTo(hipEnvironment))(any))
+        .thenReturn(Future.successful(Right(credentials)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.getCredentials(applicationId, hipEnvironment.id))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(credentials)
+      }
+    }
+
+    "must return 404 Not Found when the application does not exist" in {
+      val fixture = buildFixture()
+
+      val applicationId = "test-app-id"
+      val hipEnvironment = FakeHipEnvironments.primaryEnvironment
+
+      when(fixture.applicationsService.getCredentials(eqTo(applicationId), eqTo(hipEnvironment))(any))
+        .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.getCredentials(applicationId, hipEnvironment.id))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 404 Not Found when the environment is not known" in {
+      val fixture = buildFixture()
+
+      val applicationId = "test-app-id"
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.getCredentials(applicationId, "test-unknown-environment"))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+        verifyNoInteractions(fixture.applicationsService)
+      }
+    }
+  }
+
   "add credential" - {
     "must return 201 and a credential" in {
       val id = "app-id-1"
@@ -678,7 +740,7 @@ class ApplicationsControllerSpec
       val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"))
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Right(credential)))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Right(credential)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
@@ -719,7 +781,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
@@ -733,7 +795,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
@@ -747,7 +809,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
@@ -770,7 +832,7 @@ class ApplicationsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(primaryEnvironment), eqTo(clientId))(any())
+        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId))(any())
       }
     }
 
@@ -850,7 +912,7 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, primaryEnvironment))))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, FakeHipEnvironments.primaryEnvironment))))
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
@@ -1087,7 +1149,8 @@ object ApplicationsControllerSpec extends MockitoSugar {
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
         bind[ApplicationsService].toInstance(applicationsService),
-        bind[IdentifierAction].to(classOf[FakeIdentifierAction])
+        bind[IdentifierAction].to(classOf[FakeIdentifierAction]),
+        bind[HipEnvironments].toInstance(FakeHipEnvironments)
       )
       .build()
 
@@ -1102,5 +1165,4 @@ object ApplicationsControllerSpec extends MockitoSugar {
 
   case object UnexpectedApplicationsException extends ApplicationsException("unexpected-message", null)
 
-  val primaryEnvironment = HipEnvironment("production", 1, Primary, true, "http://localhost:15026/api-hub-apim-stubs", "apim-stub-client-id", "apim-stub-secret", false, None)
 }

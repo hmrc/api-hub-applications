@@ -20,9 +20,9 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentAction, HipEnvironmentActionProvider, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
+import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -141,6 +141,15 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case Left(_: ApplicationNotFoundException) => NotFound
         case Left(_: TeamNotFoundException) => NotFound
         case Left(_: IdmsException) => BadGateway
+        case Left(e) => throw e
+      }
+  }
+
+  def getCredentials(id: String, environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
+    implicit request =>
+      applicationsService.getCredentials(id, request.hipEnvironment).map {
+        case Right(credentials) => Ok(Json.toJson(credentials))
+        case Left(_: ApplicationNotFoundException) => NotFound
         case Left(e) => throw e
       }
   }
