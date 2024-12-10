@@ -194,7 +194,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
                     .fetchClientScopes(hipEnvironment.environmentName, credential.clientId)
                     .map(_.map(
                       scopes =>
-                        CredentialScopes(hipEnvironment.environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                        CredentialScopes(hipEnvironment.id, credential.clientId, credential.created, scopes.map(_.clientScopeId))
                     ))
               )
           )

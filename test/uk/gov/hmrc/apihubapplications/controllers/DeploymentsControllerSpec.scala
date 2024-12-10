@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{verify, when}
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
@@ -30,17 +30,17 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{ControllerComponents, Request}
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
-import play.api.{Application => PlayApplication}
+import play.api.Application as PlayApplication
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.apim._
+import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
 import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.*
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
-import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
 import scala.concurrent.Future
@@ -353,7 +353,7 @@ class DeploymentsControllerSpec
         val publisherRef = "publisher_ref"
 
         val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
-        val response = Seq(Deployed(Primary, "1"), Deployed(Secondary, "1"))
+        val response = Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Deployed(FakeHipEnvironments.secondaryEnvironment.id, "1"))
 
         when(fixture.deploymentsService.getDeployments(eqTo(publisherRef))(any()))
           .thenReturn(Future.successful(response))

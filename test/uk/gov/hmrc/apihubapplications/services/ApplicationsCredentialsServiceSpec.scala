@@ -539,10 +539,10 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(hipEnvironments.environments).thenReturn(Seq(primaryEnvironment, secondaryEnvironment))
       
       val expected = Seq(
-        buildCredentialScopes(Primary, clientId1),
-        buildCredentialScopes(Primary, clientId2),
-        buildCredentialScopes(Secondary, clientId3),
-        buildCredentialScopes(Secondary, clientId4)
+        buildCredentialScopes(FakeHipEnvironments.primaryEnvironment.id, clientId1),
+        buildCredentialScopes(FakeHipEnvironments.primaryEnvironment.id, clientId2),
+        buildCredentialScopes(FakeHipEnvironments.secondaryEnvironment.id, clientId3),
+        buildCredentialScopes(FakeHipEnvironments.secondaryEnvironment.id, clientId4)
       )
 
       service.fetchAllScopes(application.safeId)(HeaderCarrier()).map {
@@ -639,9 +639,9 @@ object ApplicationsCredentialsServiceSpec {
     )
   }
 
-  def buildCredentialScopes(environmentName: EnvironmentName, clientId: String): CredentialScopes = {
+  def buildCredentialScopes(environmentId: String, clientId: String): CredentialScopes = {
     CredentialScopes(
-      environmentName = environmentName,
+      environmentId = environmentId,
       clientId = clientId,
       created = LocalDateTime.now(clock),
       scopes = buildClientScopes(clientId).map(_.clientScopeId)
@@ -656,7 +656,7 @@ object ApplicationsCredentialsServiceSpec {
     ClientResponse(clientId = credential.clientId, secret = secretForCredential(credential))
   }
 
-  val primaryEnvironment: HipEnvironment = HipEnvironment("primary", 1, Primary, true, "url", "clientId", "secret", true, Some("apiKey"))
-  val secondaryEnvironment: HipEnvironment = HipEnvironment("secondary", 2, Secondary, false, "url", "clientId", "secret", true, Some("apiKey"))
+  val primaryEnvironment: HipEnvironment = FakeHipEnvironments.primaryEnvironment
+  val secondaryEnvironment: HipEnvironment = FakeHipEnvironments.secondaryEnvironment
   
 }

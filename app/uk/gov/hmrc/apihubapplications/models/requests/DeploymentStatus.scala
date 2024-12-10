@@ -17,19 +17,18 @@
 package uk.gov.hmrc.apihubapplications.models.requests
 
 import play.api.libs.json.{Format, Json, JsonConfiguration, JsonNaming}
-import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 
 sealed trait DeploymentStatus {
-  def environmentName: EnvironmentName
+  def environmentId: String
 }
 
 object DeploymentStatus {
 
-  case class Deployed(override val environmentName: EnvironmentName, version: String) extends DeploymentStatus
+  case class Deployed(override val environmentId: String, version: String) extends DeploymentStatus
 
-  case class NotDeployed(override val environmentName: EnvironmentName) extends DeploymentStatus
+  case class NotDeployed(override val environmentId: String) extends DeploymentStatus
 
-  case class Unknown(override val environmentName: EnvironmentName) extends DeploymentStatus
+  case class Unknown(override val environmentId: String) extends DeploymentStatus
 
   private implicit val jsonConfiguration: JsonConfiguration =
     JsonConfiguration(typeNaming = JsonNaming { fullName => fullName.split('.').last })
