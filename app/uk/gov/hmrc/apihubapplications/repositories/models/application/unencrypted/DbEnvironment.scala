@@ -19,12 +19,12 @@ package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypt
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.Environment
 
-case class DbEnvironment(credentials: Seq[DbCredential]) extends DbModel[Environment] {
+case class DbEnvironment(credentials: Seq[DbCredential]) {
 
-  override def toModel(dbApplication: DbApplication): Environment =
+  def toModel(dbApplication: DbApplication, environmentId: String): Environment =
     Environment(
       scopes = Seq.empty,
-      credentials = credentials.map(_.toModel(dbApplication))
+      credentials = credentials.map(_.toModel(dbApplication, environmentId))
     )
 
 }

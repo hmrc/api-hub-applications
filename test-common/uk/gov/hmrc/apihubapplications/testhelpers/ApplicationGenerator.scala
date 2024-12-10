@@ -58,25 +58,25 @@ trait ApplicationGenerator {
     } yield Scope(name)
   }
 
-  val credentialGenerator: Gen[Credential] = {
+  def credentialGenerator(environmentId: String): Gen[Credential] = {
     for {
       clientId <- Gen.uuid
       clientSecret <- Gen.uuid
       created <- localDateTimeGenerator
-    } yield Credential(clientId.toString, created, Some(clientSecret.toString), Some(clientSecret.toString.takeRight(4)))
+    } yield Credential(clientId.toString, created, Some(clientSecret.toString), Some(clientSecret.toString.takeRight(4)), environmentId)
   }
 
-  val environmentGenerator: Gen[Environment] = {
+  def environmentGenerator(environmentId: String): Gen[Environment] = {
     for {
       scopes <- Gen.listOf(scopeGenerator)
-      credentials <- Gen.listOf(credentialGenerator)
+      credentials <- Gen.listOf(credentialGenerator(environmentId))
     } yield Environment(scopes, credentials)
   }
 
   val environmentsGenerator: Gen[Environments] = {
     for {
-      primary <- environmentGenerator
-      secondary <- environmentGenerator
+      primary <- environmentGenerator(FakeHipEnvironments.primaryEnvironment.id)
+      secondary <- environmentGenerator(FakeHipEnvironments.secondaryEnvironment.id)
     } yield Environments(primary,secondary)
   }
 

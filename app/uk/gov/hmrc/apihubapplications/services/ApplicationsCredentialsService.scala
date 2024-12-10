@@ -122,7 +122,8 @@ class ApplicationsCredentialsServiceImpl @Inject()(
               clientId = credential.clientId,
               created = LocalDateTime.now(clock),
               clientSecret = Some(secret.secret),
-              secretFragment = Some(secret.secret.takeRight(4))
+              secretFragment = Some(secret.secret.takeRight(4)),
+              environmentId = hipEnvironment.id
             )
 
             Right(NewCredential(application.replaceCredential(hipEnvironment, newCredential), newCredential, wasHidden = true))
@@ -131,7 +132,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
       case _ =>
         idmsConnector.createClient(hipEnvironment.environmentName, Client(application)).map {
           case Right(clientResponse) =>
-            val newCredential = clientResponse.asNewCredential(clock)
+            val newCredential = clientResponse.asNewCredential(clock, hipEnvironment)
             Right(NewCredential(application.addCredential(hipEnvironment, newCredential), newCredential, wasHidden = false))
           case Left(e) => Left(e)
         }

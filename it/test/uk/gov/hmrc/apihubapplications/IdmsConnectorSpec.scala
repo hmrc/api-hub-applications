@@ -24,17 +24,18 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.Configuration
-import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.{CallError, InvalidCredential}
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
+import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.LocalDateTime
@@ -47,7 +48,7 @@ class IdmsConnectorSpec
   with TableDrivenPropertyChecks
   with EitherValues {
 
-  import IdmsConnectorSpec._
+  import IdmsConnectorSpec.*
   
   private val correlationId = "correlation-id"
   private val requestId = Some(RequestId(correlationId))
@@ -593,8 +594,8 @@ class IdmsConnectorSpec
 
   private def buildApplication(clientId1: String, clientId2: String, id: String) = {
     Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
-      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
+      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
+      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
   }
 }
 

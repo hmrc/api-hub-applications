@@ -51,6 +51,7 @@ case class DbApplication(
       },
       deleted = deleted,
       teamName = None,
+      credentials = environments.toModel(this).toCredentials
     )
 
 }

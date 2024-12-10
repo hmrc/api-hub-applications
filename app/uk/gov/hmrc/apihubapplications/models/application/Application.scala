@@ -32,7 +32,8 @@ case class Application (
   issues: Seq[String] = Seq.empty,
   apis: Seq[Api] = Seq.empty,
   deleted: Option[Deleted],
-  teamName: Option[String]
+  teamName: Option[String],
+  credentials: Set[Credential]
 )
 
 object Application {
@@ -51,12 +52,12 @@ object Application {
 
   def apply(id: Option[String], name: String, createdBy: Creator, teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
-    Application(id, name, now, createdBy, now, None, teamMembers, Environments(), apis = Seq.empty, deleted = None, teamName = None)
+    Application(id, name, now, createdBy, now, None, teamMembers, Environments(), apis = Seq.empty, deleted = None, teamName = None, credentials = Set.empty)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, teamId: Option[String], teamMembers: Seq[TeamMember], clock: Clock): Application = {
     val now = LocalDateTime.now(clock)
-    Application(id, name, now, createdBy, now, teamId, teamMembers, Environments(), apis = Seq.empty, deleted = None, teamName = None)
+    Application(id, name, now, createdBy, now, teamId, teamMembers, Environments(), apis = Seq.empty, deleted = None, teamName = None, credentials = Set.empty)
   }
 
   def apply(newApplication: NewApplication): Application = {
@@ -68,19 +69,19 @@ object Application {
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamId: String, environments: Environments): Application = {
-    Application(id, name, now, createdBy, now, Some(teamId), Seq.empty, environments, apis = Seq.empty, deleted = None, teamName = None)
+    Application(id, name, now, createdBy, now, Some(teamId), Seq.empty, environments, apis = Seq.empty, deleted = None, teamName = None, credentials = environments.toCredentials)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
-    Application(id, name, now, createdBy, now, None, teamMembers, environments, apis = Seq.empty, deleted = None, teamName = None)
+    Application(id, name, now, createdBy, now, None, teamMembers, environments, apis = Seq.empty, deleted = None, teamName = None, credentials = environments.toCredentials)
   }
 
   def apply(id: Option[String], name: String, createdBy: Creator, now: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments, deleted: Option[Deleted]): Application = {
-    Application(id, name, now, createdBy, now, None, teamMembers, environments, apis = Seq.empty, deleted = deleted, teamName = None)
+    Application(id, name, now, createdBy, now, None, teamMembers, environments, apis = Seq.empty, deleted = deleted, teamName = None, credentials = environments.toCredentials)
   }
 
   def apply(id: Option[String], name: String, created: LocalDateTime, createdBy: Creator, lastUpdated: LocalDateTime, teamMembers: Seq[TeamMember], environments: Environments): Application = {
-    Application(id, name, created, createdBy, lastUpdated, None, teamMembers, environments, apis = Seq.empty, deleted = None, teamName = None)
+    Application(id, name, created, createdBy, lastUpdated, None, teamMembers, environments, apis = Seq.empty, deleted = None, teamName = None, credentials = environments.toCredentials)
   }
 
   implicit val applicationFormat: Format[Application] = Json.format[Application]

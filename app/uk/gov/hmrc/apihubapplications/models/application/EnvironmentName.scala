@@ -43,4 +43,7 @@ object EnvironmentName extends Enumerable.Implicits {
     }
   }
 
+  val primaryEnvironmentId: String = "production"
+  val secondaryEnvironmentId: String = "test"
+
 }
