@@ -24,7 +24,8 @@ import java.time.LocalDateTime
 case class DbCredential(
   clientId: String,
   created: Option[LocalDateTime],
-  secretFragment: Option[String]
+  secretFragment: Option[String],
+  environmentId: Option[String]
 ) {
 
   def toModel(dbApplication: DbApplication, environmentId: String): Credential =
@@ -33,7 +34,7 @@ case class DbCredential(
       created = created.getOrElse(dbApplication.created),
       clientSecret = None,
       secretFragment = secretFragment,
-      environmentId = environmentId
+      environmentId = this.environmentId.getOrElse(environmentId)
     )
 
 }
@@ -44,7 +45,8 @@ object DbCredential {
     DbCredential(
       clientId = credential.clientId,
       created = Some(credential.created),
-      secretFragment = credential.secretFragment
+      secretFragment = credential.secretFragment,
+      environmentId = Some(credential.environmentId)
     )
 
   implicit val formatDbCredential: Format[DbCredential] = Json.format[DbCredential]
