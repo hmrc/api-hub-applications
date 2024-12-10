@@ -32,19 +32,23 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
   "DbApplication" - {
     "when translating from Application to DbApplication" - {
       "must remove client secrets" in {
-        val credential = Credential("test-client-id", now, Some("test-secret"), Some("test-fragment"), "test-environment-id")
-        val dbCredential = DbCredential(credential.clientId, Some(credential.created), credential.secretFragment)
+        val productionCredential = Credential("test-client-id-1", now, Some("test-secret-1"), Some("test-fragment-1"), FakeHipEnvironments.primaryEnvironment.id)
+        val testCredential = Credential("test-client-id-2", now, Some("test-secret-2"), Some("test-fragment-2"), FakeHipEnvironments.secondaryEnvironment.id)
+
+        val productionDbCredential = DbCredential(productionCredential.clientId, Some(productionCredential.created), productionCredential.secretFragment, Some(productionCredential.environmentId))
+        val testDbCredential = DbCredential(testCredential.clientId, Some(testCredential.created), testCredential.secretFragment, Some(testCredential.environmentId))
 
         val application = testApplication
-          .addCredential(Primary, credential)
-          .addCredential(Secondary, credential)
+          .addCredential(Primary, productionCredential)
+          .addCredential(Secondary, testCredential)
 
         val expected = testDbApplication
           .copy(
             environments = DbEnvironments(
-              primary = DbEnvironment(Seq(dbCredential)),
-              secondary = DbEnvironment(Seq(dbCredential))
-            )
+              primary = DbEnvironment(Seq(productionDbCredential)),
+              secondary = DbEnvironment(Seq(testDbCredential))
+            ),
+            credentials = Some(Set(productionDbCredential, testDbCredential))
           )
 
         DbApplication(application) mustBe expected
@@ -66,6 +70,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           environments = DbEnvironments(Environments()),
           apis = None,
           deleted = None,
+          credentials = Some(Set.empty)
         )
 
         DbApplication(application) mustBe expected
@@ -86,7 +91,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val dbApplication = testDbApplication
           .copy(
             environments = DbEnvironments(
-              primary = DbEnvironment(Seq(DbCredential(clientId, None, None))),
+              primary = DbEnvironment(Seq(DbCredential(clientId, None, None, None))),
               secondary = DbEnvironment(Seq.empty)
             )
           )

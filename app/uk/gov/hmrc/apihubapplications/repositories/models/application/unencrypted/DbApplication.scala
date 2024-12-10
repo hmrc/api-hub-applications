@@ -32,6 +32,7 @@ case class DbApplication(
   environments: DbEnvironments,
   apis: Option[Seq[DbApi]],
   deleted: Option[Deleted],
+  credentials: Option[Set[DbCredential]]
 ) {
 
   def toModel: Application =
@@ -58,7 +59,11 @@ case class DbApplication(
 
 object DbApplication {
 
-  def apply(application: Application): DbApplication =
+  def apply(application: Application): DbApplication = {
+    if (application.environments.toCredentials != application.credentials) {
+      throw new IllegalStateException(s"")
+    }
+
     DbApplication(
       id = application.id,
       name = application.name,
@@ -73,7 +78,9 @@ object DbApplication {
         case _ => None
       },
       deleted = application.deleted,
+      credentials = Some(application.credentials.map(DbCredential(_)))
     )
+  }
 
   implicit val formatDbApplication: Format[DbApplication] = Json.format[DbApplication]
 
