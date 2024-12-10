@@ -69,15 +69,15 @@ class ScopeFixer @Inject()(
 
   private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
     Future.sequence(
-      Seq(Primary, Secondary).flatMap(
-        environmentName =>
-          application.getCredentials(environmentName).map(
+      hipEnvironments.environments.flatMap(
+        hipEnvironment =>
+          application.getCredentials(hipEnvironment).map(
             credential =>
               idmsConnector
-                .fetchClientScopes(environmentName, credential.clientId)
+                .fetchClientScopes(hipEnvironment.environmentName, credential.clientId)
                 .map(_.map(
                   scopes =>
-                    CredentialScopes(environmentName, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+                    CredentialScopes(hipEnvironment.id, credential.clientId, credential.created, scopes.map(_.clientScopeId))
                 ))
           )
       )
@@ -134,12 +134,12 @@ class ScopeFixer @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     Future.sequence(
       credentials
-        .filter(_.environmentName == hipEnvironment.environmentName)
+        .filter(_.environmentId == hipEnvironment.id)
         .flatMap(
           credential =>
             scopesToRemove(credential, allowedScopes).map(
               scopeName =>
-                idmsConnector.deleteClientScope(credential.environmentName, credential.clientId, scopeName)
+                idmsConnector.deleteClientScope(hipEnvironment.environmentName, credential.clientId, scopeName)
             )
         )
     )
@@ -154,12 +154,12 @@ class ScopeFixer @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     Future.sequence(
       credentials
-        .filter(_.environmentName == hipEnvironment.environmentName)
+        .filter(_.environmentId == hipEnvironment.id)
         .flatMap(
           credential =>
             allowedScopes.map(
               scopeName =>
-                idmsConnector.addClientScope(credential.environmentName, credential.clientId, scopeName)
+                idmsConnector.addClientScope(hipEnvironment.environmentName, credential.clientId, scopeName)
             )
         )
     )

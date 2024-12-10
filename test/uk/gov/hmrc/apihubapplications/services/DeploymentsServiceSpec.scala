@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
@@ -32,7 +32,7 @@ import uk.gov.hmrc.apihubapplications.models.exception.ApimException.unexpectedR
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, EmailException, IntegrationCatalogueException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.{Deployed, NotDeployed, Unknown}
 import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, ZoneOffset}
@@ -137,7 +137,7 @@ class DeploymentsServiceSpec
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
-          result mustBe Seq(Deployed(Primary, "1"), Deployed(Secondary, "1"))
+          result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Deployed(FakeHipEnvironments.secondaryEnvironment.id, "1"))
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
           succeed
@@ -153,7 +153,7 @@ class DeploymentsServiceSpec
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
-          result mustBe Seq(Deployed(Primary, "1"), NotDeployed(Secondary))
+          result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), NotDeployed(FakeHipEnvironments.secondaryEnvironment.id))
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
           succeed
@@ -169,7 +169,7 @@ class DeploymentsServiceSpec
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
-          result mustBe Seq(Deployed(Primary, "1"), Unknown(Secondary))
+          result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Unknown(FakeHipEnvironments.secondaryEnvironment.id))
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
           verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
           verify(fixture.metricsService).apimUnknownFailure()
@@ -374,7 +374,7 @@ class DeploymentsServiceSpec
     val emailConnector = mock[EmailConnector]
     val teamsService = mock[TeamsService]
     val metricsService = mock[MetricsService]
-    val deploymentsService = new DeploymentsService(apimConnector, integrationCatalogueConnector, emailConnector, teamsService, metricsService)
+    val deploymentsService = new DeploymentsService(apimConnector, integrationCatalogueConnector, emailConnector, teamsService, metricsService, FakeHipEnvironments)
 
     Fixture(apimConnector, integrationCatalogueConnector, deploymentsService, teamsService, emailConnector, metricsService)
   }

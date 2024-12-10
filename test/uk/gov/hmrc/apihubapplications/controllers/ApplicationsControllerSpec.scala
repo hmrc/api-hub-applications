@@ -1065,7 +1065,7 @@ class ApplicationsControllerSpec
       val allScopes = (1 to 2).map(
         i =>
           CredentialScopes(
-            environmentName = Primary,
+            environmentId = FakeHipEnvironments.primaryEnvironment.id,
             clientId = s"test-client-id-$i",
             created = LocalDateTime.now(),
             scopes = Seq(s"test-scope-$i-1", s"test-scope-$i-2")

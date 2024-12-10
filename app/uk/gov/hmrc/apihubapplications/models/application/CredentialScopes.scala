@@ -21,10 +21,10 @@ import play.api.libs.json.{Format, Json}
 import java.time.LocalDateTime
 
 case class CredentialScopes(
-  environmentName: EnvironmentName,
-  clientId: String,
-  created: LocalDateTime,
-  scopes: Seq[String]
+                             environmentId: String,
+                             clientId: String,
+                             created: LocalDateTime,
+                             scopes: Seq[String]
 )
 
 object CredentialScopes {

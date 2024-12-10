@@ -22,16 +22,17 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.*
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.NotDeployed
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
 class DeploymentStatusSpec extends AnyFreeSpec with Matchers{
 
   "DeploymentStatus" - {
     "must serialize a deployment status into the expected json" in {
-      val deploymentStatus: DeploymentStatus = NotDeployed(Primary)
+      val deploymentStatus: DeploymentStatus = NotDeployed(FakeHipEnvironments.primaryEnvironment.id)
       val json = Json.prettyPrint(Json.toJson[DeploymentStatus](deploymentStatus))
 
       json mustBe """{
-                    |  "environmentName" : "primary",
+                    |  "environmentId" : "production",
                     |  "_type" : "NotDeployed"
                     |}""".stripMargin
     }

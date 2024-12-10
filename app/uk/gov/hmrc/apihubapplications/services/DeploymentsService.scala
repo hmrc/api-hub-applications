@@ -19,6 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
 import uk.gov.hmrc.apihubapplications.models.apim._
@@ -38,6 +39,7 @@ class DeploymentsService @Inject()(
                                     emailConnector: EmailConnector,
                                     teamsService: TeamsService,
                                     metricsService: MetricsService,
+                                    hipEnvironments: HipEnvironments,
                                   )(implicit ec: ExecutionContext) extends Logging {
   private[services] val customUnknownDeploymentStatusMessage = "UNKNOWN_APIM_DEPLOYMENT_STATUS"
 
@@ -75,16 +77,15 @@ class DeploymentsService @Inject()(
   def getDeployments(
                      publisherRef: String,
                    )(implicit hc: HeaderCarrier): Future[Seq[DeploymentStatus]] = {
-    Future.sequence(Seq(Primary, Secondary)
-      .map(environmentName =>
-        apimConnector.getDeployment(publisherRef, environmentName)
+    Future.sequence(hipEnvironments.environments.map(hipEnvironment =>
+        apimConnector.getDeployment(publisherRef, hipEnvironment.environmentName)
           .map {
-            case Right(Some(SuccessfulDeploymentResponse(_, version))) => Deployed(environmentName, version)
-            case Right(None) => NotDeployed(environmentName)
+            case Right(Some(SuccessfulDeploymentResponse(_, version))) => Deployed(hipEnvironment.id, version)
+            case Right(None) => NotDeployed(hipEnvironment.id)
             case Left(exception) =>
               logger.warn(customUnknownDeploymentStatusMessage, exception)
               metricsService.apimUnknownFailure()
-              Unknown(environmentName)
+              Unknown(hipEnvironment.id)
           }
       ))
   }
