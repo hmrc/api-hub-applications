@@ -20,7 +20,8 @@ import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
 import java.time.LocalDateTime
 
@@ -31,7 +32,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
   "DbApplication" - {
     "when translating from Application to DbApplication" - {
       "must remove client secrets" in {
-        val credential = Credential("test-client-id", now, Some("test-secret"), Some("test-fragment"))
+        val credential = Credential("test-client-id", now, Some("test-secret"), Some("test-fragment"), "test-environment-id")
         val dbCredential = DbCredential(credential.clientId, Some(credential.created), credential.secretFragment)
 
         val application = testApplication
@@ -93,7 +94,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val expected = testApplication
           .setCredentials(
             Primary, 
-            Seq(Credential(clientId, testApplication.created, None, None))
+            Seq(Credential(clientId, testApplication.created, None, None, FakeHipEnvironments.primaryEnvironment.id))
           )
 
         dbApplication.toModel mustBe expected
@@ -126,7 +127,8 @@ object DbApplicationSpec {
     environments = Environments(),
     issues = Seq.empty,
     deleted = None,
-    teamName = None
+    teamName = None,
+    credentials = Set.empty
   )
 
   private val testDbApplication = DbApplication(testApplication)

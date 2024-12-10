@@ -25,14 +25,15 @@ case class DbCredential(
   clientId: String,
   created: Option[LocalDateTime],
   secretFragment: Option[String]
-) extends DbModel[Credential] {
+) {
 
-  override def toModel(dbApplication: DbApplication): Credential =
+  def toModel(dbApplication: DbApplication, environmentId: String): Credential =
     Credential(
       clientId = clientId,
       created = created.getOrElse(dbApplication.created),
       clientSecret = None,
-      secretFragment = secretFragment
+      secretFragment = secretFragment,
+      environmentId = environmentId
     )
 
 }

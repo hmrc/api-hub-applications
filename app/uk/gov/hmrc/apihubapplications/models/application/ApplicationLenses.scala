@@ -169,11 +169,11 @@ object ApplicationLenses {
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
         )
       }
-      
+
       setCredentials(
         environmentName,
         getCredentials(environmentName).map {
-          case credential@Credential(id, _, _, _) if id == clientId =>
+          case credential@Credential(id, _, _, _, _) if id == clientId =>
             credential.copy(
               clientSecret = Some(secret),
               secretFragment = Some(secret.takeRight(4))
