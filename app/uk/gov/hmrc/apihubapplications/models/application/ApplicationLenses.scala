@@ -155,13 +155,19 @@ object ApplicationLenses {
       setScopes(hipEnvironment.environmentName, scopes)
 
     def setCredentials(environmentName: EnvironmentName, credentials: Seq[Credential]): Application =
-      environmentName match {
-        case Primary => applicationPrimaryCredentials.set(application, credentials)
-        case Secondary => applicationSecondaryCredentials.set(application, credentials)
-      }
+      syncCredentials(
+        environmentName match {
+          case Primary => applicationPrimaryCredentials.set(application, credentials)
+          case Secondary => applicationSecondaryCredentials.set(application, credentials)
+        }
+      )
 
     def setCredentials(hipEnvironment: HipEnvironment, credentials: Seq[Credential]): Application =
       setCredentials(hipEnvironment.environmentName, credentials)
+
+    private def syncCredentials(application: Application): Application = {
+      application.copy(credentials = application.environments.toCredentials)
+    }
 
     def updateCredential(environmentName: EnvironmentName, clientId: String, secret: String): Application = {
       if (!getCredentials(environmentName).exists(_.clientId == clientId)) {
@@ -210,10 +216,10 @@ object ApplicationLenses {
     }
 
     def addCredential(environmentName: EnvironmentName, credential: Credential): Application = {
-      environmentName match {
-        case Primary => applicationPrimaryCredentials.set(application, applicationPrimaryCredentials.get(application) :+ credential)
-        case Secondary => applicationSecondaryCredentials.set(application, applicationSecondaryCredentials.get(application) :+ credential)
-      }
+      setCredentials(
+        environmentName,
+        application.getCredentials(environmentName) :+ credential
+      )
     }
 
     def addCredential(hipEnvironment: HipEnvironment, credential: Credential): Application =
