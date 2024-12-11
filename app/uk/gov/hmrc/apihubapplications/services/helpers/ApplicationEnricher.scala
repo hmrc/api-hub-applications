@@ -187,9 +187,7 @@ object ApplicationEnrichers {
         case Right(clientResponse) =>
           Right(
             (application: Application) => {
-              if !hipEnvironment.isProductionLike then
-                application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock))
-              else application
+              application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock))
             }
           )
         case Left(e) => Left(e)

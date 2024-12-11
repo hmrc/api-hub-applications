@@ -97,31 +97,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       }
     }
 
-    "must return IdmsException and not persist in MongoDb if the primary credentials fail" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val newApplication = NewApplication(
-        "test-name",
-        Creator(email = "test-email"),
-        Seq.empty
-      )
-
-      when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
-
-      val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
-      when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Right(secondaryClientResponse)))
-
-      service.registerApplication(newApplication)(HeaderCarrier()) map {
-        actual =>
-          actual.left.value mustBe a[IdmsException]
-          verify(repository, times(0)).insert(any)
-          succeed
-      }
-    }
-
     "must return IdmsException and not persist in MongoDb if the secondary credentials fail" in {
       val fixture = buildFixture
       import fixture._

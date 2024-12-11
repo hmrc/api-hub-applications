@@ -58,7 +58,10 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
 
     ApplicationEnrichers.process(
       application,
-      hipEnvironments.environments.map(ApplicationEnrichers.credentialCreatingApplicationEnricher(_, application, idmsConnector, clock))
+      hipEnvironments.environments.filterNot(_.isProductionLike)
+        .map(
+          ApplicationEnrichers.credentialCreatingApplicationEnricher(_, application, idmsConnector, clock)
+        )
     ).flatMap {
       case Right(enriched) =>
         repository.insert(enriched).flatMap {
