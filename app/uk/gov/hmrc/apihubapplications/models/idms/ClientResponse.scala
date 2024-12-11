@@ -31,16 +31,6 @@ case class ClientResponse(clientId: String, secret: String) {
       secretFragment = Some(secret.takeRight(4))
     )
   }
-
-  def asNewHiddenCredential(clock: Clock): Credential = {
-    Credential(
-      clientId = clientId,
-      created = LocalDateTime.now(clock),
-      clientSecret = None,
-      secretFragment = None
-    )
-  }
-
 }
 
 object ClientResponse {

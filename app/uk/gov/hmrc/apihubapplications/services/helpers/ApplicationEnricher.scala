@@ -182,15 +182,14 @@ object ApplicationEnrichers {
                                              original: Application,
                                              idmsConnector: IdmsConnector,
                                              clock: Clock,
-                                             hiddenPrimary: Boolean = true
                                            )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
       idmsConnector.createClient(hipEnvironment.environmentName, Client(original)).map {
         case Right(clientResponse) =>
           Right(
             (application: Application) => {
-              if hipEnvironment.isProductionLike && hiddenPrimary then
-                  application.addCredential(hipEnvironment.environmentName, clientResponse.asNewHiddenCredential(clock))
-              else application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock))
+              if !hipEnvironment.isProductionLike then
+                application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock))
+              else application
             }
           )
         case Left(e) => Left(e)

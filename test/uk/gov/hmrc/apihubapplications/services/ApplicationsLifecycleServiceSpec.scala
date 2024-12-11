@@ -74,7 +74,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .thenReturn(Future.successful(Right(secondaryClientResponse)))
 
       val applicationWithCreds = application
-        .setCredentials(Primary, Seq(primaryClientResponse.asNewHiddenCredential(clock)))
+        .setCredentials(Primary, Seq.empty)
         .setCredentials(Secondary, Seq(secondaryClientResponse.asNewCredential(clock)))
 
       val saved = applicationWithCreds.copy(id = Some("test-id"))
@@ -211,7 +211,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
@@ -248,7 +247,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
@@ -285,7 +283,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = Some("team-id"))
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any)).thenReturn(Future.successful(saved))
@@ -315,7 +312,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
