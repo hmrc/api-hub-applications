@@ -87,13 +87,15 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
     "when translating from DbApplication to Application" - {
       "must default a credential's created timestamp to the application's" in {
         val clientId = "test-client-id"
+        val dbCredential = DbCredential(clientId, None, None, Some(FakeHipEnvironments.primaryEnvironment.id))
 
         val dbApplication = testDbApplication
           .copy(
             environments = DbEnvironments(
-              primary = DbEnvironment(Seq(DbCredential(clientId, None, None, None))),
+              primary = DbEnvironment(Seq(dbCredential)),
               secondary = DbEnvironment(Seq.empty)
-            )
+            ),
+            credentials = Some(Set(dbCredential))
           )
 
         val expected = testApplication

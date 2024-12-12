@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypt
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 
 import java.time.LocalDateTime
 
@@ -52,7 +53,9 @@ case class DbApplication(
       },
       deleted = deleted,
       teamName = None,
-      credentials = environments.toModel(this).toCredentials
+      credentials = this.credentials
+        .map(_.map(_.toModel(this)))
+        .getOrElse(environments.toModel(this).toCredentials)
     )
 
 }
@@ -61,7 +64,7 @@ object DbApplication {
 
   def apply(application: Application): DbApplication = {
     if (application.environments.toCredentials != application.credentials) {
-      throw new IllegalStateException(s"")
+      throw new IllegalStateException(s"Credentials and environments no in sync for application ${application.safeId}")
     }
 
     DbApplication(
