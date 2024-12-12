@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnectorParityImpl, IdmsConnectorParityImpl}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnectorImpl, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -28,11 +28,11 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class EnvironmentParityTestController @Inject()(
-  cc: ControllerComponents,
-  identify: IdentifierAction,
-  idmsConnector: IdmsConnectorParityImpl,
-  apimConnector: APIMConnectorParityImpl,
-  hipEnvironment: HipEnvironmentActionProvider
+                                                 cc: ControllerComponents,
+                                                 identify: IdentifierAction,
+                                                 idmsConnector: IdmsConnectorImpl,
+                                                 apimConnector: APIMConnectorImpl,
+                                                 hipEnvironment: HipEnvironmentActionProvider
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def fetchClientScopes(environmentName: String, clientId: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
