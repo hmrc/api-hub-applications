@@ -16,44 +16,48 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import org.apache.pekko.stream.scaladsl.Source
-import play.api.Logging
-import play.api.http.Status.*
-import play.api.libs.json.{JsPath, Json, JsonValidationError}
 import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSBodyWritables.bodyWritableOf_Multipart
+import play.api.Logging
+import play.api.http.Status.{BAD_REQUEST, NOT_FOUND}
+import play.api.libs.json.{JsPath, Json, JsonValidationError}
 import play.api.mvc.MultipartFormData.DataPart
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
-import uk.gov.hmrc.apihubapplications.models.apim.*
+import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentResponse, DeploymentsRequest, DeploymentsResponse, DetailsResponse, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata, ValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
+@Singleton
 class APIMConnectorImpl @Inject()(
-                                   servicesConfig: ServicesConfig,
-                                   httpClient: HttpClientV2
-                                 )(implicit ec: ExecutionContext) extends APIMConnector
+  httpClient: HttpClientV2,
+  hipEnvironments: HipEnvironments
+)(implicit ec: ExecutionContext) extends APIMConnector
   with Logging
   with ExceptionRaising
   with HttpErrorFunctions
   with ProxySupport
   with CorrelationIdSupport {
 
-  import ProxySupport._
-  import CorrelationIdSupport._
+  import APIMConnectorImpl.*
+  import ProxySupport.*
+  import CorrelationIdSupport.*
 
   override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
-    httpClient.post(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/validate")
-      .setHeader("Authorization" -> authorizationForEnvironment(Primary))
+    val hipEnvironment = hipEnvironments.forEnvironmentName(Primary)
+
+    httpClient.post(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/validate")
+      .setHeader("Authorization" -> authorizationForEnvironment(hipEnvironment))
       .setHeader("Content-Type" -> "application/yaml")
       .withCorrelationId()
       .withBody(oas)
@@ -73,14 +77,15 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def deployToSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
+    val hipEnvironment = hipEnvironments.forEnvironmentName(Secondary)
+
     val metadata = Json.toJson(CreateMetadata(request))
     val context = Seq("metadata" -> Json.prettyPrint(metadata))
       .withCorrelationId()
 
-    httpClient.post(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments")
-      .setHeader(headersForEnvironment(Secondary)*)
-      .withProxyIfRequired(Secondary, useProxyForSecondary)
+    httpClient.post(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/deployments")
+      .setHeader(headersForEnvironment(hipEnvironment)*)
+      .withProxyIfRequired(hipEnvironment)
       .setHeader("Accept" -> "application/json")
       .withCorrelationId()
       .withBody(
@@ -107,14 +112,15 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
+    val hipEnvironment = hipEnvironments.forEnvironmentName(Secondary)
+
     val metadata = Json.toJson(UpdateMetadata(request))
     val context = Seq("publisherReference" -> publisherReference, "metadata" -> Json.prettyPrint(metadata))
       .withCorrelationId()
 
-    httpClient.put(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
-      .setHeader(headersForEnvironment(Secondary)*)
-      .withProxyIfRequired(Secondary, useProxyForSecondary)
+    httpClient.put(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/deployments/$publisherReference")
+      .setHeader(headersForEnvironment(hipEnvironment)*)
+      .withProxyIfRequired(hipEnvironment)
       .setHeader("Accept" -> "application/json")
       .withCorrelationId()
       .withBody(
@@ -141,6 +147,139 @@ class APIMConnectorImpl @Inject()(
             Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
           }
       )
+  }
+
+  override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
+    val hipEnvironment = hipEnvironments.forEnvironmentName(environment)
+
+    val url = url"${hipEnvironment.apimUrl}/v1/oas-deployments/$publisherReference"
+    val context = Seq("publisherReference" -> publisherReference, "environment" -> environment)
+      .withCorrelationId()
+
+    httpClient.get(url)
+      .setHeader(headersForEnvironment(hipEnvironment)*)
+      .withProxyIfRequired(hipEnvironment)
+      .withCorrelationId()
+      .execute[Either[UpstreamErrorResponse, SuccessfulDeploymentResponse]]
+      .map {
+        case Right(deployment) => Right(Some(deployment))
+        case Left(e) if e.statusCode == 404 => Right(None)
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+      . recover {
+        case NonFatal(e) => Left(raiseApimException.error(e, context))
+      }
+  }
+
+  override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
+    val hipEnvironment = hipEnvironments.forEnvironmentName(Secondary)
+
+    val context = Seq("publisherReference" -> publisherReference)
+      .withCorrelationId()
+
+    httpClient.get(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/deployments/$publisherReference")
+      .setHeader(headersForEnvironment(hipEnvironment)*)
+      .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
+      .withProxyIfRequired(hipEnvironment)
+      .execute[Either[UpstreamErrorResponse, DetailsResponse]]
+      .map {
+        case Right(detailsResponse) => Right(detailsResponse.toDeploymentDetails)
+        case Left(e) if e.statusCode == 404 => Left(raiseApimException.serviceNotFound(publisherReference))
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+  }
+
+  override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
+    val hipEnvironment = hipEnvironments.forEnvironmentName(Primary)
+
+    val context = Seq("publisherReference" -> publisherReference)
+      .withCorrelationId()
+    val deploymentFrom = DeploymentFrom(
+      env = "env/test",
+      serviceId = publisherReference
+    )
+
+    httpClient.put(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/deployment-from")
+      .setHeader("Authorization" -> authorizationForEnvironment(hipEnvironment))
+      .setHeader("Content-Type" -> "application/json")
+      .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
+      .withBody(Json.toJson(deploymentFrom))
+      .execute[HttpResponse]
+      .map(
+        response =>
+          if (is2xx(response.status)) {
+            handleSuccessfulRequest(response)
+          }
+          else if (response.status.intValue == BAD_REQUEST) {
+            handleBadRequest(response)
+          }
+          else if (response.status.intValue == NOT_FOUND) {
+            Left(raiseApimException.serviceNotFound(publisherReference))
+          }
+          else {
+            Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
+          }
+      )
+  }
+
+  override def getDeployments(environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]] = {
+    val hipEnvironment = hipEnvironments.forEnvironmentName(environment)
+
+    val context = Seq("environment" -> environment)
+      .withCorrelationId()
+
+    httpClient.get(url"${hipEnvironment.apimUrl}/v1/oas-deployments")
+      .setHeader(headersForEnvironment(hipEnvironment) *)
+      .withProxyIfRequired(hipEnvironment)
+      .withCorrelationId()
+      .setHeader("Accept" -> "application/json")
+      .execute[Either[UpstreamErrorResponse, Seq[ApiDeployment]]]
+      .map {
+        case Right(apiDeployments) => Right(apiDeployments)
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+  }
+
+  override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
+    listEgressGateways(Secondary)
+  }
+
+  def listEgressGateways(environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
+    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
+
+    val context = Seq.empty.withCorrelationId()
+
+    httpClient.get(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/egress-gateways")
+      .setHeader(headersForEnvironment(hipEnvironment) *)
+      .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
+      .withProxyIfRequired(hipEnvironment)
+      .execute[Either[UpstreamErrorResponse, Seq[EgressGateway]]]
+      .map {
+        case Right(egressGateways) => Right(egressGateways)
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+  }
+
+}
+
+object APIMConnectorImpl extends Logging with ExceptionRaising {
+
+  private def headersForEnvironment(hipEnvironment: HipEnvironment): Seq[(String, String)] = {
+    Seq(
+      Some(("Authorization", authorizationForEnvironment(hipEnvironment))),
+      hipEnvironment.apiKey.map(apiKey => ("x-api-key", apiKey))
+    ).flatten
+  }
+
+  private def authorizationForEnvironment(hipEnvironment: HipEnvironment): String = {
+    val clientId = hipEnvironment.clientId
+    val secret = hipEnvironment.secret
+
+    val endcoded = Base64.getEncoder.encodeToString(s"$clientId:$secret".getBytes("UTF-8"))
+    s"Basic $endcoded"
   }
 
   private def handleSuccessfulRequest(response: HttpResponse): Either[ApimException, SuccessfulDeploymentsResponse] = {
@@ -174,137 +313,4 @@ class APIMConnectorImpl @Inject()(
       .getOrElse(Left(raiseApimException.unexpectedResponse(BAD_REQUEST)))
   }
 
-  override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
-    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
-    val url = url"${baseUrlForEnvironment(environment)}/v1/oas-deployments/$publisherReference"
-    val context = Seq("publisherReference" -> publisherReference, "environment" -> environment)
-      .withCorrelationId()
-
-    httpClient.get(url)
-      .setHeader(headersForEnvironment(environment)*)
-      .withProxyIfRequired(environment, useProxyForSecondary)
-      .withCorrelationId()
-      .execute[Either[UpstreamErrorResponse, SuccessfulDeploymentResponse]]
-      .map {
-        case Right(deployment) => Right(Some(deployment))
-        case Left(e) if e.statusCode == 404 => Right(None)
-        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
-      }
-      . recover {
-        case NonFatal(e) => Left(raiseApimException.error(e, context))
-      }
-  }
-
-  override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
-    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
-    val context = Seq("publisherReference" -> publisherReference)
-      .withCorrelationId()
-
-    httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/deployments/$publisherReference")
-      .setHeader(headersForEnvironment(Secondary)*)
-      .setHeader("Accept" -> "application/json")
-      .withCorrelationId()
-      .withProxyIfRequired(Secondary, useProxyForSecondary)
-      .execute[Either[UpstreamErrorResponse, DetailsResponse]]
-      .map {
-        case Right(detailsResponse) => Right(detailsResponse.toDeploymentDetails)
-        case Left(e) if e.statusCode == 404 => Left(raiseApimException.serviceNotFound(publisherReference))
-        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
-      }
-  }
-
-  override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val context = Seq("publisherReference" -> publisherReference)
-      .withCorrelationId()
-    val deploymentFrom = DeploymentFrom(
-      env = "env/test",
-      serviceId = publisherReference
-    )
-
-    httpClient.put(url"${baseUrlForEnvironment(Primary)}/v1/simple-api-deployment/deployment-from")
-      .setHeader("Authorization" -> authorizationForEnvironment(Primary))
-      .setHeader("Content-Type" -> "application/json")
-      .setHeader("Accept" -> "application/json")
-      .withCorrelationId()
-      .withBody(Json.toJson(deploymentFrom))
-      .execute[HttpResponse]
-      .map(
-        response =>
-          if (is2xx(response.status)) {
-            handleSuccessfulRequest(response)
-          }
-          else if (response.status.intValue == BAD_REQUEST) {
-            handleBadRequest(response)
-          }
-          else if (response.status.intValue == NOT_FOUND) {
-            Left(raiseApimException.serviceNotFound(publisherReference))
-          }
-          else {
-            Left(raiseApimException.unexpectedResponse(response.status.intValue, context))
-          }
-      )
-  }
-
-  override def getDeployments(environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]] = {
-    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-$environment.useProxy", true)
-
-    val context = Seq("environment" -> environment)
-      .withCorrelationId()
-
-    httpClient.get(url"${baseUrlForEnvironment(environment)}/v1/oas-deployments")
-      .setHeader(headersForEnvironment(environment) *)
-      .withProxyIfRequired(environment, useProxyForSecondary)
-      .withCorrelationId()
-      .setHeader("Accept" -> "application/json")
-      .execute[Either[UpstreamErrorResponse, Seq[ApiDeployment]]]
-      .map {
-        case Right(apiDeployments) => Right(apiDeployments)
-        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
-      }
-  }
-
-  private def baseUrlForEnvironment(environmentName: EnvironmentName): String = {
-    val baseUrl = servicesConfig.baseUrl(s"apim-$environmentName")
-    val path = servicesConfig.getConfString(s"apim-$environmentName.path", "")
-
-    if (path.isEmpty) {
-      baseUrl
-    }
-    else {
-      s"$baseUrl/$path"
-    }
-  }
-
-  private def headersForEnvironment(environmentName: EnvironmentName): Seq[(String, String)] = {
-    Seq(("Authorization", authorizationForEnvironment(environmentName))) :++
-      (environmentName match {
-        case Primary => Seq.empty
-        case Secondary => Seq(("x-api-key", servicesConfig.getConfString(s"apim-$environmentName.apiKey", "")))
-      })
-  }
-
-  private def authorizationForEnvironment(environmentName: EnvironmentName): String = {
-    val clientId = servicesConfig.getConfString(s"apim-$environmentName.clientId", "")
-    val secret = servicesConfig.getConfString(s"apim-$environmentName.secret", "")
-
-    val encoded = Base64.getEncoder.encodeToString(s"$clientId:$secret".getBytes("UTF-8"))
-    s"Basic $encoded"
-  }
-
-  override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
-    val useProxyForSecondary = servicesConfig.getConfBool(s"apim-secondary.useProxy", true)
-    
-    val context = Seq.empty.withCorrelationId()
-    
-    httpClient.get(url"${baseUrlForEnvironment(Secondary)}/v1/simple-api-deployment/egress-gateways")
-      .setHeader(headersForEnvironment(Secondary) *)
-      .setHeader("Accept" -> "application/json")
-      .withCorrelationId()
-      .withProxyIfRequired(Secondary, useProxyForSecondary)
-      .execute[Either[UpstreamErrorResponse, Seq[EgressGateway]]]
-      .map {
-        case Right(egressGateways) => Right(egressGateways)
-        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
-      }
-  }
 }

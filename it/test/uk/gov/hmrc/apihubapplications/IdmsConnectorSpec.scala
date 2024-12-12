@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,18 @@ import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
-import play.api.Configuration
 import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.{CallError, InvalidCredential}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
@@ -47,8 +46,8 @@ class IdmsConnectorSpec
   with TableDrivenPropertyChecks
   with EitherValues {
 
-  import IdmsConnectorSpec._
-  
+  import IdmsConnectorImplSpec.*
+
   private val correlationId = "correlation-id"
   private val requestId = Some(RequestId(correlationId))
 
@@ -590,34 +589,39 @@ class IdmsConnectorSpec
       }
     }
   }
-
-  private def buildApplication(clientId1: String, clientId2: String, id: String) = {
-    Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
-      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
-  }
 }
 
-object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
+object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
 
   def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): IdmsConnector = {
-    val servicesConfig = new ServicesConfig(
-      Configuration.from(Map(
-        "microservice.services.idms-primary.host" -> wireMockSupport.wireMockHost,
-        "microservice.services.idms-primary.port" -> wireMockSupport.wireMockPort,
-        "microservice.services.idms-primary.path" -> "primary",
-        "microservice.services.idms-primary.clientId" -> primaryClientId,
-        "microservice.services.idms-primary.secret" -> primarySecret,
-        "microservice.services.idms-secondary.host" -> wireMockSupport.wireMockHost,
-        "microservice.services.idms-secondary.port" -> wireMockSupport.wireMockPort,
-        "microservice.services.idms-secondary.path" -> "secondary",
-        "microservice.services.idms-secondary.clientId" -> secondaryClientId,
-        "microservice.services.idms-secondary.secret" -> secondarySecret,
-        "microservice.services.idms-secondary.apiKey" -> secondaryApiKey
-      ))
-    )
+    val hipEnvironments = new HipEnvironments {
+      override val environments: Seq[HipEnvironment] = Seq(
+        HipEnvironment(
+          id = "production",
+          rank = 1,
+          environmentName = Primary,
+          isProductionLike = true,
+          apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/primary",
+          clientId = primaryClientId,
+          secret = primarySecret,
+          useProxy = false,
+          apiKey = None
+        ),
+        HipEnvironment(
+          id = "test",
+          rank = 2,
+          environmentName = Secondary,
+          isProductionLike = false,
+          apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/secondary",
+          clientId = secondaryClientId,
+          secret = secondarySecret,
+          useProxy = false,
+          apiKey = Some(secondaryApiKey)
+        )
+      )
+    }
 
-    new IdmsConnectorImpl(servicesConfig, httpClientV2)
+    new IdmsConnectorImpl(httpClientV2, hipEnvironments)
   }
 
   def authorizationHeaderFor(environmentName: EnvironmentName): String = {
@@ -646,6 +650,7 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
   val testSecret: Secret = Secret("test-secret")
   val testClient: Client = Client("test-name", "test-description")
   val testClientResponse: ClientResponse = ClientResponse(testClientId, testSecret.secret)
+
   val environmentNames: TableFor1[WithName & EnvironmentName] = Table(
     "environment",
     Primary,
@@ -658,5 +663,11 @@ object IdmsConnectorSpec extends HttpClientV2Support with TableDrivenPropertyChe
     401,
     500
   )
+
+  private def buildApplication(clientId1: String, clientId2: String, id: String) = {
+    Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
+      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
+      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
+  }
 
 }
