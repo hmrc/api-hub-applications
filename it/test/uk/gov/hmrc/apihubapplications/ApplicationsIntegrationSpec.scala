@@ -30,17 +30,17 @@ import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.CONTENT_TYPE
-import play.api.{Application => GuideApplication}
+import play.api.Application as GuideApplication
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.requests.UserEmail
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
-import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeIdmsConnector}
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeHipEnvironments, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -177,10 +177,10 @@ class ApplicationsIntegrationSpec
       val myEmail = "member1@digital.hmrc.gov.uk"
       val myTeamMembers = Seq(TeamMember(myEmail), TeamMember("member2@digital.hmrc.gov.uk"))
 
-      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, teamName = None)
+      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, teamName = None, credentials = Set.empty)
       val otherTeamMembers = Seq(TeamMember("member3@digital.hmrc.gov.uk"), TeamMember("member4@digital.hmrc.gov.uk"))
 
-      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, teamName = None)
+      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, teamName = None, credentials = Set.empty)
       deleteAll().futureValue
       val crypto = fakeApplication().injector.instanceOf[ApplicationCrypto]
       insert(application1).futureValue
@@ -209,9 +209,9 @@ class ApplicationsIntegrationSpec
 
         insert(
           application
-            .setCredentials(Primary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+            .setCredentials(Primary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
             .setScopes(Primary, Seq.empty)
-            .setCredentials(Secondary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None)))
+            .setCredentials(Secondary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
         ).futureValue
 
         val storedApplication = findAll().futureValue.head.decryptedValue.toModel

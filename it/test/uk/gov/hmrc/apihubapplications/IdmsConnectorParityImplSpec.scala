@@ -33,6 +33,7 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.{CallError, InvalidCredential}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 
@@ -666,8 +667,8 @@ object IdmsConnectorParityImplSpec extends HttpClientV2Support with TableDrivenP
 
   private def buildApplication(clientId1: String, clientId2: String, id: String) = {
     Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
-      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
+      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
+      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
   }
 
 }

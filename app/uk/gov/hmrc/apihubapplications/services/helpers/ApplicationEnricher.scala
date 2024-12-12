@@ -189,8 +189,8 @@ object ApplicationEnrichers {
           Right(
             (application: Application) => {
               if hipEnvironment.isProductionLike && hiddenPrimary then
-                  application.addCredential(hipEnvironment.environmentName, clientResponse.asNewHiddenCredential(clock))
-              else application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock))
+                  application.addCredential(hipEnvironment.environmentName, clientResponse.asNewHiddenCredential(clock, hipEnvironment))
+              else application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock, hipEnvironment))
             }
           )
         case Left(e) => Left(e)

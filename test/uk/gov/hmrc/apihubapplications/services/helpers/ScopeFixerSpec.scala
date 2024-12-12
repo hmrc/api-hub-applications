@@ -479,10 +479,10 @@ object ScopeFixerSpec {
   private val clientId2: String = "test-client-id-2"
   private val clientId3: String = "test-client-id-3"
   private val clientId4: String = "test-client-id-4"
-  private val credential1: Credential = Credential(clientId1, LocalDateTime.now(), None, None)
-  private val credential2: Credential = Credential(clientId2, LocalDateTime.now(), None, None)
-  private val credential3: Credential = Credential(clientId3, LocalDateTime.now(), None, None)
-  private val credential4: Credential = Credential(clientId4, LocalDateTime.now(), None, None)
+  private val credential1: Credential = Credential(clientId1, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
+  private val credential2: Credential = Credential(clientId2, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
+  private val credential3: Credential = Credential(clientId3, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
+  private val credential4: Credential = Credential(clientId4, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
   private val scopeName1: String = "test-scope-name-1"
   private val scopeName2: String = "test-scope-name-2"
   private val scopeName3: String = "test-scope-name-3"

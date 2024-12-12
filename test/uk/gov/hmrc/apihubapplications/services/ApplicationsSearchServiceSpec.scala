@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{verify, verifyNoInteractions, when}
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.freespec.AsyncFreeSpec
@@ -24,12 +24,13 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Deleted, Issues, Primary, Scope, Secondary, TeamMember}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, ClientScope}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -304,8 +305,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val scope4 = "test-scope-4"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(Primary, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None)))
-        .setCredentials(Secondary, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
+        .setCredentials(Secondary, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
 
       when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
@@ -318,7 +319,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application
-        .setCredentials(Secondary, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"))))
+        .setCredentials(Secondary, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"), FakeHipEnvironments.secondaryEnvironment.id)))
         .setScopes(Secondary, Seq(Scope(scope1), Scope(scope2)))
         .setScopes(Primary, Seq(Scope(scope3), Scope(scope4)))
 
@@ -402,7 +403,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val clientId = "test-client-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(Secondary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Secondary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
 
       val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
 
@@ -426,8 +427,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val id = "test-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(Primary, Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
-        .setCredentials(Secondary, Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
+        .setCredentials(Secondary, Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
 
       when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
@@ -447,8 +448,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val id = "test-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock).copy(deleted = Some(Deleted(LocalDateTime.now(clock), "test-deleted-by")))
-        .setCredentials(Primary, Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None)))
-        .setCredentials(Secondary, Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
+        .setCredentials(Secondary, Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
 
       when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
@@ -486,8 +487,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val scope4 = "test-scope-4"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(Primary, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None)))
-        .setCredentials(Secondary, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(Primary, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
+        .setCredentials(Secondary, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
         .setTeamId(teamId)
 
       when(repository.findByTeamId(teamId, true))
