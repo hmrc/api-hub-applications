@@ -74,7 +74,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .thenReturn(Future.successful(Right(secondaryClientResponse)))
 
       val applicationWithCreds = application
-        .setCredentials(Primary, Seq(primaryClientResponse.asNewHiddenCredential(clock)))
+        .setCredentials(Primary, Seq.empty)
         .setCredentials(Secondary, Seq(secondaryClientResponse.asNewCredential(clock)))
 
       val saved = applicationWithCreds.copy(id = Some("test-id"))
@@ -94,31 +94,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
           actual mustBe Right(saved)
-      }
-    }
-
-    "must return IdmsException and not persist in MongoDb if the primary credentials fail" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val newApplication = NewApplication(
-        "test-name",
-        Creator(email = "test-email"),
-        Seq.empty
-      )
-
-      when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
-
-      val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
-      when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Right(secondaryClientResponse)))
-
-      service.registerApplication(newApplication)(HeaderCarrier()) map {
-        actual =>
-          actual.left.value mustBe a[IdmsException]
-          verify(repository, times(0)).insert(any)
-          succeed
       }
     }
 
@@ -211,7 +186,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
@@ -248,7 +222,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
@@ -285,7 +258,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = Some("team-id"))
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any)).thenReturn(Future.successful(saved))
@@ -315,7 +287,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
-        .addCredential(Primary, clientResponse.asNewHiddenCredential(clock))
         .addCredential(Secondary, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))

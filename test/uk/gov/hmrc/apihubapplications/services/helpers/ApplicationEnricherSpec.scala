@@ -355,7 +355,7 @@ class ApplicationEnricherSpec extends AsyncFreeSpec
   "credentialCreatingApplicationEnricher" - {
     "must create a credential in the hip environments and enrich the application with it" in {
       val expected = Seq(
-        testApplication.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(testClientResponse1.asNewHiddenCredential(clock))),
+        testApplication.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(testClientResponse1.asNewCredential(clock))),
         testApplication.setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(testClientResponse2.asNewCredential(clock))),
       )
 
