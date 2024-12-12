@@ -20,8 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnectorParityImpl, IdmsConnectorParityImpl}
-import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
+import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -32,29 +31,30 @@ class EnvironmentParityTestController @Inject()(
   cc: ControllerComponents,
   identify: IdentifierAction,
   idmsConnector: IdmsConnectorParityImpl,
-  apimConnector: APIMConnectorParityImpl
+  apimConnector: APIMConnectorParityImpl,
+  hipEnvironment: HipEnvironmentActionProvider
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
-  def fetchClientScopes(environmentName: EnvironmentName, clientId: String): Action[AnyContent] = identify.async {
+  def fetchClientScopes(environmentName: String, clientId: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      idmsConnector.fetchClientScopes(environmentName, clientId).map {
+      idmsConnector.fetchClientScopes(request.hipEnvironment.environmentName, clientId).map {
         case Right(scopes) => Ok(Json.toJson(scopes))
         case Left(e) if e.issue == IdmsException.ClientNotFound => NotFound
         case Left(e) => throw e
       }
   }
 
-  def fetchEgresses(environmentName: EnvironmentName): Action[AnyContent] = identify.async {
+  def fetchEgresses(environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      apimConnector.listEgressGateways(environmentName).map {
+      apimConnector.listEgressGateways(request.hipEnvironment.environmentName).map {
         case Right(egresses) => Ok(Json.toJson(egresses))
         case Left(e) => throw e
       }
   }
 
-  def fetchDeployments(environmentName: EnvironmentName): Action[AnyContent] = identify.async {
+  def fetchDeployments(environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      apimConnector.getDeployments(environmentName).map {
+      apimConnector.getDeployments(request.hipEnvironment.environmentName).map {
         case Right(deployments) => Ok(Json.toJson(deployments))
         case Left(e) => throw e
       }

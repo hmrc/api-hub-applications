@@ -54,6 +54,6 @@ POST       /oas/validate                                                        
 
 GET        /egresses/gateways                                                       uk.gov.hmrc.apihubapplications.controllers.EgressController.listEgressGateways()
 
-GET        /environment-parity-test/client-scopes/:environmentName/:clientId        uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchClientScopes(environmentName: EnvironmentName, clientId: String)
-GET        /environment-parity-test/egresses/:environmentName                       uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchEgresses(environmentName: EnvironmentName)
-GET        /environment-parity-test/deployments/:environmentName                    uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchDeployments(environmentName: EnvironmentName)
+GET        /environment-parity-test/client-scopes/:environmentName/:clientId        uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchClientScopes(environmentName: String, clientId: String)
+GET        /environment-parity-test/egresses/:environmentName                       uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchEgresses(environmentName: String)
+GET        /environment-parity-test/deployments/:environmentName                    uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchDeployments(environmentName: String)
