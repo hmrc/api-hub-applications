@@ -37,6 +37,15 @@ case class DbCredential(
       environmentId = this.environmentId.getOrElse(environmentId)
     )
 
+  def toModel(dbApplication: DbApplication): Credential =
+    Credential(
+      clientId = clientId,
+      created = created.getOrElse(dbApplication.created),
+      clientSecret = None,
+      secretFragment = secretFragment,
+      environmentId = this.environmentId.getOrElse(throw new IllegalStateException(s"No environmentId reading credential $clientId"))
+    )
+
 }
 
 object DbCredential {
