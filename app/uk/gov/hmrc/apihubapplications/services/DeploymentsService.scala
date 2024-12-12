@@ -78,7 +78,7 @@ class DeploymentsService @Inject()(
                      publisherRef: String,
                    )(implicit hc: HeaderCarrier): Future[Seq[DeploymentStatus]] = {
     Future.sequence(hipEnvironments.environments.map(hipEnvironment =>
-        apimConnector.getDeployment(publisherRef, hipEnvironment.environmentName)
+        apimConnector.getDeployment(publisherRef, hipEnvironment)
           .map {
             case Right(Some(SuccessfulDeploymentResponse(_, version))) => Deployed(hipEnvironment.id, version)
             case Right(None) => NotDeployed(hipEnvironment.id)

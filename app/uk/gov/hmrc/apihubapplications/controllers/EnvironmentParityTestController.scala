@@ -37,7 +37,7 @@ class EnvironmentParityTestController @Inject()(
 
   def fetchClientScopes(environmentName: String, clientId: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      idmsConnector.fetchClientScopes(request.hipEnvironment.environmentName, clientId).map {
+      idmsConnector.fetchClientScopes(request.hipEnvironment, clientId).map {
         case Right(scopes) => Ok(Json.toJson(scopes))
         case Left(e) if e.issue == IdmsException.ClientNotFound => NotFound
         case Left(e) => throw e
@@ -46,7 +46,7 @@ class EnvironmentParityTestController @Inject()(
 
   def fetchEgresses(environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      apimConnector.listEgressGateways(request.hipEnvironment.environmentName).map {
+      apimConnector.listEgressGateways(request.hipEnvironment).map {
         case Right(egresses) => Ok(Json.toJson(egresses))
         case Left(e) => throw e
       }
@@ -54,7 +54,7 @@ class EnvironmentParityTestController @Inject()(
 
   def fetchDeployments(environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      apimConnector.getDeployments(request.hipEnvironment.environmentName).map {
+      apimConnector.getDeployments(request.hipEnvironment).map {
         case Right(deployments) => Ok(Json.toJson(deployments))
         case Left(e) => throw e
       }

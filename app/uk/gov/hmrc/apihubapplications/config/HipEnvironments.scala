@@ -31,7 +31,9 @@ case class HipEnvironment(
   secret: String,
   useProxy: Boolean,
   apiKey: Option[String]
-)
+) {
+  override def toString: String = id
+}
 
 object HipEnvironment {
 

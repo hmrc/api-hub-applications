@@ -27,7 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Acces
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, EnvironmentName, Primary, Scope, Secondary, Endpoint as ApplicationEndpoint}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, EnvironmentName, Scope, Endpoint as ApplicationEndpoint}
 import uk.gov.hmrc.apihubapplications.models.exception.ApiNotFoundException
 import uk.gov.hmrc.apihubapplications.models.idms.ClientScope
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
@@ -56,10 +56,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
     "must remove all scopes when the application has no remaining APIs" in {
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Primary, scope2.name)
-        .addScope(Secondary, scope2.name)
-        .addScope(Secondary, scope3.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope3.name)
 
       val fixture = buildFixture()
       val accessRequests = Seq.empty
@@ -73,10 +73,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoInteractions(fixture.integrationCatalogueConnector)
           verifyIdmsFetchClientScopes(application, fixture)
 
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName2))(any)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName3))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName3))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -89,10 +89,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Primary, scope2.name)
-        .addScope(Secondary, scope1.name)
-        .addScope(Secondary, scope2.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(api.removeEndpoint(endpointForScope2.path)))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -112,10 +112,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName2))(any)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -127,9 +127,9 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope1)
 
       val application = applicationWithCredentials
-        .addCredential(Primary, credential3)
-        .addScope(Primary, scope1.name)
-        .addScope(Secondary, scope1.name)
+        .addCredential(FakeHipEnvironments.primaryEnvironment, credential3)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -139,7 +139,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
 
       stubIdmsFetchClientScopes(application, fixture)
-      when(fixture.idmsConnector.fetchClientScopes(eqTo(Primary), eqTo(clientId3))(any))
+      when(fixture.idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId3))(any))
         .thenReturn(Future.successful(Right(Seq(ClientScope(scopeName1), ClientScope(scopeName2)))))
 
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
@@ -151,10 +151,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId3), eqTo(scopeName2))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId3), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId3), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId3), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -166,8 +166,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope1)
 
       val application = applicationWithCredentials
-        .addCredential(Primary, credential3)
-        .addCredential(Secondary, credential4)
+        .addCredential(FakeHipEnvironments.primaryEnvironment, credential3)
+        .addCredential(FakeHipEnvironments.secondaryEnvironment, credential4)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -187,10 +187,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId3), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId4), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId3), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId4), eqTo(scopeName1))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -203,10 +203,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Primary, scope2.name)
-        .addScope(Secondary, scope1.name)
-        .addScope(Secondary, scope2.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -225,10 +225,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName2))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -240,10 +240,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Primary, scope2.name)
-        .addScope(Secondary, scope2.name)
-        .addScope(Secondary, scope3.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope3.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -263,10 +263,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName3))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName2))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName3))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -279,8 +279,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Secondary, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq.empty
@@ -299,8 +299,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -315,8 +315,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Secondary, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
         .addApi(buildApi(api1))
         .addApi(buildApi(api2))
 
@@ -338,8 +338,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -354,10 +354,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Primary, scope2.name)
-        .addScope(Secondary, scope1.name)
-        .addScope(Secondary, scope2.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(apiDetail1))
         .addApi(buildApi(apiDetail2))
 
@@ -386,10 +386,10 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-        .addScope(Primary, scope1.name)
-        .addScope(Primary, scope2.name)
-        .addScope(Secondary, scope1.name)
-        .addScope(Secondary, scope2.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
+        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(api))
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api.removeEndpoint(endpointForScope2.path)))
@@ -408,9 +408,9 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
           verifyIdmsFetchClientScopes(application, fixture)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Primary), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(Secondary), eqTo(clientId2), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId2), eqTo(scopeName2))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -432,41 +432,41 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
   }
 
   private def stubIdmsFetchClientScopes(application: Application, fixture: Fixture, noScopesFor: Set[String] = Set.empty): Unit = {
-    EnvironmentName.values.foreach(
-      environmentName =>
+    FakeHipEnvironments.environments.foreach(
+      hipEnvironment =>
         application
-          .getCredentials(environmentName)
+          .getCredentials(hipEnvironment)
           .filterNot(credential => noScopesFor.contains(credential.clientId))
           .foreach(
             credential =>
-              when(fixture.idmsConnector.fetchClientScopes(eqTo(environmentName), eqTo(credential.clientId))(any))
+              when(fixture.idmsConnector.fetchClientScopes(eqTo(hipEnvironment), eqTo(credential.clientId))(any))
                 .thenReturn(Future.successful(Right(
                   application
-                    .getScopes(environmentName)
+                    .getScopes(hipEnvironment)
                     .map(scope => ClientScope(scope.name))
                 )))
           )
     )
 
-    EnvironmentName.values.foreach(
-      environmentName =>
+    FakeHipEnvironments.environments.foreach(
+      hipEnvironment =>
         noScopesFor.foreach(
           clientId =>
-            when(fixture.idmsConnector.fetchClientScopes(eqTo(environmentName), eqTo(clientId))(any))
+            when(fixture.idmsConnector.fetchClientScopes(eqTo(hipEnvironment), eqTo(clientId))(any))
               .thenReturn(Future.successful(Right(Seq.empty)))
         )
     )
   }
 
   private def verifyIdmsFetchClientScopes(application: Application, fixture: Fixture, ignoreClientIds: Set[String] = Set.empty) = {
-    EnvironmentName.values.map(
-      environmentName =>
+    FakeHipEnvironments.environments.map(
+      hipEnvironment =>
         application
-          .getCredentials(environmentName)
+          .getCredentials(hipEnvironment)
           .filterNot(credential => ignoreClientIds.contains(credential.clientId))
           .foreach(
             credential =>
-              verify(fixture.idmsConnector).fetchClientScopes(eqTo(environmentName), eqTo(credential.clientId))(any)
+              verify(fixture.idmsConnector).fetchClientScopes(eqTo(hipEnvironment), eqTo(credential.clientId))(any)
           )
     )
   }
@@ -492,8 +492,8 @@ object ScopeFixerSpec {
 
   private val baseApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq.empty)
   private val applicationWithCredentials: Application = baseApplication
-    .addCredential(Primary, credential1)
-    .addCredential(Secondary, credential2)
+    .addCredential(FakeHipEnvironments.primaryEnvironment, credential1)
+    .addCredential(FakeHipEnvironments.secondaryEnvironment, credential2)
 
   private def baseApi(id: String): ApiDetail = ApiDetail(id, "test-publisher-ref", "test-title", "test-description", "test-platform", "test-version", Seq.empty, None, "test-oas", Live, None, None, None, Seq.empty)
 

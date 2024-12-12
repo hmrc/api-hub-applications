@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailSummary
 import uk.gov.hmrc.apihubapplications.models.application.Primary
@@ -30,7 +31,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class StatsService @Inject()(
   apimConnector: APIMConnector,
-  integrationCatalogueConnector: IntegrationCatalogueConnector
+  integrationCatalogueConnector: IntegrationCatalogueConnector,
+  hipEnvironments: HipEnvironments,
 )(implicit ec: ExecutionContext) {
 
   import StatsService.*
@@ -47,7 +49,7 @@ class StatsService @Inject()(
   }
 
   private def buildApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApisInProduction]] = {
-    val futureDeployments = apimConnector.getDeployments(Primary)
+    val futureDeployments = apimConnector.getDeployments(hipEnvironments.forEnvironmentName(Primary))
     val futureApis = integrationCatalogueConnector.findHipApis()
 
     (for {

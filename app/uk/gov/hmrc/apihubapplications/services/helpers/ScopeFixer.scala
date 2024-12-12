@@ -74,7 +74,7 @@ class ScopeFixer @Inject()(
           application.getCredentials(hipEnvironment).map(
             credential =>
               idmsConnector
-                .fetchClientScopes(hipEnvironment.environmentName, credential.clientId)
+                .fetchClientScopes(hipEnvironment, credential.clientId)
                 .map(_.map(
                   scopes =>
                     CredentialScopes(hipEnvironment.id, credential.clientId, credential.created, scopes.map(_.clientScopeId))
@@ -139,7 +139,7 @@ class ScopeFixer @Inject()(
           credential =>
             scopesToRemove(credential, allowedScopes).map(
               scopeName =>
-                idmsConnector.deleteClientScope(hipEnvironment.environmentName, credential.clientId, scopeName)
+                idmsConnector.deleteClientScope(hipEnvironment, credential.clientId, scopeName)
             )
         )
     )
@@ -159,7 +159,7 @@ class ScopeFixer @Inject()(
           credential =>
             allowedScopes.map(
               scopeName =>
-                idmsConnector.addClientScope(hipEnvironment.environmentName, credential.clientId, scopeName)
+                idmsConnector.addClientScope(hipEnvironment, credential.clientId, scopeName)
             )
         )
     )

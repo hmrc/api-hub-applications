@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services.helpers
 
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.*
@@ -76,7 +76,8 @@ object ApplicationEnrichers {
 
   def secondaryCredentialApplicationEnricher(
                                               original: Application,
-                                              idmsConnector: IdmsConnector
+                                              idmsConnector: IdmsConnector,
+                                              hipEnvironments: HipEnvironments,
                                             )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     type IssueOrClientResponse = Either[String, ClientResponse]
 
@@ -100,9 +101,9 @@ object ApplicationEnrichers {
     }
 
     Future.sequence(
-        original.getCredentials(Secondary).map {
+        original.getCredentials(hipEnvironments.forEnvironmentName(Secondary)).map {
           credential =>
-            idmsConnector.fetchClient(Secondary, credential.clientId)
+            idmsConnector.fetchClient(hipEnvironments.forEnvironmentName(Secondary), credential.clientId)
         }
       )
       .map(toIssuesOrClientResponses)
@@ -115,13 +116,14 @@ object ApplicationEnrichers {
 
   def secondaryScopeApplicationEnricher(
                                          original: Application,
-                                         idmsConnector: IdmsConnector
+                                         idmsConnector: IdmsConnector,
+                                         hipEnvironments: HipEnvironments,
                                        )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
         application.setScopes(
-          Secondary, 
+          hipEnvironments.forEnvironmentName(Secondary),
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
@@ -136,7 +138,7 @@ object ApplicationEnrichers {
     original.getMasterCredential(Secondary) match {
       case Some(credential) =>
         idmsConnector
-          .fetchClientScopes(Secondary, credential.clientId)
+          .fetchClientScopes(hipEnvironments.forEnvironmentName(Secondary), credential.clientId)
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
             case Left(e: IdmsException) => Right(buildIssuesEnricher(e))
@@ -147,13 +149,14 @@ object ApplicationEnrichers {
 
   def primaryScopeApplicationEnricher(
                                        original: Application,
-                                       idmsConnector: IdmsConnector
+                                       idmsConnector: IdmsConnector,
+                                       hipEnvironments: HipEnvironments,
                                      )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
 
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
         application.setScopes(
-          Primary, 
+          hipEnvironments.forEnvironmentName(Primary),
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
@@ -165,10 +168,10 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getMasterCredential(Primary) match {
+    original.getMasterCredential(hipEnvironments.forEnvironmentName(Primary)) match {
       case Some(credential) =>
         idmsConnector
-          .fetchClientScopes(Primary, credential.clientId)
+          .fetchClientScopes(hipEnvironments.forEnvironmentName(Primary), credential.clientId)
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
             case Left(e: IdmsException) => Right(buildIssuesEnricher(e))
@@ -183,11 +186,11 @@ object ApplicationEnrichers {
                                              idmsConnector: IdmsConnector,
                                              clock: Clock,
                                            )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
-      idmsConnector.createClient(hipEnvironment.environmentName, Client(original)).map {
+      idmsConnector.createClient(hipEnvironment, Client(original)).map {
         case Right(clientResponse) =>
           Right(
             (application: Application) => {
-              application.addCredential(hipEnvironment.environmentName, clientResponse.asNewCredential(clock))
+              application.addCredential(hipEnvironment, clientResponse.asNewCredential(clock))
             }
           )
         case Left(e) => Left(e)
@@ -195,28 +198,28 @@ object ApplicationEnrichers {
   }
 
   def scopeAddingApplicationEnricher(
-                                      environmentName: EnvironmentName,
+                                      hipEnvironment: HipEnvironment,
                                       original: Application,
                                       idmsConnector: IdmsConnector,
                                       scopeName: String
                                     )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
     Future.sequence(
         original
-          .getCredentials(environmentName)
+          .getCredentials(hipEnvironment)
           .map(
             credential =>
-              idmsConnector.addClientScope(environmentName, credential.clientId, scopeName)
+              idmsConnector.addClientScope(hipEnvironment, credential.clientId, scopeName)
           )
       )
       .map(useFirstException)
       .map {
-        case Right(_) => Right(_.addScope(environmentName, scopeName))
+        case Right(_) => Right(_.addScope(hipEnvironment, scopeName))
         case Left(e) => Left(e)
       }
   }
 
   def scopeRemovingApplicationEnricher(
-    environmentName: EnvironmentName,
+    hipEnvironment: HipEnvironment,
     original: Application,
     idmsConnector: IdmsConnector,
     scopeName: String,
@@ -226,12 +229,12 @@ object ApplicationEnrichers {
     Future
       .sequence(
         original
-          .getCredentials(environmentName)
+          .getCredentials(hipEnvironment)
           .filter(credential => clientId.isEmpty || clientId.contains(credential.clientId))
           .map(
             credential =>
               idmsConnector
-                .deleteClientScope(environmentName, credential.clientId, scopeName)
+                .deleteClientScope(hipEnvironment, credential.clientId, scopeName)
                 .map {
                   case Right(_) => Right(())
                   case Left(e) if e.issue.equals(ClientNotFound) => Right(())
@@ -242,11 +245,8 @@ object ApplicationEnrichers {
       .map(useFirstException)
       .map(_.map(_ =>
         (application: Application) => {
-          if (updateScopes(environmentName, application, clientId)) {
-            environmentName match {
-              case Primary => application.removeScope(Primary, scopeName)
-              case Secondary => application.removeScope(Secondary, scopeName)
-            }
+          if (updateScopes(hipEnvironment, application, clientId)) {
+              application.removeScope(hipEnvironment, scopeName)
           }
           else {
             application
@@ -256,11 +256,11 @@ object ApplicationEnrichers {
 
   }
 
-  private def updateScopes(environmentName: EnvironmentName, application: Application, clientId: Option[String]) = {
+  private def updateScopes(hipEnvironment: HipEnvironment, application: Application, clientId: Option[String]) = {
     clientId match {
       case Some(clientId) =>
         application
-          .getMasterCredential(environmentName)
+          .getMasterCredential(hipEnvironment)
           .map(_.clientId)
           .contains(clientId)
       case _ => true

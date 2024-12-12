@@ -21,7 +21,7 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
@@ -46,11 +46,9 @@ class IdmsConnectorImpl @Inject()(
   import ProxySupport.*
   import CorrelationIdSupport.*
 
-  override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  override def createClient(hipEnvironment: HipEnvironment, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${hipEnvironment.apimUrl}/identity/clients"
-    val context = Seq("environmentName" -> environmentName, "client" -> client)
+    val context = Seq("hipEnvironment" -> hipEnvironment.id, "client" -> client)
       .withCorrelationId()
 
     httpClient.post(url)
@@ -70,11 +68,9 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-  override def fetchClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  override def fetchClient(hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     val url = url"${hipEnvironment.apimUrl}/identity/clients/$clientId/client-secret"
-    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+    val context = Seq("hipEnvironment" -> hipEnvironment.id, "clientId" -> clientId)
       .withCorrelationId()
 
     httpClient.get(url)
@@ -96,11 +92,9 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-  override def deleteClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  override def deleteClient(hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${hipEnvironment.apimUrl}/identity/clients/$clientId"
-    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+    val context = Seq("hipEnvironment" -> hipEnvironment.id, "clientId" -> clientId)
       .withCorrelationId()
 
     httpClient.delete(url)
@@ -119,11 +113,9 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-  override def newSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  override def newSecret(hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
     val url = url"${hipEnvironment.apimUrl}/identity/clients/$clientId/client-secret"
-    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+    val context = Seq("hipEnvironment" -> hipEnvironment.id, "clientId" -> clientId)
       .withCorrelationId()
 
     httpClient.post(url)
@@ -145,11 +137,9 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-  override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  override def addClientScope(hipEnvironment: HipEnvironment, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${hipEnvironment.apimUrl}/identity/clients/$clientId/client-scopes/$scopeId"
-    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
+    val context = Seq("hipEnvironment" -> hipEnvironment.id, "clientId" -> clientId, "scopeId" -> scopeId)
       .withCorrelationId()
 
     httpClient.put(url)
@@ -170,11 +160,9 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-  override def deleteClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  override def deleteClientScope(hipEnvironment: HipEnvironment, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     val url = url"${hipEnvironment.apimUrl}/identity/clients/$clientId/client-scopes/$scopeId"
-    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId, "scopeId" -> scopeId)
+    val context = Seq("hipEnvironment" -> hipEnvironment.id, "clientId" -> clientId, "scopeId" -> scopeId)
       .withCorrelationId()
 
     httpClient.delete(url)
@@ -193,11 +181,9 @@ class IdmsConnectorImpl @Inject()(
       }
   }
 
-  override def fetchClientScopes(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  override def fetchClientScopes(hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]] = {
     val url = url"${hipEnvironment.apimUrl}/identity/clients/$clientId/client-scopes"
-    val context = Seq("environmentName" -> environmentName, "clientId" -> clientId)
+    val context = Seq("hipEnvironment" -> hipEnvironment.id, "clientId" -> clientId)
       .withCorrelationId()
 
     httpClient.get(url)

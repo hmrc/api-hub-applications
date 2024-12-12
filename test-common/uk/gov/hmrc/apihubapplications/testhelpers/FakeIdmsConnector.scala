@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.testhelpers
 
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeIdmsConnector.{FakeClientResponse, fakeClientScopeId1, fakeClientScopeId2, fakeSecret}
@@ -27,32 +28,32 @@ import scala.concurrent.Future
 
 class FakeIdmsConnector extends IdmsConnector {
 
-  override def createClient(environmentName: EnvironmentName, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
+  override def createClient(hipEnvironment: HipEnvironment, client: Client)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     Future.successful(Right(FakeClientResponse))
   }
 
-  override def fetchClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
+  override def fetchClient(hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, ClientResponse]] = {
     Future.successful(Right(ClientResponse(clientId, fakeSecret)))
   }
 
-  override def deleteClient(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+  override def deleteClient(hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     Future.successful(Right(()))
   }
 
-  override def newSecret(environmentName: EnvironmentName, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
+  override def newSecret(hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Secret]] = {
     Future.successful(Right(Secret(fakeSecret)))
   }
 
-  override def addClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+  override def addClientScope(hipEnvironment: HipEnvironment, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     Future.successful(Right(()))
   }
 
-  override def deleteClientScope(environmentName: EnvironmentName, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
+  override def deleteClientScope(hipEnvironment: HipEnvironment, clientId: String, scopeId: String)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] = {
     Future.successful(Right(()))
   }
 
   override def fetchClientScopes(
-    environmentName: EnvironmentName,
+    hipEnvironment: HipEnvironment,
     clientId: String
   )(implicit hc: HeaderCarrier): Future[Either[IdmsException, Seq[ClientScope]]] = {
     Future.successful(Right(Seq(ClientScope(fakeClientScopeId1), ClientScope(fakeClientScopeId2))))

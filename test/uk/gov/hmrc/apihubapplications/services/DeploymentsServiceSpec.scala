@@ -27,7 +27,7 @@ import play.api.http.Status.BAD_REQUEST
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
 import uk.gov.hmrc.apihubapplications.models.apim.*
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.unexpectedResponse
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, EmailException, IntegrationCatalogueException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.{Deployed, NotDeployed, Unknown}
@@ -138,8 +138,8 @@ class DeploymentsServiceSpec
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
           result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Deployed(FakeHipEnvironments.secondaryEnvironment.id, "1"))
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.primaryEnvironment))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.secondaryEnvironment))(any)
           succeed
       }
     }
@@ -148,14 +148,14 @@ class DeploymentsServiceSpec
       val publisherRef = "test-publisher-ref"
       val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
 
-      when(fixture.apimConnector.getDeployment(any, eqTo(Primary))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
-      when(fixture.apimConnector.getDeployment(any, eqTo(Secondary))(any)).thenReturn(Future.successful(Right(None)))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.secondaryEnvironment))(any)).thenReturn(Future.successful(Right(None)))
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
           result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), NotDeployed(FakeHipEnvironments.secondaryEnvironment.id))
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.primaryEnvironment))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.secondaryEnvironment))(any)
           succeed
       }
     }
@@ -164,14 +164,14 @@ class DeploymentsServiceSpec
       val publisherRef = "test-publisher-ref"
       val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
 
-      when(fixture.apimConnector.getDeployment(any, eqTo(Primary))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
-      when(fixture.apimConnector.getDeployment(any, eqTo(Secondary))(any)).thenReturn(Future.successful(Left(unexpectedResponse(500))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.secondaryEnvironment))(any)).thenReturn(Future.successful(Left(unexpectedResponse(500))))
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
           result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Unknown(FakeHipEnvironments.secondaryEnvironment.id))
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Primary))(any)
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(Secondary))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.primaryEnvironment))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.secondaryEnvironment))(any)
           verify(fixture.metricsService).apimUnknownFailure()
           succeed
       }

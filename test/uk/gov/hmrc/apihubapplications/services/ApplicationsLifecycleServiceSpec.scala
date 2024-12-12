@@ -66,16 +66,16 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       )
 
       val primaryClientResponse = ClientResponse("primary-client-id", "test-secret-1234")
-      when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(newApplication)))(any))
+      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(Client(newApplication)))(any))
         .thenReturn(Future.successful(Right(primaryClientResponse)))
 
       val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
-      when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(newApplication)))(any))
+      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(Client(newApplication)))(any))
         .thenReturn(Future.successful(Right(secondaryClientResponse)))
 
       val applicationWithCreds = application
-        .setCredentials(Primary, Seq.empty)
-        .setCredentials(Secondary, Seq(secondaryClientResponse.asNewCredential(clock)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq.empty)
+        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(secondaryClientResponse.asNewCredential(clock)))
 
       val saved = applicationWithCreds.copy(id = Some("test-id"))
 
@@ -108,10 +108,10 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       )
 
       val primaryClientResponse = ClientResponse("primary-client-id", "test-secret-1234")
-      when(idmsConnector.createClient(eqTo(Primary), eqTo(Client(newApplication)))(any))
+      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(Client(newApplication)))(any))
         .thenReturn(Future.successful(Right(primaryClientResponse)))
 
-      when(idmsConnector.createClient(eqTo(Secondary), eqTo(Client(newApplication)))(any))
+      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(Client(newApplication)))(any))
         .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
@@ -141,7 +141,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2, TeamMember(creator.email)),
         environments = Environments()
-      ).setCredentials(Secondary, Seq(clientResponse.asNewCredential(clock)))
+      ).setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(clientResponse.asNewCredential(clock)))
 
       when(idmsConnector.createClient(any, any)(any))
         .thenReturn(Future.successful(Right(clientResponse)))
@@ -186,7 +186,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addCredential(Secondary, clientResponse.asNewCredential(clock))
+        .addCredential(FakeHipEnvironments.secondaryEnvironment, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
@@ -222,7 +222,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
-        .addCredential(Secondary, clientResponse.asNewCredential(clock))
+        .addCredential(FakeHipEnvironments.secondaryEnvironment, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
@@ -258,7 +258,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = Some("team-id"))
-        .addCredential(Secondary, clientResponse.asNewCredential(clock))
+        .addCredential(FakeHipEnvironments.secondaryEnvironment, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any)).thenReturn(Future.successful(saved))
 
@@ -287,7 +287,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
-        .addCredential(Secondary, clientResponse.asNewCredential(clock))
+        .addCredential(FakeHipEnvironments.secondaryEnvironment, clientResponse.asNewCredential(clock))
 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
@@ -316,7 +316,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       val captor: ArgumentCaptor[Application] = ArgumentCaptor.forClass(classOf[Application])
       when(repository.update(captor.capture())).thenReturn(Future.successful(Right(())))
@@ -343,7 +343,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
@@ -371,7 +371,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq(teamMember1, teamMember2))
-        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
@@ -400,7 +400,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq(teamMember1, teamMember2))
-        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
@@ -446,7 +446,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
@@ -472,7 +472,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val id = "test-id"
       val clientId = "test-client-id"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setCredentials(Primary, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId, LocalDateTime.now(clock), None, None)))
 
       val currentUser = "user@hmrc.gov.uk"
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
@@ -513,8 +513,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
-        .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
@@ -541,8 +541,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val clientId1 = "test-client-id-1"
       val clientId2 = "test-client-id-2"
       val application = Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-        .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
-        .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(clientId1, LocalDateTime.now(clock), None, None)))
+        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(clientId2, LocalDateTime.now(clock), None, None)))
 
       when(searchService.findById(eqTo(id))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
