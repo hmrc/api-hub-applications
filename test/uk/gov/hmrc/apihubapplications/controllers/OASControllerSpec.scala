@@ -45,13 +45,13 @@ class OASControllerSpec
     with OptionValues {
 
   "validateOAS" - {
-    "must return Ok when the OAS is valid" in {
+    "must return Ok when the OAS is valid and not bother validating the title" in {
       val fixture = buildFixture()
       val oas = "valid oas"
       val validResult = SuccessfulValidateResponse
       val expectedResult = Json.toJson(validResult)(formatValidateResponse)
 
-      when(fixture.oasService.validateInPrimary(eqTo(oas))(any)).thenReturn(Future.successful(Right(validResult)))
+      when(fixture.oasService.validateInPrimary(eqTo(oas), eqTo(false))(any, any)).thenReturn(Future.successful(Right(validResult)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.OASController.validateOAS())
@@ -64,13 +64,13 @@ class OASControllerSpec
       }
     }
 
-    "must return BadRequest when the OAS is invalid" in {
+    "must return BadRequest when the OAS is invalid and not bother validating title" in {
       val fixture = buildFixture()
       val oas = "invalid oas"
       val invalidResult = InvalidOasResponse(FailuresResponse("code", "reason", None))
       val expectedResult = Json.toJson(invalidResult)(formatValidateResponse)
 
-      when(fixture.oasService.validateInPrimary(eqTo(oas))(any))
+      when(fixture.oasService.validateInPrimary(eqTo(oas), eqTo(false))(any, any))
         .thenReturn(Future.successful(Right(invalidResult)))
 
       running(fixture.application) {
@@ -88,7 +88,7 @@ class OASControllerSpec
       val fixture = buildFixture()
       val oas = "invalid oas"
 
-      when(fixture.oasService.validateInPrimary(eqTo(oas))(any))
+      when(fixture.oasService.validateInPrimary(eqTo(oas), eqTo(false))(any, any))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {
@@ -113,6 +113,27 @@ class OASControllerSpec
         status(result) mustBe BAD_REQUEST
       }
     }
+
+    "must return Ok when the OAS is valid and and validate the title" in {
+      val fixture = buildFixture()
+      val oas = "valid oas"
+      val validResult = SuccessfulValidateResponse
+      val expectedResult = Json.toJson(validResult)(formatValidateResponse)
+
+      when(fixture.oasService.validateInPrimary(eqTo(oas), eqTo(true))(any, any)).thenReturn(Future.successful(Right(validResult)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.OASController.validateOAS(true))
+          .withBody(oas)
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe expectedResult
+      }
+    }
+
+
   }
 
   private case class Fixture(application: Application, oasService: OASService)

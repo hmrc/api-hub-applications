@@ -50,7 +50,7 @@ GET        /users                                                               
 GET        /stats/apis-in-production                                                uk.gov.hmrc.apihubapplications.controllers.StatsController.apisInProduction()
 GET        /stats/list-apis-in-production                                           uk.gov.hmrc.apihubapplications.controllers.StatsController.listApisInProduction()
 
-POST       /oas/validate                                                            uk.gov.hmrc.apihubapplications.controllers.OASController.validateOAS()
+POST       /oas/validate                                                            uk.gov.hmrc.apihubapplications.controllers.OASController.validateOAS(validateTitle: Boolean ?= false)
 
 GET        /egresses/gateways                                                       uk.gov.hmrc.apihubapplications.controllers.EgressController.listEgressGateways()
 
