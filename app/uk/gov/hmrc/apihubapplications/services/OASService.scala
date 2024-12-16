@@ -29,7 +29,7 @@ class OASService @Inject()(apimConnector: APIMConnector) {
 
   val oasTitleError = ApimError("APIM", "Oas title is too long.")
   val oasTitleMaxSize = 46
-  
+
   def validateInPrimary(oas: String, validateTitle: Boolean)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[ApimException, ValidateResponse]] = {
 
     if (validateTitle) {
@@ -51,7 +51,7 @@ class OASService @Inject()(apimConnector: APIMConnector) {
   }
 
   private def newFailuresResponse = {
-    FailuresResponse("BAD_REQUEST", "oas title is longer than 46 characters", Some(Seq(oasTitleError)))
+    FailuresResponse("BAD_REQUEST", s"oas title is longer than $oasTitleMaxSize characters", Some(Seq(oasTitleError)))
   }
 
   private def isValidOasTitle(oas: String) = oasTitle(oas).forall(title => {
