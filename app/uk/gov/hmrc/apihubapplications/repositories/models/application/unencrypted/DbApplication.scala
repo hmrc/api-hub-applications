@@ -36,8 +36,8 @@ case class DbApplication(
   credentials: Option[Set[DbCredential]]
 ) {
 
-  def toModel: Application =
-    Application(
+  def toModel: Application = {
+    val application = Application(
       id = id,
       name = name,
       created = created,
@@ -58,13 +58,20 @@ case class DbApplication(
         .getOrElse(environments.toModel(this).toCredentials)
     )
 
+    if (application.environments.toCredentials != application.credentials) {
+      throw new IllegalStateException(s"Credentials and environments not in sync converting to application ${application.safeId}")
+    }
+
+    application
+  }
+
 }
 
 object DbApplication {
 
   def apply(application: Application): DbApplication = {
     if (application.environments.toCredentials != application.credentials) {
-      throw new IllegalStateException(s"Credentials and environments no in sync for application ${application.safeId}")
+      throw new IllegalStateException(s"Credentials and environments not in sync converting from application ${application.safeId}")
     }
 
     DbApplication(

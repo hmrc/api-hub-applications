@@ -82,6 +82,13 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
         DbApplication(application).apis mustBe Some(Seq(DbApi(api.id, Some(api.title), api.endpoints)))
       }
+
+      "must throw an exception if environments and credentials are not in sync" in {
+        val credential = Credential("test-client-id", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
+        val application = testApplication.copy(credentials = Set(credential))
+
+        an[IllegalStateException] must be thrownBy DbApplication(application)
+      }
     }
 
     "when translating from DbApplication to Application" - {
@@ -114,6 +121,12 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         dbApplication.toModel.apis mustBe Seq(Api(dbApi.id, dbApi.title.value, dbApi.endpoints))
       }
 
+      "must throw an exception if environments and credentials are not in sync" in {
+        val dbCredential = DbCredential("test-client-id", None, None, None)
+        val dbApplication = testDbApplication.copy(credentials = Some(Set(dbCredential)))
+
+        an[IllegalStateException] must be thrownBy dbApplication.toModel
+      }
     }
   }
 

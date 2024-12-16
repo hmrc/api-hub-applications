@@ -316,6 +316,32 @@ class ApplicationLensesSpec extends LensBehaviours {
           (application, credentials) => ApplicationLensOps(application).setCredentials(Secondary, credentials)
         )
       }
+
+      "must keep environments and credentials in sync" in {
+        val application = testApplication
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
+
+        val expected = application.copy(
+          environments = Environments(
+            primary = Environment(
+              scopes = Seq.empty,
+              credentials = Seq(credential1)
+            ),
+            secondary = Environment(
+              scopes = Seq.empty,
+              credentials = Seq(credential2)
+            )
+          ),
+          credentials = Set(credential1, credential2)
+        )
+
+        val actual = application
+          .setCredentials(Primary, Seq(credential1))
+          .setCredentials(Secondary, Seq(credential2))
+
+        actual mustBe expected
+      }
     }
 
     "addCredential(Primary)" - {
