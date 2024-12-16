@@ -44,7 +44,7 @@ class OASServiceSpec
     "must return a validation result and not validate the title" in {
 
       val fixture = buildFixture()
-      val oas = "some test oas"
+      val oas = "some invalid test oas without a title"
 
       val validResponse = SuccessfulValidateResponse
       when(fixture.apimConnector.validateInPrimary(eqTo(oas))(any)).thenReturn(Future.successful(Right(validResponse)))
