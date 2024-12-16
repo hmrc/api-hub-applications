@@ -81,7 +81,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "client" -> testClient,
         "X-Correlation-Id" -> correlationId
       )
@@ -167,7 +167,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )
@@ -241,7 +241,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx or 404 response" in {
       val context = Seq(
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )
@@ -318,7 +318,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )
@@ -393,7 +393,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "scopeId" -> testScopeId,
         "X-Correlation-Id" -> correlationId
@@ -468,7 +468,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "scopeId" -> testScopeId,
         "X-Correlation-Id" -> correlationId
@@ -550,7 +550,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )

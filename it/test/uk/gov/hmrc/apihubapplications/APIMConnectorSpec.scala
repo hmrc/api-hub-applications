@@ -438,7 +438,7 @@ class APIMConnectorSpec
       val publisherReference = "publisher_ref"
       val context = Seq(
         "publisherReference" -> publisherReference,
-        "hipEnvironment" -> primaryEnvironment,
+        "hipEnvironment" -> primaryEnvironment.id,
         "X-Correlation-Id" -> correlationId
       )
 
@@ -731,7 +731,7 @@ class APIMConnectorSpec
 
     "must return UnexpectedResponse when APIM returns one" in {
       val context = Seq(
-        "hipEnvironment" -> secondaryEnvironment,
+        "hipEnvironment" -> secondaryEnvironment.id,
         "X-Correlation-Id" -> correlationId
       )
 
