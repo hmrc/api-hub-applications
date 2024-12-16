@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
-import io.circe.*
+import io.circe.{yaml}
 import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.apim.{Error as ApimError, *}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
@@ -30,9 +30,9 @@ class OASService @Inject()(apimConnector: APIMConnector) {
   val oasTitleError = ApimError("APIM", "Oas title is too long.")
 
   def validateInPrimary(oas: String, validateTitle: Boolean)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[ApimException, ValidateResponse]] = {
-    val validOasTitle = isValidOasTitle(oas)
-    
+
     if (validateTitle) {
+      val validOasTitle = isValidOasTitle(oas)
       apimConnector.validateInPrimary(oas) map {
         case Right(SuccessfulValidateResponse) if validOasTitle => Right(SuccessfulValidateResponse)
         case Right(SuccessfulValidateResponse) => Right(InvalidOasResponse(newFailuresResponse))

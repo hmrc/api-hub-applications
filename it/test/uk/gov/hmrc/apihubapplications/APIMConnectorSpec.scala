@@ -779,8 +779,7 @@ class APIMConnectorSpec
 
 object APIMConnectorSpec extends HttpClientV2Support {
 
-  private val oas = "title: test-oas-document"
-  private val oasWithTitleTooLong = "title: test-oas-document with a ridiculously long name longer than forty six characters."
+  private val oas = "test-oas-document"
   private val primaryClientId = "test-client-id-primary"
   private val secondaryClientId = "test-client-id-secondary"
   private val primarySecret = "test-secret-primary"
