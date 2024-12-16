@@ -28,7 +28,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class OASService @Inject()(apimConnector: APIMConnector) {
 
   val oasTitleError = ApimError("APIM", "Oas title is too long.")
-
+  val oasTitleMaxSize = 46
+  
   def validateInPrimary(oas: String, validateTitle: Boolean)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[ApimException, ValidateResponse]] = {
 
     if (validateTitle) {
@@ -37,13 +38,11 @@ class OASService @Inject()(apimConnector: APIMConnector) {
         case Right(SuccessfulValidateResponse) if validOasTitle => Right(SuccessfulValidateResponse)
         case Right(SuccessfulValidateResponse) => Right(InvalidOasResponse(newFailuresResponse))
         case Right(invalidOasResponse: InvalidOasResponse) if validOasTitle => Right(invalidOasResponse)
-        case Right(invalidOasResponse: InvalidOasResponse) if invalidOasResponse.failure.errors.isDefined =>
-          val failure = invalidOasResponse.failure
-          val existingErrors = failure.errors.get
-          Right(invalidOasResponse.copy(failure = failure.copy(errors = Some(existingErrors ++ Seq(oasTitleError)))))
         case Right(invalidOasResponse: InvalidOasResponse) =>
           val failure = invalidOasResponse.failure
-          Right(invalidOasResponse.copy(failure = failure.copy(errors = Some(Seq(oasTitleError)))))
+          Right(invalidOasResponse.copy(
+            failure = failure.copy(
+              errors = Some(failure.errors.toList.flatten ++ Seq(oasTitleError)))))
         case Left(exception) => Left(exception)
       }
     } else {
@@ -55,13 +54,15 @@ class OASService @Inject()(apimConnector: APIMConnector) {
     FailuresResponse("BAD_REQUEST", "oas title is longer than 46 characters", Some(Seq(oasTitleError)))
   }
 
-  private def isValidOasTitle(oas: String) = oasTitle(oas).forall(title => title.length <= 46)
+  private def isValidOasTitle(oas: String) = oasTitle(oas).forall(title => {
+    title.length <= oasTitleMaxSize
+  })
 
   private def oasTitle(oas: String): Option[String] = {
     val oasYamlOrFail = yaml.parser.parse(oas)
-    oasYamlOrFail match
-      case Right(json) => Some(json.findAllByKey("title").head.toString)
-      case Left(e) => None
+    oasYamlOrFail.toOption.flatMap(
+      _.findAllByKey("title").headOption.map(_.toString)
+    )
   }
 
 }
