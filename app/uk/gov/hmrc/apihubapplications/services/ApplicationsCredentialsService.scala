@@ -69,7 +69,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
               .map(
                 credential =>
                   idmsConnector
-                    .fetchClient(hipEnvironment.environmentName, credential.clientId)
+                    .fetchClient(hipEnvironment, credential.clientId)
                     .map {
                       case Right(clientResponse) =>
                         Right(credential.setSecret(clientResponse.secret))
@@ -116,7 +116,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   private def updateOrAddCredential(application: Application, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
     application.getMasterCredential(hipEnvironment) match {
       case Some(credential) if credential.isHidden && hipEnvironment.isProductionLike =>
-        idmsConnector.newSecret(hipEnvironment.environmentName, credential.clientId).map {
+        idmsConnector.newSecret(hipEnvironment, credential.clientId).map {
           case Right(secret) =>
             val newCredential = Credential(
               clientId = credential.clientId,
@@ -129,7 +129,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
           case Left(e) => Left(e)
         }
       case _ =>
-        idmsConnector.createClient(hipEnvironment.environmentName, Client(application)).map {
+        idmsConnector.createClient(hipEnvironment, Client(application)).map {
           case Right(clientResponse) =>
             val newCredential = clientResponse.asNewCredential(clock)
             Right(NewCredential(application.addCredential(hipEnvironment, newCredential), newCredential, wasHidden = false))
@@ -159,7 +159,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
         application.getCredentials(hipEnvironment).find(_.clientId == clientId) match {
           case Some(_) =>
             if (application.getCredentials(hipEnvironment).size > 1) {
-              idmsConnector.deleteClient(hipEnvironment.environmentName, clientId).flatMap {
+              idmsConnector.deleteClient(hipEnvironment, clientId).flatMap {
                 case Right(_) => deleteCredential(application, hipEnvironment, clientId)
                 case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, hipEnvironment, clientId)
                 case Left(e) => Future.successful(Left(e))
@@ -191,7 +191,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
               application.getCredentials(hipEnvironment).map(
                 credential =>
                   idmsConnector
-                    .fetchClientScopes(hipEnvironment.environmentName, credential.clientId)
+                    .fetchClientScopes(hipEnvironment, credential.clientId)
                     .map(_.map(
                       scopes =>
                         CredentialScopes(hipEnvironment.id, credential.clientId, credential.created, scopes.map(_.clientScopeId))

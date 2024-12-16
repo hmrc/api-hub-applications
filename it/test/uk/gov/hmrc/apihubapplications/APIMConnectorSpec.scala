@@ -26,11 +26,11 @@ import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentsRequest, DetailsResponse, EgressMapping, Error, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata}
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidCredential
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
 import java.time.Instant
 import java.util.Base64
@@ -47,11 +47,12 @@ class APIMConnectorSpec
 
   private val correlationId = "correlation-id"
   private val requestId = Some(RequestId(correlationId))
+  private val Seq(primaryEnvironment, secondaryEnvironment) = hipEnvironments(this).environments
 
   "APIMConnector.validatePrimary" - {
     "must place the correct request to the Simple API Deployment service" in {
       stubFor(
-        post(urlEqualTo(s"/$Primary/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/validate"))
           .withHeader("Content-Type", equalTo("application/yaml"))
           .withHeader("Authorization", equalTo(authorizationTokenPrimary))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
@@ -69,7 +70,7 @@ class APIMConnectorSpec
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
       stubFor(
-        post(urlEqualTo(s"/$Primary/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -85,7 +86,7 @@ class APIMConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
       stubFor(
-        post(urlEqualTo(s"/$Primary/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -100,7 +101,7 @@ class APIMConnectorSpec
 
     "must return an invalid credential response on a 401 response from APIM" in {
       stubFor(
-        post(urlEqualTo(s"/$Primary/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(401)
@@ -118,7 +119,7 @@ class APIMConnectorSpec
 
     "must return an invalid credential response on a 403 response from APIM" in {
       stubFor(
-        post(urlEqualTo(s"/$Primary/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(403)
@@ -136,7 +137,7 @@ class APIMConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns one" in {
       stubFor(
-        post(urlEqualTo(s"/$Primary/v1/simple-api-deployment/validate"))
+        post(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/validate"))
           .willReturn(
             aResponse()
               .withStatus(500)
@@ -153,7 +154,7 @@ class APIMConnectorSpec
   "APIMConnector.deployToSecondary" - {
     "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
       stubFor(
-        post(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments"))
+        post(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments"))
           .withHeader("Content-Type", containing("multipart/form-data"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
@@ -183,7 +184,7 @@ class APIMConnectorSpec
 
     "must return invalid response when the Simple API Deployment service's response cannot be parsed'" in {
       stubFor(
-        post(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments"))
+        post(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withBody("{}")
@@ -198,7 +199,7 @@ class APIMConnectorSpec
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
       stubFor(
-        post(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments"))
+        post(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -214,7 +215,7 @@ class APIMConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
       stubFor(
-        post(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments"))
+        post(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -234,7 +235,7 @@ class APIMConnectorSpec
       )
 
       stubFor(
-        post(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments"))
+        post(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments"))
           .willReturn(
             aResponse()
               .withStatus(500)
@@ -251,7 +252,7 @@ class APIMConnectorSpec
   "APIMConnector.redeployToSecondary" - {
     "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
       stubFor(
-        put(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$publisherRef"))
+        put(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$publisherRef"))
           .withHeader("Content-Type", containing("multipart/form-data"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
@@ -281,7 +282,7 @@ class APIMConnectorSpec
 
     "must return invalid response when the Simple API Deployment service's response cannot be parsed'" in {
       stubFor(
-        put(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$publisherRef"))
+        put(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$publisherRef"))
           .willReturn(
             aResponse()
               .withBody("{}")
@@ -296,7 +297,7 @@ class APIMConnectorSpec
 
     "must return OAS validation failures when returned from the Simple API Deployment service" in {
       stubFor(
-        put(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$publisherRef"))
+        put(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$publisherRef"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -312,7 +313,7 @@ class APIMConnectorSpec
 
     "must return unexpected response when the Simple API Deployment service returns Bad Request but no errors" in {
       stubFor(
-        put(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$publisherRef"))
+        put(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$publisherRef"))
           .willReturn(
             aResponse()
               .withStatus(400)
@@ -333,7 +334,7 @@ class APIMConnectorSpec
       )
 
       stubFor(
-        put(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$publisherRef"))
+        put(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$publisherRef"))
           .willReturn(
             aResponse()
               .withStatus(500)
@@ -348,7 +349,7 @@ class APIMConnectorSpec
 
     "must return ServiceNotFound when the Simple API Deployment service returns 404 Not Found" in {
       stubFor(
-        put(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$publisherRef"))
+        put(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$publisherRef"))
           .willReturn(
             aResponse()
               .withStatus(404)
@@ -365,7 +366,7 @@ class APIMConnectorSpec
   "APIMConnector.getDeployment" - {
     "must place the correct request to the APIM in primary" in {
       stubFor(
-        get(urlEqualTo(s"/$Primary/v1/oas-deployments/publisher_ref"))
+        get(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/oas-deployments/publisher_ref"))
           .withHeader("Authorization", equalTo(authorizationTokenPrimary))
           .willReturn(
             aResponse()
@@ -374,7 +375,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeployment("publisher_ref", Primary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployment("publisher_ref", primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(Some(successfulDeploymentResponse))
       }
@@ -382,7 +383,7 @@ class APIMConnectorSpec
 
     "must place the correct request to the APIM in secondary" in {
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/oas-deployments/publisher_ref"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/oas-deployments/publisher_ref"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
@@ -393,7 +394,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeployment("publisher_ref", Secondary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployment("publisher_ref", secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(Some(successfulDeploymentResponse))
       }
@@ -401,7 +402,7 @@ class APIMConnectorSpec
 
     "must handle 404 in primary" in {
       stubFor(
-        get(urlEqualTo(s"/$Primary/v1/oas-deployments/publisher_ref"))
+        get(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/oas-deployments/publisher_ref"))
           .withHeader("Authorization", equalTo(authorizationTokenPrimary))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
@@ -410,7 +411,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeployment("publisher_ref", Primary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployment("publisher_ref", primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(None)
       }
@@ -418,7 +419,7 @@ class APIMConnectorSpec
 
     "must handle 404 in secondary" in {
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/oas-deployments/publisher_ref"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/oas-deployments/publisher_ref"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
@@ -427,7 +428,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeployment("publisher_ref", Secondary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployment("publisher_ref", secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(None)
       }
@@ -437,19 +438,19 @@ class APIMConnectorSpec
       val publisherReference = "publisher_ref"
       val context = Seq(
         "publisherReference" -> publisherReference,
-        "environment" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "X-Correlation-Id" -> correlationId
       )
 
       stubFor(
-        get(urlEqualTo(s"/$Primary/v1/oas-deployments/publisher_ref"))
+        get(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/oas-deployments/publisher_ref"))
           .willReturn(
             aResponse()
               .withStatus(500)
           )
       )
 
-      buildConnector(this).getDeployment(publisherReference, Primary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployment(publisherReference, primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500, context))
       }
@@ -462,7 +463,7 @@ class APIMConnectorSpec
       )
 
       stubFor(
-        get(urlEqualTo(s"/$Primary/v1/oas-deployments/publisher_ref"))
+        get(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/oas-deployments/publisher_ref"))
           .willReturn(
             aResponse()
               .withBody(s"""{"id": "${expected.id}"}""")
@@ -470,7 +471,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeployment("publisher_ref", Primary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployment("publisher_ref", primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(Some(expected))
       }
@@ -480,7 +481,7 @@ class APIMConnectorSpec
   "APIMConnector.getDeploymentDetails" - {
     "must place the correct request and return the DeploymentDetails on success" in {
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$serviceId"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
@@ -514,7 +515,7 @@ class APIMConnectorSpec
           |""".stripMargin
 
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$serviceId"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
@@ -547,7 +548,7 @@ class APIMConnectorSpec
           |""".stripMargin
 
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$serviceId"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
@@ -567,7 +568,7 @@ class APIMConnectorSpec
 
     "must process a response with no details" in {
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$serviceId"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
@@ -586,7 +587,7 @@ class APIMConnectorSpec
 
     "must return ServiceNotFound when APIM returns a 404 Not Found" in {
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$serviceId"))
           .willReturn(
             aResponse()
               .withStatus(NOT_FOUND)
@@ -603,7 +604,7 @@ class APIMConnectorSpec
       val context = Seq("publisherReference" -> serviceId, "X-Correlation-Id" -> correlationId)
 
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/deployments/$serviceId"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/deployments/$serviceId"))
           .willReturn(
             aResponse()
               .withStatus(INTERNAL_SERVER_ERROR)
@@ -620,7 +621,7 @@ class APIMConnectorSpec
   "APIMConnector.promoteToProduction" - {
     "must place the correct request and return the DeploymentsResponse on success" in {
       stubFor(
-        put(urlEqualTo(s"/$Primary/v1/simple-api-deployment/deployment-from"))
+        put(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/deployment-from"))
           .withHeader("Content-Type", equalTo("application/json"))
           .withHeader("Authorization", equalTo(authorizationTokenPrimary))
           .withHeader("Accept", equalTo("application/json"))
@@ -640,7 +641,7 @@ class APIMConnectorSpec
 
     "must return InvalidOasResponse on failure" in {
       stubFor(
-        put(urlEqualTo(s"/$Primary/v1/simple-api-deployment/deployment-from"))
+        put(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/deployment-from"))
           .withRequestBody(equalToJson(Json.toJson(deploymentFrom).toString()))
           .willReturn(
             aResponse()
@@ -657,7 +658,7 @@ class APIMConnectorSpec
 
     "must return InvalidResponse when the response from APIM cannot be parsed" in {
       stubFor(
-        put(urlEqualTo(s"/$Primary/v1/simple-api-deployment/deployment-from"))
+        put(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/deployment-from"))
           .willReturn(
             aResponse()
               .withBody(Json.obj().toString())
@@ -672,7 +673,7 @@ class APIMConnectorSpec
 
     "must return ServiceNotFound when APIM returns a 4040 Not Found" in {
       stubFor(
-        put(urlEqualTo(s"/$Primary/v1/simple-api-deployment/deployment-from"))
+        put(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/deployment-from"))
           .willReturn(
             aResponse()
               .withStatus(NOT_FOUND)
@@ -689,7 +690,7 @@ class APIMConnectorSpec
       val context = Seq("publisherReference" -> serviceId, "X-Correlation-Id" -> correlationId)
 
       stubFor(
-        put(urlEqualTo(s"/$Primary/v1/simple-api-deployment/deployment-from"))
+        put(urlEqualTo(s"/${primaryEnvironment.environmentName}/v1/simple-api-deployment/deployment-from"))
           .willReturn(
             aResponse()
               .withStatus(INTERNAL_SERVER_ERROR)
@@ -711,7 +712,7 @@ class APIMConnectorSpec
       )
 
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/oas-deployments"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/oas-deployments"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
@@ -722,7 +723,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeployments(Secondary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployments(secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.value mustBe deployments
       }
@@ -730,19 +731,19 @@ class APIMConnectorSpec
 
     "must return UnexpectedResponse when APIM returns one" in {
       val context = Seq(
-        "environment" -> Secondary,
+        "hipEnvironment" -> secondaryEnvironment.id,
         "X-Correlation-Id" -> correlationId
       )
 
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/oas-deployments"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/oas-deployments"))
           .willReturn(
             aResponse()
               .withStatus(INTERNAL_SERVER_ERROR)
           )
       )
 
-      buildConnector(this).getDeployments(Secondary)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).getDeployments(secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
       }
@@ -757,7 +758,7 @@ class APIMConnectorSpec
       }
 
       stubFor(
-        get(urlEqualTo(s"/$Secondary/v1/simple-api-deployment/egress-gateways"))
+        get(urlEqualTo(s"/${secondaryEnvironment.environmentName}/v1/simple-api-deployment/egress-gateways"))
           .withHeader("Authorization", equalTo(authorizationTokenSecondary))
           .withHeader("x-api-key", equalTo(secondaryApiKey))
           .withHeader("Accept", equalTo("application/json"))
@@ -879,35 +880,35 @@ object APIMConnectorSpec extends HttpClientV2Support {
     prefixesToRemove = Seq.empty
   )
 
-  private def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): APIMConnector = {
-    val hipEnvironments = new HipEnvironments {
-      override val environments: Seq[HipEnvironment] = Seq(
-        HipEnvironment(
-          id = "production",
-          rank = 1,
-          environmentName = Primary,
-          isProductionLike = true,
-          apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/primary",
-          clientId = primaryClientId,
-          secret = primarySecret,
-          useProxy = false,
-          apiKey = None
-        ),
-        HipEnvironment(
-          id = "test",
-          rank = 2,
-          environmentName = Secondary,
-          isProductionLike = false,
-          apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/secondary",
-          clientId = secondaryClientId,
-          secret = secondarySecret,
-          useProxy = false,
-          apiKey = Some(secondaryApiKey)
-        )
+  def hipEnvironments(wireMockSupport: WireMockSupport): HipEnvironments = new HipEnvironments {
+    override val environments: Seq[HipEnvironment] = Seq(
+      HipEnvironment(
+        id = "production",
+        rank = 1,
+        environmentName = FakeHipEnvironments.primaryEnvironment.environmentName,
+        isProductionLike = true,
+        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/primary",
+        clientId = primaryClientId,
+        secret = primarySecret,
+        useProxy = false,
+        apiKey = None
+      ),
+      HipEnvironment(
+        id = "test",
+        rank = 2,
+        environmentName = FakeHipEnvironments.secondaryEnvironment.environmentName,
+        isProductionLike = false,
+        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/secondary",
+        clientId = secondaryClientId,
+        secret = secondarySecret,
+        useProxy = false,
+        apiKey = Some(secondaryApiKey)
       )
-    }
+    )
+  }
 
-    new APIMConnectorImpl(httpClientV2, hipEnvironments)
+  private def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): APIMConnector = {
+    new APIMConnectorImpl(httpClientV2, hipEnvironments(wireMockSupport))
   }
 
 }

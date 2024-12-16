@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.*
-import uk.gov.hmrc.apihubapplications.models.application.EnvironmentName
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -32,13 +32,13 @@ trait APIMConnector {
 
   def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
-  def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]]
+  def getDeployment(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]]
 
   def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]]
 
   def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
-  def getDeployments(environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]]
+  def getDeployments(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]]
 
   def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]]
 

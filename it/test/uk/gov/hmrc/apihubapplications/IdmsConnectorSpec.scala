@@ -28,13 +28,14 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.{CallError, InvalidCredential}
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
@@ -50,16 +51,17 @@ class IdmsConnectorSpec
 
   private val correlationId = "correlation-id"
   private val requestId = Some(RequestId(correlationId))
+  private val Seq(primaryEnvironment, secondaryEnvironment) = hipEnvironments(this).environments
 
   "IdmsConnector.createClient" - {
     "must place the correct request per environment to IDMS and return the ClientResponse" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          post(urlEqualTo(s"/$environmentName/identity/clients"))
+          post(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Content-Type", equalTo("application/json"))
-            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
-            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
             .withRequestBody(
               equalToJson(Json.toJson(testClient).toString())
@@ -70,7 +72,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).createClient(environmentName, testClient)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).createClient(hipEnvironment, testClient)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Right(testClientResponse)
         }
@@ -79,7 +81,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "environmentName" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "client" -> testClient,
         "X-Correlation-Id" -> correlationId
       )
@@ -98,7 +100,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).createClient(Primary, testClient)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).createClient(primaryEnvironment, testClient)(HeaderCarrier(requestId = requestId)) map {
           result =>
             result mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -118,7 +120,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).createClient(Primary, testClient)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).createClient(primaryEnvironment, testClient)(HeaderCarrier(requestId = requestId)) map {
         result =>
           result.left.value mustBe a [IdmsException]
           result.left.value.issue mustBe CallError
@@ -128,12 +130,12 @@ class IdmsConnectorSpec
 
   "IdmsConnector.fetchClient" - {
     "must place the correct request per environment to IDMS and return the secret" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
+          get(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/$testClientId/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
-            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
-            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
@@ -141,7 +143,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).fetchClient(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).fetchClient(hipEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Right(testClientResponse)
         }
@@ -157,7 +159,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).fetchClient(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse mustBe Left(IdmsException.clientNotFound(testClientId))
       }
@@ -165,7 +167,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "environmentName" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )
@@ -179,7 +181,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).fetchClient(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -195,7 +197,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).fetchClient(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse.left.value mustBe a [IdmsException]
           clientResponse.left.value.issue mustBe CallError
@@ -205,17 +207,17 @@ class IdmsConnectorSpec
 
   "IdmsConnector.deleteClient" - {
     "must place the correct request per environment to IDMS and succeed" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          delete(urlEqualTo(s"/$environmentName/identity/clients/$testClientId"))
-            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
-            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+          delete(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/$testClientId"))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .willReturn(
               aResponse()
             )
         )
 
-        buildConnector(this).deleteClient(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).deleteClient(hipEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Right(())
         }
@@ -224,14 +226,14 @@ class IdmsConnectorSpec
 
     "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
-        delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+        delete(urlEqualTo(s"/${primaryEnvironment.environmentName}/identity/clients/$testClientId"))
           .willReturn(
             aResponse()
               .withStatus(NOT_FOUND)
           )
       )
 
-      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).deleteClient(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual mustBe Left(IdmsException.clientNotFound(testClientId))
       }
@@ -239,21 +241,21 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx or 404 response" in {
       val context = Seq(
-        "environmentName" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+          delete(urlEqualTo(s"/${primaryEnvironment.environmentName}/identity/clients/$testClientId"))
             .willReturn(
               aResponse()
                 .withStatus(status)
             )
         )
 
-        buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).deleteClient(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -262,14 +264,14 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        delete(urlEqualTo(s"/$Primary/identity/clients/$testClientId"))
+        delete(urlEqualTo(s"/${primaryEnvironment.environmentName}/identity/clients/$testClientId"))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
           )
       )
 
-      buildConnector(this).deleteClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).deleteClient(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
           actual.left.value.issue mustBe CallError
@@ -279,12 +281,12 @@ class IdmsConnectorSpec
 
   "IdmsConnector.newSecret" - {
     "must place the correct request per environment to IDMS and return the new secret" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          post(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-secret"))
+          post(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
-            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
-            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
@@ -292,7 +294,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).newSecret(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).newSecret(hipEnvironment, hipEnvironment.clientId)(HeaderCarrier(requestId = requestId)) map {
           secretResponse =>
             secretResponse mustBe Right(testSecret)
         }
@@ -308,7 +310,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClient(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).fetchClient(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse mustBe Left(IdmsException.clientNotFound(testClientId))
       }
@@ -316,7 +318,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "environmentName" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )
@@ -330,7 +332,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).newSecret(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
           clientResponse =>
             clientResponse mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -346,7 +348,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).newSecret(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).newSecret(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         clientResponse =>
           clientResponse.left.value mustBe a[IdmsException]
           clientResponse.left.value.issue mustBe CallError
@@ -356,11 +358,11 @@ class IdmsConnectorSpec
 
   "IdmsConnector.addClientScope" - {
     "must place the correct request per environment to IDMS and return true" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          put(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
-            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
-            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+          put(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-scopes/$testScopeId"))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
@@ -368,7 +370,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).addClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).addClientScope(hipEnvironment, hipEnvironment.clientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response => response mustBe Right(())
         }
       }
@@ -383,7 +385,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).addClientScope(primaryEnvironment, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response mustBe Left(IdmsException.clientNotFound(testClientId))
       }
@@ -391,7 +393,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "environmentName" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "scopeId" -> testScopeId,
         "X-Correlation-Id" -> correlationId
@@ -406,7 +408,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).addClientScope(primaryEnvironment, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response =>
             response mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -422,7 +424,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).addClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).addClientScope(primaryEnvironment, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response.left.value mustBe a[IdmsException]
           response.left.value.issue mustBe CallError
@@ -432,18 +434,18 @@ class IdmsConnectorSpec
 
   "IdmsConnector.deleteClientScope" - {
     "must place the correct request per environment to IDMS" in {
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          delete(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes/$testScopeId"))
-            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
-            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+          delete(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-scopes/$testScopeId"))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .willReturn(
               aResponse()
                 .withStatus(200)
             )
         )
 
-        buildConnector(this).deleteClientScope(environmentName, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).deleteClientScope(hipEnvironment, hipEnvironment.clientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response => response mustBe Right(())
         }
       }
@@ -458,7 +460,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).deleteClientScope(primaryEnvironment, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response mustBe Left(IdmsException.clientNotFound(testClientId))
       }
@@ -466,7 +468,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "environmentName" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "scopeId" -> testScopeId,
         "X-Correlation-Id" -> correlationId
@@ -481,7 +483,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).deleteClientScope(primaryEnvironment, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
           response =>
             response mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -497,7 +499,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).deleteClientScope(Primary, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).deleteClientScope(primaryEnvironment, testClientId, testScopeId)(HeaderCarrier(requestId = requestId)) map {
         response =>
           response.left.value mustBe a[IdmsException]
           response.left.value.issue mustBe CallError
@@ -509,12 +511,12 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return the client scopes" in {
       val scopes = Seq(ClientScope("test-scope-1"), ClientScope("test-scope-2"))
 
-      forAll(environmentNames) { (environmentName: EnvironmentName) =>
+      forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          get(urlEqualTo(s"/$environmentName/identity/clients/$testClientId/client-scopes"))
+          get(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-scopes"))
             .withHeader("Accept", equalTo("application/json"))
-            .withHeader("Authorization", equalTo(authorizationHeaderFor(environmentName)))
-            .withHeader("x-api-key", apiKeyHeaderPatternFor(environmentName))
+            .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
+            .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
               aResponse()
@@ -522,7 +524,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).fetchClientScopes(environmentName, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Right(scopes)
         }
@@ -540,7 +542,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).fetchClientScopes(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual mustBe Left(IdmsException.clientNotFound(testClientId))
       }
@@ -548,7 +550,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any non-2xx response" in {
       val context = Seq(
-        "environmentName" -> Primary,
+        "hipEnvironment" -> primaryEnvironment.id,
         "clientId" -> testClientId,
         "X-Correlation-Id" -> correlationId
       )
@@ -564,7 +566,7 @@ class IdmsConnectorSpec
             )
         )
 
-        buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+        buildConnector(this).fetchClientScopes(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
           actual =>
             actual mustBe Left(IdmsException.unexpectedResponse(status, context))
         }
@@ -582,7 +584,7 @@ class IdmsConnectorSpec
           )
       )
 
-      buildConnector(this).fetchClientScopes(Primary, testClientId)(HeaderCarrier(requestId = requestId)) map {
+      buildConnector(this).fetchClientScopes(primaryEnvironment, testClientId)(HeaderCarrier(requestId = requestId)) map {
         actual =>
           actual.left.value mustBe a[IdmsException]
           actual.left.value.issue mustBe CallError
@@ -593,51 +595,47 @@ class IdmsConnectorSpec
 
 object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
 
-  def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): IdmsConnector = {
-    val hipEnvironments = new HipEnvironments {
-      override val environments: Seq[HipEnvironment] = Seq(
-        HipEnvironment(
-          id = "production",
-          rank = 1,
-          environmentName = Primary,
-          isProductionLike = true,
-          apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/primary",
-          clientId = primaryClientId,
-          secret = primarySecret,
-          useProxy = false,
-          apiKey = None
-        ),
-        HipEnvironment(
-          id = "test",
-          rank = 2,
-          environmentName = Secondary,
-          isProductionLike = false,
-          apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/secondary",
-          clientId = secondaryClientId,
-          secret = secondarySecret,
-          useProxy = false,
-          apiKey = Some(secondaryApiKey)
-        )
+  def hipEnvironments(wireMockSupport: WireMockSupport): HipEnvironments = new HipEnvironments {
+    override val environments: Seq[HipEnvironment] = Seq(
+      HipEnvironment(
+        id = "production",
+        rank = 1,
+        environmentName = FakeHipEnvironments.primaryEnvironment.environmentName,
+        isProductionLike = true,
+        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/primary",
+        clientId = primaryClientId,
+        secret = primarySecret,
+        useProxy = false,
+        apiKey = None
+      ),
+      HipEnvironment(
+        id = "test",
+        rank = 2,
+        environmentName = FakeHipEnvironments.secondaryEnvironment.environmentName,
+        isProductionLike = false,
+        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/secondary",
+        clientId = secondaryClientId,
+        secret = secondarySecret,
+        useProxy = false,
+        apiKey = Some(secondaryApiKey)
       )
-    }
-
-    new IdmsConnectorImpl(httpClientV2, hipEnvironments)
+    )
   }
 
-  def authorizationHeaderFor(environmentName: EnvironmentName): String = {
-    val encoded = environmentName match {
-      case Primary => "cHJpbWFyeS1jbGllbnQtaWQ6cHJpbWFyeS1zZWNyZXQ="
-      case Secondary => "c2Vjb25kYXJ5LWNsaWVudC1pZDpzZWNvbmRhcnktc2VjcmV0"
-    }
+  def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): IdmsConnector = {
+    new IdmsConnectorImpl(httpClientV2, hipEnvironments(wireMockSupport))
+  }
+
+  def authorizationHeaderFor(hipEnvironment: HipEnvironment): String = {
+    val encoded = if hipEnvironment.isProductionLike then "cHJpbWFyeS1jbGllbnQtaWQ6cHJpbWFyeS1zZWNyZXQ="
+      else "c2Vjb25kYXJ5LWNsaWVudC1pZDpzZWNvbmRhcnktc2VjcmV0"
 
     s"Basic $encoded"
   }
 
-  def apiKeyHeaderPatternFor(environmentName: EnvironmentName): StringValuePattern = {
-    environmentName match {
-      case Primary => absent()
-      case Secondary => equalTo(secondaryApiKey)
-    }
+  def apiKeyHeaderPatternFor(hipEnvironment: HipEnvironment): StringValuePattern = {
+    if hipEnvironment.isProductionLike then absent()
+    else equalTo(secondaryApiKey)
   }
 
   val primaryClientId: String = "primary-client-id"
@@ -651,10 +649,9 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
   val testClient: Client = Client("test-name", "test-description")
   val testClientResponse: ClientResponse = ClientResponse(testClientId, testSecret.secret)
 
-  val environmentNames: TableFor1[WithName & EnvironmentName] = Table(
-    "environment",
-    Primary,
-    Secondary
+  def hipEnvironmentsTable(wireMockSupport: WireMockSupport): TableFor1[HipEnvironment] = Table(
+    "hipEnvironment",
+    hipEnvironments(wireMockSupport).environments*
   )
 
   val nonSuccessResponses: TableFor1[Int] = Table(
@@ -663,11 +660,5 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
     401,
     500
   )
-
-  private def buildApplication(clientId1: String, clientId2: String, id: String) = {
-    Application(Some(id), "test-description", Creator("test-email"), Seq.empty)
-      .setCredentials(Primary, Seq(Credential(clientId1, LocalDateTime.now(), None, None)))
-      .setCredentials(Secondary, Seq(Credential(clientId2, LocalDateTime.now(), None, None)))
-  }
 
 }

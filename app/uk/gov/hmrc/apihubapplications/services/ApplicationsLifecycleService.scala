@@ -114,8 +114,8 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
 
   private def deleteClients(application: Application, hipEnvironments: HipEnvironments)(implicit hc: HeaderCarrier): Future[Either[IdmsException, Unit]] =
     Future.sequence(hipEnvironments.environments.flatMap(hipEnvironment =>
-      application.getCredentials(hipEnvironment.environmentName)
-        .map(credential => idmsConnector.deleteClient(hipEnvironment.environmentName, credential.clientId))
+      application.getCredentials(hipEnvironment)
+        .map(credential => idmsConnector.deleteClient(hipEnvironment, credential.clientId))
     )).map(ignoreClientNotFound)
     .map(useFirstException)
     .map {

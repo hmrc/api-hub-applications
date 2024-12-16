@@ -28,7 +28,7 @@ import play.api.mvc.MultipartFormData.DataPart
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentResponse, DeploymentsRequest, DeploymentsResponse, DetailsResponse, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata, ValidateResponse}
-import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits.*
@@ -149,11 +149,9 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  override def getDeployment(publisherReference: String, environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environment)
-
+  override def getDeployment(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]] = {
     val url = url"${hipEnvironment.apimUrl}/v1/oas-deployments/$publisherReference"
-    val context = Seq("publisherReference" -> publisherReference, "environment" -> environment)
+    val context = Seq("publisherReference" -> publisherReference, "hipEnvironment" -> hipEnvironment.id)
       .withCorrelationId()
 
     httpClient.get(url)
@@ -224,10 +222,8 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  override def getDeployments(environment: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environment)
-
-    val context = Seq("environment" -> environment)
+  override def getDeployments(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]] = {
+    val context = Seq("hipEnvironment" -> hipEnvironment.id)
       .withCorrelationId()
 
     httpClient.get(url"${hipEnvironment.apimUrl}/v1/oas-deployments")
@@ -243,12 +239,10 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
-    listEgressGateways(Secondary)
+    listEgressGateways(hipEnvironments.forEnvironmentName(Secondary))
   }
 
-  def listEgressGateways(environmentName: EnvironmentName)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(environmentName)
-
+  def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
     val context = Seq.empty.withCorrelationId()
 
     httpClient.get(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/egress-gateways")

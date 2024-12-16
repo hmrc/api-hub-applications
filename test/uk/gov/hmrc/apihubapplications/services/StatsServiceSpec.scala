@@ -24,9 +24,8 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.apim.ApiDeployment
-import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.stats.ApisInProductionStatistic
-import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -52,7 +51,7 @@ class StatsServiceSpec
           sampleApiDetail().toSummary.copy(publisherReference = s"test-id-$i")
       )
 
-      when(fixture.apimConnector.getDeployments(eqTo(Primary))(any)).thenReturn(Future.successful(Right(deployments)))
+      when(fixture.apimConnector.getDeployments(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(deployments)))
       when(fixture.integrationCatalogueConnector.findHipApis()(any)).thenReturn(Future.successful(Right(apis)))
 
       val expected = ApisInProductionStatistic(apis.size, 3)
@@ -78,7 +77,7 @@ class StatsServiceSpec
           sampleApiDetail().toSummary.copy(publisherReference = s"test-id-$i")
       )
 
-      when(fixture.apimConnector.getDeployments(eqTo(Primary))(any)).thenReturn(Future.successful(Right(deployments)))
+      when(fixture.apimConnector.getDeployments(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(deployments)))
       when(fixture.integrationCatalogueConnector.findHipApis()(any)).thenReturn(Future.successful(Right(apis)))
 
       val expected = apis.take(3)
@@ -99,7 +98,7 @@ class StatsServiceSpec
   private def buildFixture(): Fixture = {
     val apimConnector = mock[APIMConnector]
     val integrationCatalogueConnector = mock[IntegrationCatalogueConnector]
-    val statsService = StatsService(apimConnector, integrationCatalogueConnector)
+    val statsService = StatsService(apimConnector, integrationCatalogueConnector, FakeHipEnvironments)
 
     Fixture(apimConnector, integrationCatalogueConnector, statsService)
   }

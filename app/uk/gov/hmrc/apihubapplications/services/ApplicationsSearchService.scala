@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Issues}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
@@ -56,7 +57,8 @@ trait ApplicationsSearchService {
 class ApplicationsSearchServiceImpl @Inject()(
   teamsService: TeamsService,
   repository: ApplicationsRepository,
-  idmsConnector: IdmsConnector
+  idmsConnector: IdmsConnector,
+  hipEnvironments: HipEnvironments
 )(implicit ec: ExecutionContext) extends ApplicationsSearchService {
 
   override def findAll(teamMemberEmail: Option[String], includeDeleted: Boolean): Future[Seq[Application]] = {
@@ -88,9 +90,9 @@ class ApplicationsSearchServiceImpl @Inject()(
           ApplicationEnrichers.process(
             application,
             Seq(
-              ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector),
-              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector),
-              ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector)
+              ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector, hipEnvironments),
+              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, hipEnvironments),
+              ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector, hipEnvironments)
             )
           )
         } else {
