@@ -55,10 +55,28 @@ class OASServiceSpec
       }
     }
 
+    "must return a validation success result for a valid oas when title is 46 chars" in {
+      val fixture = buildFixture()
+
+      val title = "valid oas content but with a title of 46 chars"
+      assert(title.length == 46)
+      val oas = s"title: $title"
+      val validResponse = SuccessfulValidateResponse
+
+      when(fixture.apimConnector.validateInPrimary(eqTo(oas))(any)).thenReturn(Future.successful(Right(validResponse)))
+
+      fixture.oasService.validateInPrimary(oas, true)(HeaderCarrier()).map {
+        result =>
+          result.value mustBe validResponse
+      }
+    }
+
     "must return a validation result for a valid oas but with title validation error when title too long" in {
       val fixture = buildFixture()
 
-      val oas = "title: valid oas content but with a title that is much longer than the maximum forty six characters"
+      val title = "valid oas content but with a title that is much longer than the maximum forty six characters"
+      assert(title.length > 46)
+      val oas = s"title: $title"
       val validResponse = SuccessfulValidateResponse
       val invalidResponse = InvalidOasResponse(FailuresResponse("BAD_REQUEST","oas title is longer than 46 characters", Some(Seq(ApimError("APIM", "Oas title is too long.")))))
 

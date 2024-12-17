@@ -55,7 +55,7 @@ class OASService @Inject()(apimConnector: APIMConnector) {
   }
 
   private def isValidOasTitle(oas: String) = oasTitle(oas).forall(title => {
-    title.length <= oasTitleMaxSize
+    title.replace("\"", "").length <= oasTitleMaxSize
   })
 
   private def oasTitle(oas: String): Option[String] = {
