@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypt
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 
 import java.time.LocalDateTime
 
@@ -32,10 +33,11 @@ case class DbApplication(
   environments: DbEnvironments,
   apis: Option[Seq[DbApi]],
   deleted: Option[Deleted],
+  credentials: Option[Set[DbCredential]]
 ) {
 
-  def toModel: Application =
-    Application(
+  def toModel: Application = {
+    val application = Application(
       id = id,
       name = name,
       created = created,
@@ -51,13 +53,27 @@ case class DbApplication(
       },
       deleted = deleted,
       teamName = None,
+      credentials = this.credentials
+        .map(_.map(_.toModel(this)))
+        .getOrElse(environments.toModel(this).toCredentials)
     )
+
+    if (application.environments.toCredentials != application.credentials) {
+      throw new IllegalStateException(s"Credentials and environments not in sync converting to application ${application.safeId}")
+    }
+
+    application
+  }
 
 }
 
 object DbApplication {
 
-  def apply(application: Application): DbApplication =
+  def apply(application: Application): DbApplication = {
+    if (application.environments.toCredentials != application.credentials) {
+      throw new IllegalStateException(s"Credentials and environments not in sync converting from application ${application.safeId}")
+    }
+
     DbApplication(
       id = application.id,
       name = application.name,
@@ -72,7 +88,9 @@ object DbApplication {
         case _ => None
       },
       deleted = application.deleted,
+      credentials = Some(application.credentials.map(DbCredential(_)))
     )
+  }
 
   implicit val formatDbApplication: Format[DbApplication] = Json.format[DbApplication]
 

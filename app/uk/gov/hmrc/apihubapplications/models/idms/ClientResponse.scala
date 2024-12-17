@@ -17,18 +17,20 @@
 package uk.gov.hmrc.apihubapplications.models.idms
 
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.models.application.Credential
 
 import java.time.{Clock, LocalDateTime}
 
 case class ClientResponse(clientId: String, secret: String) {
 
-  def asNewCredential(clock: Clock): Credential = {
+  def asNewCredential(clock: Clock, hipEnvironment: HipEnvironment): Credential = {
     Credential(
       clientId = clientId,
       created = LocalDateTime.now(clock),
       clientSecret = Some(secret),
-      secretFragment = Some(secret.takeRight(4))
+      secretFragment = Some(secret.takeRight(4)),
+      environmentId = hipEnvironment.id
     )
   }
 }

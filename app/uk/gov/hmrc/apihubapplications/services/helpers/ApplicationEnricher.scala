@@ -190,7 +190,7 @@ object ApplicationEnrichers {
         case Right(clientResponse) =>
           Right(
             (application: Application) => {
-              application.addCredential(hipEnvironment, clientResponse.asNewCredential(clock))
+              application.addCredential(hipEnvironment, clientResponse.asNewCredential(clock, hipEnvironment))
             }
           )
         case Left(e) => Left(e)

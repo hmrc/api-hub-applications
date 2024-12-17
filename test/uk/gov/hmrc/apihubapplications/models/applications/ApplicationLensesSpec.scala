@@ -19,9 +19,10 @@ package uk.gov.hmrc.apihubapplications.models.applications
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.apihubapplications.models.Lens
-import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses._
-import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.applications.ApplicationLensesSpec.*
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
 import java.time.LocalDateTime
 import scala.util.Random
@@ -315,6 +316,32 @@ class ApplicationLensesSpec extends LensBehaviours {
           (application, credentials) => ApplicationLensOps(application).setCredentials(Secondary, credentials)
         )
       }
+
+      "must keep environments and credentials in sync" in {
+        val application = testApplication
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
+
+        val expected = application.copy(
+          environments = Environments(
+            primary = Environment(
+              scopes = Seq.empty,
+              credentials = Seq(credential1)
+            ),
+            secondary = Environment(
+              scopes = Seq.empty,
+              credentials = Seq(credential2)
+            )
+          ),
+          credentials = Set(credential1, credential2)
+        )
+
+        val actual = application
+          .setCredentials(Primary, Seq(credential1))
+          .setCredentials(Secondary, Seq(credential2))
+
+        actual mustBe expected
+      }
     }
 
     "addCredential(Primary)" - {
@@ -404,11 +431,11 @@ class ApplicationLensesSpec extends LensBehaviours {
 
     "updateCredential(Primary)" - {
       "must correctly update a specific credential" in {
-        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None)
-        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None)
-        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None)
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
+        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
 
-        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"))
+        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"), FakeHipEnvironments.primaryEnvironment.id)
 
         val application = testApplication
           .setCredentials(Primary, Seq(credential1, credential2, credential3))
@@ -428,11 +455,11 @@ class ApplicationLensesSpec extends LensBehaviours {
     
     "updateCredential(Secondary)" - {
       "must correctly update a specific credential" in {
-        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None)
-        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None)
-        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None)
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
+        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
 
-        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"))
+        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"), FakeHipEnvironments.secondaryEnvironment.id)
 
         val application = testApplication
           .setCredentials(Secondary, Seq(credential1, credential2, credential3))
@@ -601,7 +628,8 @@ object ApplicationLensesSpec {
       clientId = s"test-client-id${randomString()}",
       created = LocalDateTime.now(),
       clientSecret = Some(clientSecret),
-      secretFragment = Some(clientSecret.takeRight(4))
+      secretFragment = Some(clientSecret.takeRight(4)),
+      environmentId = "test-environment-id"
     )
   }
 
