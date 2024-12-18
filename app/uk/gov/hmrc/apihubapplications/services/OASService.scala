@@ -23,7 +23,6 @@ import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.apim.{Error as ApimError, *}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.http.HeaderCarrier
-//import io.swagger.oas.inflector.examples.ExampleBuilder
 import io.swagger.oas.inflector.processors.JsonNodeExampleSerializer
 import io.swagger.v3.oas.models.media.{Content, MediaType, Schema}
 import io.swagger.v3.oas.models.servers.Server
