@@ -14,9 +14,16 @@ object AppDependencies {
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-metrix-play-30"    % hmrcMongoVersion,
     "uk.gov.hmrc"             %% "internal-auth-client-play-30" % internalAuthVersion,
     "uk.gov.hmrc"             %% "crypto-json-play-30"          % "8.1.0",
-    "io.circe"                %% "circe-yaml"                   % "0.14.2",
-    "io.circe"                %% "circe-generic"                % "0.14.6",
-    "io.circe"                %% "circe-parser"                 % "0.14.6"
+    "io.swagger.parser.v3" % "swagger-parser" % "2.1.22"
+      excludeAll(
+      ExclusionRule("com.fasterxml.jackson.core", "jackson-databind"),
+      ExclusionRule("com.fasterxml.jackson.datatype", "jackson-datatype-jsr310")
+    ),
+    "io.swagger" % "swagger-inflector" % "2.0.12"
+      excludeAll(
+      ExclusionRule("com.fasterxml.jackson.core", "jackson-databind"),
+      ExclusionRule("com.fasterxml.jackson.datatype", "jackson-datatype-jsr310")
+    ),
   )
 
   val test = Seq(
