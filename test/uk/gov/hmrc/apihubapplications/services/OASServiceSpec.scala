@@ -17,6 +17,8 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, stubFor, urlEqualTo}
+import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.info.Info
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.when
 import org.scalatest.EitherValues
@@ -58,9 +60,9 @@ class OASServiceSpec
     "must return a validation success result for a valid oas when title is 46 chars" in {
       val fixture = buildFixture()
 
-      val title = "valid oas content but with a title of 46 chars"
+      val title = "valid \"oas\" content with a \"title\" of 46 chars"
       assert(title.length == 46)
-      val oas = s"title: $title"
+      val oas = validOasWithTitle(title)
       val validResponse = SuccessfulValidateResponse
 
       when(fixture.apimConnector.validateInPrimary(eqTo(oas))(any)).thenReturn(Future.successful(Right(validResponse)))
@@ -74,11 +76,11 @@ class OASServiceSpec
     "must return a validation result for a valid oas but with title validation error when title too long" in {
       val fixture = buildFixture()
 
-      val title = "valid oas content but with a title that is much longer than the maximum forty six characters"
+      val title = "valid oas content but with a title that is significantly longer than the maximum forty six characters"
       assert(title.length > 46)
-      val oas = s"title: $title"
+      val oas = validOasWithTitle(title)
       val validResponse = SuccessfulValidateResponse
-      val invalidResponse = InvalidOasResponse(FailuresResponse("BAD_REQUEST","oas title is longer than 46 characters", Some(Seq(ApimError("APIM", "Oas title is too long.")))))
+      val invalidResponse = InvalidOasResponse(FailuresResponse("BAD_REQUEST","oas title is longer than 46 characters", Some(Seq(ApimError("APIM", "Oas title has 101 characters. Maximum is 46.")))))
 
       when(fixture.apimConnector.validateInPrimary(eqTo(oas))(any)).thenReturn(Future.successful(Right(validResponse)))
 
@@ -91,10 +93,12 @@ class OASServiceSpec
     "must return a validation fail result for an invalid oas but with title validation error appended when title too long" in {
       val fixture = buildFixture()
 
-      val oas = "title: valid oas content but with a title that is much longer than the maximum forty six characters"
+      val title = "valid oas content but with a title that is significantly longer than the maximum forty six characters"
+      assert(title.length > 46)
+      val oas = validOasWithTitle(title)
       val apimErrors = Seq(ApimError("jam", "scones"))
       val invalidOasResponse = InvalidOasResponse(FailuresResponse("cheese", "crackers", Some(apimErrors)))
-      val invalidOasAndTitleResponse = InvalidOasResponse(invalidOasResponse.failure.copy(errors = Some(apimErrors ++ Seq(ApimError("APIM", "Oas title is too long.")))))
+      val invalidOasAndTitleResponse = InvalidOasResponse(invalidOasResponse.failure.copy(errors = Some(apimErrors ++ Seq(ApimError("APIM", "Oas title has 101 characters. Maximum is 46.")))))
 
       when(fixture.apimConnector.validateInPrimary(eqTo(oas))(any)).thenReturn(Future.successful(Right(invalidOasResponse)))
 
@@ -104,6 +108,10 @@ class OASServiceSpec
       }
     }
 
+  }
+
+  def validOasWithTitle(title: String) = {
+    s"openapi: 3.0.3\ninfo:\n  title: $title"
   }
 
   private case class Fixture(apimConnector: APIMConnector, oasService: OASService)
