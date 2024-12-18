@@ -17,13 +17,8 @@
 package uk.gov.hmrc.apihubapplications.services
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.inject.{Inject, Singleton}
-import io.swagger.oas.inflector.processors.JsonNodeExampleSerializer
-import io.swagger.v3.oas.models.*
-import io.swagger.v3.oas.models.media.{Content, MediaType, Schema}
-import io.swagger.v3.oas.models.servers.Server
+import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.OpenAPIV3Parser
-import io.swagger.v3.parser.core.models.{ParseOptions, SwaggerParseResult}
-import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.apim.{Error as ApimError, *}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
@@ -63,7 +58,7 @@ class OASService @Inject()(apimConnector: APIMConnector) {
       case _ => ApimError("APIM", "Oas has no title.")
     }
   }
-  
+
   private def newFailuresResponse(maybeTitle: Option[String]) = {
     maybeTitle match {
       case Some(title) => FailuresResponse("BAD_REQUEST", s"oas title is longer than $oasTitleMaxSize characters", Some(Seq(oasTitleError(maybeTitle))))
@@ -75,7 +70,7 @@ class OASService @Inject()(apimConnector: APIMConnector) {
 
   private def oasTitle(oas: String): Option[String] = parse(oas) map (_.getInfo) map (_.getTitle)
 
-  private def parse(openApiSpecification: String): Option[OpenAPI] = 
+  private def parse(openApiSpecification: String): Option[OpenAPI] =
     Option(new OpenAPIV3Parser().readContents(openApiSpecification, null, null).getOpenAPI)
 
 }
