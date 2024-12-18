@@ -15,7 +15,6 @@
  */
 
 package uk.gov.hmrc.apihubapplications.services
-import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.inject.{Inject, Singleton}
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.OpenAPIV3Parser
