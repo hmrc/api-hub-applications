@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.apihubapplications.services
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.inject.{Inject, Singleton}
 import io.circe.yaml
 import play.api.Logging
@@ -22,12 +23,11 @@ import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.apim.{Error as ApimError, *}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.http.HeaderCarrier
-import com.fasterxml.jackson.databind.module.SimpleModule
 //import io.swagger.oas.inflector.examples.ExampleBuilder
 import io.swagger.oas.inflector.processors.JsonNodeExampleSerializer
 import io.swagger.v3.oas.models.media.{Content, MediaType, Schema}
-import io.swagger.v3.oas.models.{Components, OpenAPI, Operation, PathItem, Paths}
 import io.swagger.v3.oas.models.servers.Server
+import io.swagger.v3.oas.models.*
 import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.{ParseOptions, SwaggerParseResult}
 
