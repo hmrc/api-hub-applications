@@ -50,7 +50,7 @@ class EnvironmentParityDataMigrationJob @Inject()(
 
   def migrate(): Future[MigrationSummary] = {
     applicationsService.findAll(None, includeDeleted = true)
-      .map(_.map(deleteApplication))
+      .map(_.map(migrateApplication))
       .flatMap(Future.sequence(_))
       .map(
         _.foldRight(MigrationSummary())((result, summary) => summary.add(result))
@@ -63,7 +63,7 @@ class EnvironmentParityDataMigrationJob @Inject()(
       }
   }
 
-  private def deleteApplication(application: Application):Future[MigrationResult] = {
+  private def migrateApplication(application: Application):Future[MigrationResult] = {
     (for {
       application <- EitherT(deleteHiddenCredentials(application))
       saved <- EitherT(updateApplication(application))
