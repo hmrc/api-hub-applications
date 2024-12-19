@@ -25,7 +25,7 @@ import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
+import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{ignoreClientNotFound, useFirstException}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -89,6 +89,7 @@ class EnvironmentParityDataMigrationJob @Inject()(
             )
         )
     )
+      .map(ignoreClientNotFound)
       .map(useFirstException)
       .map {
         case Right(_) => Right(removeHiddenCredentials(application))
