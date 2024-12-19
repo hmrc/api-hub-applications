@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.mongojobs
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{verify, when}
+import org.mockito.Mockito.{never, verify, when}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
@@ -25,7 +25,7 @@ import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential, Deleted}
 import uk.gov.hmrc.apihubapplications.models.exception.{IdmsException, NotUpdatedException}
 import uk.gov.hmrc.apihubapplications.mongojobs.EnvironmentParityDataMigrationJob.MigrationSummary
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
@@ -52,10 +52,11 @@ class EnvironmentParityDataMigrationJobSpec extends AsyncFreeSpec with Matchers 
         clientNotFoundApplication,
         idmsFailsApplication,
         updateFailsApplication,
-        failsApplication
+        failsApplication,
+        deletedApplication
       )
 
-      when(fixture.applicationsService.findAll(eqTo(None), eqTo(false)))
+      when(fixture.applicationsService.findAll(eqTo(None), eqTo(true)))
         .thenReturn(Future.successful(applications))
 
       when(fixture.idmsConnector.deleteClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(hiddenCredentialCredential.clientId))(any))
@@ -81,8 +82,10 @@ class EnvironmentParityDataMigrationJobSpec extends AsyncFreeSpec with Matchers 
           verify(fixture.idmsConnector).deleteClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(hiddenCredentialCredential.clientId))(any)
           verify(fixture.idmsConnector).deleteClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientNotFoundCredential.clientId))(any)
           verify(fixture.idmsConnector).deleteClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(idmsFailsCredential.clientId))(any)
+          verify(fixture.idmsConnector, never()).deleteClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(deletedApplicationCredential.clientId))(any)
           verify(fixture.applicationsRepository).update(eqTo(hiddenCredentialApplicationUpdated))
-          result mustBe MigrationSummary(7, 1, 1, 1)
+          verify(fixture.applicationsRepository).update(eqTo(deletedApplicationUpdated))
+          result mustBe MigrationSummary(8, 1, 1, 1)
       )
     }
   }
@@ -123,13 +126,27 @@ object EnvironmentParityDataMigrationJobSpec extends MockitoSugar {
 
   }
 
-  private val createdBy = Creator("test-email")
-  private val team = Seq.empty
-
-  private def buildApplication(): Application = {
+  private def buildApplication(deleted: Boolean = false): Application = {
     val id = Counters.nextApplicationId
 
-    Application(Some(s"test-id-$id"), s"test-application-$id", createdBy, team)
+    val application = Application(
+      id = Some(s"test-id-$id"),
+      name = s"test-application-$id",
+      createdBy = Creator("test-created-by"),
+      teamMembers = Seq.empty
+    )
+
+    if (deleted) {
+      application.delete(
+        Deleted(
+          deleted = LocalDateTime.now(),
+          deletedBy = "test-deleted-by"
+        )
+      )
+    }
+    else {
+      application
+    }
   }
 
   private def buildCredential(hipEnvironment: HipEnvironment): Credential = {
@@ -196,5 +213,24 @@ object EnvironmentParityDataMigrationJobSpec extends MockitoSugar {
   private val updateFailsApplication = buildApplication()
 
   private val failsApplication = buildApplication()
+
+  private val deletedApplicationCredential = buildHiddenCredential(FakeHipEnvironments.primaryEnvironment)
+  private val deletedApplication = buildApplication(deleted = true)
+    .setCredentials(
+      FakeHipEnvironments.primaryEnvironment,
+      Seq(
+        deletedApplicationCredential,
+        buildCredential(FakeHipEnvironments.primaryEnvironment)
+      )
+    )
+    .setCredentials(
+      FakeHipEnvironments.secondaryEnvironment,
+      Seq(
+        buildCredential(FakeHipEnvironments.secondaryEnvironment)
+      )
+    )
+
+  private val deletedApplicationUpdated = deletedApplication
+    .removeCredential(FakeHipEnvironments.primaryEnvironment, deletedApplicationCredential.clientId)
 
 }

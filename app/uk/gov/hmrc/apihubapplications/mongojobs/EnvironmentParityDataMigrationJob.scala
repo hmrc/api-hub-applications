@@ -49,7 +49,7 @@ class EnvironmentParityDataMigrationJob @Inject()(
   }
 
   def migrate(): Future[MigrationSummary] = {
-    applicationsService.findAll(None, false)
+    applicationsService.findAll(None, includeDeleted = true)
       .map(_.map(deleteApplication))
       .flatMap(Future.sequence(_))
       .map(
@@ -65,7 +65,7 @@ class EnvironmentParityDataMigrationJob @Inject()(
 
   private def deleteApplication(application: Application):Future[MigrationResult] = {
     (for {
-      application <- EitherT(deleteHiddenCredentialsFromIdms(application))
+      application <- EitherT(deleteHiddenCredentials(application))
       saved <- EitherT(updateApplication(application))
     } yield Migrated)
       .merge
@@ -76,25 +76,30 @@ class EnvironmentParityDataMigrationJob @Inject()(
       }
   }
 
-  private def deleteHiddenCredentialsFromIdms(application: Application): Future[Either[MigrationResult, Application]] = {
-    Future.sequence(
-      application.credentials
-        .filter(_.isHidden)
-        .toSeq
-        .map(
-          credential =>
-            idmsConnector.deleteClient(
-              hipEnvironment = hipEnvironments.forId(credential.environmentId),
-              clientId = credential.clientId
+  private def deleteHiddenCredentials(application: Application): Future[Either[MigrationResult, Application]] = {
+    if (!application.isDeleted) {
+      Future.sequence(
+          application.credentials
+            .filter(_.isHidden)
+            .toSeq
+            .map(
+              credential =>
+                idmsConnector.deleteClient(
+                  hipEnvironment = hipEnvironments.forId(credential.environmentId),
+                  clientId = credential.clientId
+                )
             )
         )
-    )
-      .map(ignoreClientNotFound)
-      .map(useFirstException)
-      .map {
-        case Right(_) => Right(removeHiddenCredentials(application))
-        case Left(e) => Left(IdsmFailed)
-      }
+        .map(ignoreClientNotFound)
+        .map(useFirstException)
+        .map {
+          case Right(_) => Right(removeHiddenCredentials(application))
+          case Left(e) => Left(IdsmFailed)
+        }
+    }
+    else {
+      Future.successful(Right(removeHiddenCredentials(application)))
+    }
   }
 
   private def removeHiddenCredentials(application: Application): Application = {
