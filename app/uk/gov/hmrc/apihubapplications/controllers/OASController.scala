@@ -37,10 +37,10 @@ class OASController @Inject()(
 
   private implicit val formatValidateResponse: Format[ValidateResponse] = ValidateResponse.formatValidateResponse
 
-  def validateOAS(validateTitle: Boolean): Action[AnyContent] = identify.async {
+  def validateOAS(): Action[AnyContent] = identify.async {
     implicit request =>
       request.body.asText.map(oasYaml =>
-        oasService.validateInPrimary(oasYaml, validateTitle)
+        oasService.validateInPrimary(oasYaml)
           .map(_.fold(
             e => InternalServerError(e.message),
             {
