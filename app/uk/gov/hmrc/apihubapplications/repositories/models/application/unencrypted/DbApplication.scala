@@ -17,7 +17,8 @@
 package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application._
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 
 import java.time.LocalDateTime
@@ -36,7 +37,7 @@ case class DbApplication(
   credentials: Option[Set[DbCredential]]
 ) {
 
-  def toModel: Application = {
+  def toModel(hipEnvironments: HipEnvironments): Application = {
     val application = Application(
       id = id,
       name = name,
@@ -45,7 +46,7 @@ case class DbApplication(
       lastUpdated = lastUpdated,
       teamId = teamId,
       teamMembers = teamMembers,
-      environments = environments.toModel(this),
+      environments = environments.toModel(this, hipEnvironments),
       issues = Seq.empty,
       apis = apis match {
         case Some(apis) => apis.map(_.toModel)
@@ -55,7 +56,7 @@ case class DbApplication(
       teamName = None,
       credentials = this.credentials
         .map(_.map(_.toModel(this)))
-        .getOrElse(environments.toModel(this).toCredentials)
+        .getOrElse(environments.toModel(this, hipEnvironments).toCredentials)
     )
 
     if (application.environments.toCredentials != application.credentials) {

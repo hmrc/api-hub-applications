@@ -27,7 +27,7 @@ import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Acces
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, EnvironmentName, Scope, Endpoint as ApplicationEndpoint}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Scope, Endpoint as ApplicationEndpoint}
 import uk.gov.hmrc.apihubapplications.models.exception.ApiNotFoundException
 import uk.gov.hmrc.apihubapplications.models.idms.ClientScope
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments

@@ -20,7 +20,7 @@ import play.api.Logging
 import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequest
-import uk.gov.hmrc.apihubapplications.models.application.{Application, EnvironmentName}
+import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.http.UpstreamErrorResponse
 

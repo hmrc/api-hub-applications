@@ -29,6 +29,7 @@ import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundExcep
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -78,7 +79,7 @@ class ApplicationsRepositoryIntegrationSpec
       result.data.id mustBe defined
       result.mdcData mustBe testMdcData
 
-      val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue.toModel
+      val persisted = find(Filters.equal("_id", new ObjectId(result.data.id.value))).futureValue.head.decryptedValue.toModel(FakeHipEnvironments)
       persisted mustEqual result.data
     }
   }

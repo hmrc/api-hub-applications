@@ -21,7 +21,6 @@ import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailSummary
-import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.stats.ApisInProductionStatistic
 import uk.gov.hmrc.http.HeaderCarrier
@@ -49,7 +48,7 @@ class StatsService @Inject()(
   }
 
   private def buildApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApisInProduction]] = {
-    val futureDeployments = apimConnector.getDeployments(hipEnvironments.forEnvironmentName(Primary))
+    val futureDeployments = apimConnector.getDeployments(hipEnvironments.productionEnvironment)
     val futureApis = integrationCatalogueConnector.findHipApis()
 
     (for {

@@ -39,8 +39,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val testDbCredential = DbCredential(testCredential.clientId, Some(testCredential.created), testCredential.secretFragment, Some(testCredential.environmentId))
 
         val application = testApplication
-          .addCredential(Primary, productionCredential)
-          .addCredential(Secondary, testCredential)
+          .addCredential(FakeHipEnvironments.primaryEnvironment, productionCredential)
+          .addCredential(FakeHipEnvironments.secondaryEnvironment, testCredential)
 
         val expected = testDbApplication
           .copy(
@@ -52,8 +52,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           )
 
         DbApplication(application) mustBe expected
-        DbApplication(application).toModel.getMasterCredential(Primary).value.clientSecret mustBe None
-        DbApplication(application).toModel.getMasterCredential(Secondary).value.clientSecret mustBe None
+        DbApplication(application).toModel(FakeHipEnvironments).getMasterCredential(FakeHipEnvironments.primaryEnvironment).value.clientSecret mustBe None
+        DbApplication(application).toModel(FakeHipEnvironments).getMasterCredential(FakeHipEnvironments.secondaryEnvironment).value.clientSecret mustBe None
       }
 
       "must remove team members when the application has a team Id" in {
@@ -107,25 +107,25 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
         val expected = testApplication
           .setCredentials(
-            Primary, 
+            FakeHipEnvironments.primaryEnvironment, 
             Seq(Credential(clientId, testApplication.created, None, None, FakeHipEnvironments.primaryEnvironment.id))
           )
 
-        dbApplication.toModel mustBe expected
+        dbApplication.toModel(FakeHipEnvironments) mustBe expected
       }
 
       "must correctly map DbApis to Apis" in {
         val dbApi = DbApi("test-id", Some("test-title"), Seq(Endpoint("endpoint-method", "endpoint-path")))
         val dbApplication = testDbApplication.copy(apis = Some(Seq(dbApi)))
 
-        dbApplication.toModel.apis mustBe Seq(Api(dbApi.id, dbApi.title.value, dbApi.endpoints))
+        dbApplication.toModel(FakeHipEnvironments).apis mustBe Seq(Api(dbApi.id, dbApi.title.value, dbApi.endpoints))
       }
 
       "must throw an exception if environments and credentials are not in sync" in {
         val dbCredential = DbCredential("test-client-id", None, None, None)
         val dbApplication = testDbApplication.copy(credentials = Some(Set(dbCredential)))
 
-        an[IllegalStateException] must be thrownBy dbApplication.toModel
+        an[IllegalStateException] must be thrownBy dbApplication.toModel(FakeHipEnvironments)
       }
     }
   }

@@ -28,7 +28,7 @@ object ApplicationCredentialLimitException {
   }
 
   def forId(id: String, hipEnvironment: HipEnvironment): ApplicationCredentialLimitException = {
-    ApplicationCredentialLimitException(s"Application $id has reached its ${hipEnvironment.environmentName} credential limit.")
+    ApplicationCredentialLimitException(s"Application $id has reached its ${hipEnvironment.id} credential limit.")
   }
 
 }

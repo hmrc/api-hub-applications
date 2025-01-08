@@ -19,14 +19,15 @@ package uk.gov.hmrc.apihubapplications.repositories
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.Document
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.*
 import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers._
-import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
+import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.*
+import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.*
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.{SensitiveApplication, SensitiveTeamMember}
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
@@ -40,7 +41,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ApplicationsRepository @Inject()(
   mongoComponent: MongoComponent,
-  @Named("aes") implicit val crypto: Encrypter & Decrypter
+  @Named("aes") implicit val crypto: Encrypter & Decrypter,
+  hipEnvironments: HipEnvironments,
 )(implicit ec: ExecutionContext)
   extends PlayMongoRepository[SensitiveApplication](
     collectionName = "applications",
@@ -72,7 +74,7 @@ class ApplicationsRepository @Inject()(
         .find(orFilters(emailFilter(teamMemberEmail), teamsFilter(owningTeams)))
         .toFuture()
     } map (_.filter(deletedFilter(includeDeleted))
-      .map(_.decryptedValue.toModel))
+      .map(_.decryptedValue.toModel(hipEnvironments)))
   }
 
   private def emailFilter(teamMemberEmail: Option[String]): Option[Bson] = {
@@ -102,7 +104,7 @@ class ApplicationsRepository @Inject()(
         .find(Filters.equal("apis.id", apiId))
         .toFuture()
     } map (_.filter(deletedFilter(includeDeleted))
-      .map(_.decryptedValue.toModel))
+      .map(_.decryptedValue.toModel(hipEnvironments)))
   }
 
   private def deletedFilter(includeDeleted: Boolean)(application: SensitiveApplication): Boolean = {
@@ -122,7 +124,7 @@ class ApplicationsRepository @Inject()(
             .find(Filters.equal("_id", objectId))
             .headOption()
         } map (_.filter(deletedFilter(includeDeleted))
-          .map(_.decryptedValue.toModel)  match {
+          .map(_.decryptedValue.toModel(hipEnvironments))  match {
             case Some(application) => Right(application)
             case None => Left(raiseApplicationNotFoundException.forId(id))
           })
@@ -136,7 +138,7 @@ class ApplicationsRepository @Inject()(
         .find(Filters.equal("teamId", teamId))
         .filter(deletedFilter(includeDeleted))
         .toFuture()
-    } map (_.map(_.decryptedValue.toModel))
+    } map (_.map(_.decryptedValue.toModel(hipEnvironments)))
 
   def insert(application: Application): Future[Application] = {
     Mdc.preservingMdc {

@@ -18,13 +18,14 @@ package uk.gov.hmrc.apihubapplications.repositories
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
-import uk.gov.hmrc.apihubapplications.models.application._
-import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier._
+import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.*
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 
 import java.time.LocalDateTime
@@ -68,7 +69,7 @@ class ApplicationsRepositorySpec
         Environments()
       )
 
-      result.get.decryptedValue.toModel mustBe expected
+      result.get.decryptedValue.toModel(FakeHipEnvironments) mustBe expected
     }
 
     "must successfully deserialise JSON with apis to create an Application object" in {
@@ -117,7 +118,7 @@ class ApplicationsRepositorySpec
         Environments()
       ).copy(apis = Seq(anApi))
 
-      result.get.decryptedValue.toModel mustBe expected
+      result.get.decryptedValue.toModel(FakeHipEnvironments) mustBe expected
     }
 
     "must successfully serialise an Application with an Id" in {

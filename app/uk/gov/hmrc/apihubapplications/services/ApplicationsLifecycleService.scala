@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, NewApplication, Primary, Secondary, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, NewApplication, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository

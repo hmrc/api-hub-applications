@@ -22,7 +22,6 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.apim._
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
 import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}

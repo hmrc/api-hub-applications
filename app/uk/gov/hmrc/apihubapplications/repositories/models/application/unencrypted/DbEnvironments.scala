@@ -17,17 +17,18 @@
 package uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Environments}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
+import uk.gov.hmrc.apihubapplications.models.application.Environments
 
 case class DbEnvironments(
   primary: DbEnvironment,
-  secondary: DbEnvironment
+  secondary: DbEnvironment,
 ) {
 
-  def toModel(dbApplication: DbApplication): Environments =
+  def toModel(dbApplication: DbApplication, hipEnvironments: HipEnvironments): Environments =
     Environments(
-      primary = primary.toModel(dbApplication, EnvironmentName.primaryEnvironmentId),
-      secondary = secondary.toModel(dbApplication, EnvironmentName.secondaryEnvironmentId)
+      primary = primary.toModel(dbApplication, hipEnvironments.productionEnvironment.id),
+      secondary = secondary.toModel(dbApplication, hipEnvironments.deploymentEnvironment.id)
     )
 
 }

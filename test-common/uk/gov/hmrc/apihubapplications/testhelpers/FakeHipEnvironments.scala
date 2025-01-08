@@ -17,14 +17,12 @@
 package uk.gov.hmrc.apihubapplications.testhelpers
 
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 
 object FakeHipEnvironments extends HipEnvironments {
 
   val primaryEnvironment: HipEnvironment = HipEnvironment(
     id = "production",
     rank = 1,
-    environmentName = Primary,
     isProductionLike = true,
     apimUrl = "http://apim.test/production",
     clientId = "test-production-client-id",
@@ -35,18 +33,21 @@ object FakeHipEnvironments extends HipEnvironments {
   val secondaryEnvironment: HipEnvironment = HipEnvironment(
     id = "test",
     rank = 2,
-    environmentName = Secondary,
     isProductionLike = false,
     apimUrl = "http://apim.test/test",
     clientId = "test-test-client-id",
     secret = "test-test-secret",
     useProxy = false,
-    apiKey = None
+    apiKey = Some("test-api-key")
   )
 
   override val environments: Seq[HipEnvironment] = Seq(
     primaryEnvironment,
     secondaryEnvironment
   )
+
+  override def productionEnvironment: HipEnvironment = primaryEnvironment
+
+  override def deploymentEnvironment: HipEnvironment = secondaryEnvironment
 
 }
