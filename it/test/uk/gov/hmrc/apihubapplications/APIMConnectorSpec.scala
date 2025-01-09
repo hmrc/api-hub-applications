@@ -803,6 +803,7 @@ object APIMConnectorSpec extends HttpClientV2Support {
     lineOfBusiness = "test-line-of-business",
     name = "test-name",
     description = "test-description",
+    egress = "test-egress",
     teamId = "test-team-id",
     oas = oas,
     passthrough = true,
