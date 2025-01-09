@@ -47,22 +47,6 @@ class ApplicationLensesSpec extends LensBehaviours {
   }
 
   "environmentScopes" - {
-    "must add scopes correctly with secondary as APPROVED and primary as PENDING" in{
-      val app = testApplication
-      val primaryScopes = Seq("test-scope-primary-1", "test-scope-primary-2")
-      val secondaryScopes = Seq("test-scope-secondary-1", "test-scope-secondary-2")
-
-      val expectedPrimaryScopes = primaryScopes.map(scopeName => Scope(scopeName))
-      val expectedSecondaryScopes = secondaryScopes.map(scopeName => Scope(scopeName))
-
-      val updatedApp = app.addScopes(FakeHipEnvironments.primaryEnvironment, primaryScopes).addScopes(FakeHipEnvironments.secondaryEnvironment, secondaryScopes)
-
-      val actualPrimaryScopes = updatedApp.environments.primary.scopes
-      val actualSecondaryScopes = updatedApp.environments.secondary.scopes
-
-      actualPrimaryScopes mustBe expectedPrimaryScopes
-      actualSecondaryScopes mustBe expectedSecondaryScopes
-    }
 
     "must get the correct Scopes" in {
       val expected = randomScopes()

@@ -108,9 +108,6 @@ object ApplicationLenses {
       if (hipEnvironment.isProductionLike) then applicationPrimaryScopes.get(application)
       else applicationSecondaryScopes.get(application)
 
-    def addScopes(hipEnvironment: HipEnvironment, scopes: Seq[String]): Application =
-      setScopes(hipEnvironment, (getScopes(hipEnvironment) ++ scopes.map(Scope(_))).distinct)
-
     def hasScope(hipEnvironment: HipEnvironment, scopeName: String): Boolean =
       application.getScopes(hipEnvironment).exists(_.name.equals(scopeName))
 
