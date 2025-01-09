@@ -20,7 +20,7 @@ import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Secondary}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest

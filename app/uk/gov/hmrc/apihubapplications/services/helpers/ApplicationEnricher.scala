@@ -93,7 +93,7 @@ object ApplicationEnrichers {
         issuesOrResponses.foldLeft(application)(
           (app, issueOrResponse) =>
             issueOrResponse match {
-              case Right(clientResponse) => app.updateCredential(Secondary, clientResponse.clientId, clientResponse.secret)
+              case Right(clientResponse) => app.updateCredential(hipEnvironments.deploymentEnvironment, clientResponse.clientId, clientResponse.secret)
               case Left(issue) => app.addIssue(issue)
             }
         )
@@ -101,9 +101,9 @@ object ApplicationEnrichers {
     }
 
     Future.sequence(
-        original.getCredentials(hipEnvironments.forEnvironmentName(Secondary)).map {
+        original.getCredentials(hipEnvironments.deploymentEnvironment).map {
           credential =>
-            idmsConnector.fetchClient(hipEnvironments.forEnvironmentName(Secondary), credential.clientId)
+            idmsConnector.fetchClient(hipEnvironments.deploymentEnvironment, credential.clientId)
         }
       )
       .map(toIssuesOrClientResponses)
@@ -123,7 +123,7 @@ object ApplicationEnrichers {
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
         application.setScopes(
-          hipEnvironments.forEnvironmentName(Secondary),
+          hipEnvironments.deploymentEnvironment,
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
@@ -135,10 +135,10 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getMasterCredential(Secondary) match {
+    original.getMasterCredential(hipEnvironments.deploymentEnvironment) match {
       case Some(credential) =>
         idmsConnector
-          .fetchClientScopes(hipEnvironments.forEnvironmentName(Secondary), credential.clientId)
+          .fetchClientScopes(hipEnvironments.deploymentEnvironment, credential.clientId)
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
             case Left(e: IdmsException) => Right(buildIssuesEnricher(e))
@@ -156,7 +156,7 @@ object ApplicationEnrichers {
     def buildEnricher(clientScopes: Seq[ClientScope]): ApplicationEnricher = {
       (application: Application) => {
         application.setScopes(
-          hipEnvironments.forEnvironmentName(Primary),
+          hipEnvironments.productionEnvironment,
           clientScopes.map(clientScope => Scope(clientScope.clientScopeId))
         )
       }
@@ -168,10 +168,10 @@ object ApplicationEnrichers {
       }
     }
 
-    original.getMasterCredential(hipEnvironments.forEnvironmentName(Primary)) match {
+    original.getMasterCredential(hipEnvironments.productionEnvironment) match {
       case Some(credential) =>
         idmsConnector
-          .fetchClientScopes(hipEnvironments.forEnvironmentName(Primary), credential.clientId)
+          .fetchClientScopes(hipEnvironments.productionEnvironment, credential.clientId)
           .map {
             case Right(clientScopes) => Right(buildEnricher(clientScopes))
             case Left(e: IdmsException) => Right(buildIssuesEnricher(e))

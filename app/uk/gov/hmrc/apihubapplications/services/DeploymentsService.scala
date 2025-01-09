@@ -23,7 +23,6 @@ import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
 import uk.gov.hmrc.apihubapplications.models.apim._
-import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.{Deployed, NotDeployed, Unknown}

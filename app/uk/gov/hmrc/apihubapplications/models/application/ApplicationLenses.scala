@@ -17,7 +17,8 @@
 package uk.gov.hmrc.apihubapplications.models.application
 
 import uk.gov.hmrc.apihubapplications.models.Lens
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+
 import java.time.{Clock, LocalDateTime}
 
 object ApplicationLenses {
@@ -103,82 +104,51 @@ object ApplicationLenses {
       }
     }
 
-    def getScopes(environmentName: EnvironmentName): Seq[Scope] = {
-      environmentName match {
-        case Primary => applicationPrimaryScopes.get(application)
-        case Secondary => applicationSecondaryScopes.get(application)
-      }
-    }
-
     def getScopes(hipEnvironment: HipEnvironment): Seq[Scope] =
-      getScopes(hipEnvironment.environmentName)
-
-    def addScopes(environment: EnvironmentName, scopes: Seq[String]): Application =
-      setScopes(environment, (getScopes(environment) ++ scopes.map(Scope(_))).distinct)
-
-    def addScopes(hipEnvironment: HipEnvironment, scopes: Seq[String]): Application =
-      addScopes(hipEnvironment.environmentName, scopes)
-
-    def hasScope(environmentName: EnvironmentName, scopeName: String): Boolean =
-      application.getScopes(environmentName).exists(_.name.equals(scopeName))
+      if (hipEnvironment.isProductionLike) then applicationPrimaryScopes.get(application)
+      else applicationSecondaryScopes.get(application)
 
     def hasScope(hipEnvironment: HipEnvironment, scopeName: String): Boolean =
-      hasScope(hipEnvironment.environmentName, scopeName)
+      application.getScopes(hipEnvironment).exists(_.name.equals(scopeName))
 
-    def addScope(environmentName: EnvironmentName, scopeName: String): Application =
-      if (!application.hasScope(environmentName, scopeName)) {
-        setScopes(environmentName, getScopes(environmentName) :+ Scope(scopeName))
+    def addScope(hipEnvironment: HipEnvironment, scopeName: String): Application =
+      if (!application.hasScope(hipEnvironment, scopeName)) {
+        setScopes(hipEnvironment, getScopes(hipEnvironment) :+ Scope(scopeName))
       }
       else {
         application
       }
 
-    def addScope(hipEnvironment: HipEnvironment, scopeName: String): Application =
-      addScope(hipEnvironment.environmentName, scopeName)
-
-    def removeScope(environmentName: EnvironmentName, scopeName: String): Application =
-      setScopes(
-        environmentName,
-        application.getScopes(environmentName).filterNot(_.name.equals(scopeName))
-      )
-
     def removeScope(hipEnvironment: HipEnvironment, scopeName: String): Application =
-      removeScope(hipEnvironment.environmentName, scopeName)
-
-    def setScopes(environmentName: EnvironmentName, scopes: Seq[Scope]): Application =
-      environmentName match {
-        case Primary => applicationPrimaryScopes.set(application, scopes)
-        case Secondary => applicationSecondaryScopes.set(application, scopes)
-      }
+      setScopes(
+        hipEnvironment,
+        application.getScopes(hipEnvironment).filterNot(_.name.equals(scopeName))
+      )
 
     def setScopes(hipEnvironment: HipEnvironment, scopes: Seq[Scope]): Application =
-      setScopes(hipEnvironment.environmentName, scopes)
-
-    def setCredentials(environmentName: EnvironmentName, credentials: Seq[Credential]): Application =
-      syncCredentials(
-        environmentName match {
-          case Primary => applicationPrimaryCredentials.set(application, credentials)
-          case Secondary => applicationSecondaryCredentials.set(application, credentials)
-        }
-      )
+      if (hipEnvironment.isProductionLike) then applicationPrimaryScopes.set(application, scopes)
+      else applicationSecondaryScopes.set(application, scopes)
 
     def setCredentials(hipEnvironment: HipEnvironment, credentials: Seq[Credential]): Application =
-      setCredentials(hipEnvironment.environmentName, credentials)
+      syncCredentials(
+        if (hipEnvironment.isProductionLike) then applicationPrimaryCredentials.set(application, credentials)
+        else applicationSecondaryCredentials.set(application, credentials)
+      )
 
     private def syncCredentials(application: Application): Application = {
       application.copy(credentials = application.environments.toCredentials)
     }
 
-    def updateCredential(environmentName: EnvironmentName, clientId: String, secret: String): Application = {
-      if (!getCredentials(environmentName).exists(_.clientId == clientId)) {
+    def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application = {
+      if (!getCredentials(hipEnvironment).exists(_.clientId == clientId)) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
         )
       }
 
       setCredentials(
-        environmentName,
-        getCredentials(environmentName).map {
+        hipEnvironment,
+        getCredentials(hipEnvironment).map {
           case credential@Credential(id, _, _, _, _) if id == clientId =>
             credential.copy(
               clientSecret = Some(secret),
@@ -189,44 +159,29 @@ object ApplicationLenses {
       )
     }
 
-    def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application =
-      updateCredential(hipEnvironment.environmentName, clientId, secret)
-
-    def getMasterCredential(environmentName: EnvironmentName): Option[Credential] = {
-      application.getCredentials(environmentName)
+    def getMasterCredential(hipEnvironment: HipEnvironment): Option[Credential] =
+      application.getCredentials(hipEnvironment)
         .sortWith((a, b) => a.created.isAfter(b.created))
         .headOption
-    }
-
-    def getMasterCredential(hipEnvironment: HipEnvironment): Option[Credential] =
-      getMasterCredential(hipEnvironment.environmentName)
-
-    def getCredentials(environmentName: EnvironmentName): Seq[Credential] = {
-      environmentName match {
-        case Primary => applicationPrimaryCredentials.get(application)
-        case Secondary => applicationSecondaryCredentials.get(application)
-      }
-    }
 
     def getCredentials(hipEnvironment: HipEnvironment): Seq[Credential] =
-      getCredentials(hipEnvironment.environmentName)
+      if (hipEnvironment.isProductionLike) then applicationPrimaryCredentials.get(application)
+      else applicationSecondaryCredentials.get(application)
+
 
     def getAllCredentials(): Seq[Credential] = {
       applicationEnvironments.get(application).primary.credentials ++ applicationEnvironments.get(application).secondary.credentials
     }
 
-    def addCredential(environmentName: EnvironmentName, credential: Credential): Application = {
+    def addCredential(hipEnvironment: HipEnvironment, credential: Credential): Application = {
       setCredentials(
-        environmentName,
-        application.getCredentials(environmentName) :+ credential
+        hipEnvironment,
+        application.getCredentials(hipEnvironment) :+ credential
       )
     }
 
-    def addCredential(hipEnvironment: HipEnvironment, credential: Credential): Application =
-      addCredential(hipEnvironment.environmentName, credential)
-
-    def replaceCredential(environmentName: EnvironmentName, credential: Credential): Application = {
-      val index = getCredentials(environmentName).indexWhere(_.clientId == credential.clientId)
+    def replaceCredential(hipEnvironment: HipEnvironment, credential: Credential): Application = {
+      val index = getCredentials(hipEnvironment).indexWhere(_.clientId == credential.clientId)
       if (index < 0) {
         throw new IllegalArgumentException(
           s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id ${credential.clientId}"
@@ -234,23 +189,17 @@ object ApplicationLenses {
       }
 
       setCredentials(
-        environmentName,
-        getCredentials(environmentName).updated(index, credential)
+        hipEnvironment,
+        getCredentials(hipEnvironment).updated(index, credential)
       )
     }
 
-    def replaceCredential(hipEnvironment: HipEnvironment, credential: Credential): Application =
-      replaceCredential(hipEnvironment.environmentName, credential)
-
-    def removeCredential(environmentName: EnvironmentName, clientId: String): Application = {
+    def removeCredential(hipEnvironment: HipEnvironment, clientId: String): Application = {
       setCredentials(
-        environmentName,
-        application.getCredentials(environmentName).filterNot(_.clientId == clientId)
+        hipEnvironment,
+        application.getCredentials(hipEnvironment).filterNot(_.clientId == clientId)
       )
     }
-
-    def removeCredential(hipEnvironment: HipEnvironment, clientId: String): Application =
-      removeCredential(hipEnvironment.environmentName, clientId)
 
     def setTeamId(teamId: String): Application = {
       application.copy(teamId = Some(teamId))
@@ -312,10 +261,10 @@ object ApplicationLenses {
       )
     }
 
-    def makePublic(): Application = {
+    def makePublic(hipEnvironments: HipEnvironments): Application = {
       application.setCredentials(
-        Primary,
-        application.getCredentials(Primary).filter(!_.isHidden)
+        hipEnvironments.productionEnvironment,
+        application.getCredentials(hipEnvironments.productionEnvironment).filter(!_.isHidden)
       )
     }
 
@@ -356,7 +305,7 @@ object ApplicationLenses {
     def isDeleted: Boolean = {
       application.deleted.isDefined
     }
-    
+
     def removeTeam(clock: Clock): Application = {
       unsetTeamName().
         setTeamMembers(Seq.empty).

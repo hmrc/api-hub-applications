@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.apihubapplications.connectors
 
-import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.client.RequestBuilder
 

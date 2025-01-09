@@ -35,7 +35,6 @@ import play.api.test.{FakeRequest, Helpers}
 import play.api.Application as PlayApplication
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim.*
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
 import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.*

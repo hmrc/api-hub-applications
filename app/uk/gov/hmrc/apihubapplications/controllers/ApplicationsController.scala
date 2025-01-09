@@ -20,6 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
@@ -36,7 +37,8 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
                                        cc: ControllerComponents,
                                        applicationsService: ApplicationsService,
                                        crypto: ApplicationCrypto,
-                                       hipEnvironment: HipEnvironmentActionProvider
+                                       hipEnvironment: HipEnvironmentActionProvider,
+                                       hipEnvironments: HipEnvironments,
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) with Logging {
 
@@ -46,7 +48,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
         case JsSuccess(newApp, _) =>
           logger.info(s"Registering new application: ${newApp.name}")
           applicationsService.registerApplication(newApp).map {
-            case Right(application) => Created(Json.toJson(application.makePublic()))
+            case Right(application) => Created(Json.toJson(application.makePublic(hipEnvironments)))
             case Left(_: IdmsException) => BadGateway
             case Left(_) => InternalServerError
           }
@@ -59,14 +61,14 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
   def getApplications(teamMember: Option[String], includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
     applicationsService
       .findAll(teamMember.map(decrypt), includeDeleted)
-      .map(applications => Json.toJson(applications.map(_.makePublic())))
+      .map(applications => Json.toJson(applications.map(_.makePublic(hipEnvironments))))
       .map(Ok(_))
   }
 
   def getApplicationsUsingApi(apiId: String, includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
     applicationsService
       .findAllUsingApi(apiId, includeDeleted)
-      .map(applications => Json.toJson(applications.map(_.makePublic())))
+      .map(applications => Json.toJson(applications.map(_.makePublic(hipEnvironments))))
       .map(Ok(_))
   }
 
@@ -74,7 +76,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
     implicit request =>
       applicationsService.findById(id, enrich, includeDeleted)
         .map {
-          case Right(application) => Ok(Json.toJson(application.makePublic()))
+          case Right(application) => Ok(Json.toJson(application.makePublic(hipEnvironments)))
           case Left(_: ApplicationNotFoundException) => NotFound
           case Left(_: IdmsException) => BadGateway
           case _ => InternalServerError

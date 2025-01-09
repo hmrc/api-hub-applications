@@ -19,7 +19,6 @@ package uk.gov.hmrc.apihubapplications.models.requests
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.models.application.Primary
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.*
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.NotDeployed
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments

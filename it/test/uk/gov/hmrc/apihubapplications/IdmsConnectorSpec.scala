@@ -57,7 +57,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return the ClientResponse" in {
       forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          post(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients"))
+          post(urlEqualTo(s"/${hipEnvironment.id}/identity/clients"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Content-Type", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
@@ -88,7 +88,7 @@ class IdmsConnectorSpec
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          post(urlEqualTo(s"/primary/identity/clients"))
+          post(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients"))
             .withHeader("Content-Type", equalTo("application/json"))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
             .withRequestBody(
@@ -109,7 +109,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        post(urlEqualTo(s"/primary/identity/clients"))
+        post(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients"))
           .withHeader("Content-Type", equalTo("application/json"))
           .withRequestBody(
             equalToJson(Json.toJson(testClient).toString())
@@ -132,7 +132,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return the secret" in {
       forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          get(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/$testClientId/client-secret"))
+          get(urlEqualTo(s"/${hipEnvironment.id}/identity/clients/$testClientId/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
@@ -152,7 +152,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException when IDMS returns 404 Not Found for a given Client Id" in {
       stubFor(
-        get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+        get(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-secret"))
           .willReturn(
             aResponse()
               .withStatus(404)
@@ -174,7 +174,7 @@ class IdmsConnectorSpec
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+          get(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-secret"))
             .willReturn(
               aResponse()
                 .withStatus(status)
@@ -190,7 +190,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+        get(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-secret"))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
@@ -209,7 +209,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and succeed" in {
       forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          delete(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/$testClientId"))
+          delete(urlEqualTo(s"/${hipEnvironment.id}/identity/clients/$testClientId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .willReturn(
@@ -226,7 +226,7 @@ class IdmsConnectorSpec
 
     "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
-        delete(urlEqualTo(s"/${primaryEnvironment.environmentName}/identity/clients/$testClientId"))
+        delete(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId"))
           .willReturn(
             aResponse()
               .withStatus(NOT_FOUND)
@@ -248,7 +248,7 @@ class IdmsConnectorSpec
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          delete(urlEqualTo(s"/${primaryEnvironment.environmentName}/identity/clients/$testClientId"))
+          delete(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId"))
             .willReturn(
               aResponse()
                 .withStatus(status)
@@ -264,7 +264,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        delete(urlEqualTo(s"/${primaryEnvironment.environmentName}/identity/clients/$testClientId"))
+        delete(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId"))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
@@ -283,7 +283,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return the new secret" in {
       forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          post(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-secret"))
+          post(urlEqualTo(s"/${hipEnvironment.id}/identity/clients/${hipEnvironment.clientId}/client-secret"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
@@ -303,7 +303,7 @@ class IdmsConnectorSpec
 
     "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
-        post(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+        post(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-secret"))
           .willReturn(
             aResponse()
               .withStatus(404)
@@ -325,7 +325,7 @@ class IdmsConnectorSpec
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          post(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+          post(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-secret"))
             .willReturn(
               aResponse()
                 .withStatus(status)
@@ -341,7 +341,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        post(urlEqualTo(s"/primary/identity/clients/$testClientId/client-secret"))
+        post(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-secret"))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
@@ -360,7 +360,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS and return true" in {
       forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          put(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-scopes/$testScopeId"))
+          put(urlEqualTo(s"/${hipEnvironment.id}/identity/clients/${hipEnvironment.clientId}/client-scopes/$testScopeId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
@@ -378,7 +378,7 @@ class IdmsConnectorSpec
 
     "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
-        put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+        put(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes/$testScopeId"))
           .willReturn(
             aResponse()
               .withStatus(404)
@@ -401,7 +401,7 @@ class IdmsConnectorSpec
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+          put(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .willReturn(
               aResponse()
                 .withStatus(status)
@@ -417,7 +417,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        put(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+        put(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes/$testScopeId"))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
@@ -436,7 +436,7 @@ class IdmsConnectorSpec
     "must place the correct request per environment to IDMS" in {
       forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          delete(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-scopes/$testScopeId"))
+          delete(urlEqualTo(s"/${hipEnvironment.id}/identity/clients/${hipEnvironment.clientId}/client-scopes/$testScopeId"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
             .willReturn(
@@ -453,7 +453,7 @@ class IdmsConnectorSpec
 
     "must throw IdmsException with an IdmsIssue of ClientNotFound when IDMS returns 404 Not Found" in {
       stubFor(
-        delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+        delete(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes/$testScopeId"))
           .willReturn(
             aResponse()
               .withStatus(404)
@@ -476,7 +476,7 @@ class IdmsConnectorSpec
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+          delete(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes/$testScopeId"))
             .willReturn(
               aResponse()
                 .withStatus(status)
@@ -492,7 +492,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        delete(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes/$testScopeId"))
+        delete(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes/$testScopeId"))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
@@ -513,7 +513,7 @@ class IdmsConnectorSpec
 
       forAll(hipEnvironmentsTable(this)) { (hipEnvironment: HipEnvironment) =>
         stubFor(
-          get(urlEqualTo(s"/${hipEnvironment.environmentName}/identity/clients/${hipEnvironment.clientId}/client-scopes"))
+          get(urlEqualTo(s"/${hipEnvironment.id}/identity/clients/${hipEnvironment.clientId}/client-scopes"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("Authorization", equalTo(authorizationHeaderFor(hipEnvironment)))
             .withHeader("x-api-key", apiKeyHeaderPatternFor(hipEnvironment))
@@ -557,7 +557,7 @@ class IdmsConnectorSpec
 
       forAll(nonSuccessResponses) { (status: Int) =>
         stubFor(
-          get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
+          get(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes"))
             .withHeader("Accept", equalTo("application/json"))
             .withHeader("X-Correlation-Id", equalTo(correlationId))
             .willReturn(
@@ -575,7 +575,7 @@ class IdmsConnectorSpec
 
     "must return IdmsException for any errors" in {
       stubFor(
-        get(urlEqualTo(s"/primary/identity/clients/$testClientId/client-scopes"))
+        get(urlEqualTo(s"/${primaryEnvironment.id}/identity/clients/$testClientId/client-scopes"))
           .withHeader("Accept", equalTo("application/json"))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
@@ -600,9 +600,8 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
       HipEnvironment(
         id = "production",
         rank = 1,
-        environmentName = FakeHipEnvironments.primaryEnvironment.environmentName,
         isProductionLike = true,
-        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/primary",
+        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/production",
         clientId = primaryClientId,
         secret = primarySecret,
         useProxy = false,
@@ -611,15 +610,16 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
       HipEnvironment(
         id = "test",
         rank = 2,
-        environmentName = FakeHipEnvironments.secondaryEnvironment.environmentName,
         isProductionLike = false,
-        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/secondary",
+        apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/test",
         clientId = secondaryClientId,
         secret = secondarySecret,
         useProxy = false,
         apiKey = Some(secondaryApiKey)
       )
     )
+    def productionEnvironment: HipEnvironment = environments.head
+    def deploymentEnvironment: HipEnvironment = environments.last
   }
 
   def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): IdmsConnector = {

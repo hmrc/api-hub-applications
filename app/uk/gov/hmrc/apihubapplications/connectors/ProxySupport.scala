@@ -17,7 +17,6 @@
 package uk.gov.hmrc.apihubapplications.connectors
 
 import uk.gov.hmrc.apihubapplications.config.HipEnvironment
-import uk.gov.hmrc.apihubapplications.models.application.{EnvironmentName, Primary, Secondary}
 import uk.gov.hmrc.http.client.RequestBuilder
 
 trait ProxySupport {
@@ -25,16 +24,12 @@ trait ProxySupport {
   object ProxySupport {
     implicit class RequestBuilderOps(requestBuilder: RequestBuilder) {
 
-      def withProxyIfRequired(environmentName: EnvironmentName, useProxy: Boolean = true): RequestBuilder = {
-        (environmentName, useProxy) match {
-          case (Primary, _) => requestBuilder
-          case (Secondary, true) => requestBuilder.withProxy
-          case (Secondary, false) => requestBuilder
-        }
-      }
-
       def withProxyIfRequired(hipEnvironment: HipEnvironment): RequestBuilder = {
-        withProxyIfRequired(hipEnvironment.environmentName, hipEnvironment.useProxy)
+        (hipEnvironment.isProductionLike, hipEnvironment.useProxy) match {
+          case (true, _) => requestBuilder
+          case (false, true) => requestBuilder.withProxy
+          case (false, false) => requestBuilder
+        }
       }
 
     }

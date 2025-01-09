@@ -28,7 +28,6 @@ import play.api.mvc.MultipartFormData.DataPart
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentResponse, DeploymentsRequest, DeploymentsResponse, DetailsResponse, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata, ValidateResponse}
-import uk.gov.hmrc.apihubapplications.models.application.{Primary, Secondary}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits.*
@@ -54,7 +53,7 @@ class APIMConnectorImpl @Inject()(
   import CorrelationIdSupport.*
 
   override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(Primary)
+    val hipEnvironment = hipEnvironments.productionEnvironment
 
     httpClient.post(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationForEnvironment(hipEnvironment))
@@ -77,7 +76,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def deployToSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(Secondary)
+    val hipEnvironment = hipEnvironments.deploymentEnvironment
 
     val metadata = Json.toJson(CreateMetadata(request))
     val context = Seq("metadata" -> Json.prettyPrint(metadata))
@@ -112,7 +111,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(Secondary)
+    val hipEnvironment = hipEnvironments.deploymentEnvironment
 
     val metadata = Json.toJson(UpdateMetadata(request))
     val context = Seq("publisherReference" -> publisherReference, "metadata" -> Json.prettyPrint(metadata))
@@ -170,7 +169,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(Secondary)
+    val hipEnvironment = hipEnvironments.deploymentEnvironment
 
     val context = Seq("publisherReference" -> publisherReference)
       .withCorrelationId()
@@ -189,7 +188,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.forEnvironmentName(Primary)
+    val hipEnvironment = hipEnvironments.productionEnvironment
 
     val context = Seq("publisherReference" -> publisherReference)
       .withCorrelationId()
@@ -239,7 +238,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
-    listEgressGateways(hipEnvironments.forEnvironmentName(Secondary))
+    listEgressGateways(hipEnvironments.deploymentEnvironment)
   }
 
   def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {

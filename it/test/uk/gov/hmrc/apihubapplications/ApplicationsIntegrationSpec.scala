@@ -77,7 +77,7 @@ class ApplicationsIntegrationSpec
 
   override protected val repository: ApplicationsRepository = applicationRepository
 
-  private def applicationRepository: ApplicationsRepository = ApplicationsRepository(mongoComponent, NoCrypto)
+  private def applicationRepository: ApplicationsRepository = ApplicationsRepository(mongoComponent, NoCrypto, FakeHipEnvironments)
 
   "POST to register a new application" should {
     "respond with a 201 Created and body containing the application" in {
@@ -129,7 +129,7 @@ class ApplicationsIntegrationSpec
 
         val storedApplications = findAll().futureValue.filter(app => app.id == responseApplication.id)
         storedApplications.size shouldBe 1
-        val storedApplication = storedApplications.head.decryptedValue.toModel
+        val storedApplication = storedApplications.head.decryptedValue.toModel(FakeHipEnvironments)
 
         val expectedTeamMembers =
           if (newApplication.teamMembers.contains(TeamMember(newApplication.createdBy.email))) {
@@ -140,7 +140,7 @@ class ApplicationsIntegrationSpec
           }
 
         val expectedApplication = storedApplication
-          .makePublic()
+          .makePublic(FakeHipEnvironments)
 
         responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name
@@ -159,7 +159,7 @@ class ApplicationsIntegrationSpec
         insert(application1).futureValue
         insert(application2).futureValue
 
-        val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue.toModel)
+        val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue.toModel(FakeHipEnvironments))
 
         val response =
           wsClient
@@ -186,7 +186,7 @@ class ApplicationsIntegrationSpec
       insert(application1).futureValue
       insert(application2).futureValue
 
-      val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue.toModel)
+      val storedApplications: Seq[Application] = findAll().futureValue.map(_.decryptedValue.toModel(FakeHipEnvironments))
       val myApplications = storedApplications.filter(application => application.teamMembers.contains(TeamMember(myEmail)))
 
       val response =
@@ -209,18 +209,18 @@ class ApplicationsIntegrationSpec
 
         insert(
           application
-            .setCredentials(Primary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-            .setScopes(Primary, Seq.empty)
-            .setCredentials(Secondary, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
+            .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
+            .setScopes(FakeHipEnvironments.primaryEnvironment, Seq.empty)
+            .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
         ).futureValue
 
-        val storedApplication = findAll().futureValue.head.decryptedValue.toModel
+        val storedApplication = findAll().futureValue.head.decryptedValue.toModel(FakeHipEnvironments)
 
         val expected = storedApplication
           .setCredentials(
-            Secondary, 
+            FakeHipEnvironments.secondaryEnvironment, 
             storedApplication
-              .getCredentials(Secondary).map(
+              .getCredentials(FakeHipEnvironments.secondaryEnvironment).map(
                 credential => credential.copy(
                   clientSecret = Some(FakeIdmsConnector.fakeSecret),
                   secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
@@ -228,20 +228,20 @@ class ApplicationsIntegrationSpec
               )
           )
           .setScopes(
-            Primary, 
+            FakeHipEnvironments.primaryEnvironment, 
             Seq(
               Scope(FakeIdmsConnector.fakeClientScopeId1),
               Scope(FakeIdmsConnector.fakeClientScopeId2)
             )
           )
           .setScopes(
-            Secondary, 
+            FakeHipEnvironments.secondaryEnvironment, 
             Seq(
               Scope(FakeIdmsConnector.fakeClientScopeId1),
               Scope(FakeIdmsConnector.fakeClientScopeId2)
             )
           )
-          .makePublic()
+          .makePublic(FakeHipEnvironments)
 
         val response =
           wsClient
