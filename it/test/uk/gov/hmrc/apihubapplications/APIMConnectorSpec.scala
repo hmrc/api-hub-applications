@@ -857,7 +857,8 @@ object APIMConnectorSpec extends HttpClientV2Support {
     subdomain = Some("test-sub-domain"),
     backends = Some(Seq("test-backend-1", "test-backend-2")),
     egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
-    prefixesToRemove = Some(Seq("test-prefix-1", "test-prefix-2"))
+    prefixesToRemove = Some(Seq("test-prefix-1", "test-prefix-2")),
+    egress = Some("test-egress")
   )
 
   private val detailsResponseWithoutDetails = DetailsResponse(
@@ -867,7 +868,8 @@ object APIMConnectorSpec extends HttpClientV2Support {
     subdomain = None,
     backends = None,
     egressMappings = None,
-    prefixesToRemove = None
+    prefixesToRemove = None,
+    egress = None,
   )
 
   private val deploymentDetailsWithoutEgressOrPrefixes = DeploymentDetails(
@@ -877,7 +879,8 @@ object APIMConnectorSpec extends HttpClientV2Support {
     subDomain = Some("8.16"),
     hods = Some(Seq("EMS")),
     egressMappings = None,
-    prefixesToRemove = Seq.empty
+    prefixesToRemove = Seq.empty,
+    egress = None,
   )
 
   def hipEnvironments(wireMockSupport: WireMockSupport): HipEnvironments = new HipEnvironments {

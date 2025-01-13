@@ -50,7 +50,8 @@ object DetailsResponseSpec{
       subdomain = Some("test-subdomain"),
       backends = Some(Seq("test-backend")),
       egressMappings = None,
-      prefixesToRemove = prefixesToRemove
+      prefixesToRemove = prefixesToRemove,
+      egress = Some("test-egress")
     )
   }
 }

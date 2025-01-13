@@ -25,7 +25,8 @@ case class DetailsResponse(
   subdomain: Option[String],
   backends: Option[Seq[String]],
   egressMappings: Option[Seq[EgressMapping]],
-  prefixesToRemove: Option[Seq[String]]
+  prefixesToRemove: Option[Seq[String]],
+  egress: Option[String],
 ) {
 
   def toDeploymentDetails: DeploymentDetails = {
@@ -36,7 +37,8 @@ case class DetailsResponse(
       subDomain = subdomain,
       hods = backends,
       egressMappings = egressMappings,
-      prefixesToRemove = mapPrefixesToRemove
+      prefixesToRemove = mapPrefixesToRemove,
+      egress = egress
     )
   }
 
