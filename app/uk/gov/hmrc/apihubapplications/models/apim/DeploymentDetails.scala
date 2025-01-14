@@ -25,7 +25,8 @@ case class DeploymentDetails (
   subDomain: Option[String],
   hods: Option[Seq[String]],
   egressMappings: Option[Seq[EgressMapping]],
-  prefixesToRemove: Seq[String]
+  prefixesToRemove: Seq[String],
+  egress: Option[String],
 )
 
 object DeploymentDetails {

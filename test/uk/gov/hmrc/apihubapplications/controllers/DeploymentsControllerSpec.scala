@@ -381,7 +381,8 @@ class DeploymentsControllerSpec
         subDomain = Some("test-dub-domain"),
         hods = Some(Seq("test-backend-1", "test-backend-2")),
         egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
-        prefixesToRemove = Seq("test-prefix-1", "test-prefix-2")
+        prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
+        egress = Some("test-egress")
       )
 
       when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef))(any()))
