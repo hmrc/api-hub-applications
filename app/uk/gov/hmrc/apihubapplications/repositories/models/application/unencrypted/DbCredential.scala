@@ -25,17 +25,8 @@ case class DbCredential(
   clientId: String,
   created: Option[LocalDateTime],
   secretFragment: Option[String],
-  environmentId: Option[String]
+  environmentId: String
 ) {
-
-  def toModel(dbApplication: DbApplication, environmentId: String): Credential =
-    Credential(
-      clientId = clientId,
-      created = created.getOrElse(dbApplication.created),
-      clientSecret = None,
-      secretFragment = secretFragment,
-      environmentId = this.environmentId.getOrElse(environmentId)
-    )
 
   def toModel(dbApplication: DbApplication): Credential =
     Credential(
@@ -43,7 +34,7 @@ case class DbCredential(
       created = created.getOrElse(dbApplication.created),
       clientSecret = None,
       secretFragment = secretFragment,
-      environmentId = this.environmentId.getOrElse(throw new IllegalStateException(s"No environmentId reading credential $clientId"))
+      environmentId = environmentId
     )
 
 }
@@ -55,7 +46,7 @@ object DbCredential {
       clientId = credential.clientId,
       created = Some(credential.created),
       secretFragment = credential.secretFragment,
-      environmentId = Some(credential.environmentId)
+      environmentId = credential.environmentId
     )
 
   implicit val formatDbCredential: Format[DbCredential] = Json.format[DbCredential]

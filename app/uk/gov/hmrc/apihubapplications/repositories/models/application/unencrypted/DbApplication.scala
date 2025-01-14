@@ -31,14 +31,13 @@ case class DbApplication(
   lastUpdated: LocalDateTime,
   teamId: Option[String],
   teamMembers: Seq[TeamMember],
-  environments: DbEnvironments,
   apis: Option[Seq[DbApi]],
   deleted: Option[Deleted],
-  credentials: Option[Set[DbCredential]]
+  credentials: Set[DbCredential]
 ) {
 
   def toModel(hipEnvironments: HipEnvironments): Application = {
-    val application = Application(
+    Application(
       id = id,
       name = name,
       created = created,
@@ -46,7 +45,6 @@ case class DbApplication(
       lastUpdated = lastUpdated,
       teamId = teamId,
       teamMembers = teamMembers,
-      environments = environments.toModel(this, hipEnvironments),
       issues = Seq.empty,
       apis = apis match {
         case Some(apis) => apis.map(_.toModel)
@@ -54,16 +52,8 @@ case class DbApplication(
       },
       deleted = deleted,
       teamName = None,
-      credentials = this.credentials
-        .map(_.map(_.toModel(this)))
-        .getOrElse(environments.toModel(this, hipEnvironments).toCredentials)
+      credentials = this.credentials.map(_.toModel(this))
     )
-
-    if (application.environments.toCredentials != application.credentials) {
-      throw new IllegalStateException(s"Credentials and environments not in sync converting to application ${application.safeId}")
-    }
-
-    application
   }
 
 }
@@ -71,10 +61,6 @@ case class DbApplication(
 object DbApplication {
 
   def apply(application: Application): DbApplication = {
-    if (application.environments.toCredentials != application.credentials) {
-      throw new IllegalStateException(s"Credentials and environments not in sync converting from application ${application.safeId}")
-    }
-
     DbApplication(
       id = application.id,
       name = application.name,
@@ -83,13 +69,12 @@ object DbApplication {
       lastUpdated = application.lastUpdated,
       teamId = application.teamId,
       teamMembers = application.teamId.map(_ => Seq.empty).getOrElse(application.teamMembers),
-      environments = DbEnvironments(application.environments),
       apis = application.apis match {
         case apis if apis.nonEmpty => Some(apis.map(DbApi.apply))
         case _ => None
       },
       deleted = application.deleted,
-      credentials = Some(application.credentials.map(DbCredential(_)))
+      credentials = application.credentials.map(DbCredential(_))
     )
   }
 

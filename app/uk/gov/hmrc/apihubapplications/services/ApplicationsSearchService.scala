@@ -19,12 +19,12 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Issues}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Issues}
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.{ApplicationEnrichers, Helpers}
+import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -90,9 +90,7 @@ class ApplicationsSearchServiceImpl @Inject()(
           ApplicationEnrichers.process(
             application,
             Seq(
-              ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector, hipEnvironments),
-              ApplicationEnrichers.secondaryScopeApplicationEnricher(application, idmsConnector, hipEnvironments),
-              ApplicationEnrichers.primaryScopeApplicationEnricher(application, idmsConnector, hipEnvironments)
+              ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector, hipEnvironments)
             )
           )
         } else {

@@ -52,32 +52,13 @@ trait ApplicationGenerator {
     } yield TeamMember(email)
   }
 
-  val scopeGenerator: Gen[Scope] = {
-    for {
-      name <- Gen.alphaStr
-    } yield Scope(name)
-  }
-
-  def credentialGenerator(environmentId: String): Gen[Credential] = {
+  def credentialGenerator: Gen[Credential] = {
     for {
       clientId <- Gen.uuid
       clientSecret <- Gen.uuid
       created <- localDateTimeGenerator
-    } yield Credential(clientId.toString, created, Some(clientSecret.toString), Some(clientSecret.toString.takeRight(4)), environmentId)
-  }
-
-  def environmentGenerator(environmentId: String): Gen[Environment] = {
-    for {
-      scopes <- Gen.listOf(scopeGenerator)
-      credentials <- Gen.listOf(credentialGenerator(environmentId))
-    } yield Environment(scopes, credentials)
-  }
-
-  val environmentsGenerator: Gen[Environments] = {
-    for {
-      primary <- environmentGenerator(FakeHipEnvironments.primaryEnvironment.id)
-      secondary <- environmentGenerator(FakeHipEnvironments.secondaryEnvironment.id)
-    } yield Environments(primary,secondary)
+      environment <- Gen.oneOf(FakeHipEnvironments.environments)
+    } yield Credential(clientId.toString, created, Some(clientSecret.toString), Some(clientSecret.toString.takeRight(4)), environment.id)
   }
 
   implicit val applicationGenerator: Arbitrary[Application] = Arbitrary {
@@ -88,7 +69,7 @@ trait ApplicationGenerator {
       createdBy <- creatorGenerator
       lastUpdated <- localDateTimeGenerator
       teamMembers <- Gen.listOf(teamMemberGenerator)
-      environments <- environmentsGenerator
+      credentials <- Gen.listOf(credentialGenerator)
     } yield
     Application(
       appId,
@@ -97,7 +78,7 @@ trait ApplicationGenerator {
       createdBy,
       lastUpdated,
       teamMembers,
-      environments
+      credentials.toSet
     )
   }
 

@@ -51,7 +51,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         createdBy = Creator("createdby-email"),
         lastUpdated = LocalDateTime.now(fixture.clock),
         teamMembers = Seq(TeamMember(email = "team-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val request = sampleAccessRequestRequest()
@@ -80,7 +80,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         createdBy = Creator("createdby-email"),
         lastUpdated = LocalDateTime.now(fixture.clock),
         teamMembers = Seq(TeamMember(email = "team-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       when(fixture.accessRequestsRepository.insert(any())).thenReturn(Future.successful(accessRequests))
@@ -109,7 +109,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         createdBy = Creator("createdby-email"),
         lastUpdated = LocalDateTime.now(fixture.clock),
         teamMembers = Seq(TeamMember(email = "team-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       when(fixture.accessRequestsRepository.insert(any())).thenReturn(Future.successful(accessRequests))
@@ -450,7 +450,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         createdBy = Creator("createdby-email"),
         lastUpdated = LocalDateTime.now(fixture.clock),
         teamMembers = Seq(TeamMember(email = "team-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val updated = accessRequest
@@ -537,7 +537,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         createdBy = Creator("createdby-email"),
         lastUpdated = LocalDateTime.now(fixture.clock),
         teamMembers = Seq(TeamMember(email = "team-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val updated = accessRequest
@@ -584,7 +584,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         createdBy = Creator("createdby-email"),
         lastUpdated = LocalDateTime.now(fixture.clock),
         teamMembers = Seq(TeamMember(email = "team-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val updated = accessRequest
@@ -632,7 +632,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         createdBy = Creator("createdby-email"),
         lastUpdated = LocalDateTime.now(fixture.clock),
         teamMembers = Seq(TeamMember(email = "team-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val updated = accessRequest
@@ -818,7 +818,7 @@ object AccessRequestsServiceSpec {
       createdBy = Creator("createdby-email"),
       lastUpdated = LocalDateTime.now(clock),
       teamMembers = Seq(TeamMember(email = "team-email")),
-      environments = Environments()
+      credentials = Set.empty
     )
   }
 

@@ -177,7 +177,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments(primary = Environment(), secondary = Environment(Seq(Scope(scopeName)), Seq(existingCredential)))
+        credentials = Set(existingCredential)
       )
 
       val newClientResponse = ClientResponse(newTestClientId, newSecret)
@@ -221,7 +221,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments(primary = Environment(Seq(Scope(scopeName)), Seq(existingCredential)), secondary = Environment())
+        credentials = Set(existingCredential)
       )
 
       val newClientResponse = ClientResponse(newTestClientId, newSecret)
@@ -266,7 +266,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments(primary = Environment(Seq(Scope(scopeName)), Seq(existingHiddenCredential)), secondary = Environment())
+        credentials = Set(existingHiddenCredential)
       )
 
       when(idmsConnector.newSecret(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(testClientId))(any)).thenReturn(Future.successful(Right(Secret(newSecret))))
@@ -299,7 +299,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       ).setCredentials(
         FakeHipEnvironments.primaryEnvironment, 
         (1 to 5).map(i => Credential(s"test-client-$i", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
@@ -337,7 +337,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
           createdBy = Creator("test-email"),
           lastUpdated = LocalDateTime.now(clock),
           teamMembers = Seq(TeamMember(email = "test-email")),
-          environments = Environments()
+          credentials = Set.empty
         )
           .addCredential(hipEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, hipEnvironment.id))
           .addCredential(hipEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, hipEnvironment.id))
@@ -368,7 +368,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock).minusDays(1),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("test-primary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
@@ -402,7 +402,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
@@ -446,7 +446,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock).minusDays(1),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
 
@@ -472,7 +472,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
@@ -500,7 +500,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock).minusDays(1),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
 
