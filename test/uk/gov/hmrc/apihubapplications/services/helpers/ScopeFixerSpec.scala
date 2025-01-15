@@ -61,10 +61,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name, scope2.name),
         FakeHipEnvironments.secondaryEnvironment -> Seq(scope2.name, scope3.name)
       )
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope3.name)
 
       val fixture = buildFixture()
       val accessRequests = Seq.empty
@@ -94,10 +90,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(api.removeEndpoint(endpointForScope2.path)))
 
       val scopeMap = Map(
@@ -138,8 +130,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       val application = applicationWithCredentials
         .addCredential(FakeHipEnvironments.primaryEnvironment, credential3)
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
         .addApi(buildApi(api))
 
       val scopeMap = Map(
@@ -219,10 +209,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(api))
 
       val scopeMap = Map(
@@ -261,10 +247,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope3.name)
         .addApi(buildApi(api))
 
       val scopeMap = Map(
@@ -305,8 +287,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
         .addApi(buildApi(api))
 
       val scopeMap = Map(
@@ -346,8 +326,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
         .addApi(buildApi(api1))
         .addApi(buildApi(api2))
 
@@ -390,10 +368,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(apiDetail1))
         .addApi(buildApi(apiDetail2))
 
@@ -427,10 +401,6 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addEndpoint(endpointForScope2)
 
       val application = applicationWithCredentials
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.primaryEnvironment, scope2.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope1.name)
-//        .addScope(FakeHipEnvironments.secondaryEnvironment, scope2.name)
         .addApi(buildApi(api))
 
       val scopeMap = Map(
