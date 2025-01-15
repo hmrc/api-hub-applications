@@ -62,7 +62,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         createdBy = newApplication.createdBy,
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val primaryClientResponse = ClientResponse("primary-client-id", "test-secret-1234")
@@ -140,7 +140,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         createdBy = creator,
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(teamMember1, teamMember2, TeamMember(creator.email)),
-        environments = Environments()
+        credentials = Set.empty
       ).setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(clientResponse.asNewCredential(clock, FakeHipEnvironments.secondaryEnvironment)))
 
       when(idmsConnector.createClient(any, any)(any))
@@ -576,7 +576,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock).minusDays(1),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       ).addTeamMember(TeamMember("test-existing-team-member-email"))
 
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
@@ -605,7 +605,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock).minusDays(1),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       ).addTeamMember(TeamMember("test-existing-team-member-email"))
 
       when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))

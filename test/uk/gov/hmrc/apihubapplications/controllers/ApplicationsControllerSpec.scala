@@ -165,8 +165,8 @@ class ApplicationsControllerSpec
       val now = LocalDateTime.now()
 
       running(fixture.application) {
-        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
-        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments())
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Set.empty)
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Set.empty)
 
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
@@ -196,7 +196,7 @@ class ApplicationsControllerSpec
         val teamMemberEmail = "jo.bloggs@hmrc.gov.uk"
 
         val expected_apps = Seq(
-          Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Environments())
+          Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Set.empty)
             .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
             .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
         )
@@ -222,8 +222,8 @@ class ApplicationsControllerSpec
       val deleted = Deleted(now, "test-deleted-by")
 
       running(fixture.application) {
-        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
-        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).delete(deleted)
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Set.empty)
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Set.empty).delete(deleted)
 
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
@@ -253,8 +253,8 @@ class ApplicationsControllerSpec
       val apiId = "my-api"
 
       running(fixture.application) {
-        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api1"))
-        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api2"))
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Set.empty).addApi(Api(apiId, "api1"))
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Set.empty).addApi(Api(apiId, "api2"))
 
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
@@ -282,8 +282,8 @@ class ApplicationsControllerSpec
       val apiId = "my-api"
 
       running(fixture.application) {
-        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api1"))
-        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Environments()).addApi(Api(apiId, "api2"))
+        val application1 = Application(Some("1"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Set.empty).addApi(Api(apiId, "api1"))
+        val application2 = Application(Some("2"), "test-app-2", now, Creator("test2@test.com"), now, Seq.empty, Set.empty).addApi(Api(apiId, "api2"))
           .delete(Deleted(now, "test-deleted-by"))
 
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
@@ -311,7 +311,7 @@ class ApplicationsControllerSpec
     "must return 200 Ok and a JSON body representing the application in public form when it exists in the repository" in {
       val id = "1"
       val now = LocalDateTime.now()
-      val expected = Application(Some(id), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())
+      val expected = Application(Some(id), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Set.empty)
         .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
         .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
 

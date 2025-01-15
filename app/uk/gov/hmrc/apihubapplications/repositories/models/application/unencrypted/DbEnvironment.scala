@@ -24,7 +24,7 @@ case class DbEnvironment(credentials: Seq[DbCredential]) {
   def toModel(dbApplication: DbApplication, environmentId: String): Environment =
     Environment(
       scopes = Seq.empty,
-      credentials = credentials.map(_.toModel(dbApplication, environmentId))
+      credentials = credentials.map(_.toModel(dbApplication))
     )
 
 }

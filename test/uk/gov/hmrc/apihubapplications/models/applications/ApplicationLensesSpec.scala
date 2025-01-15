@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.applications
 
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.models.Lens
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
@@ -28,132 +29,6 @@ import java.time.LocalDateTime
 import scala.util.Random
 
 class ApplicationLensesSpec extends LensBehaviours {
-
-  "applicationEnvironments" - {
-    "must get the correct Environments" in {
-      val expected = randomEnvironments()
-      val application = testApplication.copy(environments = expected)
-
-      val actual = applicationEnvironments.get(application)
-      actual mustBe expected
-    }
-
-    "must set the Environments correctly" in {
-      val expected = randomEnvironments()
-      val application = applicationEnvironments.set(testApplication, expected)
-
-      application.environments mustBe expected
-    }
-  }
-
-  "environmentScopes" - {
-
-    "must get the correct Scopes" in {
-      val expected = randomScopes()
-      val environment = randomEnvironment().copy(scopes = expected)
-
-      val actual = environmentScopes.get(environment)
-      actual mustBe expected
-    }
-
-    "must set the scopes correctly" in {
-      val expected = randomScopes()
-      val environment = randomEnvironment().copy(scopes = Seq.empty)
-
-      val actual = environmentScopes.set(environment, expected).scopes
-      actual mustBe expected
-    }
-  }
-
-  "environmentCredentials" - {
-    "must get the correct credentials" in {
-      val expected = randomCredentials()
-      val environment = randomEnvironment().copy(credentials = expected)
-
-      val actual = environmentCredentials.get(environment)
-      actual mustBe expected
-    }
-
-    "must set the credentials correctly" in {
-      val expected = randomCredentials()
-      val environment = randomEnvironment().copy(credentials = Seq.empty)
-
-      val actual = environmentCredentials.set(environment, expected).credentials
-      actual mustBe expected
-    }
-  }
-
-  "environmentPrimary" - {
-    "must" - {
-      behave like environmentsToEnvironmentLens(
-        environmentPrimary,
-        _.primary
-      )
-    }
-  }
-
-  "applicationPrimary" - {
-    "must" - {
-      behave like applicationToEnvironmentLens(
-        applicationPrimary,
-        _.primary
-      )
-    }
-  }
-
-  "applicationPrimaryScopes" - {
-    "must" - {
-      behave like applicationToScopesLens(
-        applicationPrimaryScopes,
-        _.primary
-      )
-    }
-  }
-
-  "applicationPrimaryCredentials" - {
-    "must" - {
-      behave like applicationToCredentialsLens(
-        applicationPrimaryCredentials,
-        _.primary
-      )
-    }
-  }
-
-  "environmentSecondary" - {
-    "must" - {
-      behave like environmentsToEnvironmentLens(
-        environmentSecondary,
-        _.secondary
-      )
-    }
-  }
-
-  "applicationSecondary" - {
-    "must" - {
-      behave like applicationToEnvironmentLens(
-        applicationSecondary,
-        _.secondary
-      )
-    }
-  }
-
-  "applicationSecondaryScopes" - {
-    "must" - {
-      behave like applicationToScopesLens(
-        applicationSecondaryScopes,
-        _.secondary
-      )
-    }
-  }
-
-  "applicationSecondaryCredentials" - {
-    "must" - {
-      behave like applicationToCredentialsLens(
-        applicationSecondaryCredentials,
-        _.secondary
-      )
-    }
-  }
 
   "applicationTeamMembers" - {
     "must get the correct team members" in {
@@ -186,91 +61,23 @@ class ApplicationLensesSpec extends LensBehaviours {
   }
 
   "ApplicationLensOps" - {
-    "getScopes(FakeHipEnvironments.primaryEnvironment)" - {
-      "must" - {
-        behave like applicationScopesGetterFunction(
-          applicationPrimaryScopes,
-          application => ApplicationLensOps(application).getScopes(FakeHipEnvironments.primaryEnvironment)
-        )
-      }
-    }
-
-    "getScopes(FakeHipEnvironments.secondaryEnvironment)" - {
-      "must" - {
-        behave like applicationScopesGetterFunction(
-          applicationSecondaryScopes,
-          application => ApplicationLensOps(application).getScopes(FakeHipEnvironments.secondaryEnvironment)
-        )
-      }
-    }
-
-    "setScopes(FakeHipEnvironments.primaryEnvironment)" - {
-      "must" - {
-        behave like applicationScopesSetterFunction(
-          applicationPrimaryScopes,
-          (application, scopes) => ApplicationLensOps(application).setScopes(FakeHipEnvironments.primaryEnvironment, scopes)
-        )
-      }
-    }
-
-    "setScopes(FakeHipEnvironments.secondaryEnvironment)" - {
-      "must" - {
-        behave like applicationScopesSetterFunction(
-          applicationSecondaryScopes,
-          (application, scopes) => ApplicationLensOps(application).setScopes(FakeHipEnvironments.secondaryEnvironment, scopes)
-        )
-      }
-    }
-
-    "addScope(FakeHipEnvironments.primaryEnvironment)" - {
-      "must" - {
-        behave like applicationAddScopeFunction(
-          applicationPrimaryScopes,
-          (application, scope) => ApplicationLensOps(application).addScope(FakeHipEnvironments.primaryEnvironment, scope.name)
-        )
-      }
-    }
-
-    "addScope(FakeHipEnvironments.secondaryEnvironment)" - {
-      "must" - {
-        behave like applicationAddScopeFunction(
-          applicationSecondaryScopes,
-          (application, scope) => ApplicationLensOps(application).addScope(FakeHipEnvironments.secondaryEnvironment, scope.name)
-        )
-      }
-    }
-
     "getMasterCredential(FakeHipEnvironments.primaryEnvironment)" - {
-      "must return the most recently created credential" in {
-        val master = randomCredential().copy(created = LocalDateTime.now())
-        val credential1 = randomCredential().copy(created = LocalDateTime.now().minusDays(1))
-        val credential2 = randomCredential().copy(created = LocalDateTime.now().minusDays(2))
-
-        val application = testApplication
-          .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(credential1, master, credential2))
-
-        application.getMasterCredential(FakeHipEnvironments.primaryEnvironment) mustBe Some(master)
+      "must" - {
+        behave like applicationMasterCredentialGetterFunction(FakeHipEnvironments.primaryEnvironment)
       }
     }
 
     "getMasterCredential(FakeHipEnvironments.secondaryEnvironment)" - {
-      "must return the most recently created credential" in {
-        val master = randomCredential().copy(created = LocalDateTime.now())
-        val credential1 = randomCredential().copy(created = LocalDateTime.now().minusDays(1))
-        val credential2 = randomCredential().copy(created = LocalDateTime.now().minusDays(2))
-
-        val application = testApplication
-          .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(credential1, master, credential2))
-
-        application.getMasterCredential(FakeHipEnvironments.secondaryEnvironment) mustBe Some(master)
+      "must" - {
+        behave like applicationMasterCredentialGetterFunction(FakeHipEnvironments.secondaryEnvironment)
       }
     }
 
     "getCredentials(FakeHipEnvironments.primaryEnvironment)" - {
       "must" - {
         behave like applicationCredentialsGetterFunction(
-          applicationPrimaryCredentials,
-          application => ApplicationLensOps(application).getCredentials(FakeHipEnvironments.primaryEnvironment)
+          applicationCredentials,
+          FakeHipEnvironments.primaryEnvironment
         )
       }
     }
@@ -278,8 +85,8 @@ class ApplicationLensesSpec extends LensBehaviours {
     "getCredentials(FakeHipEnvironments.secondaryEnvironment)" - {
       "must" - {
         behave like applicationCredentialsGetterFunction(
-          applicationSecondaryCredentials,
-          application => ApplicationLensOps(application).getCredentials(FakeHipEnvironments.secondaryEnvironment)
+          applicationCredentials,
+          FakeHipEnvironments.secondaryEnvironment
         )
       }
     }
@@ -287,8 +94,8 @@ class ApplicationLensesSpec extends LensBehaviours {
     "setCredentials(FakeHipEnvironments.primaryEnvironment)" - {
       "must" - {
         behave like applicationCredentialsSetterFunction(
-          applicationPrimaryCredentials,
-          (application, credentials) => ApplicationLensOps(application).setCredentials(FakeHipEnvironments.primaryEnvironment, credentials)
+          applicationCredentials,
+          FakeHipEnvironments.primaryEnvironment
         )
       }
     }
@@ -296,43 +103,17 @@ class ApplicationLensesSpec extends LensBehaviours {
     "setCredentials(FakeHipEnvironments.secondaryEnvironment)" - {
       "must" - {
         behave like applicationCredentialsSetterFunction(
-          applicationSecondaryCredentials,
-          (application, credentials) => ApplicationLensOps(application).setCredentials(FakeHipEnvironments.secondaryEnvironment, credentials)
+          applicationCredentials,
+          FakeHipEnvironments.secondaryEnvironment
         )
-      }
-
-      "must keep environments and credentials in sync" in {
-        val application = testApplication
-        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
-        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
-
-        val expected = application.copy(
-          environments = Environments(
-            primary = Environment(
-              scopes = Seq.empty,
-              credentials = Seq(credential1)
-            ),
-            secondary = Environment(
-              scopes = Seq.empty,
-              credentials = Seq(credential2)
-            )
-          ),
-          credentials = Set(credential1, credential2)
-        )
-
-        val actual = application
-          .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(credential1))
-          .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(credential2))
-
-        actual mustBe expected
       }
     }
 
     "addCredential(FakeHipEnvironments.primaryEnvironment)" - {
       "must" - {
         behave like applicationAddCredentialFunction(
-          applicationPrimaryCredentials,
-          (application, credential) => ApplicationLensOps(application).addCredential(FakeHipEnvironments.primaryEnvironment, credential)
+          applicationCredentials,
+          FakeHipEnvironments.primaryEnvironment
         )
       }
     }
@@ -340,8 +121,8 @@ class ApplicationLensesSpec extends LensBehaviours {
     "addCredential(FakeHipEnvironments.secondaryEnvironment)" - {
       "must" - {
         behave like applicationAddCredentialFunction(
-          applicationSecondaryCredentials,
-          (application, credential) => ApplicationLensOps(application).addCredential(FakeHipEnvironments.secondaryEnvironment, credential)
+          applicationCredentials,
+          FakeHipEnvironments.secondaryEnvironment
         )
       }
     }
@@ -349,94 +130,57 @@ class ApplicationLensesSpec extends LensBehaviours {
     "removeCredential(FakeHipEnvironments.primaryEnvironment)" - {
       "must" - {
         behave like applicationRemoveCredentialFunction(
-          applicationPrimaryCredentials,
-          (application, clientId) => ApplicationLensOps(application).removeCredential(FakeHipEnvironments.primaryEnvironment, clientId)
+          applicationCredentials,
+          FakeHipEnvironments.primaryEnvironment
+        )
+      }
+    }
+
+    "removeCredential(FakeHipEnvironments.secondaryEnvironment)" - {
+      "must" - {
+        behave like applicationRemoveCredentialFunction(
+          applicationCredentials,
+          FakeHipEnvironments.secondaryEnvironment
         )
       }
     }
 
     "replaceCredential(FakeHipEnvironments.primaryEnvironment)" - {
-      "must replace the correct credential" in {
-        val credential1 = randomCredential()
-        val credential2 = randomCredential()
-        val credential3 = randomCredential()
-
-        val application = testApplication.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(credential1, credential2, credential3))
-
-        val credential = application.getCredentials(FakeHipEnvironments.primaryEnvironment)(1)
-
-        val updatedCredential = credential.copy(
-          created = credential.created.plusDays(1),
-          clientSecret = Some("updated-secret")
+      "must" - {
+        behave like applicationReplaceCredentialFunction(
+          applicationCredentials,
+          FakeHipEnvironments.primaryEnvironment
         )
-
-        val expected = application.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(credential1, updatedCredential, credential3))
-        val actual = application.replaceCredential(FakeHipEnvironments.primaryEnvironment, updatedCredential)
-
-        actual mustBe expected
-      }
-
-      "must throw IllegalArgumentException if the credential does not exist" in {
-        val credential = randomCredential()
-        val application = testApplication
-
-        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(FakeHipEnvironments.primaryEnvironment, credential))
       }
     }
 
     "replaceCredential(FakeHipEnvironments.secondaryEnvironment)" - {
-      "must replace the correct credential" in {
-        val credential1 = randomCredential()
-        val credential2 = randomCredential()
-        val credential3 = randomCredential()
-
-        val application = testApplication.setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(credential1, credential2, credential3))
-
-        val credential = application.getCredentials(FakeHipEnvironments.secondaryEnvironment)(1)
-
-        val updatedCredential = credential.copy(
-          created = credential.created.plusDays(1),
-          clientSecret = Some("updated-secret")
+      "must" - {
+        behave like applicationReplaceCredentialFunction(
+          applicationCredentials,
+          FakeHipEnvironments.secondaryEnvironment
         )
-
-        val expected = application.setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(credential1, updatedCredential, credential3))
-        val actual = application.replaceCredential(FakeHipEnvironments.secondaryEnvironment, updatedCredential)
-
-        actual mustBe expected
-      }
-
-      "must throw IllegalArgumentException if the credential does not exist" in {
-        val credential = randomCredential()
-        val application = testApplication
-
-        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(FakeHipEnvironments.secondaryEnvironment, credential))
       }
     }
 
     "updateCredential(FakeHipEnvironments.primaryEnvironment)" - {
-      "must correctly update a specific credential" in {
-        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
-        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
-        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
-
-        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"), FakeHipEnvironments.primaryEnvironment.id)
-
-        val application = testApplication
-          .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(credential1, credential2, credential3))
-
-        val expected = testApplication
-          .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(credential1, credential2Updated, credential3))
-
-        application.updateCredential(FakeHipEnvironments.primaryEnvironment, credential2Updated.clientId, "test-secret") mustBe expected
-      }
-
-      "must throw IllegalArgumentException when the credential does not exist" in {
-        an [IllegalArgumentException] mustBe thrownBy(
-          testApplication.updateCredential(FakeHipEnvironments.primaryEnvironment, "test-client-id", "test-secret")
+      "must" - {
+        behave like applicationUpdateCredentialFunction(
+          applicationCredentials,
+          FakeHipEnvironments.primaryEnvironment
         )
       }
     }
-    
+
+    "updateCredential(FakeHipEnvironments.secondaryEnvironment)" - {
+      "must" - {
+        behave like applicationUpdateCredentialFunction(
+          applicationCredentials,
+          FakeHipEnvironments.secondaryEnvironment
+        )
+      }
+    }
+
     "updateCredential(FakeHipEnvironments.secondaryEnvironment)" - {
       "must correctly update a specific credential" in {
         val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
@@ -551,15 +295,17 @@ class ApplicationLensesSpec extends LensBehaviours {
 
     "makePublic" - {
       "must remove hidden primary credentials" in {
-        val hidden = randomCredential().copy(secretFragment = None)
-        val visible = randomCredential()
+        val hipEnvironment = FakeHipEnvironments.primaryEnvironment
 
-        val application = testApplication.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(hidden, visible))
+        val hidden = randomCredential(hipEnvironment).copy(secretFragment = None)
+        val visible = randomCredential(hipEnvironment)
 
-        application.makePublic(FakeHipEnvironments).getCredentials(FakeHipEnvironments.primaryEnvironment) mustBe Seq(visible)
+        val application = testApplication.setCredentials(hipEnvironment, Seq(hidden, visible))
+
+        application.makePublic(FakeHipEnvironments).getCredentials(hipEnvironment) mustBe Seq(visible)
       }
     }
-    
+
     "replaceApi" - {
       "must append the API if it is not already present" in {
         val api1 = Api("api-1", "api-1-name")
@@ -602,18 +348,33 @@ object ApplicationLensesSpec {
       credentials = randomCredentials()
     )
 
+  private def randomHipEnvironment(): HipEnvironment = {
+    val rank = Random.nextInt(FakeHipEnvironments.environments.size) + 1
+    FakeHipEnvironments.environments
+      .filter(_.rank == rank)
+      .head
+  }
+
   private def randomCredentials(): Seq[Credential] =
+    FakeHipEnvironments.environments
+      .flatMap(randomCredentials)
+
+  private def randomCredentials(hipEnvironment: HipEnvironment): Seq[Credential] =
     (0 to Random.nextInt(5))
-      .map(_ => randomCredential())
+      .map(_ => randomCredential(hipEnvironment))
 
   private def randomCredential(): Credential = {
+      randomCredential(randomHipEnvironment())
+  }
+
+  private def randomCredential(hipEnvironment: HipEnvironment): Credential = {
     val clientSecret = s"test-client-secret${randomString()}"
     Credential(
       clientId = s"test-client-id${randomString()}",
       created = LocalDateTime.now(),
       clientSecret = Some(clientSecret),
       secretFragment = Some(clientSecret.takeRight(4)),
-      environmentId = "test-environment-id"
+      environmentId = hipEnvironment.id
     )
   }
 
@@ -641,177 +402,130 @@ object ApplicationLensesSpec {
 
   trait LensBehaviours extends AnyFreeSpecLike with Matchers  {
 
-      def environmentsToEnvironmentLens(
-        lens: Lens[Environments, Environment],
-        getEnvironment: Environments => Environment
-      ): Unit = {
-        "it must get the correct environment" in {
-          val environments = randomEnvironments()
-          val expected = getEnvironment(environments)
+    def applicationCredentialsGetterFunction(
+      lens: Lens[Application, Set[Credential]],
+      hipEnvironment: HipEnvironment
+    ): Unit = {
+      "must get the correct credentials" in {
+        val credentials = randomCredentials()
+        val expected = credentials.filter(_.environmentId == hipEnvironment.id)
+        val application = lens.set(testApplication, credentials.toSet)
+        val actual =  application.getCredentials(hipEnvironment)
+        actual mustBe expected
+      }
+    }
 
-          val actual = lens.get(environments)
-          actual mustBe expected
-        }
+    def applicationMasterCredentialGetterFunction(
+      hipEnvironment: HipEnvironment
+    ): Unit = {
+      "must get the correct master credential" in {
+        val master = randomCredential(hipEnvironment).copy(created = LocalDateTime.now())
+        val credential1 = randomCredential(hipEnvironment).copy(created = LocalDateTime.now().minusDays(1))
+        val credential2 = randomCredential(hipEnvironment).copy(created = LocalDateTime.now().minusDays(2))
 
-        "it must set the environment correctly" in {
-          val environments = Environments()
-          val expected = randomEnvironment()
+        val application = testApplication
+          .setCredentials(hipEnvironment, Seq(credential1, master, credential2))
 
-          val actual = getEnvironment(lens.set(environments, expected))
-          actual mustBe expected
-        }
+        application.getMasterCredential(hipEnvironment) mustBe Some(master)
+      }
+    }
+
+    def applicationCredentialsSetterFunction(
+      lens: Lens[Application, Set[Credential]],
+      hipEnvironment: HipEnvironment
+    ): Unit = {
+      "must set the credentials correctly" in {
+        val credentials = randomCredentials().filterNot(_.environmentId == hipEnvironment.id)
+        val newCredentials = randomCredentials(hipEnvironment)
+        val expected = credentials ++ newCredentials
+        val application = lens.set(testApplication, credentials.toSet)
+        val actual = application.setCredentials(hipEnvironment, newCredentials).getAllCredentials()
+        actual must contain theSameElementsAs expected
+      }
+    }
+
+    def applicationAddCredentialFunction(
+      lens: Lens[Application, Set[Credential]],
+      hipEnvironment: HipEnvironment
+    ): Unit = {
+      "must add the credential correctly" in {
+        val credentials = randomCredentials()
+        val newCredential = randomCredential(hipEnvironment)
+        val expected = credentials :+ newCredential
+        val application = lens.set(testApplication, credentials.toSet)
+        val actual = ApplicationLensOps(application).addCredential(hipEnvironment, newCredential)
+        actual.credentials must contain theSameElementsAs expected
+      }
+    }
+
+    def applicationRemoveCredentialFunction(
+      lens: Lens[Application, Set[Credential]],
+      hipEnvironment: HipEnvironment
+    ): Unit = {
+      "must remove the correct credential" in {
+        val credentials = randomCredentials().toSet
+        val removeCredential = randomCredential(hipEnvironment)
+        val application = lens.set(testApplication, credentials + removeCredential)
+
+        val actual = ApplicationLensOps(application).removeCredential(hipEnvironment, removeCredential.clientId)
+        actual.credentials must contain theSameElementsAs credentials
+      }
+    }
+
+    def applicationReplaceCredentialFunction(
+      lens: Lens[Application, Set[Credential]],
+      hipEnvironment: HipEnvironment
+    ): Unit = {
+      "must replace the correct credential" in {
+        val credentials = randomCredentials().toSet
+        val credential = randomCredential(hipEnvironment)
+
+        val application = lens.set(testApplication, credentials + credential)
+
+        val updatedCredential = credential.copy(
+          created = credential.created.plusDays(1),
+          clientSecret = Some("updated-secret")
+        )
+
+        val actual = ApplicationLensOps(application).replaceCredential(hipEnvironment, updatedCredential)
+
+        actual.credentials must contain theSameElementsAs credentials + updatedCredential
       }
 
-      def applicationToEnvironmentLens(
-        lens: Lens[Application, Environment],
-        getEnvironment: Environments => Environment
-      ): Unit = {
-        "it must get the correct environment" in {
-          val application = testApplication.copy(environments = randomEnvironments())
-          val expected = getEnvironment(application.environments)
+      "must throw IllegalArgumentException if the credential does not exist" in {
+        val credential = randomCredential()
+        val application = testApplication
 
-          val actual = lens.get(application)
-          actual mustBe expected
-        }
+        an[IllegalArgumentException] mustBe thrownBy (application.replaceCredential(hipEnvironment, credential))
+      }
+    }
 
-        "it must set the environment correctly" in {
-          val application = testApplication
-          val expected = randomEnvironment()
+    def applicationUpdateCredentialFunction(
+      lens: Lens[Application, Set[Credential]],
+      hipEnvironment: HipEnvironment
+    ): Unit = {
+      "must correctly update a specific credential" in {
+        val credentials = randomCredentials().toSet
+        val credential = randomCredential(hipEnvironment)
 
-          val actual = getEnvironment(lens.set(application, expected).environments)
-          actual mustBe expected
-        }
+        val application = lens.set(testApplication, credentials + credential)
+        val newSecret = "updated-test-secret-1234"
+
+        val updatedCredential = credential.copy(
+          clientSecret = Some(newSecret),
+          secretFragment = Some(newSecret.takeRight(4))
+        )
+
+        val actual = application.updateCredential(hipEnvironment, credential.clientId, newSecret)
+        actual.credentials must contain theSameElementsAs credentials + updatedCredential
       }
 
-      def applicationToScopesLens(
-        lens: Lens[Application, Seq[Scope]],
-        getsEnvironment: Environments => Environment
-      ): Unit = {
-        "it must get the correct scopes" in {
-          val application = testApplication.copy(environments = randomEnvironments())
-          val expected = getsEnvironment(application.environments).scopes
-
-          val actual = lens.get(application)
-          actual mustBe expected
-        }
-
-        "it must set the scopes correctly" in {
-          val application = testApplication
-          val expected = randomScopes()
-
-          val actual = getsEnvironment(lens.set(application, expected).environments).scopes
-          actual mustBe expected
-        }
+      "must throw IllegalArgumentException when the credential does not exist" in {
+        an [IllegalArgumentException] mustBe thrownBy(
+          testApplication.updateCredential(hipEnvironment, "test-client-id", "test-secret")
+        )
       }
-
-      def applicationToCredentialsLens(
-        lens: Lens[Application, Seq[Credential]],
-        getsEnvironment: Environments => Environment
-      ): Unit = {
-        "it must get the correct credentials" in {
-          val application = testApplication.copy(environments = randomEnvironments())
-          val expected = getsEnvironment(application.environments).credentials
-
-          val actual = lens.get(application)
-          actual mustBe expected
-        }
-
-        "it must set the credentials correctly" in {
-          val application = testApplication
-          val expected = randomCredentials()
-
-          val actual = getsEnvironment(lens.set(application, expected).environments).credentials
-          actual mustBe expected
-        }
-      }
-
-      def applicationScopesGetterFunction(
-        lens: Lens[Application, Seq[Scope]],
-        getsScopes: Application => Seq[Scope]
-      ): Unit = {
-        "it must get the correct scopes" in {
-          val expected = randomScopes()
-          val actual = getsScopes(lens.set(testApplication, expected))
-          actual mustBe expected
-        }
-      }
-
-      def applicationScopesSetterFunction(
-        lens: Lens[Application, Seq[Scope]],
-        setsScopes: (Application, Seq[Scope]) => Application
-      ): Unit = {
-        "must set the scopes correctly" in {
-          val expected = randomScopes()
-          val actual = lens.get(setsScopes(testApplication, expected))
-          actual mustBe expected
-        }
-      }
-
-      def applicationAddScopeFunction(
-        lens: Lens[Application, Seq[Scope]],
-        addsScope: (Application, Scope) => Application
-      ): Unit = {
-        "must add the scope correctly" in {
-          val scopes = randomScopes()
-          val newScope = randomScope()
-          val expected = scopes :+ newScope
-          val application = lens.set(testApplication, scopes)
-
-          val actual = lens.get(addsScope(application, newScope))
-          actual mustBe expected
-        }
-      }
-
-      def applicationCredentialsGetterFunction(
-        lens: Lens[Application, Seq[Credential]],
-        getsCredentials: Application => Seq[Credential]
-      ): Unit = {
-        "it must get the correct credentials" in {
-          val expected = randomCredentials()
-          val actual = getsCredentials(lens.set(testApplication, expected))
-          actual mustBe expected
-        }
-      }
-
-      def applicationCredentialsSetterFunction(
-        lens: Lens[Application, Seq[Credential]],
-        setsCredentials: (Application, Seq[Credential]) => Application
-      ): Unit = {
-        "must set the credentials correctly" in {
-          val expected = randomCredentials()
-          val actual = lens.get(setsCredentials(testApplication, expected))
-          actual mustBe expected
-        }
-      }
-
-      def applicationAddCredentialFunction(
-        lens: Lens[Application, Seq[Credential]],
-        addsCredential: (Application, Credential) => Application
-      ): Unit = {
-        "must add the credential correctly" in {
-          val credentials = randomCredentials()
-          val newCredential = randomCredential()
-          val expected = credentials :+ newCredential
-          val application = lens.set(testApplication, credentials)
-
-          val actual = lens.get(addsCredential(application, newCredential))
-          actual mustBe expected
-        }
-      }
-
-      def applicationRemoveCredentialFunction(
-        lens: Lens[Application, Seq[Credential]],
-        removesCredential: (Application, String) => Application
-      ): Unit ={
-        "must remove the correct credential" in {
-          val credential1 = randomCredential()
-          val credential2 = randomCredential()
-          val application = lens.set(testApplication, Seq(credential1, credential2))
-
-          val actual = lens.get(removesCredential(application, credential1.clientId))
-          actual mustBe Seq(credential2)
-        }
-      }
+    }
   }
 
 }

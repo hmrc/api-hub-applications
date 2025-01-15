@@ -18,15 +18,15 @@ package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{verify, verifyNoInteractions, when}
-import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Deleted, Issues, Scope, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, IdmsException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.idms.{ClientResponse, ClientScope}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
@@ -38,12 +38,12 @@ import scala.concurrent.Future
 
 class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with OptionValues with EitherValues {
 
-  import ApplicationsSearchServiceSpec._
+  import ApplicationsSearchServiceSpec.*
 
   "findAll" - {
     "must return all applications from the repository" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq.empty),
@@ -63,7 +63,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return team members for applications linked to global teams" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val teamId = "test-team-id"
       val team = Team(
@@ -94,7 +94,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return an issue if a global team cannot be found" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val teamId = "test-team-id"
 
@@ -119,7 +119,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return all applications from the repository for named team member" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq(TeamMember("test-email-1"))),
@@ -139,7 +139,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return applications owned by global teams with the named team member" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val team = Team(Some("test-team-id-1"), "test-team-name", LocalDateTime.now(clock), Seq.empty)
 
@@ -163,7 +163,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return deleted applications when requested" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val deleted = Deleted(LocalDateTime.now(clock), "test-deleted-by")
 
@@ -187,7 +187,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
   "findAllUsingApi" - {
     "must return all applications from the repository that have a given API and are not deleted" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val apiId = "test-api"
       val apiTitle = "test-api-title"
@@ -208,7 +208,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return deleted applications when requested" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val deleted = Deleted(LocalDateTime.now(clock), "test-deleted-by")
       val apiId = "test-api"
@@ -231,7 +231,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return team members for applications linked to global teams" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val teamId = "test-team-id"
       val team = Team(
@@ -264,7 +264,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return an issue if a global team cannot be found" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val teamId = "test-team-id"
 
@@ -293,7 +293,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
   "findById" - {
     "must return the application when it exists" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
       val primaryClientId = "test-primary-client-id"
@@ -320,8 +320,6 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
       val expected = application
         .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"), FakeHipEnvironments.secondaryEnvironment.id)))
-        .setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope(scope1), Scope(scope2)))
-        .setScopes(FakeHipEnvironments.primaryEnvironment, Seq(Scope(scope3), Scope(scope4)))
 
       service.findById(id, enrich = true)(HeaderCarrier()).map {
         result =>
@@ -331,7 +329,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return the application's team members when it is linked to a global team" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val teamId = "test-team-id"
       val team = Team(
@@ -361,7 +359,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return ApplicationNotFoundException when the application does not exist" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
 
@@ -376,7 +374,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return an issue when the team does not exist" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val teamId = "test-team-id"
 
@@ -397,7 +395,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must not return IdmsException when that is returned from the IDMS connector and return issues instead" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
       val clientId = "test-client-id"
@@ -422,7 +420,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must not enrich with IDMS data unless asked to" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
 
@@ -443,7 +441,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must not attempt to enrich with IDMS data if the application is deleted" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
 
@@ -468,7 +466,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
   "findByTeamId" - {
     "must return applications when linked to a team" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
       val teamId = "team-id"
@@ -516,7 +514,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
 
     "must return an empty result when the application does not exist" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
 
@@ -533,7 +531,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
   "addTeam" - {
     "must set team members and team name on the application" in {
       val fixture = buildFixture
-      import fixture._
+      import fixture.*
 
       val id = "test-id"
       val teamId = "team-id"

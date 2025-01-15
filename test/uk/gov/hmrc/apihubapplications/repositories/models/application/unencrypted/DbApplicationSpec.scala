@@ -35,8 +35,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val productionCredential = Credential("test-client-id-1", now, Some("test-secret-1"), Some("test-fragment-1"), FakeHipEnvironments.primaryEnvironment.id)
         val testCredential = Credential("test-client-id-2", now, Some("test-secret-2"), Some("test-fragment-2"), FakeHipEnvironments.secondaryEnvironment.id)
 
-        val productionDbCredential = DbCredential(productionCredential.clientId, Some(productionCredential.created), productionCredential.secretFragment, Some(productionCredential.environmentId))
-        val testDbCredential = DbCredential(testCredential.clientId, Some(testCredential.created), testCredential.secretFragment, Some(testCredential.environmentId))
+        val productionDbCredential = DbCredential(productionCredential.clientId, Some(productionCredential.created), productionCredential.secretFragment, productionCredential.environmentId)
+        val testDbCredential = DbCredential(testCredential.clientId, Some(testCredential.created), testCredential.secretFragment, testCredential.environmentId)
 
         val application = testApplication
           .addCredential(FakeHipEnvironments.primaryEnvironment, productionCredential)
@@ -44,11 +44,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
         val expected = testDbApplication
           .copy(
-            environments = DbEnvironments(
-              primary = DbEnvironment(Seq(productionDbCredential)),
-              secondary = DbEnvironment(Seq(testDbCredential))
-            ),
-            credentials = Some(Set(productionDbCredential, testDbCredential))
+            credentials = Set(productionDbCredential, testDbCredential)
           )
 
         DbApplication(application) mustBe expected
@@ -67,10 +63,9 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           lastUpdated = application.lastUpdated,
           teamId = application.teamId,
           teamMembers = Seq.empty,
-          environments = DbEnvironments(Environments()),
           apis = None,
           deleted = None,
-          credentials = Some(Set.empty)
+          credentials = Set.empty
         )
 
         DbApplication(application) mustBe expected
@@ -82,27 +77,16 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
         DbApplication(application).apis mustBe Some(Seq(DbApi(api.id, Some(api.title), api.endpoints)))
       }
-
-      "must throw an exception if environments and credentials are not in sync" in {
-        val credential = Credential("test-client-id", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)
-        val application = testApplication.copy(credentials = Set(credential))
-
-        an[IllegalStateException] must be thrownBy DbApplication(application)
-      }
     }
 
     "when translating from DbApplication to Application" - {
       "must default a credential's created timestamp to the application's" in {
         val clientId = "test-client-id"
-        val dbCredential = DbCredential(clientId, None, None, Some(FakeHipEnvironments.primaryEnvironment.id))
+        val dbCredential = DbCredential(clientId, None, None, FakeHipEnvironments.primaryEnvironment.id)
 
         val dbApplication = testDbApplication
           .copy(
-            environments = DbEnvironments(
-              primary = DbEnvironment(Seq(dbCredential)),
-              secondary = DbEnvironment(Seq.empty)
-            ),
-            credentials = Some(Set(dbCredential))
+            credentials = Set(dbCredential)
           )
 
         val expected = testApplication
@@ -119,13 +103,6 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
         val dbApplication = testDbApplication.copy(apis = Some(Seq(dbApi)))
 
         dbApplication.toModel(FakeHipEnvironments).apis mustBe Seq(Api(dbApi.id, dbApi.title.value, dbApi.endpoints))
-      }
-
-      "must throw an exception if environments and credentials are not in sync" in {
-        val dbCredential = DbCredential("test-client-id", None, None, None)
-        val dbApplication = testDbApplication.copy(credentials = Some(Set(dbCredential)))
-
-        an[IllegalStateException] must be thrownBy dbApplication.toModel(FakeHipEnvironments)
       }
     }
   }
@@ -144,7 +121,6 @@ object DbApplicationSpec {
     lastUpdated = now.minusDays(1),
     None,
     teamMembers = Seq(TeamMember("test-creator-email"), TeamMember("test-member-email")),
-    environments = Environments(),
     issues = Seq.empty,
     deleted = None,
     teamName = None,

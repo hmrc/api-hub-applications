@@ -45,14 +45,11 @@ class ApplicationsRepositorySpec
            |{
            |"lastUpdated":"${now.toString}",
            |"createdBy":{"email": "\\"test1@test.com\\""},
-           |"environments":{
-           |  "primary":{"scopes":[],"credentials":[]},
-           |  "secondary":{"scopes":[],"credentials":[]}
-           |},
            |"created":"${now.toString}",
            |"name":"test-app-1",
            |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},
-           |"teamMembers":[{"email": "\\"test2@test.com\\""}]
+           |"teamMembers":[{"email": "\\"test2@test.com\\""}],
+           |"credentials": []
            |}
            |""".stripMargin)
 
@@ -66,7 +63,7 @@ class ApplicationsRepositorySpec
         Creator("test1@test.com"),
         now,
         Seq(TeamMember("test2@test.com")),
-        Environments()
+        Set.empty
       )
 
       result.get.decryptedValue.toModel(FakeHipEnvironments) mustBe expected
@@ -79,14 +76,11 @@ class ApplicationsRepositorySpec
            |{
            |"lastUpdated":"${now.toString}",
            |"createdBy":{"email": "\\"test1@test.com\\""},
-           |"environments":{
-           |  "primary":{"scopes":[],"credentials":[]},
-           |  "secondary":{"scopes":[],"credentials":[]}
-           |},
            |"created":"${now.toString}",
            |"name":"test-app-1",
            |"_id":{"$$oid":"63bebf8bbbeccc26c12294e5"},
            |"teamMembers":[{"email": "\\"test2@test.com\\""}],
+           |"credentials": [],
            |"apis": [
            |    {
            |      "id": "63bebf8bbbeccc26c12294e6",
@@ -115,7 +109,7 @@ class ApplicationsRepositorySpec
         Creator("test1@test.com"),
         now,
         Seq(TeamMember("test2@test.com")),
-        Environments()
+        Set.empty
       ).copy(apis = Seq(anApi))
 
       result.get.decryptedValue.toModel(FakeHipEnvironments) mustBe expected
@@ -123,7 +117,7 @@ class ApplicationsRepositorySpec
 
     "must successfully serialise an Application with an Id" in {
       val now = LocalDateTime.now()
-      val application = SensitiveApplication(DbApplication(Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Environments())))
+      val application = SensitiveApplication(DbApplication(Application(Some("63bebf8bbbeccc26c12294e5"), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Set.empty)))
 
       val result = Json.toJson(application)(formatDataWithMongoIdentifier[SensitiveApplication])
       (result \ "id") mustBe a[JsUndefined]

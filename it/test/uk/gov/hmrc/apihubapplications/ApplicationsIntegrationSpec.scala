@@ -22,6 +22,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+import play.api.Application as GuideApplication
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -30,19 +31,17 @@ import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.CONTENT_TYPE
-import play.api.Application as GuideApplication
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.crypto.NoCrypto
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.application.*
+import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.requests.UserEmail
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveApplication
 import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.DbApplication
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApplicationGenerator, FakeEmailConnector, FakeHipEnvironments, FakeIdmsConnector}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, PlainText}
-import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -177,10 +176,10 @@ class ApplicationsIntegrationSpec
       val myEmail = "member1@digital.hmrc.gov.uk"
       val myTeamMembers = Seq(TeamMember(myEmail), TeamMember("member2@digital.hmrc.gov.uk"))
 
-      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = myTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, teamName = None, credentials = Set.empty)
+      val application1: Application = new Application(id = None, name = "app1", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = myTeamMembers, credentials = Set.empty, apis = Seq.empty, deleted = None, teamName = None)
       val otherTeamMembers = Seq(TeamMember("member3@digital.hmrc.gov.uk"), TeamMember("member4@digital.hmrc.gov.uk"))
 
-      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = otherTeamMembers, environments = Environments(), apis = Seq.empty, deleted = None, teamName = None, credentials = Set.empty)
+      val application2 = new Application(id = None, name = "app2", created = LocalDateTime.now, createdBy = Creator("creator@digital.hmrc.gov.uk"), lastUpdated = LocalDateTime.now(), None, teamMembers = otherTeamMembers, credentials = Set.empty, apis = Seq.empty, deleted = None, teamName = None)
       deleteAll().futureValue
       val crypto = fakeApplication().injector.instanceOf[ApplicationCrypto]
       insert(application1).futureValue
@@ -210,7 +209,6 @@ class ApplicationsIntegrationSpec
         insert(
           application
             .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-            .setScopes(FakeHipEnvironments.primaryEnvironment, Seq.empty)
             .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
         ).futureValue
 
@@ -226,20 +224,6 @@ class ApplicationsIntegrationSpec
                   secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
                 )
               )
-          )
-          .setScopes(
-            FakeHipEnvironments.primaryEnvironment, 
-            Seq(
-              Scope(FakeIdmsConnector.fakeClientScopeId1),
-              Scope(FakeIdmsConnector.fakeClientScopeId2)
-            )
-          )
-          .setScopes(
-            FakeHipEnvironments.secondaryEnvironment, 
-            Seq(
-              Scope(FakeIdmsConnector.fakeClientScopeId1),
-              Scope(FakeIdmsConnector.fakeClientScopeId2)
-            )
           )
           .makePublic(FakeHipEnvironments)
 

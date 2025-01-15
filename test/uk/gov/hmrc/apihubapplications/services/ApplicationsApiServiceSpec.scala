@@ -69,23 +69,22 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-      val appWithScopesAdded = app.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
-      val appWithScopesAndApisAdded = appWithScopesAdded.copy(
-        apis = Seq(Api(api.id, api.title, api.endpoints)))
+//      val appWithScopesAdded = app.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
+      val appWithApisAdded = app.setApis(apis = Seq(Api(api.id, api.title, api.endpoints)))
 
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
+      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
-      when(repository.update(eqTo(appWithScopesAndApisAdded))).thenReturn(Future.successful(Right(())))
+      when(repository.update(eqTo(appWithApisAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       service.addApi(testAppId, api)(HeaderCarrier()) map {
         actual =>
-          verify(scopeFixer).fix(eqTo(appWithScopesAndApisAdded), eqTo(Seq.empty))(any)
-          verify(repository).update(eqTo(appWithScopesAndApisAdded))
+          verify(scopeFixer).fix(eqTo(appWithApisAdded), eqTo(Seq.empty))(any)
+          verify(repository).update(eqTo(appWithApisAdded))
           actual mustBe Right(())
       }
     }
@@ -105,22 +104,22 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       ).setApis(
         Seq(api)
       )
 
-      val appWithScopesAdded = appWithApiAlreadyAdded.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
+//      val appWithScopesAdded = appWithApiAlreadyAdded.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
 
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithScopesAdded)))
+      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithApiAlreadyAdded)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
-      when(repository.update(eqTo(appWithScopesAdded))).thenReturn(Future.successful(Right(())))
+      when(repository.update(eqTo(appWithApiAlreadyAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       service.addApi(testAppId, addApiRequest)(HeaderCarrier()) map {
         actual =>
-          verify(scopeFixer).fix(eqTo(appWithScopesAdded), eqTo(Seq.empty))(any)
-          verify(repository).update(eqTo(appWithScopesAdded))
+          verify(scopeFixer).fix(eqTo(appWithApiAlreadyAdded), eqTo(Seq.empty))(any)
+          verify(repository).update(eqTo(appWithApiAlreadyAdded))
           actual mustBe Right(())
       }
     }
@@ -138,7 +137,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         createdBy = Creator("test-email"),
         lastUpdated = LocalDateTime.now(clock),
         teamMembers = Seq(TeamMember(email = "test-email")),
-        environments = Environments()
+        credentials = Set.empty
       )
 
       val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
@@ -173,7 +172,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       createdBy = Creator("test-email"),
       lastUpdated = onceUponATime,
       teamMembers = Seq(TeamMember(email = "test-email")),
-      environments = Environments()
+      credentials = Set.empty
     )
 
     "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
@@ -272,7 +271,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       createdBy = Creator("test-email"),
       lastUpdated = onceUponATime,
       teamMembers = Seq(TeamMember(email = "test-email")),
-      environments = Environments()
+      credentials = Set.empty
     )
 
     "must remove scopes, cancel any pending access requests, send emails to both the old and new team and update the application in MongoDb" in {
@@ -363,7 +362,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       createdBy = Creator("test-email"),
       lastUpdated = onceUponATime,
       teamMembers = Seq(TeamMember(email = "test-email")),
-      environments = Environments()
+      credentials = Set.empty
     )
 
     "must update the application in MongoDb" in {
@@ -431,7 +430,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       createdBy = Creator("test-email"),
       lastUpdated = LocalDateTime.now(clock),
       teamMembers = Seq(TeamMember(email = "test-email")),
-      environments = Environments()
+      credentials = Set.empty
     )
 
     "must pass the correct request to ScopeFixer and return the result" in {
