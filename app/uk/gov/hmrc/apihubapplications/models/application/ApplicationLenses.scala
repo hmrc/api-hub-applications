@@ -72,23 +72,22 @@ object ApplicationLenses {
       )
 
     def updateCredential(hipEnvironment: HipEnvironment, clientId: String, secret: String): Application = {
-      if (!getCredentials(hipEnvironment).exists(_.clientId == clientId)) {
-        throw new IllegalArgumentException(
-          s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
-        )
-      }
-
-      setCredentials(
-        hipEnvironment,
-        getCredentials(hipEnvironment).map {
-          case credential@Credential(id, _, _, _, _) if id == clientId =>
+      application.getCredentials(hipEnvironment)
+        .find(_.clientId == clientId)
+        .map(credential =>
+          application.replaceCredential(
+            hipEnvironment,
             credential.copy(
               clientSecret = Some(secret),
               secretFragment = Some(secret.takeRight(4))
             )
-          case credential => credential
-        }
-      )
+          )
+        )
+        .getOrElse(
+          throw new IllegalArgumentException(
+            s"Application with Id ${application.id.getOrElse("<none>")} does not have a credential with Client Id $clientId"
+          )
+        )
     }
 
     def getMasterCredential(hipEnvironment: HipEnvironment): Option[Credential] =

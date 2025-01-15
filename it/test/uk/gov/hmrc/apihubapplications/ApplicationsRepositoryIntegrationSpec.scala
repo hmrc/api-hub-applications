@@ -69,7 +69,7 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
 
       val result = repository
         .insert(application)
@@ -89,10 +89,10 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
-      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val saved1 = repository.insert(application1).futureValue
       val saved2 = repository.insert(application2).futureValue
@@ -112,10 +112,10 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
-      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val saved1 = repository.insert(application1).futureValue
       val saved2 = repository.insert(application2).futureValue
@@ -135,10 +135,10 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
-      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
-      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), credentials = Set.empty)
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val saved1 = repository.insert(application1).futureValue
       repository.insert(application2).futureValue
@@ -158,10 +158,10 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments())
-      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
-      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, Environments(), deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), credentials = Set.empty)
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq(TeamMember("test1@test.com")), credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty, deleted = Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val saved1 = repository.insert(application1).futureValue
       repository.insert(application2).futureValue
@@ -184,10 +184,10 @@ class ApplicationsRepositoryIntegrationSpec
       val team3 = Team(Some("test-team-id-3"), "test-team-3", LocalDateTime.now(clock), Seq.empty)
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, Environments())
-      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, team2.id.value, Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, "test-team-id-4", Environments())
-      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, Environments()).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty)
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, team2.id.value, credentials = Set.empty)
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, "test-team-id-4", credentials = Set.empty)
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
 
       val saved1 = repository.insert(application1).futureValue
       val saved2 = repository.insert(application2).futureValue
@@ -211,10 +211,10 @@ class ApplicationsRepositoryIntegrationSpec
       val team3 = Team(Some("test-team-id-3"), "test-team-3", LocalDateTime.now(clock), Seq.empty)
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, Environments())
-      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, team2.id.value, Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, "test-team-id-4", Environments())
-      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, Environments()).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty)
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, team2.id.value, credentials = Set.empty)
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, "test-team-id-4", credentials = Set.empty)
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
 
       val saved1 = repository.insert(application1).futureValue
       val saved2 = repository.insert(application2).futureValue
@@ -238,10 +238,10 @@ class ApplicationsRepositoryIntegrationSpec
       val team2 = Team(Some("test-team-id-2"), "test-team-2", LocalDateTime.now(clock), Seq.empty)
 
       val now = LocalDateTime.now()
-      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, Environments())
-      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq(TeamMember(teamMemberEmail)), Environments())
-      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, Environments())
-      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, Environments()).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
+      val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty)
+      val application2 = Application(None, "test-app-2", Creator("test1@test.com"), now, Seq(TeamMember(teamMemberEmail)), credentials = Set.empty)
+      val application3 = Application(None, "test-app-3", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
+      val application4 = Application(None, "test-app-4", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty).delete(Deleted(LocalDateTime.now(clock), "team@test.com"))
 
       val saved1 = repository.insert(application1).futureValue
       val saved2 = repository.insert(application2).futureValue
@@ -263,7 +263,7 @@ class ApplicationsRepositoryIntegrationSpec
       val now = LocalDateTime.now()
       val apis = apiIds.map(id => Api(id, s"${id}_title", Seq.empty))
       val deleted = if (isDeleted) Some(Deleted(now, "team@test.com")) else None
-      Application(None, name, now, Creator("test1@test.com"), now, None, Seq.empty, Environments(), Seq.empty, apis, deleted, None, Set.empty)
+      Application(None, name, now, Creator("test1@test.com"), now, None, Seq.empty, Seq.empty, apis, deleted, None, Set.empty)
     }
 
     val targetApiId = "api_id"
@@ -319,7 +319,7 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, credentials = Set.empty)
 
       val expected = repository.insert(application).futureValue
 
@@ -335,7 +335,7 @@ class ApplicationsRepositoryIntegrationSpec
     "must return ApplicationNotFoundException when the application is soft deleted in MongoDb and includeDeleted is false" in {
       setMdcData()
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Set.empty, Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
       val expected = repository.insert(application).futureValue
 
       val result = repository
@@ -351,7 +351,7 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Set.empty, Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
 
       val expected = repository.insert(application).futureValue
 
@@ -399,7 +399,7 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Set.empty)
         .copy(teamId = Some(teamId))
 
       val expected = repository.insert(application).futureValue
@@ -418,11 +418,11 @@ class ApplicationsRepositoryIntegrationSpec
 
       val now = LocalDateTime.now()
       val applications = Seq(
-        Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+        Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Set.empty)
           .copy(teamId = Some(teamId)),
-        Application(None, "test-app-other-team", Creator("test1@test.com"), now, Seq.empty, Environments())
+        Application(None, "test-app-other-team", Creator("test1@test.com"), now, Seq.empty, Set.empty)
           .copy(teamId = Some("other-team")),
-        Application(None, "test-deleted-app", Creator("test1@test.com"), now, Seq.empty, Environments())
+        Application(None, "test-deleted-app", Creator("test1@test.com"), now, Seq.empty, Set.empty)
           .copy(teamId = Some("another-team"))
           .copy(deleted = Some(Deleted(LocalDateTime.now(clock), "test-user")))
       )
@@ -443,7 +443,7 @@ class ApplicationsRepositoryIntegrationSpec
     "must return an empty result when the application is soft deleted in MongoDb and includeDeleted is false" in {
       setMdcData()
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Set.empty, Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
         .copy(teamId = Some(teamId))
       val expected = repository.insert(application).futureValue
 
@@ -460,7 +460,7 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val now = LocalDateTime.now()
-      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Environments(), Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
+      val application = Application(None, "test-app", Creator("test1@test.com"), now, Seq.empty, Set.empty, Some(Deleted(LocalDateTime.now(clock), "team@test.com")))
         .copy(teamId = Some(teamId))
 
       val expected = Seq(repository.insert(application).futureValue)
