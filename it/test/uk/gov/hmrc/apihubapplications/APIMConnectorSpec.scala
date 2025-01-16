@@ -823,7 +823,8 @@ object APIMConnectorSpec extends HttpClientV2Support {
     subDomain = "a subdomain",
     hods = Seq("a hod"),
     prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
-    egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix")))
+    egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
+    egress = "test-egress",
   )
 
   private val deploymentFrom = DeploymentFrom(
