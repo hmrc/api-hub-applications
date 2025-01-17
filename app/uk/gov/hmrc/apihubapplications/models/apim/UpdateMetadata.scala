@@ -26,6 +26,7 @@ case class UpdateMetadata(
   backends: Seq[String],
   prefixesToRemove: Seq[String],
   egressMappings: Option[Seq[EgressMapping]],
+  egress: String,
 )
 
 object UpdateMetadata {
@@ -38,7 +39,8 @@ object UpdateMetadata {
       subdomain = request.subDomain,
       backends = request.hods,
       prefixesToRemove = request.prefixesToRemove,
-      egressMappings = request.egressMappings
+      egressMappings = request.egressMappings,
+      egress = request.egress.getOrElse(CreateMetadata.egressFallback)
     )
   }
 

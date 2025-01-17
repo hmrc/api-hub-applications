@@ -803,7 +803,7 @@ object APIMConnectorSpec extends HttpClientV2Support {
     lineOfBusiness = "test-line-of-business",
     name = "test-name",
     description = "test-description",
-    egress = "test-egress",
+    egress = Some("test-egress"),
     teamId = "test-team-id",
     oas = oas,
     passthrough = true,
@@ -824,7 +824,7 @@ object APIMConnectorSpec extends HttpClientV2Support {
     hods = Seq("a hod"),
     prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
     egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
-    egress = "test-egress",
+    egress = Some("test-egress"),
   )
 
   private val deploymentFrom = DeploymentFrom(
