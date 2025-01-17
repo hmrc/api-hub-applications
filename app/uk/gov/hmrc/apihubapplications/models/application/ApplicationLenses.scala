@@ -97,7 +97,7 @@ object ApplicationLenses {
         .headOption
 
     private implicit val credentialOrdering: Ordering[Credential] =
-      Ordering.by[Credential, (LocalDateTime, String)](credential => ((credential.created, credential.clientId)))
+      Ordering.by[Credential, (LocalDateTime, String)](credential => (credential.created, credential.clientId))
 
     def getCredentials(hipEnvironment: HipEnvironment): Seq[Credential] =
       applicationCredentials

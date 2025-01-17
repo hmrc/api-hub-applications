@@ -26,7 +26,7 @@ import play.api.Application as GuideApplication
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, NO_CONTENT}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
+import play.api.libs.json.{JsSuccess, Json}
 import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSClient
@@ -168,7 +168,7 @@ class ApplicationsIntegrationSpec
             .futureValue
 
         response.status shouldBe 200
-        response.json shouldBe Json.toJson(storedApplications)
+        response.json.as[Seq[Application]] shouldBe storedApplications
       }
     }
 
@@ -197,7 +197,7 @@ class ApplicationsIntegrationSpec
           .futureValue
 
       response.status shouldBe 200
-      response.json shouldBe Json.toJson(myApplications)
+      response.json.as[Seq[Application]] shouldBe myApplications
     }
   }
 
@@ -235,7 +235,7 @@ class ApplicationsIntegrationSpec
             .futureValue
 
         response.status shouldBe 200
-        response.json shouldBe Json.toJson(expected)
+        response.json.as[Application] shouldBe expected
       }
     }
 
