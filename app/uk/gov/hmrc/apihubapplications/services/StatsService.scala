@@ -48,7 +48,7 @@ class StatsService @Inject()(
   }
 
   private def buildApisInProduction()(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApisInProduction]] = {
-    val futureDeployments = apimConnector.getDeployments(hipEnvironments.productionEnvironment)
+    val futureDeployments = apimConnector.getDeployments(hipEnvironments.production)
     val futureApis = integrationCatalogueConnector.findHipApis()
 
     (for {

@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.apihubapplications.testhelpers
 
-import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+import uk.gov.hmrc.apihubapplications.config.{BaseHipEnvironment, DefaultHipEnvironment, HipEnvironment, HipEnvironments}
 
 object FakeHipEnvironments extends HipEnvironments {
 
-  val primaryEnvironment: HipEnvironment = HipEnvironment(
+  val primaryEnvironment: HipEnvironment = DefaultHipEnvironment(
     id = "production",
     rank = 1,
     isProductionLike = true,
@@ -28,9 +28,10 @@ object FakeHipEnvironments extends HipEnvironments {
     clientId = "test-production-client-id",
     secret = "test-production-secret",
     useProxy = false,
-    apiKey = None
+    apiKey = None,
+    promoteTo = None
   )
-  val secondaryEnvironment: HipEnvironment = HipEnvironment(
+  val secondaryEnvironment: HipEnvironment = DefaultHipEnvironment(
     id = "test",
     rank = 2,
     isProductionLike = false,
@@ -38,16 +39,21 @@ object FakeHipEnvironments extends HipEnvironments {
     clientId = "test-test-client-id",
     secret = "test-test-secret",
     useProxy = false,
-    apiKey = Some("test-api-key")
+    apiKey = Some("test-api-key"),
+    promoteTo = Some(primaryEnvironment)
   )
 
+  override protected val baseEnvironments: Seq[BaseHipEnvironment] = Seq.empty
+  
   override val environments: Seq[HipEnvironment] = Seq(
     primaryEnvironment,
     secondaryEnvironment
   )
 
-  override def productionEnvironment: HipEnvironment = primaryEnvironment
+  override def production: HipEnvironment = primaryEnvironment
 
-  override def deploymentEnvironment: HipEnvironment = secondaryEnvironment
+  override def deployTo: HipEnvironment = secondaryEnvironment
+
+  override def validateIn: HipEnvironment = primaryEnvironment
 
 }

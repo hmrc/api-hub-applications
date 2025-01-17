@@ -25,37 +25,42 @@ import play.api.Configuration
 class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar {
 
   "HipEnvironments" - {
-    val hipEnvironments = new HipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+    val hipEnvironments = new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
       s"""
          |hipEnvironments = {
-         |    test = {
-         |        id = "test",
-         |        rank = 2,
-         |        isProductionLike = false,
-         |        apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
-         |        clientId = "apim-stub-client-id",
-         |        secret = "apim-stub-secret",
-         |        useProxy = false
+         |    environments = {
+         |        production = {
+         |            id = "production",
+         |            rank = 1,
+         |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+         |            clientId = "apim-stub-client-id",
+         |            secret = "apim-stub-secret",
+         |            useProxy = false
+         |        },
+         |        test = {
+         |            id = "test",
+         |            rank = 2,
+         |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+         |            clientId = "apim-stub-client-id",
+         |            secret = "apim-stub-secret",
+         |            useProxy = true,
+         |            apiKey = "some-magic-key"
+         |            promoteTo = "pre-production"
+         |        }
          |    },
-         |    production = {
-         |        id = "production",
-         |        rank = 1,
-         |        isProductionLike = true,
-         |        apimUrl = "http://localhost:15026/api-hub-apim-stubs"
-         |        clientId = "apim-stub-client-id",
-         |        secret = "apim-stub-secret",
-         |        useProxy = false
-         |    }
+         |    production = "production",
+         |    deployTo = "test",
+         |    validateIn = "production"
          |}
          |""".stripMargin)))
     "must have its environments in the right order" in {
       hipEnvironments.environments.map(_.id) must contain theSameElementsInOrderAs  Seq("production", "test")
     }
     "must return the correct production environment" in {
-      hipEnvironments.productionEnvironment.id mustBe "production"
+      hipEnvironments.production.id mustBe "production"
     }
     "must return the correct deployment environment" in {
-      hipEnvironments.deploymentEnvironment.id mustBe "test"
+      hipEnvironments.deployTo.id mustBe "test"
     }
   }
 

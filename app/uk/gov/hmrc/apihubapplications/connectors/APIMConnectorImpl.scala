@@ -53,7 +53,7 @@ class APIMConnectorImpl @Inject()(
   import CorrelationIdSupport.*
 
   override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
-    val hipEnvironment = hipEnvironments.productionEnvironment
+    val hipEnvironment = hipEnvironments.production
 
     httpClient.post(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationForEnvironment(hipEnvironment))
@@ -76,7 +76,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def deployToSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.deploymentEnvironment
+    val hipEnvironment = hipEnvironments.deployTo
 
     val metadata = Json.toJson(CreateMetadata(request))
     val context = Seq("metadata" -> Json.prettyPrint(metadata))
@@ -111,7 +111,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.deploymentEnvironment
+    val hipEnvironment = hipEnvironments.deployTo
 
     val metadata = Json.toJson(UpdateMetadata(request))
     val context = Seq("publisherReference" -> publisherReference, "metadata" -> Json.prettyPrint(metadata))
@@ -169,7 +169,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
-    val hipEnvironment = hipEnvironments.deploymentEnvironment
+    val hipEnvironment = hipEnvironments.deployTo
 
     val context = Seq("publisherReference" -> publisherReference)
       .withCorrelationId()
@@ -188,7 +188,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.productionEnvironment
+    val hipEnvironment = hipEnvironments.production
 
     val context = Seq("publisherReference" -> publisherReference)
       .withCorrelationId()
@@ -238,7 +238,7 @@ class APIMConnectorImpl @Inject()(
   }
 
   override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
-    listEgressGateways(hipEnvironments.deploymentEnvironment)
+    listEgressGateways(hipEnvironments.deployTo)
   }
 
   def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
