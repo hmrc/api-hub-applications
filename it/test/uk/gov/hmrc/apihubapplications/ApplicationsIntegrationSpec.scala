@@ -168,7 +168,7 @@ class ApplicationsIntegrationSpec
             .futureValue
 
         response.status shouldBe 200
-        response.json shouldBe Json.toJson(storedApplications)
+        response.json.as[Seq[Application]] shouldBe storedApplications
       }
     }
 

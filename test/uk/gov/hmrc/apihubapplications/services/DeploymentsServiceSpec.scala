@@ -384,7 +384,7 @@ class DeploymentsServiceSpec
 
 object DeploymentsServiceSpec {
 
-  val deploymentsRequest: DeploymentsRequest = DeploymentsRequest("test-line-of-business", "test-name", "test-description", "test-egress", "test-team-id", "test-oas", false, "a status", "a domain", "a subdomain", Seq("a hod"), Seq.empty, None)
+  val deploymentsRequest: DeploymentsRequest = DeploymentsRequest("test-line-of-business", "test-name", "test-description", Some("test-egress"), "test-team-id", "test-oas", false, "a status", "a domain", "a subdomain", Seq("a hod"), Seq.empty, None)
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("test-id", "test-version", 42, "test-uri")
 
   val publisherRef = "test-publisher-ref"
@@ -397,7 +397,8 @@ object DeploymentsServiceSpec {
     subDomain = "a subdomain",
     hods = Seq("a hod"),
     prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
-    egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix")))
+    egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
+    egress = Some("test-egress"),
   )
 
 }

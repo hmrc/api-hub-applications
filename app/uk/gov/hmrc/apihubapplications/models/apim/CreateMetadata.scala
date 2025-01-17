@@ -34,12 +34,14 @@ case class CreateMetadata(
 
 object CreateMetadata {
 
+  val egressFallback = "null-egress"
+
   def apply(request: DeploymentsRequest): CreateMetadata = {
     CreateMetadata(
       lineOfBusiness = request.lineOfBusiness,
       name = request.name,
       description = request.description,
-      egress = request.egress,
+      egress = request.egress.getOrElse(CreateMetadata.egressFallback),
       passthrough = request.passthrough,
       status = Option.apply(request.status),
       domain = request.domain,
