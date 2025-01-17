@@ -27,8 +27,8 @@ case class DbEnvironments(
 
   def toModel(dbApplication: DbApplication, hipEnvironments: HipEnvironments): Environments =
     Environments(
-      primary = primary.toModel(dbApplication, hipEnvironments.productionEnvironment.id),
-      secondary = secondary.toModel(dbApplication, hipEnvironments.deploymentEnvironment.id)
+      primary = primary.toModel(dbApplication, hipEnvironments.production.id),
+      secondary = secondary.toModel(dbApplication, hipEnvironments.deployTo.id)
     )
 
 }

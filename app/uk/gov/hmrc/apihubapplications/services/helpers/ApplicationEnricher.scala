@@ -93,7 +93,7 @@ object ApplicationEnrichers {
         issuesOrResponses.foldLeft(application)(
           (app, issueOrResponse) =>
             issueOrResponse match {
-              case Right(clientResponse) => app.updateCredential(hipEnvironments.deploymentEnvironment, clientResponse.clientId, clientResponse.secret)
+              case Right(clientResponse) => app.updateCredential(hipEnvironments.deployTo, clientResponse.clientId, clientResponse.secret)
               case Left(issue) => app.addIssue(issue)
             }
         )
@@ -101,9 +101,9 @@ object ApplicationEnrichers {
     }
 
     Future.sequence(
-        original.getCredentials(hipEnvironments.deploymentEnvironment).map {
+        original.getCredentials(hipEnvironments.deployTo).map {
           credential =>
-            idmsConnector.fetchClient(hipEnvironments.deploymentEnvironment, credential.clientId)
+            idmsConnector.fetchClient(hipEnvironments.deployTo, credential.clientId)
         }
       )
       .map(toIssuesOrClientResponses)
