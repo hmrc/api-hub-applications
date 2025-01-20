@@ -96,16 +96,15 @@ object ApplicationLenses {
         .reverse
         .headOption
 
+    private implicit val credentialOrdering: Ordering[Credential] =
+      Ordering.by[Credential, (LocalDateTime, String)](credential => (credential.created, credential.clientId))
+
     def getCredentials(hipEnvironment: HipEnvironment): Seq[Credential] =
       applicationCredentials
         .get(application)
         .filter(_.environmentId == hipEnvironment.id)
         .toSeq
-        .sortBy(_.created)
-
-    def getAllCredentials(): Seq[Credential] = {
-      applicationCredentials.get(application).toSeq.sortBy(_.created)
-    }
+        .sorted
 
     def addCredential(hipEnvironment: HipEnvironment, credential: Credential): Application = {
       setCredentials(

@@ -439,7 +439,7 @@ object ApplicationLensesSpec {
         val newCredentials = randomCredentials(hipEnvironment)
         val expected = credentials ++ newCredentials
         val application = lens.set(testApplication, credentials.toSet)
-        val actual = application.setCredentials(hipEnvironment, newCredentials).getAllCredentials()
+        val actual = application.setCredentials(hipEnvironment, newCredentials).credentials
         actual must contain theSameElementsAs expected
       }
     }
