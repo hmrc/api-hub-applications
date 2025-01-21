@@ -48,7 +48,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       import fixture.*
 
       val testAppId = "test-app-id"
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
+      when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
       service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
         actual =>
@@ -76,7 +76,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 //      val appWithScopesAdded = app.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
       val appWithApisAdded = app.setApis(apis = Seq(Api(api.id, api.title, api.endpoints)))
 
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
+      when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(app)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithApisAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
@@ -111,7 +111,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
 //      val appWithScopesAdded = appWithApiAlreadyAdded.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
 
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(appWithApiAlreadyAdded)))
+      when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(appWithApiAlreadyAdded)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithApiAlreadyAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
@@ -144,7 +144,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val updatedApp = app.copy(
         apis = Seq(Api(api.id, api.title, api.endpoints)))
 
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
+      when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(app)))
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(updatedApp)))
 
@@ -184,7 +184,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         .removeApi(apiId)
         .updated(clock)
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(any, any)).thenReturn(Future.successful(Right(())))
@@ -203,7 +203,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture.*
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
+      when(searchService.findById(eqTo(applicationId))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
@@ -219,7 +219,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture.*
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(baseApplication)))
 
       service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
         result =>
@@ -242,7 +242,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       val expected = IdmsException.clientNotFound("test-client-id")
 
-      when(searchService.findById(eqTo(application.safeId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(application.safeId))(any)).thenReturn(Future.successful(Right(application)))
       when(accessRequestsService.cancelAccessRequests(any, any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
       when(repository.update(eqTo(updated))).thenReturn(Future.successful(Right(())))
@@ -283,7 +283,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         .setTeamId(teamId)
         .updated(clock)
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
       when(emailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
@@ -305,7 +305,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture.*
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
@@ -320,7 +320,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture.*
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
       when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException(""))))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
@@ -337,7 +337,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       val expected = IdmsException.clientNotFound("test-client-id")
 
-      when(searchService.findById(eqTo(applicationId), eqTo(true), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
       when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
 
       service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
@@ -374,7 +374,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         .updated(clock)
         .copy(teamId = None, teamName = None, teamMembers = Seq.empty)
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
       val captor = ArgumentCaptor.forClass(classOf[Application])
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       service.removeOwningTeamFromApplication(applicationId)(HeaderCarrier()).map {
@@ -392,7 +392,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val fixture = buildFixture
       import fixture.*
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false), eqTo(true))(any))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       service.removeOwningTeamFromApplication(applicationId)(HeaderCarrier()).map {
@@ -409,7 +409,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       val expected = IdmsException.clientNotFound("test-client-id")
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
 
       service.removeOwningTeamFromApplication(applicationId)(HeaderCarrier()).map {
         result =>

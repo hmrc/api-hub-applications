@@ -59,7 +59,7 @@ class ApplicationsApiServiceImpl @Inject()(
 
   override def addApi(applicationId: String, addApiRequest: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
-    searchService.findById(applicationId, enrich = true).flatMap {
+    searchService.findById(applicationId).flatMap {
       case Right(application) =>
         val updated = application
           .replaceApi(Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints))
@@ -76,7 +76,7 @@ class ApplicationsApiServiceImpl @Inject()(
   }
 
   override def removeApi(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    searchService.findById(applicationId, enrich = true).flatMap {
+    searchService.findById(applicationId).flatMap {
       case Right(application) if application.hasApi(apiId) => removeApi(application, apiId)
       case Right(_) => Future.successful(Left(raiseApiNotFoundException.forApplication(applicationId, apiId)))
       case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
@@ -98,7 +98,7 @@ class ApplicationsApiServiceImpl @Inject()(
   }
 
   override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    searchService.findById(applicationId, enrich = true, includeDeleted = true).flatMap {
+    searchService.findById(applicationId, includeDeleted = true).flatMap {
       case Right(application) => changeOwningTeam(application, teamId)
       case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
       case Left(e) => Future.successful(Left(e))
@@ -121,7 +121,7 @@ class ApplicationsApiServiceImpl @Inject()(
   }
 
   override def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    searchService.findById(applicationId, enrich = false, includeDeleted = true).flatMap {
+    searchService.findById(applicationId, includeDeleted = true).flatMap {
       case Right(application) if application.teamId.isDefined => repository.update(application.removeTeam(clock))
       case Right(application) => Future.successful(Right(()))
       case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))

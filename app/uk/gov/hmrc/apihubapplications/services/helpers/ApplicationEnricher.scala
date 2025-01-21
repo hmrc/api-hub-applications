@@ -74,46 +74,6 @@ object ApplicationEnrichers {
     }
   }
 
-  def secondaryCredentialApplicationEnricher(
-                                              original: Application,
-                                              idmsConnector: IdmsConnector,
-                                              hipEnvironments: HipEnvironments,
-                                            )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, ApplicationEnricher]] = {
-    type IssueOrClientResponse = Either[String, ClientResponse]
-
-    def toIssuesOrClientResponses(results: Seq[Either[IdmsException, ClientResponse]]): Seq[Either[IdmsException, IssueOrClientResponse]] = {
-      results.map {
-        case Right(clientResponse) => Right(Right(clientResponse))
-        case Left(e: IdmsException) => Right(Left(Issues.secondaryCredentialNotFound(e)))
-      }
-    }
-
-    def buildEnricher(issuesOrResponses: Seq[IssueOrClientResponse]): ApplicationEnricher = {
-      (application: Application) => {
-        issuesOrResponses.foldLeft(application)(
-          (app, issueOrResponse) =>
-            issueOrResponse match {
-              case Right(clientResponse) => app.updateCredential(hipEnvironments.deploymentEnvironment, clientResponse.clientId, clientResponse.secret)
-              case Left(issue) => app.addIssue(issue)
-            }
-        )
-      }
-    }
-
-    Future.sequence(
-        original.getCredentials(hipEnvironments.deploymentEnvironment).map {
-          credential =>
-            idmsConnector.fetchClient(hipEnvironments.deploymentEnvironment, credential.clientId)
-        }
-      )
-      .map(toIssuesOrClientResponses)
-      .map(useFirstException)
-      .map {
-        case Right(issuesOrResponses) => Right(buildEnricher(issuesOrResponses))
-        case Left(e) => Left(e)
-      }
-  }
-
   def credentialCreatingApplicationEnricher(
                                              hipEnvironment: HipEnvironment,
                                              original: Application,

@@ -82,7 +82,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(repository.insert(eqTo(applicationWithCreds)))
         .thenReturn(Future.successful(saved))
 
-      when(searchService.findById(eqTo(saved.safeId), eqTo(false))(any))
+      when(searchService.findById(eqTo(saved.safeId))(any))
         .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any)(any))
@@ -151,7 +151,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
 
-      when(searchService.findById(eqTo(saved.safeId), eqTo(false))(any))
+      when(searchService.findById(eqTo(saved.safeId))(any))
         .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any)(any))
@@ -191,7 +191,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
 
-      when(searchService.findById(eqTo(saved.safeId), eqTo(false))(any))
+      when(searchService.findById(eqTo(saved.safeId))(any))
         .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any)(any))
@@ -227,7 +227,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
 
-      when(searchService.findById(eqTo(saved.safeId), eqTo(false))(any))
+      when(searchService.findById(eqTo(saved.safeId))(any))
         .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any)(any))
@@ -292,7 +292,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(repository.insert(any))
         .thenReturn(Future.successful(saved))
 
-      when(searchService.findById(eqTo(saved.safeId), eqTo(false))(any))
+      when(searchService.findById(eqTo(saved.safeId))(any))
         .thenReturn(Future.successful(Right(saved)))
 
       when(emailConnector.sendAddTeamMemberEmail(any)(any))
@@ -579,7 +579,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         credentials = Set.empty
       ).addTeamMember(TeamMember("test-existing-team-member-email"))
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
 
       val teamMember = TeamMember("test-team-member-email")
@@ -608,7 +608,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         credentials = Set.empty
       ).addTeamMember(TeamMember("test-existing-team-member-email"))
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
 
       val teamMember = TeamMember("test-existing-team-member-email")
 
@@ -625,7 +625,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val applicationId = "test-id"
       val expected = ApplicationNotFoundException.forId(applicationId)
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any))
+      when(searchService.findById(eqTo(applicationId))(any))
         .thenReturn(Future.successful(Left(expected)))
 
       val teamMember = TeamMember("test-team-member-email")
@@ -649,7 +649,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         teamId = "test-team-id"
       )
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
 
       val teamMember = TeamMember("test-team-member-email")
 

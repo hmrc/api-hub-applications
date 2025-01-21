@@ -24,7 +24,6 @@ import uk.gov.hmrc.apihubapplications.models.application.{Application, Issues}
 import uk.gov.hmrc.apihubapplications.models.exception.ApplicationsException
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
-import uk.gov.hmrc.apihubapplications.services.helpers.ApplicationEnrichers
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,11 +42,7 @@ trait ApplicationsSearchService {
     findById(id, false)
   }
 
-  def findById(id: String, enrich: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    findById(id, enrich, false)
-  }
-
-  def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
+  def findById(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]]
 
   def findByTeamId(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Seq[Application]]
 
@@ -83,25 +78,11 @@ class ApplicationsSearchServiceImpl @Inject()(
       .flatMap(addTeams)
   }
 
-  override def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+  override def findById(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] =
     repository.findById(id, includeDeleted).flatMap {
-      case Right(application) =>
-        (if (enrich && application.deleted.isEmpty) {
-          ApplicationEnrichers.process(
-            application,
-            Seq(
-              ApplicationEnrichers.secondaryCredentialApplicationEnricher(application, idmsConnector, hipEnvironments)
-            )
-          )
-        } else {
-          Future.successful(Right(application))
-        }).flatMap{
-          case Right(application) => addTeam(application).map(Right(_))
-          case Left(e) => Future.successful(Left(e))
-        }
+      case Right(application) => addTeam(application).map(Right(_))
       case Left(e) => Future.successful(Left(e))
     }
-  }
 
   override def findByTeamId(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Seq[Application]] =
     repository.findByTeamId(id, includeDeleted)

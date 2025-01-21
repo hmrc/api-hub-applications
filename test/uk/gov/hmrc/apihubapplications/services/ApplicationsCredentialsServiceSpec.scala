@@ -62,7 +62,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .setCredentials(FakeHipEnvironments.primaryEnvironment, productionCredentials)
         .setCredentials(FakeHipEnvironments.secondaryEnvironment, testCredentials)
 
-      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(application.safeId))(any)).thenReturn(Future.successful(Right(application)))
 
       service.getCredentials(application.safeId, hipEnvironment)(HeaderCarrier()).map(
         result =>
@@ -91,7 +91,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .setCredentials(FakeHipEnvironments.primaryEnvironment, productionCredentials)
         .setCredentials(FakeHipEnvironments.secondaryEnvironment, testCredentials)
 
-      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(application.safeId))(any)).thenReturn(Future.successful(Right(application)))
 
       testCredentials.foreach(
         credential =>
@@ -115,7 +115,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       val expected = ApplicationNotFoundException.forApplication(baseApplication)
 
-      when(searchService.findById(eqTo(baseApplication.safeId), eqTo(false))(any))
+      when(searchService.findById(eqTo(baseApplication.safeId))(any))
         .thenReturn(Future.successful(Left(expected)))
 
       service.getCredentials(baseApplication.safeId, FakeHipEnvironments.primaryEnvironment)(HeaderCarrier()).map(
@@ -140,7 +140,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       val expected = IdmsException.unexpectedResponse(500)
 
-      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(application.safeId))(any)).thenReturn(Future.successful(Right(application)))
 
       when(idmsConnector.fetchClient(eqTo(hipEnvironment), eqTo(credential1.clientId))(any))
         .thenReturn(Future.successful(Right(buildClientResponse(credential1))))
@@ -184,7 +184,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       val expectedClient = Client(app.name, app.name)
       when(idmsConnector.createClient(eqTo(FakeHipEnvironments.secondaryEnvironment), any)(any)).thenReturn(Future.successful(Right(newClientResponse)))
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
+      when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(app)))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
 
       val updatedApp = app
@@ -228,7 +228,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       val expectedClient = Client(app.name, app.name)
 
       when(idmsConnector.createClient(eqTo(FakeHipEnvironments.primaryEnvironment), any)(any)).thenReturn(Future.successful(Right(newClientResponse)))
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
+      when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(app)))
 
       val updatedApp = app
         .addCredential(FakeHipEnvironments.primaryEnvironment, expectedCredential)
@@ -266,7 +266,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       )
 
       when(idmsConnector.fetchClientScopes(any, any)(any)).thenReturn(Future.successful(Right(Seq.empty)))
-      when(searchService.findById(any, any)(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(any)(any)).thenReturn(Future.successful(Right(application)))
 
       service.addCredential(applicationId, primaryEnvironment)(HeaderCarrier()).map {
         result =>
@@ -302,7 +302,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
           .addCredential(hipEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, hipEnvironment.id))
           .addCredential(hipEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, hipEnvironment.id))
 
-        when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+        when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
         when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Right(())))
         when(repository.update(any)).thenReturn(Future.successful(Right(())))
 
@@ -334,7 +334,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("test-primary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
         .addCredential(FakeHipEnvironments.secondaryEnvironment, Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id))
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
 
@@ -367,7 +367,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Left(IdmsException.clientNotFound(clientId))))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
 
@@ -384,7 +384,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       val applicationId = "test-id"
       val clientId = "test-client-id"
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
         result =>
@@ -410,7 +410,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       )
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
 
       service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
         result =>
@@ -437,7 +437,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
       service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
@@ -464,7 +464,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       )
         .addCredential(FakeHipEnvironments.primaryEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id))
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
 
       service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
         result =>
@@ -489,7 +489,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .addCredential(FakeHipEnvironments.secondaryEnvironment, buildCredential(clientId3, FakeHipEnvironments.secondaryEnvironment))
         .addCredential(FakeHipEnvironments.secondaryEnvironment, buildCredential(clientId4, FakeHipEnvironments.secondaryEnvironment))
 
-      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(application.safeId))(any)).thenReturn(Future.successful(Right(application)))
 
       when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId1))))
       when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId2))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId2))))
@@ -518,7 +518,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       val applicationId = "test-application-id"
       val expected = ApplicationNotFoundException.forId(applicationId)
 
-      when(searchService.findById(eqTo(applicationId), eqTo(false))(any))
+      when(searchService.findById(eqTo(applicationId))(any))
         .thenReturn(Future.successful(Left(expected)))
 
       service.fetchAllScopes(applicationId)(HeaderCarrier()).map {
@@ -540,7 +540,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       val expected = IdmsException.unexpectedResponse(500)
 
-      when(searchService.findById(eqTo(application.safeId), eqTo(false))(any)).thenReturn(Future.successful(Right(application)))
+      when(searchService.findById(eqTo(application.safeId))(any)).thenReturn(Future.successful(Right(application)))
 
       when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1))(any)).thenReturn(Future.successful(Right(buildClientScopes(clientId1))))
       when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId2))(any)).thenReturn(Future.successful(Left(expected)))

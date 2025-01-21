@@ -319,9 +319,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), Some(secondaryClientSecret), Some("1234"), FakeHipEnvironments.secondaryEnvironment.id)))
 
-      service.findById(id, enrich = true)(HeaderCarrier()).map {
+      service.findById(id)(HeaderCarrier()).map {
         result =>
           result mustBe Right(expected)
       }
@@ -366,7 +365,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
-      service.findById(id, enrich = true)(HeaderCarrier()).map(
+      service.findById(id)(HeaderCarrier()).map(
         result =>
           result mustBe Left(ApplicationNotFoundException.forId(id))
       )
@@ -391,52 +390,6 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
         actual =>
           actual.value.issues mustBe Seq(Issues.teamNotFound(teamId, TeamNotFoundException.forId(teamId)))
       )
-    }
-
-    "must not return IdmsException when that is returned from the IDMS connector and return issues instead" in {
-      val fixture = buildFixture
-      import fixture.*
-
-      val id = "test-id"
-      val clientId = "test-client-id"
-
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(clientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
-
-      val application1WithIssues = application.copy(issues = Seq("Secondary credential not found. test-message"))
-
-      when(repository.findById(eqTo(id), any))
-        .thenReturn(Future.successful(Right(application)))
-
-      when(idmsConnector.fetchClient(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId))(any))
-        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
-      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(clientId))(any))
-        .thenReturn(Future.successful(Right(Seq.empty)))
-
-      service.findById(id, enrich = true)(HeaderCarrier()).map {
-        result => result mustBe Right(application1WithIssues)
-      }
-    }
-
-    "must not enrich with IDMS data unless asked to" in {
-      val fixture = buildFixture
-      import fixture.*
-
-      val id = "test-id"
-
-      val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
-
-      when(repository.findById(eqTo(id), any))
-        .thenReturn(Future.successful(Right(application)))
-
-      service.findById(id, enrich = false)(HeaderCarrier()).map {
-        result =>
-          result mustBe Right(application)
-          verifyNoInteractions(idmsConnector)
-          succeed
-      }
     }
 
     "must not attempt to enrich with IDMS data if the application is deleted" in {
