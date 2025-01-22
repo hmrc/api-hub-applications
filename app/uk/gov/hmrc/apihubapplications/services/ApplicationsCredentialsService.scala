@@ -60,7 +60,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   import ApplicationsCredentialsServiceImpl.*
 
   override def getCredentials(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Credential]]] = {
-    searchService.findById(applicationId, enrich = false).flatMap {
+    searchService.findById(applicationId).flatMap {
       case Right(application) =>
         if (!hipEnvironment.isProductionLike) {
           Future.sequence(
@@ -86,7 +86,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   }
 
   override def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
-    searchService.findById(applicationId, enrich = true).map {
+    searchService.findById(applicationId).map {
       case Right(application) => addCredentialValidation(application, hipEnvironment)
       case Left(e) => Left(e)
     } flatMap {
@@ -138,7 +138,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   }
 
   override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    searchService.findById(applicationId, enrich = false).flatMap {
+    searchService.findById(applicationId).flatMap {
       case Right(application) =>
         application.getCredentials(hipEnvironment).find(_.clientId == clientId) match {
           case Some(_) =>
@@ -167,7 +167,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   }
 
   override def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
-    searchService.findById(applicationId, enrich = false).flatMap {
+    searchService.findById(applicationId).flatMap {
       case Right(application) =>
         Future.sequence(
           hipEnvironments.environments.flatMap(

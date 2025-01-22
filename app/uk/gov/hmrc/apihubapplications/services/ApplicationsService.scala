@@ -88,8 +88,8 @@ class ApplicationsService @Inject()(
     searchService.findAllUsingApi(apiId, includeDeleted)
   }
 
-  override def findById(id: String, enrich: Boolean, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
-    searchService.findById(id, enrich, includeDeleted)
+  override def findById(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
+    searchService.findById(id, includeDeleted)
   }
 
   override def findByTeamId(id: String, includeDeleted: Boolean)(implicit hc: HeaderCarrier): Future[Seq[Application]] = {

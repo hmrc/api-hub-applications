@@ -217,17 +217,12 @@ class ApplicationsIntegrationSpec
           .setCredentials(
             FakeHipEnvironments.secondaryEnvironment, 
             storedApplication
-              .getCredentials(FakeHipEnvironments.secondaryEnvironment).map(
-                credential => credential.copy(
-                  clientSecret = Some(FakeIdmsConnector.fakeSecret),
-                  secretFragment = Some(FakeIdmsConnector.fakeSecret.takeRight(4))
-                )
-              )
+              .getCredentials(FakeHipEnvironments.secondaryEnvironment)
           )
 
         val response =
           wsClient
-            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}?enrich=true")
+            .url(s"$baseUrl/api-hub-applications/applications/${application.id.get}")
             .addHttpHeaders(("Accept", "application/json"))
             .get()
             .futureValue
