@@ -26,7 +26,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Environments, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer

@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted
 
 import play.api.libs.json.*
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier
-import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.{DbApi, DbApplication, DbCredential, DbEnvironments}
+import uk.gov.hmrc.apihubapplications.repositories.models.application.unencrypted.{DbApi, DbApplication, DbCredential}
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
 
 import java.time.LocalDateTime
