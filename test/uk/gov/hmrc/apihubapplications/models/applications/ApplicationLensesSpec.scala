@@ -293,19 +293,6 @@ class ApplicationLensesSpec extends LensBehaviours {
       }
     }
 
-    "makePublic" - {
-      "must remove hidden primary credentials" in {
-        val hipEnvironment = FakeHipEnvironments.primaryEnvironment
-
-        val hidden = randomCredential(hipEnvironment).copy(secretFragment = None)
-        val visible = randomCredential(hipEnvironment)
-
-        val application = testApplication.setCredentials(hipEnvironment, Seq(hidden, visible))
-
-        application.makePublic(FakeHipEnvironments).getCredentials(hipEnvironment) mustBe Seq(visible)
-      }
-    }
-
     "replaceApi" - {
       "must append the API if it is not already present" in {
         val api1 = Api("api-1", "api-1-name")
