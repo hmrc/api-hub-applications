@@ -323,18 +323,7 @@ class ApplicationLensesSpec extends LensBehaviours {
 object ApplicationLensesSpec {
 
   val testApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq(TeamMember("test-email")))
-
-  def randomEnvironments(): Environments = Environments(
-    primary = Environment(),
-    secondary = Environment()
-  )
-
-  private def randomEnvironment(): Environment =
-    Environment(
-      scopes = randomScopes(),
-      credentials = randomCredentials()
-    )
-
+  
   private def randomHipEnvironment(): HipEnvironment = {
     val rank = Random.nextInt(FakeHipEnvironments.environments.size) + 1
     FakeHipEnvironments.environments
@@ -364,15 +353,6 @@ object ApplicationLensesSpec {
       environmentId = hipEnvironment.id
     )
   }
-
-  private def randomScopes(): Seq[Scope] =
-    (0 to Random.nextInt(5))
-      .map(_ => randomScope())
-
-  private def randomScope(): Scope =
-    Scope(
-      name = s"test-scope${randomString()}"
-    )
 
   private def randomTeamMember(): TeamMember =
     TeamMember(email = randomString())

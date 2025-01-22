@@ -28,7 +28,7 @@ import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Acces
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetailLenses.*
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, Endpoint, EndpointMethod, Live}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Scope, Endpoint as ApplicationEndpoint}
+import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Endpoint as ApplicationEndpoint}
 import uk.gov.hmrc.apihubapplications.models.exception.ApiNotFoundException
 import uk.gov.hmrc.apihubapplications.models.idms.ClientScope
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
@@ -58,8 +58,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
     "must remove all scopes when the application has no remaining APIs" in {
       val application = applicationWithCredentials
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name, scope2.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope2.name, scope3.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1, scopeName2),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName2, scopeName3)
       )
 
       val fixture = buildFixture()
@@ -93,8 +93,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api.removeEndpoint(endpointForScope2.path)))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name, scope2.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope1.name, scope2.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1, scopeName2),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName1, scopeName2)
       )
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -133,8 +133,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope1.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName1)
       )
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -212,8 +212,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name, scope2.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope1.name, scope2.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1, scopeName2),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName1, scopeName2)
       )
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -250,8 +250,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name, scope2.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope2.name, scope3.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1, scopeName2),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName2, scopeName3)
       )
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api))
@@ -290,8 +290,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope1.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName1)
       )
 
       val accessRequests = Seq.empty
@@ -330,8 +330,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api2))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope1.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName1)
       )
 
       val accessRequests = Seq.empty
@@ -372,8 +372,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(apiDetail2))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name, scope2.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope1.name, scope2.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1, scopeName2),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName1, scopeName2)
       )
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, apiDetail1))
@@ -404,8 +404,8 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
         .addApi(buildApi(api))
 
       val scopeMap = Map(
-        FakeHipEnvironments.primaryEnvironment -> Seq(scope1.name, scope2.name),
-        FakeHipEnvironments.secondaryEnvironment -> Seq(scope1.name, scope2.name)
+        FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1, scopeName2),
+        FakeHipEnvironments.secondaryEnvironment -> Seq(scopeName1, scopeName2)
       )
 
       val accessRequests = Seq(buildApprovedAccessRequest(application, api.removeEndpoint(endpointForScope2.path)))
@@ -502,9 +502,6 @@ object ScopeFixerSpec {
   private val scopeName1: String = "test-scope-name-1"
   private val scopeName2: String = "test-scope-name-2"
   private val scopeName3: String = "test-scope-name-3"
-  private val scope1: Scope = Scope(scopeName1)
-  private val scope2: Scope = Scope(scopeName2)
-  private val scope3: Scope = Scope(scopeName3)
 
   private val baseApplication: Application = Application(Some("test-id"), "test-name", Creator("test-email"), Seq.empty)
   private val applicationWithCredentials: Application = baseApplication
