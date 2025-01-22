@@ -246,46 +246,6 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       }
     }
 
-    "must update existing primary credential and set a secret fragment where the existing credential is hidden" in {
-      val fixture = buildFixture
-      import fixture.*
-
-      val testAppId = "test-app-id"
-      val testClientId = "test-client-id"
-      val scopeName = "test-scope"
-
-      val existingHiddenCredential = Credential(testClientId, LocalDateTime.now(clock).minus(Duration.ofDays(1)), None, None, FakeHipEnvironments.primaryEnvironment.id)
-      val newSecret = "test-secret-1234"
-
-      val expectedCredential = Credential(testClientId, LocalDateTime.now(clock), Some(newSecret), Some("1234"), FakeHipEnvironments.primaryEnvironment.id)
-
-      val app = Application(
-        id = Some(testAppId),
-        name = "test-app-name",
-        created = LocalDateTime.now(clock).minus(Duration.ofDays(1)),
-        createdBy = Creator("test-email"),
-        lastUpdated = LocalDateTime.now(clock),
-        teamMembers = Seq(TeamMember(email = "test-email")),
-        credentials = Set(existingHiddenCredential)
-      )
-
-      when(idmsConnector.newSecret(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(testClientId))(any)).thenReturn(Future.successful(Right(Secret(newSecret))))
-
-      when(searchService.findById(eqTo(testAppId), eqTo(true))(any)).thenReturn(Future.successful(Right(app)))
-
-      val updatedApp = app.setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(expectedCredential))
-      when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
-      when(scopeFixer.fix(eqTo(updatedApp), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(())))
-
-      service.addCredential(testAppId, primaryEnvironment)(HeaderCarrier()) map {
-        newCredential =>
-          verify(idmsConnector, times(0)).createClient(eqTo(FakeHipEnvironments.primaryEnvironment), any)(any)
-          verify(repository).update(updatedApp)
-          newCredential mustBe Right(expectedCredential)
-      }
-    }
-
     "must return ApplicationCredentialLimitException if there are already 5 credentials" in {
       val fixture = buildFixture
       import fixture.*

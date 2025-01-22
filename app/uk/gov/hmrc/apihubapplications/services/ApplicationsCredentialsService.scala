@@ -90,7 +90,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
       case Right(application) => addCredentialValidation(application, hipEnvironment)
       case Left(e) => Left(e)
     } flatMap {
-      case Right(application) => updateOrAddCredential(application, hipEnvironment)
+      case Right(application) => getNewCredential(application, hipEnvironment)
       case Left(e) => Future.successful(Left(e))
     } flatMap {
       case Right(newCredential: NewCredential) => updateRepository(newCredential)
@@ -113,29 +113,12 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  private def updateOrAddCredential(application: Application, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
-    application.getMasterCredential(hipEnvironment) match {
-      case Some(credential) if credential.isHidden && hipEnvironment.isProductionLike =>
-        idmsConnector.newSecret(hipEnvironment, credential.clientId).map {
-          case Right(secret) =>
-            val newCredential = Credential(
-              clientId = credential.clientId,
-              created = LocalDateTime.now(clock),
-              clientSecret = Some(secret.secret),
-              secretFragment = Some(secret.secret.takeRight(4)),
-              environmentId = hipEnvironment.id
-            )
-
-            Right(NewCredential(application.replaceCredential(hipEnvironment, newCredential), newCredential, wasHidden = true))
-          case Left(e) => Left(e)
-        }
-      case _ =>
-        idmsConnector.createClient(hipEnvironment, Client(application)).map {
-          case Right(clientResponse) =>
-            val newCredential = clientResponse.asNewCredential(clock, hipEnvironment)
-            Right(NewCredential(application.addCredential(hipEnvironment, newCredential), newCredential, wasHidden = false))
-          case Left(e) => Left(e)
-        }
+  private def getNewCredential(application: Application, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
+    idmsConnector.createClient(hipEnvironment, Client(application)).map {
+      case Right(clientResponse) =>
+        val newCredential = clientResponse.asNewCredential(clock, hipEnvironment)
+        Right(NewCredential(application.addCredential(hipEnvironment, newCredential), newCredential, wasHidden = false))
+      case Left(e) => Left(e)
     }
   }
 

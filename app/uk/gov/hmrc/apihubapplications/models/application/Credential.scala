@@ -22,10 +22,6 @@ import java.time.LocalDateTime
 
 case class Credential(clientId: String, created: LocalDateTime, clientSecret: Option[String], secretFragment: Option[String], environmentId: String) {
 
-  def isHidden: Boolean = {
-    secretFragment.isEmpty
-  }
-
   def setSecret(secret: String): Credential = {
     this.copy(clientSecret = Some(secret))
   }

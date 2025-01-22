@@ -90,7 +90,7 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
-        contentAsJson(result) mustBe Json.toJson(expected.makePublic(FakeHipEnvironments))
+        contentAsJson(result) mustBe Json.toJson(expected)
       }
     }
 
@@ -175,7 +175,7 @@ class ApplicationsControllerSpec
               .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
         }
 
-        val expected_json = Json.toJson(expected_apps.map(_.makePublic(FakeHipEnvironments)))
+        val expected_json = Json.toJson(expected_apps)
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(None).url)
 
@@ -201,7 +201,7 @@ class ApplicationsControllerSpec
             .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
         )
 
-        val expected_json = Json.toJson(expected_apps.map(_.makePublic(FakeHipEnvironments)))
+        val expected_json = Json.toJson(expected_apps)
 
         val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
@@ -232,7 +232,7 @@ class ApplicationsControllerSpec
               .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
         }
 
-        val expected_json = Json.toJson(expected_apps.map(_.makePublic(FakeHipEnvironments)))
+        val expected_json = Json.toJson(expected_apps)
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(None, true).url)
 
@@ -263,7 +263,7 @@ class ApplicationsControllerSpec
               .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
         }
 
-        val expected_json = Json.toJson(expected_apps.map(_.makePublic(FakeHipEnvironments)))
+        val expected_json = Json.toJson(expected_apps)
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplicationsUsingApi(apiId).url)
 
@@ -293,7 +293,7 @@ class ApplicationsControllerSpec
               .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
         }
 
-        val expected_json = Json.toJson(expected_apps.map(_.makePublic(FakeHipEnvironments)))
+        val expected_json = Json.toJson(expected_apps)
 
         val request = FakeRequest(GET, routes.ApplicationsController.getApplicationsUsingApi(apiId, true).url)
 
@@ -323,7 +323,7 @@ class ApplicationsControllerSpec
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.OK
-        contentAsJson(result) mustBe Json.toJson(expected.makePublic(FakeHipEnvironments))
+        contentAsJson(result) mustBe Json.toJson(expected)
 
         verify(fixture.applicationsService).findById(eqTo(id), eqTo(true), eqTo(false))(any())
       }

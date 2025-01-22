@@ -194,13 +194,6 @@ object ApplicationLenses {
       )
     }
 
-    def makePublic(hipEnvironments: HipEnvironments): Application = {
-      application.setCredentials(
-        hipEnvironments.productionEnvironment,
-        application.getCredentials(hipEnvironments.productionEnvironment).filter(!_.isHidden)
-      )
-    }
-
     def setApis(apis: Seq[Api]): Application = {
       applicationApis.set(
         application,
