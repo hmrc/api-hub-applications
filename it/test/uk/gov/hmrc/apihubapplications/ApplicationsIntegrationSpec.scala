@@ -139,7 +139,6 @@ class ApplicationsIntegrationSpec
           }
 
         val expectedApplication = storedApplication
-          .makePublic(FakeHipEnvironments)
 
         responseApplication shouldBe expectedApplication
         storedApplication.name shouldBe newApplication.name
@@ -225,7 +224,6 @@ class ApplicationsIntegrationSpec
                 )
               )
           )
-          .makePublic(FakeHipEnvironments)
 
         val response =
           wsClient
