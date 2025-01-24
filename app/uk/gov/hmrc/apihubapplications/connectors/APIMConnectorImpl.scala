@@ -237,11 +237,7 @@ class APIMConnectorImpl @Inject()(
       }
   }
 
-  override def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
-    listEgressGateways(hipEnvironments.deploymentEnvironment)
-  }
-
-  def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
+  override def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] = {
     val context = Seq.empty.withCorrelationId()
 
     httpClient.get(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/egress-gateways")

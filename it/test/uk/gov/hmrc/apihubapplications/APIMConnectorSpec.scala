@@ -28,6 +28,7 @@ import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentsRequest, DetailsResponse, EgressMapping, Error, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidCredential
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 
@@ -768,7 +769,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).listEgressGateways()(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).listEgressGateways(secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.value mustBe expectedResponse
       }

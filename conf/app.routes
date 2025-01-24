@@ -52,7 +52,7 @@ GET        /stats/list-apis-in-production                                       
 
 POST       /oas/validate                                                            uk.gov.hmrc.apihubapplications.controllers.OASController.validateOAS()
 
-GET        /egresses/gateways                                                       uk.gov.hmrc.apihubapplications.controllers.EgressController.listEgressGateways()
+GET        /egresses/gateways/:environmentName                                      uk.gov.hmrc.apihubapplications.controllers.EgressController.listEgressGateways(environmentName: String)
 
 GET        /environment-parity-test/client-scopes/:environmentName/:clientId        uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchClientScopes(environmentName: String, clientId: String)
 GET        /environment-parity-test/egresses/:environmentName                       uk.gov.hmrc.apihubapplications.controllers.EnvironmentParityTestController.fetchEgresses(environmentName: String)
