@@ -686,7 +686,13 @@ class APIMConnectorSpec
     }
 
     "must return UnexpectedResponse when APIM returns one" in {
-      val context = Seq("publisherReference" -> serviceId, "X-Correlation-Id" -> correlationId)
+      val context = Seq(
+        "publisherReference" -> serviceId,
+        "environmentFrom" -> secondaryEnvironment.id,
+        "environmentTo" -> primaryEnvironment.id,
+        "egress" -> "test-egress",
+        "X-Correlation-Id" -> correlationId
+      )
 
       stubFor(
         put(urlEqualTo(s"/${primaryEnvironment.id}/v1/simple-api-deployment/deployment-from"))

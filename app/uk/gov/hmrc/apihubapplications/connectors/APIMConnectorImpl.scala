@@ -193,7 +193,12 @@ class APIMConnectorImpl @Inject()(
                            environmentTo: HipEnvironment,
                            egress: String
                          )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val context = Seq("publisherReference" -> publisherReference)
+    val context = Seq(
+      "publisherReference" -> publisherReference,
+      "environmentFrom" -> environmentFrom.id,
+      "environmentTo" -> environmentTo.id,
+      "egress" -> egress,
+    )
       .withCorrelationId()
     val deploymentFrom = DeploymentFrom(
       env = environmentFrom.apimEnvironmentName,
