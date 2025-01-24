@@ -19,10 +19,10 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.config.HipEnvironments
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiTeam}
-import uk.gov.hmrc.apihubapplications.models.apim._
+import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.{Deployed, NotDeployed, Unknown}
@@ -93,10 +93,13 @@ class DeploymentsService @Inject()(
     apimConnector.getDeploymentDetails(publisherRef)
   }
 
-  def promoteToProduction(
-                           publisherRef: String
+  def promoteAPI(
+                           publisherRef: String,
+                           environmentFrom: HipEnvironment,
+                           environmentTo: HipEnvironment,
+                           egress: String,
                          )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    apimConnector.promoteToProduction(publisherRef)
+    apimConnector.promoteAPI(publisherRef, environmentFrom, environmentTo, egress)
   }
 
   def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

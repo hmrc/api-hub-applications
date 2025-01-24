@@ -28,7 +28,8 @@ object FakeHipEnvironments extends HipEnvironments {
     clientId = "test-production-client-id",
     secret = "test-production-secret",
     useProxy = false,
-    apiKey = None
+    apiKey = None,
+    apimEnvironmentName = "production"
   )
   val secondaryEnvironment: HipEnvironment = HipEnvironment(
     id = "test",
@@ -38,7 +39,8 @@ object FakeHipEnvironments extends HipEnvironments {
     clientId = "test-test-client-id",
     secret = "test-test-secret",
     useProxy = false,
-    apiKey = Some("test-api-key")
+    apiKey = Some("test-api-key"),
+    apimEnvironmentName = "test"
   )
 
   override val environments: Seq[HipEnvironment] = Seq(

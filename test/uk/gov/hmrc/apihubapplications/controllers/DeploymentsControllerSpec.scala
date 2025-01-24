@@ -33,6 +33,7 @@ import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
 import play.api.Application as PlayApplication
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
@@ -416,28 +417,44 @@ class DeploymentsControllerSpec
     "must return 200 Ok and a SuccessfulDeploymentsResponse when APIM returns success" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteToProduction(any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
         .thenReturn(Future.successful(Right(deploymentsResponse)))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val requestBody = PromotionRequest(
+          "test",
+          "production",
+          "egress"
+        )
+        val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
         status(result) mustBe OK
         contentAsJson(result) mustBe Json.toJson(deploymentsResponse)
 
-        verify(fixture.deploymentsService).promoteToProduction(eqTo(publisherRef))(any)
+        verify(fixture.deploymentsService).promoteAPI(
+          eqTo(publisherRef),
+          eqTo(FakeHipEnvironments.secondaryEnvironment),
+          eqTo(FakeHipEnvironments.primaryEnvironment),
+          eqTo(requestBody.egress))(any)
       }
     }
 
     "must return 400 Bad Request and an InvalidOasResponse when APIM returns failure" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteToProduction(any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
         .thenReturn(Future.successful(Right(invalidOasResponse)))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val requestBody = PromotionRequest(
+          "test",
+          "production",
+          "egress"
+        )
+        val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_REQUEST
@@ -448,11 +465,17 @@ class DeploymentsControllerSpec
     "must return 404 Not Found when APIM cannot find the service" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteToProduction(any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
         .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val requestBody = PromotionRequest(
+          "test",
+          "production",
+          "egress"
+        )
+        val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -462,11 +485,17 @@ class DeploymentsControllerSpec
     "must throw ApimException when raised downstream" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteToProduction(any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.DeploymentsController.promoteToProduction(publisherRef))
+        val requestBody = PromotionRequest(
+          "test",
+          "production",
+          "egress"
+        )
+        val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
         val e = the[ApimException] thrownBy status(result)
@@ -568,7 +597,8 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoS
       .overrides(
         bind[ControllerComponents].toInstance(Helpers.stubControllerComponents()),
         bind[DeploymentsService].toInstance(deploymentsService),
-        bind[IdentifierAction].to(classOf[FakeIdentifierAction])
+        bind[IdentifierAction].to(classOf[FakeIdentifierAction]),
+        bind[HipEnvironments].toInstance(FakeHipEnvironments)
       )
       .build()
 

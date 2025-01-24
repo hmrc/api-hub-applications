@@ -35,7 +35,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |        apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
          |        clientId = "apim-stub-client-id",
          |        secret = "apim-stub-secret",
-         |        useProxy = false
+         |        useProxy = false,
+         |        apimEnvironmentName = "test"
          |    },
          |    production = {
          |        id = "production",
@@ -44,7 +45,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |        apimUrl = "http://localhost:15026/api-hub-apim-stubs"
          |        clientId = "apim-stub-client-id",
          |        secret = "apim-stub-secret",
-         |        useProxy = false
+         |        useProxy = false,
+         |        apimEnvironmentName = "production"
          |    }
          |}
          |""".stripMargin)))

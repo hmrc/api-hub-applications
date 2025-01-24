@@ -28,7 +28,8 @@ case class HipEnvironment(
   clientId: String,
   secret: String,
   useProxy: Boolean,
-  apiKey: Option[String]
+  apiKey: Option[String],
+  apimEnvironmentName: String
 )
 
 object HipEnvironment {
@@ -45,7 +46,8 @@ object HipEnvironment {
         clientId = config.getString("clientId"),
         secret = config.getString("secret"),
         useProxy = config.getBoolean("useProxy"),
-        apiKey = getOptionalString(config, "apiKey")
+        apiKey = getOptionalString(config, "apiKey"),
+        apimEnvironmentName = config.getString("apimEnvironmentName")
       )
     }
 

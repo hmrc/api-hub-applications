@@ -36,7 +36,7 @@ trait APIMConnector {
 
   def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]]
 
-  def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
+  def promoteAPI(publisherReference: String, environmentFrom: HipEnvironment, environmentTo: HipEnvironment, egress: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
   def getDeployments(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]]
 

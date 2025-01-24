@@ -632,7 +632,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).promoteToProduction(serviceId)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).promoteAPI(serviceId, secondaryEnvironment, primaryEnvironment, "test-egress")(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(successfulDeploymentsResponse)
       }
@@ -649,7 +649,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).promoteToProduction(serviceId)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).promoteAPI(serviceId, secondaryEnvironment, primaryEnvironment, "test-egress")(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failuresResponse))
       }
@@ -664,7 +664,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).promoteToProduction(serviceId)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).promoteAPI(serviceId, secondaryEnvironment, primaryEnvironment, "test-egress")(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value.issue mustBe ApimException.InvalidResponse
       }
@@ -679,14 +679,20 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).promoteToProduction(serviceId)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).promoteAPI(serviceId, secondaryEnvironment, primaryEnvironment, "test-egress")(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value mustBe ApimException.serviceNotFound(serviceId)
       }
     }
 
     "must return UnexpectedResponse when APIM returns one" in {
-      val context = Seq("publisherReference" -> serviceId, "X-Correlation-Id" -> correlationId)
+      val context = Seq(
+        "publisherReference" -> serviceId,
+        "environmentFrom" -> secondaryEnvironment.id,
+        "environmentTo" -> primaryEnvironment.id,
+        "egress" -> "test-egress",
+        "X-Correlation-Id" -> correlationId
+      )
 
       stubFor(
         put(urlEqualTo(s"/${primaryEnvironment.id}/v1/simple-api-deployment/deployment-from"))
@@ -696,7 +702,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).promoteToProduction(serviceId)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).promoteAPI(serviceId, secondaryEnvironment, primaryEnvironment, "test-egress")(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
       }
@@ -828,8 +834,9 @@ object APIMConnectorSpec extends HttpClientV2Support {
   )
 
   private val deploymentFrom = DeploymentFrom(
-    env = "env/test",
-    serviceId = serviceId
+    env = "test",
+    serviceId = serviceId,
+    egress = "test-egress"
   )
 
   private val failuresResponse = FailuresResponse(
@@ -894,7 +901,8 @@ object APIMConnectorSpec extends HttpClientV2Support {
         clientId = primaryClientId,
         secret = primarySecret,
         useProxy = false,
-        apiKey = None
+        apiKey = None,
+        apimEnvironmentName = "production"
       ),
       HipEnvironment(
         id = "test",
@@ -904,7 +912,8 @@ object APIMConnectorSpec extends HttpClientV2Support {
         clientId = secondaryClientId,
         secret = secondarySecret,
         useProxy = false,
-        apiKey = Some(secondaryApiKey)
+        apiKey = Some(secondaryApiKey),
+        apimEnvironmentName = "test"
       )
     )
     def productionEnvironment: HipEnvironment = environments.head

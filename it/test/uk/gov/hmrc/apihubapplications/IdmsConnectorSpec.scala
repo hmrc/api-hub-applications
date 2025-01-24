@@ -605,7 +605,8 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
         clientId = primaryClientId,
         secret = primarySecret,
         useProxy = false,
-        apiKey = None
+        apiKey = None,
+        apimEnvironmentName = "production"
       ),
       HipEnvironment(
         id = "test",
@@ -615,7 +616,8 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
         clientId = secondaryClientId,
         secret = secondarySecret,
         useProxy = false,
-        apiKey = Some(secondaryApiKey)
+        apiKey = Some(secondaryApiKey),
+        apimEnvironmentName = "test"
       )
     )
     def productionEnvironment: HipEnvironment = environments.head
