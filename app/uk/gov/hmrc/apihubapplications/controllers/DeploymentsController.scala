@@ -20,8 +20,9 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.apim._
+import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
 import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}
@@ -35,6 +36,7 @@ class DeploymentsController @Inject()(
                                        identify: IdentifierAction,
                                        cc: ControllerComponents,
                                        deploymentsService: DeploymentsService,
+                                       hipEnvironments: HipEnvironments,
                                      )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -84,13 +86,20 @@ class DeploymentsController @Inject()(
       }
   }
 
-  def promoteToProduction(publisherRef: String): Action[AnyContent] = identify.async {
+  def promoteAPI(publisherRef: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
-      deploymentsService.promoteToProduction(publisherRef).map {
-        case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
-        case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
-        case Left(e) if e.issue == ServiceNotFound => NotFound
-        case Left(e) => throw e
+      request.body.validate[PromotionRequest] match {
+        case JsSuccess(promotionRequest, _) =>
+          val (deployFromEnvironment, deployToEnvironment) = (hipEnvironments.forId(promotionRequest.environmentFrom), hipEnvironments.forId(promotionRequest.environmentTo))
+          deploymentsService.promoteAPI(publisherRef, deployFromEnvironment, deployToEnvironment, promotionRequest.egress).map {
+            case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
+            case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
+            case Left(e) if e.issue == ServiceNotFound => NotFound
+            case Left(e) => throw e
+          }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
       }
   }
 

@@ -17,16 +17,15 @@
 package uk.gov.hmrc.apihubapplications.models.apim
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 
-case class DeploymentFrom(
-                           env: String,
-                           egress: String,
-                           serviceId: String
-                          )
+case class PromotionRequest(
+  environmentFrom: String,
+  environmentTo: String,
+  egress: String,
+)
 
-object DeploymentFrom {
+object PromotionRequest {
 
-  implicit val formatDeploymentFrom: Format[DeploymentFrom] = Json.format[DeploymentFrom]
+  implicit val formatRedeploymentRequest: Format[PromotionRequest] = Json.format[PromotionRequest]
 
 }

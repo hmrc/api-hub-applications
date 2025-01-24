@@ -187,18 +187,22 @@ class APIMConnectorImpl @Inject()(
       }
   }
 
-  override def promoteToProduction(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.productionEnvironment
-
+  override def promoteAPI(
+                           publisherReference: String,
+                           environmentFrom: HipEnvironment,
+                           environmentTo: HipEnvironment,
+                           egress: String
+                         )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     val context = Seq("publisherReference" -> publisherReference)
       .withCorrelationId()
     val deploymentFrom = DeploymentFrom(
-      env = "env/test",
+      env = environmentFrom.apimEnvironmentName,
+      egress = egress,
       serviceId = publisherReference
     )
 
-    httpClient.put(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/deployment-from")
-      .setHeader("Authorization" -> authorizationForEnvironment(hipEnvironment))
+    httpClient.put(url"${environmentTo.apimUrl}/v1/simple-api-deployment/deployment-from")
+      .setHeader("Authorization" -> authorizationForEnvironment(environmentTo))
       .setHeader("Content-Type" -> "application/json")
       .setHeader("Accept" -> "application/json")
       .withCorrelationId()

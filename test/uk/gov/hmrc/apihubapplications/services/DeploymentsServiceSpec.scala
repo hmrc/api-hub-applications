@@ -216,12 +216,16 @@ class DeploymentsServiceSpec
       forAll(responses) { (response: Either[ApimException, DeploymentsResponse]) =>
         val fixture = buildFixture()
 
-        when(fixture.apimConnector.promoteToProduction(any)(any)).thenReturn(Future.successful(response))
+        when(fixture.apimConnector.promoteAPI(any, any, any, any)(any)).thenReturn(Future.successful(response))
 
-        fixture.deploymentsService.promoteToProduction(publisherRef)(HeaderCarrier()).map {
+        fixture.deploymentsService.promoteAPI(publisherRef, FakeHipEnvironments.secondaryEnvironment, FakeHipEnvironments.primaryEnvironment, "egress")(HeaderCarrier()).map {
           actual =>
             actual mustBe response
-            verify(fixture.apimConnector).promoteToProduction(eqTo(publisherRef))(any)
+            verify(fixture.apimConnector).promoteAPI(
+              eqTo(publisherRef),
+              eqTo(FakeHipEnvironments.secondaryEnvironment),
+              eqTo(FakeHipEnvironments.primaryEnvironment),
+              eqTo("egress"))(any)
             succeed
         }
       }
