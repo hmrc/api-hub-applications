@@ -40,6 +40,6 @@ trait APIMConnector {
 
   def getDeployments(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]]
 
-  def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]]
+  def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]]
 
 }

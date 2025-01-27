@@ -24,6 +24,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -39,9 +40,9 @@ class EgressServiceSpec
       val fixture = buildFixture()
 
       val expectedResponse = {1 until 10 map(i => EgressGateway(s"fake-egress-id-$i", s"Egress Friendly Name $i"))}
-      when(fixture.apimConnector.listEgressGateways()(any)).thenReturn(Future.successful(Right(expectedResponse)))
+      when(fixture.apimConnector.listEgressGateways(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(expectedResponse)))
 
-      fixture.egressService.listEgressGateways()(HeaderCarrier()).map {
+      fixture.egressService.listEgressGateways(FakeHipEnvironments.primaryEnvironment)(HeaderCarrier()).map {
         result =>
           result.value mustBe expectedResponse
       }

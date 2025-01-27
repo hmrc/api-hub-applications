@@ -30,12 +30,14 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.ValidateResponse.formatValidateResponse
 import uk.gov.hmrc.apihubapplications.models.apim.{FailuresResponse, InvalidOasResponse, SuccessfulValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.services.{EgressService, OASService}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
 import scala.concurrent.Future
 
@@ -53,10 +55,10 @@ class EgressControllerSpec
         1 until 10 map (i => EgressGateway(s"fake-egress-id-$i", s"Egress Friendly Name $i"))
       }
 
-      when(fixture.egressService.listEgressGateways()(any)).thenReturn(Future.successful(Right(expectedResponse)))
+      when(fixture.egressService.listEgressGateways(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(expectedResponse)))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.EgressController.listEgressGateways())
+        val request = FakeRequest(routes.EgressController.listEgressGateways(FakeHipEnvironments.primaryEnvironment.id))
 
         val result = route(fixture.application, request).value
 
@@ -68,11 +70,11 @@ class EgressControllerSpec
     "must return an error when the APIM call returns an error" in {
       val fixture = buildFixture()
 
-      when(fixture.egressService.listEgressGateways()(any))
+      when(fixture.egressService.listEgressGateways(eqTo(FakeHipEnvironments.primaryEnvironment))(any))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.EgressController.listEgressGateways())
+        val request = FakeRequest(routes.EgressController.listEgressGateways(FakeHipEnvironments.primaryEnvironment.id))
 
         val result = route(fixture.application, request).value
 
@@ -90,7 +92,8 @@ class EgressControllerSpec
       .overrides(
         bind[ControllerComponents].toInstance(stubControllerComponents()),
         bind[EgressService].toInstance(egressService),
-        bind[IdentifierAction].to(classOf[FakeIdentifierAction])
+        bind[IdentifierAction].to(classOf[FakeIdentifierAction]),
+        bind[HipEnvironments].toInstance(FakeHipEnvironments)
       )
       .build()
 

@@ -20,7 +20,8 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
+import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.services.EgressService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -30,12 +31,13 @@ import scala.concurrent.ExecutionContext
 class EgressController @Inject()(
   cc: ControllerComponents,
   identify: IdentifierAction,
-  egressService: EgressService
+  egressService: EgressService,
+  hipEnvironment: HipEnvironmentActionProvider
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
-  def listEgressGateways(): Action[AnyContent] = identify.async {
+  def listEgressGateways(environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-        egressService.listEgressGateways() map {
+        egressService.listEgressGateways(request.hipEnvironment) map {
           case Left(e) => InternalServerError(e.message)
           case Right(egressGateways) => Ok(Json.toJson(egressGateways))
         }

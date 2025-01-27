@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironment
 import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
@@ -26,6 +27,6 @@ import scala.concurrent.Future
 
 @Singleton
 class EgressService @Inject()(apimConnector: APIMConnector) {
-  def listEgressGateways()(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] =
-    apimConnector.listEgressGateways()
+  def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]] =
+    apimConnector.listEgressGateways(hipEnvironment)
 }
