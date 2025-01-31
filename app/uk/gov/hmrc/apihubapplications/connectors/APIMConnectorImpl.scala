@@ -201,7 +201,7 @@ class APIMConnectorImpl @Inject()(
     )
       .withCorrelationId()
     val deploymentFrom = DeploymentFrom(
-      env = environmentFrom.apimEnvironmentName,
+      env = promoteApiEnvPrefix + environmentFrom.apimEnvironmentName,
       egress = egress,
       serviceId = publisherReference
     )
@@ -264,6 +264,9 @@ class APIMConnectorImpl @Inject()(
 }
 
 object APIMConnectorImpl extends Logging with ExceptionRaising {
+  // This works around an anomaly in the APIM code - for the /deployment-from endpoint only the environment name
+  // must be prefixed with 'env/' (see CopyDeploymentFromModel.Environments enum in APIM code)
+  private val promoteApiEnvPrefix = "env/"
 
   private def headersForEnvironment(hipEnvironment: HipEnvironment): Seq[(String, String)] = {
     Seq(

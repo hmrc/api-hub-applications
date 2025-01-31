@@ -835,7 +835,7 @@ object APIMConnectorSpec extends HttpClientV2Support {
   )
 
   private val deploymentFrom = DeploymentFrom(
-    env = "test",
+    env = "env/test",
     serviceId = serviceId,
     egress = "test-egress"
   )
