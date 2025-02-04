@@ -371,6 +371,26 @@ class DeploymentsControllerSpec
     }
   }
 
+  "getDeploymentStatusForEnvironment" - {
+    "must return Ok with correct response" in {
+      val fixture = DeploymentsControllerSpec.buildFixture()
+      val publisherRef = "publisher_ref"
+      val environment = FakeHipEnvironments.secondaryEnvironment
+      val deploymentStatus: DeploymentStatus = Deployed(FakeHipEnvironments.primaryEnvironment.id, "1.0.0")
+
+      when(fixture.deploymentsService.getDeployment(eqTo(environment), eqTo(publisherRef))(any))
+        .thenReturn(Future.successful(deploymentStatus))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.getDeploymentStatusForEnvironment(environment.id, publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(deploymentStatus)
+      }
+    }
+  }
+
   "getDeploymentDetails" - {
     "must return 200 Ok and a DeploymentDetails JSON payload when returned by APIM" in {
       val fixture = buildFixture()
