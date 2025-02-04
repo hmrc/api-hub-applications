@@ -96,7 +96,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
       case Right(newCredential: NewCredential) => updateRepository(newCredential)
       case Left(e) => Future.successful(Left(e))
     } flatMap {
-      case Right(newCredential: NewCredential) => copyScopes(newCredential)
+      case Right(newCredential: NewCredential) => copyScopes(newCredential, hipEnvironment)
       case Left(e) => Future.successful(Left(e))
     } map {
       case Right(newCredential) => Right(newCredential.credential)
@@ -130,10 +130,10 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  private def copyScopes(newCredential: NewCredential)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
+  private def copyScopes(newCredential: NewCredential, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
     (for {
       accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(newCredential.application.safeId), None))
-      fixed <- EitherT(scopeFixer.fix(newCredential.application, accessRequests))
+      fixed <- EitherT(scopeFixer.fix(newCredential.application, hipEnvironment, accessRequests))
     } yield newCredential).value
   }
 
