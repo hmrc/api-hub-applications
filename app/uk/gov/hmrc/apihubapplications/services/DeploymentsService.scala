@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
@@ -76,17 +75,26 @@ class DeploymentsService @Inject()(
   def getDeployments(
                      publisherRef: String,
                    )(implicit hc: HeaderCarrier): Future[Seq[DeploymentStatus]] = {
-    Future.sequence(hipEnvironments.environments.map(hipEnvironment =>
-        apimConnector.getDeployment(publisherRef, hipEnvironment)
-          .map {
-            case Right(Some(SuccessfulDeploymentResponse(_, version))) => Deployed(hipEnvironment.id, version)
-            case Right(None) => NotDeployed(hipEnvironment.id)
-            case Left(exception) =>
-              logger.warn(customUnknownDeploymentStatusMessage, exception)
-              metricsService.apimUnknownFailure()
-              Unknown(hipEnvironment.id)
-          }
-      ))
+    Future.sequence(
+      hipEnvironments.environments.map(
+        hipEnvironment =>
+          getDeployment(hipEnvironment, publisherRef)
+      )
+    )
+  }
+
+  def getDeployment(
+    hipEnvironment: HipEnvironment,
+    publisherRef: String
+  )(implicit hc: HeaderCarrier): Future[DeploymentStatus] = {
+    apimConnector.getDeployment(publisherRef, hipEnvironment).map {
+      case Right(Some(SuccessfulDeploymentResponse(_, version))) => Deployed(hipEnvironment.id, version)
+      case Right(None) => NotDeployed(hipEnvironment.id)
+      case Left(exception) =>
+        logger.warn(customUnknownDeploymentStatusMessage, exception)
+        metricsService.apimUnknownFailure()
+        Unknown(hipEnvironment.id)
+    }
   }
 
   def getDeploymentDetails(publisherRef: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
@@ -111,7 +119,7 @@ class DeploymentsService @Inject()(
               case Right(()) => for {
                   _ <- sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam)
                   _ <- sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam)
-                } yield (()) match {
+                } yield () match {
                   case _ => Right(())
                 }
               case Left(e) => Future.successful(Left(e))
@@ -138,9 +146,7 @@ class DeploymentsService @Inject()(
 
   private def sendApiOwnershipChangedEmailToOldTeam(apiDetail: ApiDetail, maybeCurrentTeam: Option[Team], newTeam: Team)(implicit hc: HeaderCarrier) = {
     if (maybeCurrentTeam.isDefined) {
-      emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(maybeCurrentTeam.get, newTeam, apiDetail) flatMap {
-        case _ => Future.successful(())
-      }
+      emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(maybeCurrentTeam.get, newTeam, apiDetail) flatMap (_ => Future.successful(()))
     } else {
       Future.successful(())
     }

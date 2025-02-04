@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
-import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
+import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
@@ -37,6 +37,7 @@ class DeploymentsController @Inject()(
                                        cc: ControllerComponents,
                                        deploymentsService: DeploymentsService,
                                        hipEnvironments: HipEnvironments,
+                                       hipEnvironment: HipEnvironmentActionProvider
                                      )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
@@ -75,6 +76,14 @@ class DeploymentsController @Inject()(
         .map(response =>
           Ok(Json.toJson(DeploymentStatuses(response)))
         )
+  }
+
+  def getDeploymentStatusForEnvironment(environment: String, publisherRef: String): Action[AnyContent] = (identify andThen hipEnvironment(environment)).async {
+    implicit request =>
+      deploymentsService.getDeployment(request.hipEnvironment, publisherRef).map(
+        response =>
+          Ok(Json.toJson(response))
+      )
   }
 
   def getDeploymentDetails(publisherRef: String): Action[AnyContent] = identify.async {
