@@ -133,7 +133,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   private def copyScopes(newCredential: NewCredential, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
     (for {
       accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(newCredential.application.safeId), None))
-      fixed <- EitherT(scopeFixer.fix(newCredential.application, hipEnvironment, accessRequests))
+      fixed <- EitherT(scopeFixer.fix(newCredential.application, newCredential.credential, hipEnvironment, accessRequests))
     } yield newCredential).value
   }
 

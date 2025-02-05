@@ -192,7 +192,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .copy(lastUpdated = LocalDateTime.now(clock))
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(scopeFixer.fix(eqTo(updatedApp), eqTo(secondaryEnvironment), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(eqTo(updatedApp), any(), eqTo(secondaryEnvironment), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(())))
 
       service.addCredential(testAppId, secondaryEnvironment)(HeaderCarrier()) map {
         newCredential =>
@@ -236,7 +236,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
-      when(scopeFixer.fix(eqTo(updatedApp), eqTo(primaryEnvironment), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(())))
+      when(scopeFixer.fix(eqTo(updatedApp), any(), eqTo(primaryEnvironment), eqTo(Seq.empty))(any)).thenReturn(Future.successful(Right(())))
 
       service.addCredential(testAppId, primaryEnvironment)(HeaderCarrier()) map {
         newCredential =>

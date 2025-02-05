@@ -55,14 +55,17 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must process an application with no APIs or Scopes efficiently on a single environment" in {
+    "must process an application with no APIs or Scopes efficiently for a credential" in {
       val fixture = buildFixture()
       val accessRequests = Seq.empty
 
-      fixture.scopeFixer.fix(baseApplication, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
+      when(fixture.idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(credential1.clientId))(any))
+        .thenReturn(Future.successful(Right(Seq.empty)))
+
+          fixture.scopeFixer.fix(baseApplication, credential1, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.integrationCatalogueConnector)
-          verifyNoInteractions(fixture.idmsConnector)
+          verify(fixture.idmsConnector).fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(credential1.clientId))(any)
 
           result.value mustBe ()
       }
@@ -97,7 +100,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must remove all scopes of the specified environment when the application has no remaining APIs" in {
+    "must remove all scopes of the specified credential when the application has no remaining APIs" in {
       val application = applicationWithCredentials
       val scopeMap = Map(
         FakeHipEnvironments.primaryEnvironment -> Seq(scopeName1, scopeName2),
@@ -111,7 +114,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, credential1, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.integrationCatalogueConnector)
           verify(fixture.idmsConnector).fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), any)(any)
@@ -164,7 +167,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must remove scopes associated with an environment and a removed endpoint and retain scopes still used" in {
+    "must remove scopes associated with a credential and a removed endpoint and retain scopes still used" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)
         .addEndpoint(endpointForScope2)
@@ -188,7 +191,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, credential1, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -245,7 +248,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must handle disparity when removing an environment's scopes (use each credential's scopes and not a master list)" in {
+    "must handle disparity when removing a credential's scopes (use each credential's scopes and not a master list)" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)
 
@@ -272,15 +275,13 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, credential1, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
-          verify(fixture.idmsConnector, times(2)).fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), any)(any)
-          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId3), eqTo(scopeName2))(any)
+          verify(fixture.idmsConnector).fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), any)(any)
           verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId3), eqTo(scopeName1))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -323,7 +324,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must handle disparity when adding scopes to an environment (use each credential's scopes and not a master list)" in {
+    "must handle disparity when adding scopes to a credential (use each credential's scopes and not a master list)" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)
 
@@ -343,14 +344,13 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, credential1, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
 
-          verify(fixture.idmsConnector, times(2)).fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), any)(any)
+          verify(fixture.idmsConnector).fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), any)(any)
           verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
-          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId3), eqTo(scopeName1))(any)
           verifyNoMoreInteractions(fixture.idmsConnector)
 
           result.value mustBe ()
@@ -396,7 +396,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must always grant all allowed scopes to an environment (self-healing)" in {
+    "must always grant all allowed scopes to a credential (self-healing)" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)
         .addEndpoint(endpointForScope2)
@@ -419,7 +419,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
 
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, credential1, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
@@ -472,7 +472,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
-    "must not remove scopes that are still required for an environment" in {
+    "must not remove scopes that are still required for a credential" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope2)
 
@@ -495,7 +495,7 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.scopeFixer.fix(application, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
+      fixture.scopeFixer.fix(application, credential1, FakeHipEnvironments.primaryEnvironment, accessRequests)(HeaderCarrier()).map {
         result =>
           verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
           verifyNoMoreInteractions(fixture.integrationCatalogueConnector)

@@ -50,13 +50,14 @@ class ScopeFixer @Inject()(
 
   def fix(
            application: Application,
+           credential: Credential,
            hipEnvironment: HipEnvironment,
            accessRequests: Seq[AccessRequest],
          )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     (for {
       requiredScopes <- EitherT(requiredScopes(application))
-      credentials <- EitherT(Future.sequence(environmentCredentials(application, hipEnvironment)).map(useFirstException))
-      _ <- EitherT(processEnvironment(hipEnvironment, accessRequests, credentials, requiredScopes))
+      credentialScopes <- EitherT(credentialScopes(hipEnvironment, credential))
+      _ <- EitherT(processCredentialScopes(hipEnvironment, accessRequests, Seq(credentialScopes), requiredScopes))
     } yield ()).value
   }
 
@@ -90,42 +91,41 @@ class ScopeFixer @Inject()(
   private def environmentCredentials(application: Application, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier) =
     application.getCredentials(hipEnvironment).map(
       credential =>
-        idmsConnector
-          .fetchClientScopes(hipEnvironment, credential.clientId)
-          .map(_.map(
-            scopes =>
-              CredentialScopes(hipEnvironment.id, credential.clientId, credential.created, scopes.map(_.clientScopeId))
-          ))
+        credentialScopes(hipEnvironment, credential)
     )
 
+  private def credentialScopes(hipEnvironment: HipEnvironment, credential: Credential)(implicit hc: HeaderCarrier) =
+    idmsConnector.fetchClientScopes(hipEnvironment, credential.clientId)
+      .map(_.map(
+        scopes =>
+          CredentialScopes(hipEnvironment.id, credential.clientId, credential.created, scopes.map(_.clientScopeId))
+      ))
+
   private def processEnvironments(
-    accessRequests: Seq[AccessRequest],
-    credentials: Seq[CredentialScopes],
-    requiredScopes: Set[String]
+                                   accessRequests: Seq[AccessRequest],
+                                   credentialScopes: Seq[CredentialScopes],
+                                   requiredScopes: Set[String]
   )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     Future.sequence(
-      hipEnvironments.environments.flatMap(
+      hipEnvironments.environments.map(
         hipEnvironment =>
-          Seq(
-            minimiseScopesInEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests)),
-            addScopesToEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests))
-          )
+          processCredentialScopes(hipEnvironment, accessRequests, credentialScopes, requiredScopes)
       )
     )
       .map(useFirstApplicationsException)
       .map(result => result.map(_ => ()))
   }
 
-  private def processEnvironment(
-                                   hipEnvironment: HipEnvironment,
-                                   accessRequests: Seq[AccessRequest],
-                                   credentials: Seq[CredentialScopes],
-                                   requiredScopes: Set[String]
+  private def processCredentialScopes(
+                                 hipEnvironment: HipEnvironment,
+                                 accessRequests: Seq[AccessRequest],
+                                 credentialScopes: Seq[CredentialScopes],
+                                 requiredScopes: Set[String]
                                  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] =
       Future.sequence(
         Seq(
-          minimiseScopesInEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests)),
-          addScopesToEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests))
+          minimiseScopesInEnvironment(hipEnvironment, credentialScopes, allowedScopes(hipEnvironment, requiredScopes, accessRequests)),
+          addScopesToEnvironment(hipEnvironment, credentialScopes, allowedScopes(hipEnvironment, requiredScopes, accessRequests))
         )
       )
       .map(useFirstApplicationsException)
