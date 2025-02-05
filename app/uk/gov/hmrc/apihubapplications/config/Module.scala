@@ -44,7 +44,7 @@ class Module extends play.api.inject.Module {
       bindz(classOf[ApplicationsCredentialsService]).to(classOf[ApplicationsCredentialsServiceImpl]).eagerly(),
       bindz(classOf[ApplicationsLifecycleService]).to(classOf[ApplicationsLifecycleServiceImpl]).eagerly(),
       bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly(),
-      bindz(classOf[HipEnvironments]).to(classOf[HipEnvironmentsImpl]).eagerly(),
+      bindz(classOf[HipEnvironments]).to(classOf[ConfigurationHipEnvironmentsImpl]).eagerly(),
       bindz(classOf[HipEnvironmentActionProvider]).to(classOf[HipEnvironmentActionProviderImpl]).eagerly()
     )
 

@@ -25,7 +25,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
 import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+import uk.gov.hmrc.apihubapplications.config.{BaseHipEnvironment, DefaultHipEnvironment, HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.WithName
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential}
@@ -596,8 +596,10 @@ class IdmsConnectorSpec
 object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropertyChecks {
 
   def hipEnvironments(wireMockSupport: WireMockSupport): HipEnvironments = new HipEnvironments {
+    override protected val baseEnvironments: Seq[BaseHipEnvironment] = Seq.empty
+
     override val environments: Seq[HipEnvironment] = Seq(
-      HipEnvironment(
+      DefaultHipEnvironment(
         id = "production",
         rank = 1,
         isProductionLike = true,
@@ -606,9 +608,10 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
         secret = primarySecret,
         useProxy = false,
         apiKey = None,
+        promoteTo = None,
         apimEnvironmentName = "production"
       ),
-      HipEnvironment(
+      DefaultHipEnvironment(
         id = "test",
         rank = 2,
         isProductionLike = false,
@@ -617,11 +620,13 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
         secret = secondarySecret,
         useProxy = false,
         apiKey = Some(secondaryApiKey),
-        apimEnvironmentName = "test"
+        apimEnvironmentName = "test",
+        promoteTo = None
       )
     )
-    def productionEnvironment: HipEnvironment = environments.head
-    def deploymentEnvironment: HipEnvironment = environments.last
+    override def production: HipEnvironment = environments.head
+    override def deployTo: HipEnvironment = environments.last
+    override def validateIn: HipEnvironment = production
   }
 
   def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): IdmsConnector = {
