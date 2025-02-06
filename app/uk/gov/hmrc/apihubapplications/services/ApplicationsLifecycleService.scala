@@ -16,16 +16,13 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, NewApplication, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{ignoreClientNotFound, useFirstException}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -114,16 +111,6 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
         case Right(_) => Right(())
         case Left(e) => Left(e)
       }
-
-  private def createClientAndCredentials(application: Application)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, Application]] =
-    Future.sequence(hipEnvironments.environments.filterNot(_.isProductionLike).map(hipEnvironment =>
-        idmsConnector.createClient(hipEnvironment, Client(application)).map(_.map(clientResponse =>
-          (hipEnvironment, clientResponse.asNewCredential(clock, hipEnvironment))
-        ))
-      )).map(useFirstException)
-      .map(_.map(_.foldLeft(application) { case (acc, (hipEnvironment, credential)) =>
-        acc.addCredential(hipEnvironment, credential)
-      }))
 
   private def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
     val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), currentUser)))

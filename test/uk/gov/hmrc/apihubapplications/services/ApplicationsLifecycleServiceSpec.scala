@@ -28,9 +28,8 @@ import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.*
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.exception.*
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse}
+import uk.gov.hmrc.apihubapplications.models.idms.ClientResponse
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.HeaderCarrier
@@ -106,9 +105,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         credentials = Set.empty
       ).setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(clientResponse.asNewCredential(clock, FakeHipEnvironments.secondaryEnvironment)))
 
-      when(idmsConnector.createClient(any, any)(any))
-        .thenReturn(Future.successful(Right(clientResponse)))
-
       val saved = expected.copy(id = Some("id"))
 
       when(repository.insert(any))
@@ -143,9 +139,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
 
-      when(idmsConnector.createClient(any, any)(any))
-        .thenReturn(Future.successful(Right(clientResponse)))
-
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = None)
@@ -178,9 +171,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val newApplication = NewApplication("test-name", creator, Seq.empty)
 
       val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
-
-      when(idmsConnector.createClient(any, any)(any))
-        .thenReturn(Future.successful(Right(clientResponse)))
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
@@ -215,9 +205,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
 
       val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
 
-      when(idmsConnector.createClient(any, any)(any))
-        .thenReturn(Future.successful(Right(clientResponse)))
-
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
         .copy(teamId = Some("team-id"))
@@ -244,9 +231,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       val newApplication = NewApplication("test-name", creator, Seq(teamMember1, teamMember2))
 
       val clientResponse = ClientResponse("test-client-id", "test-secret-1234")
-
-      when(idmsConnector.createClient(any, any)(any))
-        .thenReturn(Future.successful(Right(clientResponse)))
 
       val saved = Application(newApplication, clock)
         .copy(id = Some("id"))
