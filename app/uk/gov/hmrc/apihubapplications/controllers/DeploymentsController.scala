@@ -24,7 +24,8 @@ import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
-import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
+import uk.gov.hmrc.apihubapplications.models.exception.AutopublishException.DeploymentNotFound
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, AutopublishException}
 import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -127,6 +128,15 @@ class DeploymentsController @Inject()(
         case Right(()) => NoContent
         case Left(e: ApiNotFoundException) => NotFound
         case Left(_) => InternalServerError
+      }
+  }
+
+  def forcePublish(publisherReference: String): Action[AnyContent] = identify.async {
+    implicit request =>
+      deploymentsService.forcePublish(publisherReference).map {
+        case Right(_) => NoContent
+        case Left(e: AutopublishException) if e.issue == DeploymentNotFound => NotFound
+        case Left(e) => throw e
       }
   }
 
