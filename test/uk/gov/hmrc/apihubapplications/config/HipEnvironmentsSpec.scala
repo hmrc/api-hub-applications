@@ -47,7 +47,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |            secret = "apim-stub-secret",
          |            useProxy = true,
          |            apiKey = "some-magic-key"
-         |            promoteTo = "pre-production",
+         |            promoteTo = "production",
          |            apimEnvironmentName = "test"
          |        }
          |    },
@@ -57,7 +57,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |}
          |""".stripMargin)))
     "must have its environments in the right order" in {
-      hipEnvironments.environments.map(_.id) must contain theSameElementsInOrderAs  Seq("production", "test")
+      hipEnvironments.environments.map(_.id) must contain theSameElementsInOrderAs Seq("production", "test")
     }
     "must return the correct production environment" in {
       hipEnvironments.production.id mustBe "production"
@@ -65,6 +65,378 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
     "must return the correct deployment environment" in {
       hipEnvironments.deployTo.id mustBe "test"
     }
-  }
+    "must have contiguous ranks" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production"
+           |
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 3,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "test",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
 
+      e.getMessage mustBe ("Hip environments must have valid ranks.")
+    }
+    "must have as many ranks as there are environments ranks" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production"
+           |
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "test",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+
+      e.getMessage mustBe "Hip environments must have valid ranks."
+    }
+    "must have ranks starting at 1" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production"
+           |
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 3,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "test",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "Hip environments must have valid ranks."
+
+    }
+    "must have unique ids" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production"
+           |
+           |        },
+           |        test = {
+           |            id = "production",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "test",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+
+      e.getMessage mustBe "Hip environment ids must be unique."
+    }
+    "must have a real production environment" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production"
+           |
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "productionish",
+           |    deployTo = "test",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+
+      e.getMessage mustBe "production id productionish must match one of the configured environments."
+    }
+    "must not allow promotion from production environment" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production",
+           |            promoteTo = "brigadoon"
+           |        },
+           |        brigadoon = {
+           |            id = "brigadoon",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            apimEnvironmentName = "brigadoon"
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "production",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "production environment cannot promote to anywhere."
+    }
+    "must have a real deployTo environment" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production"
+           |
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "testish",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "deployTo id testish must match one of the configured environments."
+    }
+    "can only promoteTo real environment" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production"
+           |
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "productionish",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "test",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "promoteTo ids must be real."
+    }
+    "can not have cyclic promoteTo chains" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |      production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production",
+           |        },
+           |        coventry = {
+           |            id = "coventry",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "coventry",
+           |            promoteTo = "test"
+           |        },
+           |        preProduction = {
+           |            id = "preProduction",
+           |            rank = 3,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "preProduction",
+           |            promoteTo = "coventry"
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 4,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs",
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key",
+           |            promoteTo = "preProduction",
+           |            apimEnvironmentName = "test"
+           |        }
+           |    },
+           |    production = "production"
+           |    deployTo = "test",
+           |    validateIn = "preProduction"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "environments cannot cyclically promoteTo themselves."
+    }
+    "must have valid apimUrls" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |      production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "httq://localhost:15026/api-hub-apim-stubs",
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production",
+           |        }
+           |    }
+           |    production = "production"
+           |    deployTo = "production",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "environments must have a valid apimUrl."
+    }
+    "must have apiKeys where useProxy=true" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |      production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apimEnvironmentName = "production",
+           |        }
+           |    }
+           |    production = "production"
+           |    deployTo = "production",
+           |    validateIn = "production"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "environments with useProxy=true must have an apiKey."
+    }
+  }
 }

@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.apihubapplications.config
 
+import com.ctc.wstx.util.URLUtil
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
-
+import java.net.URL
 import scala.annotation.tailrec
+import scala.util.Try
 
 // Define the attributes of an environment in an abstract way
 trait AbstractHipEnvironment[T] {
@@ -33,6 +35,7 @@ trait AbstractHipEnvironment[T] {
   def useProxy: Boolean
   def apiKey: Option[String]
   def promoteTo: Option[T]
+  def apimEnvironmentName: String
 }
 
 // This can be serialised/de-serialised to support REST calls
@@ -47,7 +50,8 @@ case class BaseHipEnvironment(
   secret: String,
   useProxy: Boolean,
   apiKey: Option[String],
-  promoteTo: Option[String]
+  promoteTo: Option[String],
+  apimEnvironmentName: String
 ) extends AbstractHipEnvironment[String]
 
 // Nicer, as promoteTo now gives us a HipEnvironment
@@ -86,6 +90,7 @@ trait HipEnvironments {
             override val useProxy: Boolean = base.useProxy
             override val apiKey: Option[String] = base.apiKey
             override lazy val promoteTo: Option[HipEnvironment] = base.promoteTo.map(forId)
+            override val apimEnvironmentName: String = base.apimEnvironmentName
       )
       .sortBy(_.rank)
   }
@@ -206,7 +211,8 @@ object ConfigurationHipEnvironmentsImpl {
           secret = base.secret,
           useProxy = base.useProxy,
           apiKey = base.apiKey,
-          promoteTo = base.promoteTo
+          promoteTo = base.promoteTo,
+          apimEnvironmentName = base.apimEnvironmentName
         )
 
       )
@@ -225,6 +231,86 @@ object ConfigurationHipEnvironmentsImpl {
         apimUrl - valid URL
         apiKey - mandatory if useProxy is true
      */
+    validateRanks(baseConfig.environments)
+    validateIds(baseConfig.environments)
+    validateProduction(baseConfig)
+    validateDeployTo(baseConfig)
+    validateValidateIn(baseConfig)
+    validatePromoteTos(baseConfig)
+    validateApimUrls(baseConfig.environments)
+    validateApiKeys(baseConfig.environments)
   }
 
+  private def validateRanks(environments: Seq[ConfigHipEnvironment]): Unit = {
+    val actualRanks = environments.map(_.rank).toSet
+    val expectedRanks = Seq.range(1, environments.size + 1).toSet
+    if (!actualRanks.equals(expectedRanks)) {
+      throw new IllegalArgumentException("Hip environments must have valid ranks.")
+    }
+  }
+
+  private def validateIds(environments: Seq[ConfigHipEnvironment]): Unit = {
+    val actualIds = environments.map(_.id).toSet
+    if (!actualIds.size.equals(environments.size)) {
+      throw new IllegalArgumentException("Hip environment ids must be unique.")
+    }
+    if (actualIds.exists(id => !id.matches("[A-Za-z0-9-_.~]+"))) {
+      throw new IllegalArgumentException("Hip environment ids must only contain URL unreserved characters.")
+    }
+  }
+
+  private def validateProduction(baseConfig: BaseConfig): Unit = {
+    baseConfig.environments.find(_.id == baseConfig.production).getOrElse(throw new IllegalArgumentException(s"production id ${baseConfig.production} must match one of the configured environments."))
+    if (baseConfig.environments.find(_.id == baseConfig.production).exists(_.promoteTo.isDefined)) {
+      throw new IllegalArgumentException(s"production environment cannot promote to anywhere.")
+    }
+  }
+
+  private def validateDeployTo(baseConfig: BaseConfig): Unit = {
+    baseConfig.environments.find(_.id == baseConfig.deployTo).getOrElse(throw new IllegalArgumentException(s"deployTo id ${baseConfig.deployTo} must match one of the configured environments."))
+  }
+
+  private def validateValidateIn(baseConfig: BaseConfig): Unit = {
+    baseConfig.environments.find(_.id == baseConfig.validateIn).getOrElse(throw new IllegalArgumentException(s"validateIn id ${baseConfig.validateIn} must match one of the configured environments."))
+  }
+
+  private def validatePromoteTos(baseConfig: BaseConfig): Unit = {
+    val actualIds = baseConfig.environments.map(_.id).toSet
+    val actualPromoteTos = baseConfig.environments.flatMap(_.promoteTo)
+    val actualPromoteTosSet = actualPromoteTos.toSet
+
+    if (!actualPromoteTos.size.equals(actualPromoteTosSet.size)) {
+      throw new IllegalArgumentException("promoteTo ids must be unique.")
+    }
+
+    if (!actualPromoteTosSet.subsetOf(actualIds)) {
+      throw new IllegalArgumentException("promoteTo ids must be real.")
+    }
+
+    baseConfig.environments.foreach(env => {
+      val thisEnvId = env.id
+      var promoteTo = env.promoteTo
+      while (promoteTo.isDefined) {
+        if (promoteTo.get.equals(thisEnvId)) {
+          throw new IllegalArgumentException("environments cannot cyclically promoteTo themselves.")
+        }
+        promoteTo = baseConfig.environments.find(_.id == promoteTo.get).flatMap(_.promoteTo)
+      }
+    })
+  }
+
+  private def validateApimUrls(environments: Seq[ConfigHipEnvironment]): Unit = {
+    environments.foreach(env => {
+      val value = Try(new URL(env.apimUrl)).toOption
+      if (value.isEmpty) {
+        throw new IllegalArgumentException("environments must have a valid apimUrl.")
+      }
+    })
+  }
+
+  private def validateApiKeys(environments: Seq[ConfigHipEnvironment]): Unit = {
+    if (environments.filter(_.useProxy).exists(_.apiKey.isEmpty)) {
+      throw new IllegalArgumentException("environments with useProxy=true must have an apiKey.")
+    }
+  }
 }
