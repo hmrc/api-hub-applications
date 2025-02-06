@@ -65,21 +65,9 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         credentials = Set.empty
       )
 
-      val primaryClientResponse = ClientResponse("primary-client-id", "test-secret-1234")
-      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Right(primaryClientResponse)))
+      val saved = application.copy(id = Some("test-id"))
 
-      val secondaryClientResponse = ClientResponse("secondary-client-id", "test-secret-5678")
-      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Right(secondaryClientResponse)))
-
-      val applicationWithCreds = application
-        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq.empty)
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(secondaryClientResponse.asNewCredential(clock, FakeHipEnvironments.secondaryEnvironment)))
-
-      val saved = applicationWithCreds.copy(id = Some("test-id"))
-
-      when(repository.insert(eqTo(applicationWithCreds)))
+      when(repository.insert(eqTo(application)))
         .thenReturn(Future.successful(saved))
 
       when(searchService.findById(eqTo(saved.safeId))(any))
@@ -94,31 +82,6 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
           actual mustBe Right(saved)
-      }
-    }
-
-    "must return IdmsException and not persist in MongoDb if the secondary credentials fail" in {
-      val fixture = buildFixture
-      import fixture._
-
-      val newApplication = NewApplication(
-        "test-name",
-        Creator(email = "test-email"),
-        Seq.empty
-      )
-
-      val primaryClientResponse = ClientResponse("primary-client-id", "test-secret-1234")
-      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Right(primaryClientResponse)))
-
-      when(idmsConnector.createClient(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(Client(newApplication)))(any))
-        .thenReturn(Future.successful(Left(IdmsException("test-message", CallError))))
-
-      service.registerApplication(newApplication)(HeaderCarrier()) map {
-        actual =>
-          actual.left.value mustBe a[IdmsException]
-          verify(repository, times(0)).insert(any)
-          succeed
       }
     }
 

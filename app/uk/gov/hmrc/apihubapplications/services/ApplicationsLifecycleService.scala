@@ -58,26 +58,21 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
     val applicationWithTeamMember = Application(newApplication, clock)
       .assertTeamMember(newApplication.createdBy.email)
 
-    createClientAndCredentials(applicationWithTeamMember)
-      .flatMap{
-        case Right(application) =>
-          repository.insert(application).flatMap {
-            case saved if saved.teamId.isEmpty =>
-              searchService.findById(saved.safeId).flatMap {
-                case Right(fetched) =>
-                  val teamMemberEmail = emailConnector.sendAddTeamMemberEmail(fetched)
-                  val creatorEmail = emailConnector.sendApplicationCreatedEmailToCreator(fetched)
+    repository.insert(applicationWithTeamMember).flatMap {
+      case saved if saved.teamId.isEmpty =>
+        searchService.findById(saved.safeId).flatMap {
+          case Right(fetched) =>
+            val teamMemberEmail = emailConnector.sendAddTeamMemberEmail(fetched)
+            val creatorEmail = emailConnector.sendApplicationCreatedEmailToCreator(fetched)
 
-                  for {
-                    _ <- teamMemberEmail
-                    _ <- creatorEmail
-                  } yield Right(fetched)
-                case Left(e) => Future.successful(Left(e))
-              }
-            case saved => Future.successful(Right(saved))
-          }
-        case Left(e) => Future.successful(Left(e))
-      }
+            for {
+              _ <- teamMemberEmail
+              _ <- creatorEmail
+            } yield Right(fetched)
+          case Left(e) => Future.successful(Left(e))
+        }
+      case saved => Future.successful(Right(saved))
+    }
   }
 
   override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
