@@ -207,6 +207,16 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseAutopublishException {
+    def deploymentNotFound(publisherReference: String): AutopublishException = {
+      log(AutopublishException.deploymentNotFound(publisherReference))
+    }
+
+    def unexpectedResponse(statusCode: Int): AutopublishException = {
+      log(AutopublishException.unexpectedResponse(statusCode))
+    }
+  }
+
   private def log[T <: ApplicationsException](e: T): T = {
     e match {
       case emailException: EmailException => logger.error("Raised EmailException:", emailException)
