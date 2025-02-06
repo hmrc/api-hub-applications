@@ -40,10 +40,16 @@ class ScopeFixer @Inject()(
 
   // Manipulate the model first, adding and removing APIs and endpoints, THEN call this method to fix scopes
   // The application does not have to be enriched
-  def fix(application: Application, accessRequests: Seq[AccessRequest])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  def fix(application: Application, accessRequests: Seq[AccessRequest])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] =
+    fix(application, accessRequests, application.credentials)
+
+  def fix(application: Application, accessRequests: Seq[AccessRequest], credential: Credential)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] =
+    fix(application, accessRequests, Set(credential))
+
+  def fix(application: Application, accessRequests: Seq[AccessRequest], credentials: Set[Credential])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     (for {
       requiredScopes <- EitherT(requiredScopes(application))
-      credentials <- EitherT(allCredentials(application))
+      credentials <- EitherT(credentialsScopes(credentials))
       _ <- EitherT(processEnvironments(accessRequests, credentials, requiredScopes))
     } yield ()).value
   }
@@ -67,11 +73,11 @@ class ScopeFixer @Inject()(
       .map(_.map(_.toSet.flatMap((apiDetail: ApiDetail) => apiDetail.getRequiredScopeNames(application))))
   }
 
-  private def allCredentials(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
+  private def credentialsScopes(credentials: Set[Credential])(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {
     Future.sequence(
       hipEnvironments.environments.flatMap(
         hipEnvironment =>
-          application.getCredentials(hipEnvironment).map(
+          credentials.filter(_.environmentId == hipEnvironment.id).map(
             credential =>
               idmsConnector
                 .fetchClientScopes(hipEnvironment, credential.clientId)

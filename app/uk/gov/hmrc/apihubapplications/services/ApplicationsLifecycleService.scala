@@ -16,16 +16,13 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstException
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Deleted, NewApplication, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.{ignoreClientNotFound, useFirstException}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -58,26 +55,21 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
     val applicationWithTeamMember = Application(newApplication, clock)
       .assertTeamMember(newApplication.createdBy.email)
 
-    createClientAndCredentials(applicationWithTeamMember)
-      .flatMap{
-        case Right(application) =>
-          repository.insert(application).flatMap {
-            case saved if saved.teamId.isEmpty =>
-              searchService.findById(saved.safeId).flatMap {
-                case Right(fetched) =>
-                  val teamMemberEmail = emailConnector.sendAddTeamMemberEmail(fetched)
-                  val creatorEmail = emailConnector.sendApplicationCreatedEmailToCreator(fetched)
+    repository.insert(applicationWithTeamMember).flatMap {
+      case saved if saved.teamId.isEmpty =>
+        searchService.findById(saved.safeId).flatMap {
+          case Right(fetched) =>
+            val teamMemberEmail = emailConnector.sendAddTeamMemberEmail(fetched)
+            val creatorEmail = emailConnector.sendApplicationCreatedEmailToCreator(fetched)
 
-                  for {
-                    _ <- teamMemberEmail
-                    _ <- creatorEmail
-                  } yield Right(fetched)
-                case Left(e) => Future.successful(Left(e))
-              }
-            case saved => Future.successful(Right(saved))
-          }
-        case Left(e) => Future.successful(Left(e))
-      }
+            for {
+              _ <- teamMemberEmail
+              _ <- creatorEmail
+            } yield Right(fetched)
+          case Left(e) => Future.successful(Left(e))
+        }
+      case saved => Future.successful(Right(saved))
+    }
   }
 
   override def delete(applicationId: String, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
@@ -119,16 +111,6 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
         case Right(_) => Right(())
         case Left(e) => Left(e)
       }
-
-  private def createClientAndCredentials(application: Application)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[IdmsException, Application]] =
-    Future.sequence(hipEnvironments.environments.filterNot(_.isProductionLike).map(hipEnvironment =>
-        idmsConnector.createClient(hipEnvironment, Client(application)).map(_.map(clientResponse =>
-          (hipEnvironment, clientResponse.asNewCredential(clock, hipEnvironment))
-        ))
-      )).map(useFirstException)
-      .map(_.map(_.foldLeft(application) { case (acc, (hipEnvironment, credential)) =>
-        acc.addCredential(hipEnvironment, credential)
-      }))
 
   private def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
     val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), currentUser)))

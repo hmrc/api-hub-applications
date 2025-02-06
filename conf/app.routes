@@ -42,8 +42,10 @@ DELETE     /teams/:id/members/:encryptedEmail                                   
 PUT        /teams/:id                                                               uk.gov.hmrc.apihubapplications.controllers.TeamsController.renameTeam(id: String)
 
 GET        /apis/:publisherRef/deployment-status                                    uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatus(publisherRef: String)
+GET        /apis/:publisherRef/environment/:environment/deployment-status           uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatusForEnvironment(environment: String, publisherRef: String)
 PUT        /apis/:apiId/teams/:teamId                                               uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.updateApiTeam(apiId: String, teamId: String)
 DELETE     /apis/:apiId/teams                                                       uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.removeTeam(apiId: String)
+PUT        /apis/:publisherRef/force-publish                                        uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.forcePublish(publisherRef: String)
 
 GET        /users                                                                   uk.gov.hmrc.apihubapplications.controllers.UsersController.findAll()
 

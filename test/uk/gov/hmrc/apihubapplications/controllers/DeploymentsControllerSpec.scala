@@ -36,7 +36,7 @@ import play.api.Application as PlayApplication
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim.*
-import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, AutopublishException}
 import uk.gov.hmrc.apihubapplications.models.requests.{DeploymentStatus, DeploymentStatuses}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.*
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
@@ -371,6 +371,26 @@ class DeploymentsControllerSpec
     }
   }
 
+  "getDeploymentStatusForEnvironment" - {
+    "must return Ok with correct response" in {
+      val fixture = DeploymentsControllerSpec.buildFixture()
+      val publisherRef = "publisher_ref"
+      val environment = FakeHipEnvironments.secondaryEnvironment
+      val deploymentStatus: DeploymentStatus = Deployed(FakeHipEnvironments.primaryEnvironment.id, "1.0.0")
+
+      when(fixture.deploymentsService.getDeployment(eqTo(environment), eqTo(publisherRef))(any))
+        .thenReturn(Future.successful(deploymentStatus))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.getDeploymentStatusForEnvironment(environment.id, publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe Status.OK
+        contentAsJson(result) mustBe Json.toJson(deploymentStatus)
+      }
+    }
+  }
+
   "getDeploymentDetails" - {
     "must return 200 Ok and a DeploymentDetails JSON payload when returned by APIM" in {
       val fixture = buildFixture()
@@ -577,9 +597,39 @@ class DeploymentsControllerSpec
 
   }
 
+  "forcePublish" - {
+    "must return 204 No Content when a deployment is successfully force published" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.forcePublish(any)(any))
+        .thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.forcePublish(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+
+        verify(fixture.deploymentsService).forcePublish(eqTo(publisherRef))(any)
+      }
+    }
+
+    "must return 404 Not Found when the deployment does not exist" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.forcePublish(any)(any))
+        .thenReturn(Future.successful(Left(AutopublishException.deploymentNotFound(publisherRef))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.forcePublish(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
 }
-
-
 
 object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoSugar {
 

@@ -124,6 +124,50 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
+    "must remove scopes associated with a removed endpoint and retain scopes still used for a specific credential and environment" in {
+      val api = baseApi(apiId1)
+        .addEndpoint(endpointForScope1)
+        .addEndpoint(endpointForScope2)
+
+      val application = applicationWithCredentials
+        .addApi(buildApi(api))
+
+      val newCredential = Credential(
+        clientId = clientId4,
+        created = LocalDateTime.now(),
+        clientSecret = None,
+        secretFragment = None,
+        environmentId = FakeHipEnvironments.primaryEnvironment.id
+      )
+
+      val clientScopes = Seq(ClientScope(scopeName1), ClientScope(scopeName2), ClientScope(scopeName3))
+
+      val accessRequests = Seq(buildApprovedAccessRequest(application, api))
+
+      val fixture = buildFixture()
+
+      when(fixture.idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(newCredential.clientId))(any))
+        .thenReturn(Future.successful(Right(clientScopes)))
+      when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
+
+      when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.scopeFixer.fix(application, accessRequests, newCredential)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
+          verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
+
+          verify(fixture.idmsConnector).fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId4))(any)
+          verify(fixture.idmsConnector).deleteClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId4), eqTo(scopeName3))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId4), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId4), eqTo(scopeName2))(any)
+          verifyNoMoreInteractions(fixture.idmsConnector)
+
+          result.value mustBe ()
+      }
+    }
+
     "must handle disparity when removing scopes (use each credential's scopes and not a master list)" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)

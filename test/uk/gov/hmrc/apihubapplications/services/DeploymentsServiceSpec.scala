@@ -24,12 +24,12 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status.BAD_REQUEST
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, EmailConnector, IntegrationCatalogueConnector}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, AutopublishConnector, EmailConnector, IntegrationCatalogueConnector}
 import uk.gov.hmrc.apihubapplications.models.api.ApiTeam
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.unexpectedResponse
-import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, EmailException, IntegrationCatalogueException}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApimException, AutopublishException, EmailException, IntegrationCatalogueException}
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.{Deployed, NotDeployed, Unknown}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
@@ -364,6 +364,28 @@ class DeploymentsServiceSpec
     }
   }
 
+  "forcePublish" - {
+    "must return the response from the connector" in {
+      val fixture = buildFixture()
+
+      val responses = Table(
+        "response",
+        Right(()),
+        Left(AutopublishException.deploymentNotFound(publisherRef))
+      )
+
+      forAll(responses) {(response: Either[AutopublishException, Unit]) =>
+        when(fixture.autopublishConnector.forcePublish(eqTo(publisherRef))(any))
+          .thenReturn(Future.successful(response))
+
+        fixture.deploymentsService.forcePublish(publisherRef)(HeaderCarrier()).map(
+          result =>
+            result mustBe response
+        )
+      }
+    }
+  }
+
   private case class Fixture(
                               apimConnector: APIMConnector,
                               integrationCatalogueConnector: IntegrationCatalogueConnector,
@@ -371,6 +393,7 @@ class DeploymentsServiceSpec
                               teamsService: TeamsService,
                               emailConnector: EmailConnector,
                               metricsService: MetricsService,
+                              autopublishConnector: AutopublishConnector
                             )
 
   private def buildFixture(): Fixture = {
@@ -379,9 +402,10 @@ class DeploymentsServiceSpec
     val emailConnector = mock[EmailConnector]
     val teamsService = mock[TeamsService]
     val metricsService = mock[MetricsService]
-    val deploymentsService = new DeploymentsService(apimConnector, integrationCatalogueConnector, emailConnector, teamsService, metricsService, FakeHipEnvironments)
+    val autopublishConnector = mock[AutopublishConnector]
+    val deploymentsService = new DeploymentsService(apimConnector, integrationCatalogueConnector, emailConnector, teamsService, metricsService, FakeHipEnvironments, autopublishConnector)
 
-    Fixture(apimConnector, integrationCatalogueConnector, deploymentsService, teamsService, emailConnector, metricsService)
+    Fixture(apimConnector, integrationCatalogueConnector, deploymentsService, teamsService, emailConnector, metricsService, autopublishConnector)
   }
 
 }
