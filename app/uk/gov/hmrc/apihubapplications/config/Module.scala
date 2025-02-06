@@ -45,7 +45,7 @@ class Module extends play.api.inject.Module {
       bindz(classOf[ApplicationsLifecycleService]).to(classOf[ApplicationsLifecycleServiceImpl]).eagerly(),
       bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly(),
       bindz(classOf[HipEnvironments]).to(classOf[ConfigurationHipEnvironmentsImpl]).eagerly(),
-      bindz(classOf[HipEnvironmentActionProvider]).to(classOf[HipEnvironmentActionProviderImpl]).eagerly()
+      bindz(classOf[HipEnvironmentActionProvider]).to(classOf[HipEnvironmentActionProviderImpl]).eagerly(),
       bindz(classOf[AutopublishConnector]).to(classOf[AutopublishConnectorImpl]).eagerly()
     )
 
