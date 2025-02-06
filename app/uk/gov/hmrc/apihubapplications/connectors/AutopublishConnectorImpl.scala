@@ -35,7 +35,7 @@ class AutopublishConnectorImpl @Inject()(
 
   private val baseUrl = servicesConfig.baseUrl("integration-catalogue-autopublish")
 
-  override def publish(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[AutopublishException, Unit]] = {
+  override def forcePublish(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[AutopublishException, Unit]] = {
     httpClient.put(url"$baseUrl/integration-catalogue-autopublish/apis/$publisherReference/publish")
       .execute[Either[UpstreamErrorResponse, Unit]]
       .map {

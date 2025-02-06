@@ -38,7 +38,7 @@ class AutopublishConnectorSpec
 
   import AutopublishConnectorSpec.*
 
-  "publish" - {
+  "forcePublish" - {
     "must place the correct request to auto-publish and return success" in {
       stubFor(
         put(s"/integration-catalogue-autopublish/apis/$publisherReference/publish")
@@ -48,7 +48,7 @@ class AutopublishConnectorSpec
           )
       )
 
-      buildConnector().publish(publisherReference).map(
+      buildConnector().forcePublish(publisherReference).map(
         result =>
           result mustBe Right(())
       )
@@ -63,7 +63,7 @@ class AutopublishConnectorSpec
           )
       )
 
-      buildConnector().publish(publisherReference).map(
+      buildConnector().forcePublish(publisherReference).map(
         result =>
           result mustBe Left(AutopublishException.deploymentNotFound(publisherReference))
       )

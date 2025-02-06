@@ -23,6 +23,6 @@ import scala.concurrent.Future
 
 trait AutopublishConnector {
 
-  def publish(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[AutopublishException, Unit]]
+  def forcePublish(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[AutopublishException, Unit]]
 
 }
