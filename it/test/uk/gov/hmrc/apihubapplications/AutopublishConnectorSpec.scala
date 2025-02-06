@@ -22,7 +22,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
-import play.api.http.Status.{NOT_FOUND, NO_CONTENT}
+import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT}
 import uk.gov.hmrc.apihubapplications.connectors.{AutopublishConnector, AutopublishConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.exception.AutopublishException
 import uk.gov.hmrc.http.HeaderCarrier
@@ -54,7 +54,7 @@ class AutopublishConnectorSpec
       )
     }
 
-    "must return AutopublishException when the deployment cannot be found" in {
+    "must return AutopublishException (DeploymentNotFound) when the deployment cannot be found" in {
       stubFor(
         put(s"/integration-catalogue-autopublish/apis/$publisherReference/publish")
           .willReturn(
@@ -66,6 +66,21 @@ class AutopublishConnectorSpec
       buildConnector().forcePublish(publisherReference).map(
         result =>
           result mustBe Left(AutopublishException.deploymentNotFound(publisherReference))
+      )
+    }
+
+    "must return AutopublishException (UnexpectedResponse) when auto-publish returns an unexpected status" in {
+      stubFor(
+        put(s"/integration-catalogue-autopublish/apis/$publisherReference/publish")
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector().forcePublish(publisherReference).map(
+        result =>
+          result mustBe Left(AutopublishException.unexpectedResponse(INTERNAL_SERVER_ERROR))
       )
     }
   }
