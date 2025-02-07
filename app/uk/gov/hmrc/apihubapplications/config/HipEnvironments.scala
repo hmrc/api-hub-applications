@@ -221,9 +221,6 @@ object ConfigurationHipEnvironmentsImpl {
   def validate(baseConfig: BaseConfig): Unit = {
     /*
       Validation rules?
-        rank - unique, contiguous, min is 1, max is array size
-        id - unique, URL safe
-        isProductionLike - only one, must match production
         production - must be real Id's
         deployTo - must be real Id's
         validateIn - must be real Id's
@@ -242,6 +239,7 @@ object ConfigurationHipEnvironmentsImpl {
   }
 
   private def validateRanks(environments: Seq[ConfigHipEnvironment]): Unit = {
+    // ranks mandatory, start at 1, be contiguous,  
     val actualRanks = environments.map(_.rank).toSet
     val expectedRanks = Seq.range(1, environments.size + 1).toSet
     if (!actualRanks.equals(expectedRanks)) {
@@ -250,6 +248,7 @@ object ConfigurationHipEnvironmentsImpl {
   }
 
   private def validateIds(environments: Seq[ConfigHipEnvironment]): Unit = {
+    // ids must be unique and URL safe
     val actualIds = environments.map(_.id).toSet
     if (!actualIds.size.equals(environments.size)) {
       throw new IllegalArgumentException("Hip environment ids must be unique.")
@@ -260,6 +259,7 @@ object ConfigurationHipEnvironmentsImpl {
   }
 
   private def validateProduction(baseConfig: BaseConfig): Unit = {
+    // production id must be real, and production cannot promote
     baseConfig.environments.find(_.id == baseConfig.production).getOrElse(throw new IllegalArgumentException(s"production id ${baseConfig.production} must match one of the configured environments."))
     if (baseConfig.environments.find(_.id == baseConfig.production).exists(_.promoteTo.isDefined)) {
       throw new IllegalArgumentException(s"production environment cannot promote to anywhere.")
@@ -267,14 +267,17 @@ object ConfigurationHipEnvironmentsImpl {
   }
 
   private def validateDeployTo(baseConfig: BaseConfig): Unit = {
+    // deployTo must be real
     baseConfig.environments.find(_.id == baseConfig.deployTo).getOrElse(throw new IllegalArgumentException(s"deployTo id ${baseConfig.deployTo} must match one of the configured environments."))
   }
 
   private def validateValidateIn(baseConfig: BaseConfig): Unit = {
+    // validateIn must be real
     baseConfig.environments.find(_.id == baseConfig.validateIn).getOrElse(throw new IllegalArgumentException(s"validateIn id ${baseConfig.validateIn} must match one of the configured environments."))
   }
 
   private def validatePromoteTos(baseConfig: BaseConfig): Unit = {
+    // promoteTo must be real, unique, and not cyclical
     val actualIds = baseConfig.environments.map(_.id).toSet
     val actualPromoteTos = baseConfig.environments.flatMap(_.promoteTo)
     val actualPromoteTosSet = actualPromoteTos.toSet
@@ -300,6 +303,7 @@ object ConfigurationHipEnvironmentsImpl {
   }
 
   private def validateApimUrls(environments: Seq[ConfigHipEnvironment]): Unit = {
+    // must be valid url
     environments.foreach(env => {
       val value = Try(new URL(env.apimUrl)).toOption
       if (value.isEmpty) {
@@ -309,6 +313,7 @@ object ConfigurationHipEnvironmentsImpl {
   }
 
   private def validateApiKeys(environments: Seq[ConfigHipEnvironment]): Unit = {
+    // environments with useProxy must have apiKey
     if (environments.filter(_.useProxy).exists(_.apiKey.isEmpty)) {
       throw new IllegalArgumentException("environments with useProxy=true must have an apiKey.")
     }
