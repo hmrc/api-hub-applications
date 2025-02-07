@@ -219,15 +219,6 @@ object ConfigurationHipEnvironmentsImpl {
   }
 
   def validate(baseConfig: BaseConfig): Unit = {
-    /*
-      Validation rules?
-        production - must be real Id's
-        deployTo - must be real Id's
-        validateIn - must be real Id's
-        promoteTo - must be real Id's, not cyclical
-        apimUrl - valid URL
-        apiKey - mandatory if useProxy is true
-     */
     validateRanks(baseConfig.environments)
     validateIds(baseConfig.environments)
     validateProduction(baseConfig)
