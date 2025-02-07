@@ -218,7 +218,7 @@ object ConfigurationHipEnvironmentsImpl {
       )
   }
 
-  def validate(baseConfig: BaseConfig): Unit = {
+  private def validate(baseConfig: BaseConfig): Unit = {
     validateRanks(baseConfig.environments)
     validateIds(baseConfig.environments)
     validateProduction(baseConfig)
