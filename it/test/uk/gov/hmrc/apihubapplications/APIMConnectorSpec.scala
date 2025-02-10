@@ -22,7 +22,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+import uk.gov.hmrc.apihubapplications.config.{BaseHipEnvironment, DefaultHipEnvironment, HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentsRequest, DetailsResponse, EgressMapping, Error, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata}
@@ -893,8 +893,10 @@ object APIMConnectorSpec extends HttpClientV2Support {
   )
 
   def hipEnvironments(wireMockSupport: WireMockSupport): HipEnvironments = new HipEnvironments {
+    override protected val baseEnvironments: Seq[BaseHipEnvironment] = Seq.empty
+
     override val environments: Seq[HipEnvironment] = Seq(
-      HipEnvironment(
+      DefaultHipEnvironment(
         id = "production",
         rank = 1,
         isProductionLike = true,
@@ -903,9 +905,10 @@ object APIMConnectorSpec extends HttpClientV2Support {
         secret = primarySecret,
         useProxy = false,
         apiKey = None,
+        promoteTo = None,
         apimEnvironmentName = "production"
       ),
-      HipEnvironment(
+      DefaultHipEnvironment(
         id = "test",
         rank = 2,
         isProductionLike = false,
@@ -914,11 +917,14 @@ object APIMConnectorSpec extends HttpClientV2Support {
         secret = secondarySecret,
         useProxy = false,
         apiKey = Some(secondaryApiKey),
+        promoteTo = None,
         apimEnvironmentName = "test"
       )
     )
-    def productionEnvironment: HipEnvironment = environments.head
-    def deploymentEnvironment: HipEnvironment = environments.last
+    override def production: HipEnvironment = environments.head
+    override def deployTo: HipEnvironment = environments.last
+
+    override def validateIn: HipEnvironment = production
   }
 
   private def buildConnector(wireMockSupport: WireMockSupport)(implicit ec: ExecutionContext): APIMConnector = {
