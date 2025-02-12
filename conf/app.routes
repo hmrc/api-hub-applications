@@ -55,3 +55,5 @@ GET        /stats/list-apis-in-production                                       
 POST       /oas/validate                                                            uk.gov.hmrc.apihubapplications.controllers.OASController.validateOAS()
 
 GET        /egresses/gateways/:environmentName                                      uk.gov.hmrc.apihubapplications.controllers.EgressController.listEgressGateways(environmentName: String)
+
+GET        /api-hub-applications/config/environments                                uk.gov.hmrc.apihubapplications.controllers.ConfigController.listEnvironments()

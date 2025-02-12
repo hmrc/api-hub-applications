@@ -20,6 +20,7 @@ import com.ctc.wstx.util.URLUtil
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
+import play.api.libs.json.{Format, Json}
 import java.net.URL
 import scala.annotation.tailrec
 import scala.util.Try
@@ -119,7 +120,7 @@ class ConfigurationHipEnvironmentsImpl @Inject(configuration: Configuration) ext
 
   import ConfigurationHipEnvironmentsImpl._
 
-  private val baseConfig = buildBaseConfig(configuration)
+  val baseConfig = buildBaseConfig(configuration)
 
   override protected val baseEnvironments: Seq[BaseHipEnvironment] = {
     buildEnvironments(baseConfig)
@@ -135,6 +136,8 @@ class ConfigurationHipEnvironmentsImpl @Inject(configuration: Configuration) ext
 
 object ConfigurationHipEnvironmentsImpl {
 
+  implicit val formatBaseConfig: Format[BaseConfig] = Json.format[BaseConfig]
+
   case class ConfigHipEnvironment(
     id: String,
     rank: Int,
@@ -148,6 +151,8 @@ object ConfigurationHipEnvironmentsImpl {
   )
 
   object ConfigHipEnvironment {
+
+    implicit val formatConfigHipEnvironment: Format[ConfigHipEnvironment] = Json.format[ConfigHipEnvironment]
 
     implicit val hipEnvironmentConfigLoader: ConfigLoader[ConfigHipEnvironment] =
       (rootConfig: Config, path: String) => {
@@ -309,4 +314,6 @@ object ConfigurationHipEnvironmentsImpl {
       throw new IllegalArgumentException("environments with useProxy=true must have an apiKey.")
     }
   }
+
+
 }
