@@ -21,6 +21,8 @@ import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.apihubapplications.models.config.ShareableHipConfig
+
 import java.net.URL
 import scala.annotation.tailrec
 import scala.util.Try
@@ -54,6 +56,10 @@ case class BaseHipEnvironment(
   promoteTo: Option[String],
   apimEnvironmentName: String
 ) extends AbstractHipEnvironment[String]
+
+object BaseHipEnvironment {
+  implicit val formatBaseHipEnvironment: Format[BaseHipEnvironment] = Json.format[BaseHipEnvironment]
+}
 
 // Nicer, as promoteTo now gives us a HipEnvironment
 // Use this everywhere in code
@@ -111,6 +117,7 @@ trait HipEnvironments {
   def forUrlPathParameter(pathParameter: String): Option[HipEnvironment] =
     environments.find(hipEnvironment => hipEnvironment.id == pathParameter)
 
+  def asShareableEnvironments() : ShareableHipConfig = ShareableHipConfig(baseEnvironments, production.id, deployTo.id)
 }
 
 // In the frontend we would have a RestHipEnvironmentsImpl
@@ -122,7 +129,7 @@ class ConfigurationHipEnvironmentsImpl @Inject(configuration: Configuration) ext
 
   val baseConfig = buildBaseConfig(configuration)
 
-  override protected val baseEnvironments: Seq[BaseHipEnvironment] = {
+  override val baseEnvironments: Seq[BaseHipEnvironment] = {
     buildEnvironments(baseConfig)
   }
 
@@ -135,8 +142,6 @@ class ConfigurationHipEnvironmentsImpl @Inject(configuration: Configuration) ext
 }
 
 object ConfigurationHipEnvironmentsImpl {
-
-  implicit val formatBaseConfig: Format[BaseConfig] = Json.format[BaseConfig]
 
   case class ConfigHipEnvironment(
     id: String,
@@ -151,8 +156,6 @@ object ConfigurationHipEnvironmentsImpl {
   )
 
   object ConfigHipEnvironment {
-
-    implicit val formatConfigHipEnvironment: Format[ConfigHipEnvironment] = Json.format[ConfigHipEnvironment]
 
     implicit val hipEnvironmentConfigLoader: ConfigLoader[ConfigHipEnvironment] =
       (rootConfig: Config, path: String) => {

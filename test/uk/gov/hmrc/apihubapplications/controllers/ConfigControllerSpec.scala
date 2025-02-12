@@ -29,7 +29,7 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
-import uk.gov.hmrc.apihubapplications.config.ConfigurationHipEnvironmentsImpl
+import uk.gov.hmrc.apihubapplications.config.{ConfigurationHipEnvironmentsImpl, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.stats.ApisInProductionStatistic
 import uk.gov.hmrc.apihubapplications.services.StatsService
@@ -48,16 +48,14 @@ class ConfigControllerSpec
     "must return Ok and the hip environments" in {
       val fixture = buildFixture()
 
-      val configurationHipEnvironmentsImpl = fixture.application.injector.instanceOf[ConfigurationHipEnvironmentsImpl]
-
-      val baseConfig = configurationHipEnvironmentsImpl.baseConfig
+      val hipEnvironments = fixture.application.injector.instanceOf[HipEnvironments]
       
       running(fixture.application) {
         val request = FakeRequest(routes.ConfigController.listEnvironments())
         val result = route(fixture.application, request).value
 
         status(result) mustBe OK
-        contentAsJson(result) mustBe Json.toJson(baseConfig)
+        contentAsJson(result) mustBe Json.toJson(hipEnvironments.asShareableEnvironments())
       }
     }
   }

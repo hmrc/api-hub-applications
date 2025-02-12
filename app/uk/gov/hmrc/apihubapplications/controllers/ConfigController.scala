@@ -20,21 +20,22 @@ import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.services.StatsService
+import uk.gov.hmrc.apihubapplications.models.config.ShareableHipConfig
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.apihubapplications.config.ConfigurationHipEnvironmentsImpl
+import uk.gov.hmrc.apihubapplications.config.{BaseHipEnvironment, ConfigurationHipEnvironmentsImpl, HipEnvironments}
+
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class ConfigController @Inject()(
   cc: ControllerComponents,
   identify: IdentifierAction,
-  configurationHipEnvironments: ConfigurationHipEnvironmentsImpl,
+  hipEnvironments: HipEnvironments
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def listEnvironments(): Action[AnyContent] = identify {
     implicit request =>
-      Ok(Json.toJson(configurationHipEnvironments.baseConfig))
+      Ok(Json.toJson(hipEnvironments.asShareableEnvironments()))
   }
 
 }
