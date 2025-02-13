@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -29,13 +27,9 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
-import uk.gov.hmrc.apihubapplications.config.{ConfigurationHipEnvironmentsImpl, HipEnvironments}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.stats.ApisInProductionStatistic
-import uk.gov.hmrc.apihubapplications.services.StatsService
 import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
-
-import scala.concurrent.Future
 
 class ConfigControllerSpec
   extends AnyFreeSpec
