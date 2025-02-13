@@ -63,8 +63,6 @@ class ConfigControllerSpec
   private case class Fixture(application: Application)
 
   private def buildFixture(): Fixture = {
-    val statsService = mock[StatsService]
-
     val application = new GuiceApplicationBuilder()
       .overrides(
         bind[ControllerComponents].toInstance(stubControllerComponents()),
