@@ -70,6 +70,7 @@ trait ApiDetailGenerators {
       hods <- Gen.listOfN(size/ listSizeQuota, sensiblySizedAlphaNumStr).suchThat(_.nonEmpty)
       reviewedDate <- genInstant
       apiType <- Gen.oneOf(ApiType.values.toIndexedSeq)
+      apiGeneration <- Gen.oneOf(Seq("v1", "v2"))
     } yield ApiDetail(
       id.toString,
       publisherReference,
@@ -85,6 +86,7 @@ trait ApiDetailGenerators {
       subDomain = Some(subDomain),
       hods = hods,
       apiType = Some(apiType),
+      apiGeneration = Some(apiGeneration),
     )
   }
 
