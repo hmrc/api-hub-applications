@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.apihubapplications.config
 
-import com.ctc.wstx.util.URLUtil
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.Config
-import play.api.{ConfigLoader, Configuration}
 import play.api.libs.json.{Format, Json}
+import play.api.{ConfigLoader, Configuration}
 import uk.gov.hmrc.apihubapplications.models.config.ShareableHipConfig
 
 import java.net.URL
@@ -125,7 +124,7 @@ trait HipEnvironments {
 @Singleton
 class ConfigurationHipEnvironmentsImpl @Inject(configuration: Configuration) extends HipEnvironments {
 
-  import ConfigurationHipEnvironmentsImpl._
+  import ConfigurationHipEnvironmentsImpl.*
 
   val baseConfig = buildBaseConfig(configuration)
 
@@ -152,7 +151,8 @@ object ConfigurationHipEnvironmentsImpl {
     useProxy: Boolean,
     apiKey: Option[String],
     promoteTo: Option[String],
-    apimEnvironmentName: String
+    apimEnvironmentName: String,
+    isProductionLike: Boolean
   )
 
   object ConfigHipEnvironment {
@@ -170,7 +170,8 @@ object ConfigurationHipEnvironmentsImpl {
           useProxy = config.getBoolean("useProxy"),
           apiKey = getOptionalString(config, "apiKey"),
           promoteTo = getOptionalString(config, "promoteTo"),
-          apimEnvironmentName = config.getString("apimEnvironmentName")
+          apimEnvironmentName = config.getString("apimEnvironmentName"),
+          isProductionLike = config.getBoolean("isProductionLike")
         )
       }
 
@@ -213,7 +214,7 @@ object ConfigurationHipEnvironmentsImpl {
         base => BaseHipEnvironment(
           id = base.id,
           rank = base.rank,
-          isProductionLike = base.id == baseConfig.production,
+          isProductionLike = base.isProductionLike,
           apimUrl = base.apimUrl,
           clientId = base.clientId,
           secret = base.secret,
@@ -259,10 +260,18 @@ object ConfigurationHipEnvironmentsImpl {
 
   private def validateProduction(baseConfig: BaseConfig): Unit = {
     // production id must be real, and production cannot promote
-    baseConfig.environments.find(_.id == baseConfig.production).getOrElse(throw new IllegalArgumentException(s"production id ${baseConfig.production} must match one of the configured environments."))
-    if (baseConfig.environments.find(_.id == baseConfig.production).exists(_.promoteTo.isDefined)) {
+    val productionEnvironment = baseConfig.environments
+      .find(_.id == baseConfig.production)
+      .getOrElse(throw new IllegalArgumentException(s"production id ${baseConfig.production} must match one of the configured environments."))
+    if (productionEnvironment.promoteTo.isDefined) {
       throw new IllegalArgumentException(s"production environment cannot promote to anywhere.")
     }
+    // production must be productionLike
+    if (!productionEnvironment.isProductionLike) {
+      throw new IllegalArgumentException(s"production environment must be productionLike.")
+    }
+
+
   }
 
   private def validateDeployTo(baseConfig: BaseConfig): Unit = {
