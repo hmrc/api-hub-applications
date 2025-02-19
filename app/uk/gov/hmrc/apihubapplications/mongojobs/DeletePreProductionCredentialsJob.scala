@@ -27,14 +27,15 @@ import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.ClientNotFound
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
-import uk.gov.hmrc.apihubapplications.services.helpers.Helpers
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton
 class DeletePreProductionCredentialsJob @Inject()(
+  clock: Clock,
   configuration: Configuration,
   applicationsService: ApplicationsService,
   idmsConnector: IdmsConnector,
@@ -85,7 +86,7 @@ class DeletePreProductionCredentialsJob @Inject()(
             deleteCredential(hipEnvironment, application, credential)
         )
     )
-      .map(compileResults)
+      .map(compileResult)
       .flatMap(result => updateApplication(hipEnvironment, application, result))
 
   }
@@ -112,12 +113,12 @@ class DeletePreProductionCredentialsJob @Inject()(
 
   }
 
-  private def compileResults(results: Seq[Either[IdmsException, Credential]]): MigrationResult = {
+  private def compileResult(results: Seq[Either[IdmsException, Credential]]): MigrationResult = {
 
     results.foldLeft(MigrationResult())(
-      (withCredential, result) => result match {
-        case Right(credential) => withCredential.success(credential)
-        case Left(e) => withCredential.failure()
+      (migrationResult, result) => result match {
+        case Right(credential) => migrationResult.success(credential)
+        case Left(e) => migrationResult.failure()
       }
     )
 
@@ -134,7 +135,7 @@ class DeletePreProductionCredentialsJob @Inject()(
         result.deleted.foldLeft(application)(
           (application, credential) =>
             application.removeCredential(hipEnvironment, credential.clientId)
-        )
+        ).updated(clock)
       ).map {
         case Right(_) => result
         case Left(e) =>
