@@ -64,6 +64,7 @@ case class ApiDetail(
   subDomain: Option[String] = None,
   hods: Seq[String] = List.empty,
   apiType: Option[ApiType] = None,
+  apiGeneration: Option[String] = None,
 ) {
 
   def toSummary: ApiDetailSummary = ApiDetailSummary(this)
