@@ -479,4 +479,50 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
       e.getMessage mustBe "environments with useProxy=true must have an apiKey."
     }
   }
+  "can have multiple productionLike environments" in {
+    new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+      s"""
+         |hipEnvironments = {
+         |    environments = {
+         |      production = {
+         |            id = "production",
+         |            rank = 1,
+         |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
+         |            clientId = "apim-stub-client-id",
+         |            secret = "apim-stub-secret",
+         |            useProxy = false,
+         |            apimEnvironmentName = "production",
+         |            isProductionLike = true
+         |        },
+         |        preProduction = {
+         |            id = "preProduction",
+         |            rank = 2,
+         |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
+         |            clientId = "apim-stub-client-id",
+         |            secret = "apim-stub-secret",
+         |            useProxy = false,
+         |            apimEnvironmentName = "preProduction",
+         |            promoteTo = "production",
+         |            isProductionLike = true
+         |        },
+         |        test = {
+         |            id = "test",
+         |            rank = 3,
+         |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs",
+         |            clientId = "apim-stub-client-id",
+         |            secret = "apim-stub-secret",
+         |            useProxy = true,
+         |            apiKey = "some-magic-key",
+         |            promoteTo = "preProduction",
+         |            apimEnvironmentName = "test",
+         |            isProductionLike = false
+         |        }
+         |    },
+         |    production = "production"
+         |    deployTo = "test",
+         |    validateIn = "preProduction"
+         |}
+         |""".stripMargin)))
+    succeed
+  }
 }
