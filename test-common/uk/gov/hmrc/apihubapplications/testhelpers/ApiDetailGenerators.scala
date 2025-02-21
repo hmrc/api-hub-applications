@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.testhelpers
 
 import org.scalacheck.rng.Seed
 import org.scalacheck.{Arbitrary, Gen}
-import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiStatus, ApiType, Endpoint, EndpointMethod}
+import uk.gov.hmrc.apihubapplications.models.api.{ApiDetail, ApiGeneration, ApiStatus, ApiType, Endpoint, EndpointMethod}
 
 import java.time.Instant
 
@@ -70,7 +70,7 @@ trait ApiDetailGenerators {
       hods <- Gen.listOfN(size/ listSizeQuota, sensiblySizedAlphaNumStr).suchThat(_.nonEmpty)
       reviewedDate <- genInstant
       apiType <- Gen.oneOf(ApiType.values.toIndexedSeq)
-      apiGeneration <- Gen.oneOf(Seq("v1", "v2"))
+      apiGeneration <- Gen.oneOf(ApiGeneration.values)
     } yield ApiDetail(
       id.toString,
       publisherReference,

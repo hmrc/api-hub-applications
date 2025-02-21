@@ -48,6 +48,19 @@ object ApiType extends Enumerable.Implicits {
     Enumerable(values.map(value => value.toString -> value)*)
 }
 
+sealed trait ApiGeneration
+
+object ApiGeneration extends Enumerable.Implicits {
+
+  val values: Seq[ApiGeneration] = Seq(V1, V2)
+
+  implicit val enumerable: Enumerable[ApiGeneration] =
+    Enumerable(values.map(value => value.toString -> value)*)
+
+  case object V1 extends WithName("V1") with ApiGeneration
+  case object V2 extends WithName("V2") with ApiGeneration
+}
+
 case class ApiDetail(
   id: String,
   publisherReference: String,
@@ -64,7 +77,7 @@ case class ApiDetail(
   subDomain: Option[String] = None,
   hods: Seq[String] = List.empty,
   apiType: Option[ApiType] = None,
-  apiGeneration: Option[String] = None,
+  apiGeneration: Option[ApiGeneration] = None,
 ) {
 
   def toSummary: ApiDetailSummary = ApiDetailSummary(this)
