@@ -35,7 +35,8 @@ class AccessRequestRequestSpec extends AnyFreeSpec with Matchers {
         applicationId = "test-application-id",
         supportingInformation = "test-supporting-information",
         requestedBy = "test-requested-by",
-        apis = Seq(api1, api2)
+        apis = Seq(api1, api2),
+        environmentId = Some("test")
       )
 
       val expected = Seq(
@@ -81,7 +82,8 @@ class AccessRequestRequestSpec extends AnyFreeSpec with Matchers {
       status = Pending,
       supportingInformation = request.supportingInformation,
       requested = LocalDateTime.now(clock),
-      requestedBy = request.requestedBy
+      requestedBy = request.requestedBy,
+      environmentId = request.environmentId
     ).setEndpoints(api.endpoints)
 
   }

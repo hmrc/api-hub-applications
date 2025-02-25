@@ -36,7 +36,8 @@ case class SensitiveAccessRequest(
   requested: LocalDateTime,
   requestedBy: SensitiveString,
   decision: Option[SensitiveAccessRequestDecision],
-  cancelled: Option[SensitiveAccessRequestCancelled]
+  cancelled: Option[SensitiveAccessRequestCancelled],
+  environmentId: Option[String]
 ) extends Sensitive[AccessRequest] with MongoIdentifier {
 
   override def decryptedValue: AccessRequest =
@@ -51,7 +52,8 @@ case class SensitiveAccessRequest(
       requested = requested,
       requestedBy = requestedBy.decryptedValue,
       decision = decision.map(_.decryptedValue),
-      cancelled = cancelled.map(_.decryptedValue)
+      cancelled = cancelled.map(_.decryptedValue),
+      environmentId = environmentId
     )
 
 }
@@ -70,7 +72,8 @@ object SensitiveAccessRequest {
       requested = accessRequest.requested,
       requestedBy = SensitiveString(accessRequest.requestedBy),
       decision = accessRequest.decision.map(SensitiveAccessRequestDecision(_)),
-      cancelled = accessRequest.cancelled.map(SensitiveAccessRequestCancelled(_))
+      cancelled = accessRequest.cancelled.map(SensitiveAccessRequestCancelled(_)),
+      environmentId = accessRequest.environmentId
     )
 
   implicit def formatSensitiveAccessRequest(implicit crypto: Encrypter & Decrypter): Format[SensitiveAccessRequest] = {

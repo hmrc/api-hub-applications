@@ -31,7 +31,8 @@ case class AccessRequest(
   requested: LocalDateTime,
   requestedBy: String,
   decision: Option[AccessRequestDecision],
-  cancelled: Option[AccessRequestCancelled]
+  cancelled: Option[AccessRequestCancelled],
+  environmentId: Option[String]
 )
 
 object AccessRequest {
@@ -44,7 +45,8 @@ object AccessRequest {
     supportingInformation: String,
     requested: LocalDateTime,
     requestedBy: String,
-  ): AccessRequest = {
+    environmentId: Option[String]
+): AccessRequest = {
     apply(
       applicationId = applicationId,
       apiId = apiId,
@@ -53,7 +55,8 @@ object AccessRequest {
       endpoints = Seq.empty,
       supportingInformation = supportingInformation,
       requested = requested,
-      requestedBy = requestedBy
+      requestedBy = requestedBy,
+      environmentId = environmentId
     )
   }
 
@@ -66,7 +69,8 @@ object AccessRequest {
     supportingInformation: String,
     requested: LocalDateTime,
     requestedBy: String,
-  ): AccessRequest = {
+    environmentId: Option[String]
+): AccessRequest = {
     AccessRequest(
       id = None,
       applicationId = applicationId,
@@ -78,7 +82,8 @@ object AccessRequest {
       requested = requested,
       requestedBy = requestedBy,
       decision = None,
-      cancelled = None
+      cancelled = None,
+      environmentId = environmentId
     )
   }
 

@@ -644,7 +644,8 @@ object ApplicationsLifecycleServiceSpec {
     requested = LocalDateTime.now(clock),
     requestedBy = "test-requested-by",
     decision = None,
-    cancelled = None
+    cancelled = None,
+    environmentId = Some("test")
   )
 
   val someAccessRequests: Seq[AccessRequest] = Seq(accessRequest)
