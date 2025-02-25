@@ -324,7 +324,7 @@ object AccessRequestsRepositoryIntegrationSpec {
     supportingInformation = "test-supporting-information-1",
     requested = LocalDateTime.now(),
     requestedBy = "test-requested-by-1",
-    environmentId = Some("test")
+    environmentId = None
   )
 
   private val accessRequest2 = AccessRequest(
