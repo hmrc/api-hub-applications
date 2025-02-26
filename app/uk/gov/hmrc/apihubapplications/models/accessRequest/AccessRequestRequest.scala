@@ -24,7 +24,8 @@ case class AccessRequestRequest(
   applicationId: String,
   supportingInformation: String,
   requestedBy: String,
-  apis: Seq[AccessRequestApi]
+  apis: Seq[AccessRequestApi],
+  environmentId: Option[String]
 ) {
 
   def toAccessRequests(clock: Clock): Seq[AccessRequest] = {
@@ -38,7 +39,8 @@ case class AccessRequestRequest(
           endpoints = api.endpoints,
           supportingInformation = supportingInformation,
           requested = LocalDateTime.now(clock),
-          requestedBy = requestedBy
+          requestedBy = requestedBy,
+          environmentId = environmentId
         )
     )
   }

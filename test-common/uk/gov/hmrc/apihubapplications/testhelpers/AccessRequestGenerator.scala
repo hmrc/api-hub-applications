@@ -64,6 +64,10 @@ trait AccessRequestGenerator {
     )
   }
 
+  private def genEnvironmentId: Gen[String] = {
+    Gen.oneOf("production", "test")
+  }
+
   private def genAccessRequestEndpoints: Gen[Seq[AccessRequestEndpoint]] = Gen.sized {size=>
     Gen.listOf(Gen.resize(size/ resizeFactor, genAccessRequestEndpoint))
   }
@@ -103,6 +107,7 @@ trait AccessRequestGenerator {
       requestedBy <- sensiblySizedAlphaNumStr
       decision <- Gen.option(genAccessRequestDecision)
       cancelled <- Gen.option(genAccessRequestCancelled)
+      environmentId <- Gen.option(genEnvironmentId)
     } yield AccessRequest(
       id = Some(id.toString),
       applicationId = applicationId,
@@ -114,7 +119,8 @@ trait AccessRequestGenerator {
       requested = requested,
       requestedBy = requestedBy,
       decision = decision,
-      cancelled = cancelled
+      cancelled = cancelled,
+      environmentId = environmentId
     )
   }
 
@@ -154,11 +160,13 @@ trait AccessRequestGenerator {
       supportingInformation <- sensiblySizedAlphaNumStr
       requestedBy <- sensiblySizedAlphaNumStr
       apis <- Gen.resize(newSize(size), genAccessRequestApis)
+      environmentId <- Gen.option(genEnvironmentId)
     } yield AccessRequestRequest(
       applicationId = applicationId.toString,
       supportingInformation = supportingInformation,
       requestedBy = requestedBy,
-      apis = apis
+      apis = apis,
+      environmentId = environmentId
     )
   }
 

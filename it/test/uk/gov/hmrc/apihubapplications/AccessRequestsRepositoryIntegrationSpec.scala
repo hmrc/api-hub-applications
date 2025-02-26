@@ -66,7 +66,8 @@ class AccessRequestsRepositoryIntegrationSpec
         status = Approved,
         supportingInformation = "test-supporting-information-1",
         requested = LocalDateTime.now().minusDays(1),
-        requestedBy = "test-requested-by-1"
+        requestedBy = "test-requested-by-1",
+        environmentId = Some("test")
       )
         .addEndpoint(
           httpMethod = "test-http-method-1",
@@ -91,7 +92,8 @@ class AccessRequestsRepositoryIntegrationSpec
         status = Approved,
         supportingInformation = "test-supporting-information-2",
         requested = LocalDateTime.now().minusDays(2),
-        requestedBy = "test-requested-by-2"
+        requestedBy = "test-requested-by-2",
+        environmentId = None
       )
 
       val accessRequests = Seq(accessRequestWithFullAttributes, accessRequestWithMinimalAttributes)
@@ -123,7 +125,8 @@ class AccessRequestsRepositoryIntegrationSpec
       status = Pending,
       supportingInformation = "test-supporting-information",
       requested = LocalDateTime.now(),
-      requestedBy = "test-requested-by"
+      requestedBy = "test-requested-by",
+      environmentId = Some("test")
     )
 
     val accessRequest2 = AccessRequest(
@@ -133,7 +136,8 @@ class AccessRequestsRepositoryIntegrationSpec
       status = Approved,
       supportingInformation = "test-supporting-information",
       requested = LocalDateTime.now(),
-      requestedBy = "test-requested-by"
+      requestedBy = "test-requested-by",
+      environmentId = Some("test")
     )
 
     val accessRequest3 = AccessRequest(
@@ -143,7 +147,8 @@ class AccessRequestsRepositoryIntegrationSpec
       status = Pending,
       supportingInformation = "test-supporting-information",
       requested = LocalDateTime.now(),
-      requestedBy = "test-requested-by"
+      requestedBy = "test-requested-by",
+      environmentId = Some("test")
     )
 
     "must return all access requests when no filters are applied" in {
@@ -318,7 +323,8 @@ object AccessRequestsRepositoryIntegrationSpec {
     status = Pending,
     supportingInformation = "test-supporting-information-1",
     requested = LocalDateTime.now(),
-    requestedBy = "test-requested-by-1"
+    requestedBy = "test-requested-by-1",
+    environmentId = None
   )
 
   private val accessRequest2 = AccessRequest(
@@ -328,7 +334,8 @@ object AccessRequestsRepositoryIntegrationSpec {
     status = Pending,
     supportingInformation = "test-supporting-information-2",
     requested = LocalDateTime.now(),
-    requestedBy = "test-requested-by-2"
+    requestedBy = "test-requested-by-2",
+    environmentId = Some("test")
   )
 
   private val accessRequest3 = AccessRequest(
@@ -338,7 +345,8 @@ object AccessRequestsRepositoryIntegrationSpec {
     status = Approved,
     supportingInformation = "test-supporting-information-3",
     requested = LocalDateTime.now(),
-    requestedBy = "test-requested-by-3"
+    requestedBy = "test-requested-by-3",
+    environmentId = Some("test")
   )
 
 }

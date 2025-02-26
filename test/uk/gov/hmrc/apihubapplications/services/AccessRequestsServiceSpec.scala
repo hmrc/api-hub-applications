@@ -194,7 +194,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val updated = accessRequest
@@ -239,7 +240,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val updated = accessRequest
@@ -279,7 +281,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val updated = accessRequest
@@ -320,7 +323,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val updated = accessRequest
@@ -357,7 +361,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
@@ -400,7 +405,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val updated = accessRequest
@@ -440,7 +446,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val app = Application(
@@ -486,7 +493,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
@@ -527,7 +535,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val app = Application(
@@ -574,7 +583,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val app = Application(
@@ -622,7 +632,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requested = LocalDateTime.now(fixture.clock),
         requestedBy = "test-requested-by",
         decision = None,
-        cancelled = None
+        cancelled = None,
+        environmentId = Some("test")
       )
 
       val app = Application(
@@ -794,7 +805,8 @@ object AccessRequestsServiceSpec {
       requested = LocalDateTime.now(),
       requestedBy = "test-requested-by",
       decision = None,
-      cancelled = None
+      cancelled = None,
+      environmentId = Some("test")
     )
   }
 

@@ -43,7 +43,8 @@ class AccessRequestsRepositorySpec extends AnyFreeSpec with Matchers {
           status = Pending,
           supportingInformation = "test-supporting-information",
           requested = LocalDateTime.now(),
-          requestedBy = "test-requested-by"
+          requestedBy = "test-requested-by",
+          environmentId = Some("test")
         )
       )
 
@@ -62,7 +63,8 @@ class AccessRequestsRepositorySpec extends AnyFreeSpec with Matchers {
           status = Pending,
           supportingInformation = "test-supporting-information",
           requested = LocalDateTime.now(),
-          requestedBy = "test-requested-by"
+          requestedBy = "test-requested-by",
+          environmentId = Some("test")
         ).setId("63bebf8bbbeccc26c12294e5")
       )
 
