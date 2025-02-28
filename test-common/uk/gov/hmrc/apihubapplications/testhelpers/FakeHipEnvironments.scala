@@ -20,7 +20,7 @@ import uk.gov.hmrc.apihubapplications.config.{BaseHipEnvironment, DefaultHipEnvi
 
 object FakeHipEnvironments extends HipEnvironments {
 
-  val primaryEnvironment: HipEnvironment = DefaultHipEnvironment(
+  val productionEnvironment: HipEnvironment = DefaultHipEnvironment(
     id = "production",
     rank = 1,
     isProductionLike = true,
@@ -32,30 +32,43 @@ object FakeHipEnvironments extends HipEnvironments {
     promoteTo = None,
     apimEnvironmentName = "production"
   )
-  val secondaryEnvironment: HipEnvironment = DefaultHipEnvironment(
-    id = "test",
+  val preProductionEnvironment: HipEnvironment = DefaultHipEnvironment(
+    id = "pre-production",
     rank = 2,
+    isProductionLike = true,
+    apimUrl = "http://apim.test/pre-production",
+    clientId = "test-pre-production-client-id",
+    secret = "test-pre-production-secret",
+    useProxy = false,
+    apiKey = None,
+    promoteTo = Some(productionEnvironment),
+    apimEnvironmentName = "pre-production"
+  )
+  val testEnvironment: HipEnvironment = DefaultHipEnvironment(
+    id = "test",
+    rank = 3,
     isProductionLike = false,
     apimUrl = "http://apim.test/test",
     clientId = "test-test-client-id",
     secret = "test-test-secret",
     useProxy = false,
     apiKey = Some("test-api-key"),
-    promoteTo = Some(primaryEnvironment),
+    promoteTo = Some(preProductionEnvironment),
     apimEnvironmentName = "test"
   )
 
   override protected val baseEnvironments: Seq[BaseHipEnvironment] = Seq.empty
 
   override val environments: Seq[HipEnvironment] = Seq(
-    primaryEnvironment,
-    secondaryEnvironment
+    productionEnvironment,
+    preProductionEnvironment,
+    testEnvironment
   )
 
-  override def production: HipEnvironment = primaryEnvironment
+  override def production: HipEnvironment = productionEnvironment
 
-  override def deployTo: HipEnvironment = secondaryEnvironment
+  override def deployTo: HipEnvironment = testEnvironment
 
-  override def validateIn: HipEnvironment = primaryEnvironment
+  override def validateIn: HipEnvironment = productionEnvironment
 
 }

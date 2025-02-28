@@ -207,17 +207,17 @@ class ApplicationsIntegrationSpec
 
         insert(
           application
-            .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-            .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
+            .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id)))
+            .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential(FakeIdmsConnector.fakeClientId, LocalDateTime.now(), None, None, FakeHipEnvironments.testEnvironment.id)))
         ).futureValue
 
         val storedApplication = findAll().futureValue.head.decryptedValue.toModel(FakeHipEnvironments)
 
         val expected = storedApplication
           .setCredentials(
-            FakeHipEnvironments.secondaryEnvironment, 
+            FakeHipEnvironments.testEnvironment, 
             storedApplication
-              .getCredentials(FakeHipEnvironments.secondaryEnvironment)
+              .getCredentials(FakeHipEnvironments.testEnvironment)
           )
 
         val response =

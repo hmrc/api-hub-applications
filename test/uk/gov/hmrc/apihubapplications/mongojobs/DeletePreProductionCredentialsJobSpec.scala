@@ -179,8 +179,8 @@ private object DeletePreProductionCredentialsJobSpec extends MockitoSugar {
   def buildApplication(index: Int, preProdCreds: Int): Application = {
     Application(Some(s"test-id-$index"), s"test-application-$index", createdBy, team).copy(
       credentials = Set(
-        buildCredential(index, 1, FakeHipEnvironments.primaryEnvironment),
-        buildCredential(index, 2, FakeHipEnvironments.secondaryEnvironment)
+        buildCredential(index, 1, FakeHipEnvironments.productionEnvironment),
+        buildCredential(index, 2, FakeHipEnvironments.testEnvironment)
       ) ++ (1 to preProdCreds).map(
         preProdCred =>
           buildCredential(index, preProdCred + 2, preProdHipEnvironment)

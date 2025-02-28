@@ -32,15 +32,15 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
   "DbApplication" - {
     "when translating from Application to DbApplication" - {
       "must remove client secrets" in {
-        val productionCredential = Credential("test-client-id-1", now, Some("test-secret-1"), Some("test-fragment-1"), FakeHipEnvironments.primaryEnvironment.id)
-        val testCredential = Credential("test-client-id-2", now, Some("test-secret-2"), Some("test-fragment-2"), FakeHipEnvironments.secondaryEnvironment.id)
+        val productionCredential = Credential("test-client-id-1", now, Some("test-secret-1"), Some("test-fragment-1"), FakeHipEnvironments.productionEnvironment.id)
+        val testCredential = Credential("test-client-id-2", now, Some("test-secret-2"), Some("test-fragment-2"), FakeHipEnvironments.testEnvironment.id)
 
         val productionDbCredential = DbCredential(productionCredential.clientId, Some(productionCredential.created), productionCredential.secretFragment, productionCredential.environmentId)
         val testDbCredential = DbCredential(testCredential.clientId, Some(testCredential.created), testCredential.secretFragment, testCredential.environmentId)
 
         val application = testApplication
-          .addCredential(FakeHipEnvironments.primaryEnvironment, productionCredential)
-          .addCredential(FakeHipEnvironments.secondaryEnvironment, testCredential)
+          .addCredential(FakeHipEnvironments.productionEnvironment, productionCredential)
+          .addCredential(FakeHipEnvironments.testEnvironment, testCredential)
 
         val expected = testDbApplication
           .copy(
@@ -48,8 +48,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
           )
 
         DbApplication(application) mustBe expected
-        DbApplication(application).toModel(FakeHipEnvironments).getMasterCredential(FakeHipEnvironments.primaryEnvironment).value.clientSecret mustBe None
-        DbApplication(application).toModel(FakeHipEnvironments).getMasterCredential(FakeHipEnvironments.secondaryEnvironment).value.clientSecret mustBe None
+        DbApplication(application).toModel(FakeHipEnvironments).getMasterCredential(FakeHipEnvironments.productionEnvironment).value.clientSecret mustBe None
+        DbApplication(application).toModel(FakeHipEnvironments).getMasterCredential(FakeHipEnvironments.testEnvironment).value.clientSecret mustBe None
       }
 
       "must remove team members when the application has a team Id" in {
@@ -82,7 +82,7 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
     "when translating from DbApplication to Application" - {
       "must default a credential's created timestamp to the application's" in {
         val clientId = "test-client-id"
-        val dbCredential = DbCredential(clientId, None, None, FakeHipEnvironments.primaryEnvironment.id)
+        val dbCredential = DbCredential(clientId, None, None, FakeHipEnvironments.productionEnvironment.id)
 
         val dbApplication = testDbApplication
           .copy(
@@ -91,8 +91,8 @@ class DbApplicationSpec extends AnyFreeSpec with Matchers with OptionValues {
 
         val expected = testApplication
           .setCredentials(
-            FakeHipEnvironments.primaryEnvironment, 
-            Seq(Credential(clientId, testApplication.created, None, None, FakeHipEnvironments.primaryEnvironment.id))
+            FakeHipEnvironments.productionEnvironment, 
+            Seq(Credential(clientId, testApplication.created, None, None, FakeHipEnvironments.productionEnvironment.id))
           )
 
         dbApplication.toModel(FakeHipEnvironments) mustBe expected

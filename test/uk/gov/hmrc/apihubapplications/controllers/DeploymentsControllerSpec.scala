@@ -358,7 +358,7 @@ class DeploymentsControllerSpec
         val publisherRef = "publisher_ref"
 
         val request = FakeRequest(GET, routes.DeploymentsController.getDeploymentStatus(publisherRef).url)
-        val response = Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Deployed(FakeHipEnvironments.secondaryEnvironment.id, "1"))
+        val response = Seq(Deployed(FakeHipEnvironments.productionEnvironment.id, "1"), Deployed(FakeHipEnvironments.testEnvironment.id, "1"))
 
         when(fixture.deploymentsService.getDeployments(eqTo(publisherRef))(any()))
           .thenReturn(Future.successful(response))
@@ -375,8 +375,8 @@ class DeploymentsControllerSpec
     "must return Ok with correct response" in {
       val fixture = DeploymentsControllerSpec.buildFixture()
       val publisherRef = "publisher_ref"
-      val environment = FakeHipEnvironments.secondaryEnvironment
-      val deploymentStatus: DeploymentStatus = Deployed(FakeHipEnvironments.primaryEnvironment.id, "1.0.0")
+      val environment = FakeHipEnvironments.testEnvironment
+      val deploymentStatus: DeploymentStatus = Deployed(FakeHipEnvironments.productionEnvironment.id, "1.0.0")
 
       when(fixture.deploymentsService.getDeployment(eqTo(environment), eqTo(publisherRef))(any))
         .thenReturn(Future.successful(deploymentStatus))
@@ -455,8 +455,8 @@ class DeploymentsControllerSpec
 
         verify(fixture.deploymentsService).promoteAPI(
           eqTo(publisherRef),
-          eqTo(FakeHipEnvironments.secondaryEnvironment),
-          eqTo(FakeHipEnvironments.primaryEnvironment),
+          eqTo(FakeHipEnvironments.testEnvironment),
+          eqTo(FakeHipEnvironments.productionEnvironment),
           eqTo(requestBody.egress))(any)
       }
     }
