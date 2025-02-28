@@ -44,7 +44,7 @@ class AccessRequestsRepositorySpec extends AnyFreeSpec with Matchers {
           supportingInformation = "test-supporting-information",
           requested = LocalDateTime.now(),
           requestedBy = "test-requested-by",
-          environmentId = Some("test")
+          environmentId = "test"
         )
       )
 
@@ -64,7 +64,7 @@ class AccessRequestsRepositorySpec extends AnyFreeSpec with Matchers {
           supportingInformation = "test-supporting-information",
           requested = LocalDateTime.now(),
           requestedBy = "test-requested-by",
-          environmentId = Some("test")
+          environmentId = "test"
         ).setId("63bebf8bbbeccc26c12294e5")
       )
 
@@ -88,7 +88,8 @@ class AccessRequestsRepositorySpec extends AnyFreeSpec with Matchers {
           |  "supportingInformation" : "test-supporting-information",
           |  "requested" : "2023-11-08T14:18:04.09041",
           |  "requestedBy" : "\"test-requested-by\"",
-          |  "endpoints" : []
+          |  "endpoints" : [],
+          |  "environmentId" : "test"
           |}
           |""".stripMargin
       )

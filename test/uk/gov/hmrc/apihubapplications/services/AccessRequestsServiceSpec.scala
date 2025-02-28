@@ -195,7 +195,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val updated = accessRequest
@@ -241,7 +241,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val updated = accessRequest
@@ -282,7 +282,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val updated = accessRequest
@@ -324,7 +324,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val updated = accessRequest
@@ -362,7 +362,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
@@ -406,7 +406,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val updated = accessRequest
@@ -447,7 +447,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val app = Application(
@@ -494,7 +494,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
@@ -536,7 +536,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val app = Application(
@@ -584,7 +584,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val app = Application(
@@ -633,7 +633,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
         requestedBy = "test-requested-by",
         decision = None,
         cancelled = None,
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val app = Application(
@@ -806,7 +806,7 @@ object AccessRequestsServiceSpec {
       requestedBy = "test-requested-by",
       decision = None,
       cancelled = None,
-      environmentId = Some("test")
+      environmentId = "test"
     )
   }
 

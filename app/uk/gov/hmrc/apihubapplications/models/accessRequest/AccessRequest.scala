@@ -32,7 +32,7 @@ case class AccessRequest(
   requestedBy: String,
   decision: Option[AccessRequestDecision],
   cancelled: Option[AccessRequestCancelled],
-  environmentId: Option[String]
+  environmentId: String
 )
 
 object AccessRequest {
@@ -45,7 +45,7 @@ object AccessRequest {
     supportingInformation: String,
     requested: LocalDateTime,
     requestedBy: String,
-    environmentId: Option[String]
+    environmentId: String
 ): AccessRequest = {
     apply(
       applicationId = applicationId,
@@ -69,7 +69,7 @@ object AccessRequest {
     supportingInformation: String,
     requested: LocalDateTime,
     requestedBy: String,
-    environmentId: Option[String]
+    environmentId: String
 ): AccessRequest = {
     AccessRequest(
       id = None,
