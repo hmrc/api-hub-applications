@@ -63,13 +63,13 @@ class ApplicationLensesSpec extends LensBehaviours {
   "ApplicationLensOps" - {
     "getMasterCredential(FakeHipEnvironments.primaryEnvironment)" - {
       "must" - {
-        behave like applicationMasterCredentialGetterFunction(FakeHipEnvironments.primaryEnvironment)
+        behave like applicationMasterCredentialGetterFunction(FakeHipEnvironments.productionEnvironment)
       }
     }
 
     "getMasterCredential(FakeHipEnvironments.secondaryEnvironment)" - {
       "must" - {
-        behave like applicationMasterCredentialGetterFunction(FakeHipEnvironments.secondaryEnvironment)
+        behave like applicationMasterCredentialGetterFunction(FakeHipEnvironments.testEnvironment)
       }
     }
 
@@ -77,7 +77,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationCredentialsGetterFunction(
           applicationCredentials,
-          FakeHipEnvironments.primaryEnvironment
+          FakeHipEnvironments.productionEnvironment
         )
       }
     }
@@ -86,7 +86,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationCredentialsGetterFunction(
           applicationCredentials,
-          FakeHipEnvironments.secondaryEnvironment
+          FakeHipEnvironments.testEnvironment
         )
       }
     }
@@ -95,7 +95,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationCredentialsSetterFunction(
           applicationCredentials,
-          FakeHipEnvironments.primaryEnvironment
+          FakeHipEnvironments.productionEnvironment
         )
       }
     }
@@ -104,7 +104,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationCredentialsSetterFunction(
           applicationCredentials,
-          FakeHipEnvironments.secondaryEnvironment
+          FakeHipEnvironments.testEnvironment
         )
       }
     }
@@ -113,7 +113,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationAddCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.primaryEnvironment
+          FakeHipEnvironments.productionEnvironment
         )
       }
     }
@@ -122,7 +122,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationAddCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.secondaryEnvironment
+          FakeHipEnvironments.testEnvironment
         )
       }
     }
@@ -131,7 +131,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationRemoveCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.primaryEnvironment
+          FakeHipEnvironments.productionEnvironment
         )
       }
     }
@@ -140,7 +140,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationRemoveCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.secondaryEnvironment
+          FakeHipEnvironments.testEnvironment
         )
       }
     }
@@ -149,7 +149,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationReplaceCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.primaryEnvironment
+          FakeHipEnvironments.productionEnvironment
         )
       }
     }
@@ -158,7 +158,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationReplaceCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.secondaryEnvironment
+          FakeHipEnvironments.testEnvironment
         )
       }
     }
@@ -167,7 +167,7 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationUpdateCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.primaryEnvironment
+          FakeHipEnvironments.productionEnvironment
         )
       }
     }
@@ -176,31 +176,31 @@ class ApplicationLensesSpec extends LensBehaviours {
       "must" - {
         behave like applicationUpdateCredentialFunction(
           applicationCredentials,
-          FakeHipEnvironments.secondaryEnvironment
+          FakeHipEnvironments.testEnvironment
         )
       }
     }
 
     "updateCredential(FakeHipEnvironments.secondaryEnvironment)" - {
       "must correctly update a specific credential" in {
-        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
-        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
-        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None, FakeHipEnvironments.secondaryEnvironment.id)
+        val credential1 = Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.testEnvironment.id)
+        val credential2 = Credential("test-client-id-2", LocalDateTime.now(), None, None, FakeHipEnvironments.testEnvironment.id)
+        val credential3 = Credential("test-client-id-3", LocalDateTime.now(), None, None, FakeHipEnvironments.testEnvironment.id)
 
-        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"), FakeHipEnvironments.secondaryEnvironment.id)
+        val credential2Updated = Credential(credential2.clientId, credential2.created, Some("test-secret"), Some("cret"), FakeHipEnvironments.testEnvironment.id)
 
         val application = testApplication
-          .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(credential1, credential2, credential3))
+          .setCredentials(FakeHipEnvironments.testEnvironment, Seq(credential1, credential2, credential3))
 
         val expected = testApplication
-          .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(credential1, credential2Updated, credential3))
+          .setCredentials(FakeHipEnvironments.testEnvironment, Seq(credential1, credential2Updated, credential3))
 
-        application.updateCredential(FakeHipEnvironments.secondaryEnvironment, credential2Updated.clientId, "test-secret") mustBe expected
+        application.updateCredential(FakeHipEnvironments.testEnvironment, credential2Updated.clientId, "test-secret") mustBe expected
       }
 
       "must throw IllegalArgumentException when the credential does not exist" in {
         an [IllegalArgumentException] mustBe thrownBy(
-          testApplication.updateCredential(FakeHipEnvironments.secondaryEnvironment, "test-client-id", "test-secret")
+          testApplication.updateCredential(FakeHipEnvironments.testEnvironment, "test-client-id", "test-secret")
         )
       }
     }

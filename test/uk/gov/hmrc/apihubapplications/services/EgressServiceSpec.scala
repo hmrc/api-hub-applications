@@ -40,9 +40,9 @@ class EgressServiceSpec
       val fixture = buildFixture()
 
       val expectedResponse = {1 until 10 map(i => EgressGateway(s"fake-egress-id-$i", s"Egress Friendly Name $i"))}
-      when(fixture.apimConnector.listEgressGateways(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(expectedResponse)))
+      when(fixture.apimConnector.listEgressGateways(eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(expectedResponse)))
 
-      fixture.egressService.listEgressGateways(FakeHipEnvironments.primaryEnvironment)(HeaderCarrier()).map {
+      fixture.egressService.listEgressGateways(FakeHipEnvironments.productionEnvironment)(HeaderCarrier()).map {
         result =>
           result.value mustBe expectedResponse
       }

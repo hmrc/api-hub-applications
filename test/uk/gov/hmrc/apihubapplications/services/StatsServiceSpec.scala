@@ -51,7 +51,7 @@ class StatsServiceSpec
           sampleApiDetail().toSummary.copy(publisherReference = s"test-id-$i")
       )
 
-      when(fixture.apimConnector.getDeployments(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(deployments)))
+      when(fixture.apimConnector.getDeployments(eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(deployments)))
       when(fixture.integrationCatalogueConnector.findHipApis()(any)).thenReturn(Future.successful(Right(apis)))
 
       val expected = ApisInProductionStatistic(apis.size, 3)
@@ -77,7 +77,7 @@ class StatsServiceSpec
           sampleApiDetail().toSummary.copy(publisherReference = s"test-id-$i")
       )
 
-      when(fixture.apimConnector.getDeployments(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(deployments)))
+      when(fixture.apimConnector.getDeployments(eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(deployments)))
       when(fixture.integrationCatalogueConnector.findHipApis()(any)).thenReturn(Future.successful(Right(apis)))
 
       val expected = apis.take(3)

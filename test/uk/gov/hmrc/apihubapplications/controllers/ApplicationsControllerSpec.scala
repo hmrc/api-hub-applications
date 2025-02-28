@@ -81,8 +81,8 @@ class ApplicationsControllerSpec
           .withBody(json)
 
         val expected = Application(newApplication)
-          .addCredential(FakeHipEnvironments.primaryEnvironment, Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id))
-          .addCredential(FakeHipEnvironments.secondaryEnvironment, Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id))
+          .addCredential(FakeHipEnvironments.productionEnvironment, Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id))
+          .addCredential(FakeHipEnvironments.testEnvironment, Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.testEnvironment.id))
           .copy(id = Some("test-id"))
 
         when(fixture.applicationsService.registerApplication(eqTo(newApplication))(any()))
@@ -171,8 +171,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-              .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.testEnvironment.id)))
         }
 
         val expected_json = Json.toJson(expected_apps)
@@ -197,8 +197,8 @@ class ApplicationsControllerSpec
 
         val expected_apps = Seq(
           Application(Some("1"), "test-app-1", now, Creator(teamMemberEmail), now, Seq(TeamMember(teamMemberEmail)), Set.empty)
-            .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-            .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
+            .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id)))
+            .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.testEnvironment.id)))
         )
 
         val expected_json = Json.toJson(expected_apps)
@@ -228,8 +228,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-              .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.testEnvironment.id)))
         }
 
         val expected_json = Json.toJson(expected_apps)
@@ -259,8 +259,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-              .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.testEnvironment.id)))
         }
 
         val expected_json = Json.toJson(expected_apps)
@@ -289,8 +289,8 @@ class ApplicationsControllerSpec
         val expected_apps = Seq(application1, application2).zipWithIndex.map {
           case (application, index) =>
             application
-              .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-              .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential(s"test-client-id-$index-1", LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id)))
+              .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential(s"test-client-id-$index-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.testEnvironment.id)))
         }
 
         val expected_json = Json.toJson(expected_apps)
@@ -312,8 +312,8 @@ class ApplicationsControllerSpec
       val id = "1"
       val now = LocalDateTime.now()
       val expected = Application(Some(id), "test-app-1", now, Creator("test1@test.com"), now, Seq.empty, Set.empty)
-        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.secondaryEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential("test-client-id-1", LocalDateTime.now(), None, None, FakeHipEnvironments.productionEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential("test-client-id-2", LocalDateTime.now(), None, Some("test-fragment"), FakeHipEnvironments.testEnvironment.id)))
 
       val fixture = buildFixture()
       running(fixture.application) {
@@ -677,7 +677,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       val applicationId = "test-app-id"
-      val hipEnvironment = FakeHipEnvironments.primaryEnvironment
+      val hipEnvironment = FakeHipEnvironments.productionEnvironment
 
       val credentials = (1 to 2).map(
         i =>
@@ -706,7 +706,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       val applicationId = "test-app-id"
-      val hipEnvironment = FakeHipEnvironments.primaryEnvironment
+      val hipEnvironment = FakeHipEnvironments.productionEnvironment
 
       when(fixture.applicationsService.getCredentials(eqTo(applicationId), eqTo(hipEnvironment))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
@@ -738,12 +738,12 @@ class ApplicationsControllerSpec
     "must return 201 and a credential" in {
       val id = "app-id-1"
       val fixture = buildFixture()
-      val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"), FakeHipEnvironments.primaryEnvironment.id)
+      val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"), FakeHipEnvironments.productionEnvironment.id)
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Right(credential)))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Right(credential)))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.primaryEnvironment.id).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.productionEnvironment.id).url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
@@ -781,7 +781,7 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
 
@@ -795,9 +795,9 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.primaryEnvironment.id).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.productionEnvironment.id).url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.INTERNAL_SERVER_ERROR
@@ -809,9 +809,9 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.primaryEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
+        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
 
-        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.primaryEnvironment.id).url)
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.productionEnvironment.id).url)
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CONFLICT
@@ -828,11 +828,11 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.primaryEnvironment.id, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(clientId))(any())
+        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(FakeHipEnvironments.productionEnvironment), eqTo(clientId))(any())
       }
     }
 
@@ -898,7 +898,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.primaryEnvironment.id, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_GATEWAY
@@ -910,10 +910,10 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, FakeHipEnvironments.primaryEnvironment))))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, FakeHipEnvironments.productionEnvironment))))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.primaryEnvironment.id, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe CONFLICT
@@ -928,7 +928,7 @@ class ApplicationsControllerSpec
       when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
       running(fixture.application) {
-        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.primaryEnvironment.id, clientId).url)
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
         val result = route(fixture.application, request).value
 
         status(result) mustBe INTERNAL_SERVER_ERROR
@@ -1063,7 +1063,7 @@ class ApplicationsControllerSpec
       val allScopes = (1 to 2).map(
         i =>
           CredentialScopes(
-            environmentId = FakeHipEnvironments.primaryEnvironment.id,
+            environmentId = FakeHipEnvironments.productionEnvironment.id,
             clientId = s"test-client-id-$i",
             created = LocalDateTime.now(),
             scopes = Seq(s"test-scope-$i-1", s"test-scope-$i-2")

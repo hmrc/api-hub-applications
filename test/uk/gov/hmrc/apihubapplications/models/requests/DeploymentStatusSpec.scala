@@ -27,7 +27,7 @@ class DeploymentStatusSpec extends AnyFreeSpec with Matchers{
 
   "DeploymentStatus" - {
     "must serialize a deployment status into the expected json" in {
-      val deploymentStatus: DeploymentStatus = NotDeployed(FakeHipEnvironments.primaryEnvironment.id)
+      val deploymentStatus: DeploymentStatus = NotDeployed(FakeHipEnvironments.productionEnvironment.id)
       val json = Json.prettyPrint(Json.toJson[DeploymentStatus](deploymentStatus))
 
       json mustBe """{
