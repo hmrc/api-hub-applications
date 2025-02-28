@@ -124,7 +124,7 @@ class ScopeFixer @Inject()(
 
   private def allowedProductionLikeScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest], hipEnvironment: HipEnvironment): Set[String] = {
     accessRequests
-      .filter(ar => ar.status == Approved && ar.environmentId.contains(hipEnvironment.id))
+      .filter(ar => ar.status == Approved && ar.environmentId == hipEnvironment.id)
       .flatMap(_.endpoints.flatMap(_.scopes))
       .toSet
       .intersect(requiredScopes)
