@@ -36,7 +36,7 @@ class AccessRequestRequestSpec extends AnyFreeSpec with Matchers {
         supportingInformation = "test-supporting-information",
         requestedBy = "test-requested-by",
         apis = Seq(api1, api2),
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val expected = Seq(

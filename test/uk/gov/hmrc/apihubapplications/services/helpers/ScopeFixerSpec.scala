@@ -763,7 +763,7 @@ object ScopeFixerSpec {
       requestedBy = "test-requested-by",
       decision = None,
       cancelled = None,
-      environmentId = Some(environmentId)
+      environmentId = environmentId
     )
   }
 

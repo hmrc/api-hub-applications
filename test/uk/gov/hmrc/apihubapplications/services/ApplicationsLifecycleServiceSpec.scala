@@ -645,7 +645,7 @@ object ApplicationsLifecycleServiceSpec {
     requestedBy = "test-requested-by",
     decision = None,
     cancelled = None,
-    environmentId = Some("test")
+    environmentId = "test"
   )
 
   val someAccessRequests: Seq[AccessRequest] = Seq(accessRequest)

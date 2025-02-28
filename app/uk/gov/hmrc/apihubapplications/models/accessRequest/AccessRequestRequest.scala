@@ -25,7 +25,7 @@ case class AccessRequestRequest(
   supportingInformation: String,
   requestedBy: String,
   apis: Seq[AccessRequestApi],
-  environmentId: Option[String]
+  environmentId: String
 ) {
 
   def toAccessRequests(clock: Clock): Seq[AccessRequest] = {

@@ -37,7 +37,7 @@ case class SensitiveAccessRequest(
   requestedBy: SensitiveString,
   decision: Option[SensitiveAccessRequestDecision],
   cancelled: Option[SensitiveAccessRequestCancelled],
-  environmentId: Option[String]
+  environmentId: String
 ) extends Sensitive[AccessRequest] with MongoIdentifier {
 
   override def decryptedValue: AccessRequest =

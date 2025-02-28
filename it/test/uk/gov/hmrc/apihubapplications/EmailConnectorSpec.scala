@@ -248,7 +248,7 @@ class EmailConnectorSpec
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
         requestedBy = "test-requested-by",
-        environmentId = Some("test")
+        environmentId = "test"
       ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
@@ -288,7 +288,7 @@ class EmailConnectorSpec
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
         requestedBy = "test-requested-by",
-        environmentId = Some("test")
+        environmentId = "test"
       ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
@@ -332,7 +332,7 @@ class EmailConnectorSpec
         supportingInformation = "",
         requestedBy = "test-requested-by",
         apis = Seq(accessRequest),
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val request = SendEmailRequest(
@@ -374,7 +374,7 @@ class EmailConnectorSpec
         supportingInformation = "",
         requestedBy = "test-requested-by",
         apis = Seq(accessRequest),
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       stubFor(
@@ -406,7 +406,7 @@ class EmailConnectorSpec
         supportingInformation = "",
         requestedBy = "test-requested-by",
         apis = Seq(accessRequest),
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       val request = SendEmailRequest(
@@ -448,7 +448,7 @@ class EmailConnectorSpec
         supportingInformation = "",
         requestedBy = "test-requested-by",
         apis = Seq(accessRequest),
-        environmentId = Some("test")
+        environmentId = "test"
       )
 
       stubFor(
@@ -478,7 +478,7 @@ class EmailConnectorSpec
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
         requestedBy = "test-requested-by",
-        environmentId = Some("test")
+        environmentId = "test"
       ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
@@ -518,7 +518,7 @@ class EmailConnectorSpec
         supportingInformation = "test-supporting-information",
         requested = LocalDateTime.now(),
         requestedBy = "test-requested-by",
-        environmentId = Some("test")
+        environmentId = "test"
       ).setId(Some("test-id"))
 
       val request = SendEmailRequest(
