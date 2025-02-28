@@ -305,17 +305,17 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val scope4 = "test-scope-4"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.productionEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.testEnvironment.id)))
 
       when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
 
-      when(idmsConnector.fetchClient(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(secondaryClientId))(any))
+      when(idmsConnector.fetchClient(eqTo(FakeHipEnvironments.testEnvironment), eqTo(secondaryClientId))(any))
         .thenReturn(Future.successful(Right(ClientResponse(secondaryClientId, secondaryClientSecret))))
-      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(secondaryClientId))(any))
+      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.testEnvironment), eqTo(secondaryClientId))(any))
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope1), ClientScope(scope2)))))
-      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(primaryClientId))(any))
+      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.productionEnvironment), eqTo(primaryClientId))(any))
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application
@@ -399,8 +399,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val id = "test-id"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock).copy(deleted = Some(Deleted(LocalDateTime.now(clock), "test-deleted-by")))
-        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential("test-primary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.productionEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential("test-secondary-client-id", LocalDateTime.now(clock), None, None, FakeHipEnvironments.testEnvironment.id)))
 
       when(repository.findById(eqTo(id), any))
         .thenReturn(Future.successful(Right(application)))
@@ -438,8 +438,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val scope4 = "test-scope-4"
 
       val application = Application(Some(id), "test-name", Creator("test-creator"), Seq.empty, clock)
-        .setCredentials(FakeHipEnvironments.primaryEnvironment, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.primaryEnvironment.id)))
-        .setCredentials(FakeHipEnvironments.secondaryEnvironment, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.secondaryEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.productionEnvironment, Seq(Credential(primaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.productionEnvironment.id)))
+        .setCredentials(FakeHipEnvironments.testEnvironment, Seq(Credential(secondaryClientId, LocalDateTime.now(clock), None, None, FakeHipEnvironments.testEnvironment.id)))
         .setTeamId(teamId)
 
       when(repository.findByTeamId(teamId, true))
@@ -448,11 +448,11 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       when(teamsService.findById(teamId))
         .thenReturn(Future.successful(Right(team)))
 
-      when(idmsConnector.fetchClient(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(secondaryClientId))(any))
+      when(idmsConnector.fetchClient(eqTo(FakeHipEnvironments.testEnvironment), eqTo(secondaryClientId))(any))
         .thenReturn(Future.successful(Right(ClientResponse(secondaryClientId, secondaryClientSecret))))
-      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.secondaryEnvironment), eqTo(secondaryClientId))(any))
+      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.testEnvironment), eqTo(secondaryClientId))(any))
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope1), ClientScope(scope2)))))
-      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.primaryEnvironment), eqTo(primaryClientId))(any))
+      when(idmsConnector.fetchClientScopes(eqTo(FakeHipEnvironments.productionEnvironment), eqTo(primaryClientId))(any))
         .thenReturn(Future.successful(Right(Seq(ClientScope(scope3), ClientScope(scope4)))))
 
       val expected = application

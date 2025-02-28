@@ -137,9 +137,9 @@ class DeploymentsServiceSpec
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
-          result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Deployed(FakeHipEnvironments.secondaryEnvironment.id, "1"))
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.primaryEnvironment))(any)
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.secondaryEnvironment))(any)
+          result mustBe Seq(Deployed(FakeHipEnvironments.productionEnvironment.id, "1"), Deployed(FakeHipEnvironments.preProductionEnvironment.id, "1"), Deployed(FakeHipEnvironments.testEnvironment.id, "1"))
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.productionEnvironment))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.testEnvironment))(any)
           succeed
       }
     }
@@ -148,14 +148,15 @@ class DeploymentsServiceSpec
       val publisherRef = "test-publisher-ref"
       val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
 
-      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
-      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.secondaryEnvironment))(any)).thenReturn(Future.successful(Right(None)))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.preProductionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.testEnvironment))(any)).thenReturn(Future.successful(Right(None)))
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
-          result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), NotDeployed(FakeHipEnvironments.secondaryEnvironment.id))
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.primaryEnvironment))(any)
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.secondaryEnvironment))(any)
+          result mustBe Seq(Deployed(FakeHipEnvironments.productionEnvironment.id, "1"), Deployed(FakeHipEnvironments.preProductionEnvironment.id, "1"), NotDeployed(FakeHipEnvironments.testEnvironment.id))
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.productionEnvironment))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.testEnvironment))(any)
           succeed
       }
     }
@@ -164,14 +165,15 @@ class DeploymentsServiceSpec
       val publisherRef = "test-publisher-ref"
       val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
 
-      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
-      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.secondaryEnvironment))(any)).thenReturn(Future.successful(Left(unexpectedResponse(500))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.preProductionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
+      when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.testEnvironment))(any)).thenReturn(Future.successful(Left(unexpectedResponse(500))))
 
       fixture.deploymentsService.getDeployments(publisherRef)(HeaderCarrier()).map {
         result =>
-          result mustBe Seq(Deployed(FakeHipEnvironments.primaryEnvironment.id, "1"), Unknown(FakeHipEnvironments.secondaryEnvironment.id))
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.primaryEnvironment))(any)
-          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.secondaryEnvironment))(any)
+          result mustBe Seq(Deployed(FakeHipEnvironments.productionEnvironment.id, "1"), Deployed(FakeHipEnvironments.preProductionEnvironment.id, "1"), Unknown(FakeHipEnvironments.testEnvironment.id))
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.productionEnvironment))(any)
+          verify(fixture.apimConnector).getDeployment(eqTo(publisherRef), eqTo(FakeHipEnvironments.testEnvironment))(any)
           verify(fixture.metricsService).apimUnknownFailure()
           succeed
       }
@@ -218,13 +220,13 @@ class DeploymentsServiceSpec
 
         when(fixture.apimConnector.promoteAPI(any, any, any, any)(any)).thenReturn(Future.successful(response))
 
-        fixture.deploymentsService.promoteAPI(publisherRef, FakeHipEnvironments.secondaryEnvironment, FakeHipEnvironments.primaryEnvironment, "egress")(HeaderCarrier()).map {
+        fixture.deploymentsService.promoteAPI(publisherRef, FakeHipEnvironments.testEnvironment, FakeHipEnvironments.productionEnvironment, "egress")(HeaderCarrier()).map {
           actual =>
             actual mustBe response
             verify(fixture.apimConnector).promoteAPI(
               eqTo(publisherRef),
-              eqTo(FakeHipEnvironments.secondaryEnvironment),
-              eqTo(FakeHipEnvironments.primaryEnvironment),
+              eqTo(FakeHipEnvironments.testEnvironment),
+              eqTo(FakeHipEnvironments.productionEnvironment),
               eqTo("egress"))(any)
             succeed
         }

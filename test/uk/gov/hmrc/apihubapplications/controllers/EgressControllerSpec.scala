@@ -55,10 +55,10 @@ class EgressControllerSpec
         1 until 10 map (i => EgressGateway(s"fake-egress-id-$i", s"Egress Friendly Name $i"))
       }
 
-      when(fixture.egressService.listEgressGateways(eqTo(FakeHipEnvironments.primaryEnvironment))(any)).thenReturn(Future.successful(Right(expectedResponse)))
+      when(fixture.egressService.listEgressGateways(eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(expectedResponse)))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.EgressController.listEgressGateways(FakeHipEnvironments.primaryEnvironment.id))
+        val request = FakeRequest(routes.EgressController.listEgressGateways(FakeHipEnvironments.productionEnvironment.id))
 
         val result = route(fixture.application, request).value
 
@@ -70,11 +70,11 @@ class EgressControllerSpec
     "must return an error when the APIM call returns an error" in {
       val fixture = buildFixture()
 
-      when(fixture.egressService.listEgressGateways(eqTo(FakeHipEnvironments.primaryEnvironment))(any))
+      when(fixture.egressService.listEgressGateways(eqTo(FakeHipEnvironments.productionEnvironment))(any))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.EgressController.listEgressGateways(FakeHipEnvironments.primaryEnvironment.id))
+        val request = FakeRequest(routes.EgressController.listEgressGateways(FakeHipEnvironments.productionEnvironment.id))
 
         val result = route(fixture.application, request).value
 

@@ -152,7 +152,8 @@ object ConfigurationHipEnvironmentsImpl {
     apiKey: Option[String],
     promoteTo: Option[String],
     apimEnvironmentName: String,
-    isProductionLike: Boolean
+    isProductionLike: Boolean,
+    used: Boolean
   )
 
   object ConfigHipEnvironment {
@@ -171,7 +172,8 @@ object ConfigurationHipEnvironmentsImpl {
           apiKey = getOptionalString(config, "apiKey"),
           promoteTo = getOptionalString(config, "promoteTo"),
           apimEnvironmentName = config.getString("apimEnvironmentName"),
-          isProductionLike = config.getBoolean("isProductionLike")
+          isProductionLike = config.getBoolean("isProductionLike"),
+          used = config.getBoolean("used")
         )
       }
 
@@ -191,7 +193,9 @@ object ConfigurationHipEnvironmentsImpl {
     production: String,
     deployTo: String,
     validateIn: String
-  )
+  ) {
+    def usedEnvironments: Seq[ConfigHipEnvironment] = environments.filter(_.used)
+  }
 
   def buildBaseConfig(configuration: Configuration): BaseConfig = {
     val environments = configuration
@@ -209,7 +213,7 @@ object ConfigurationHipEnvironmentsImpl {
   def buildEnvironments(baseConfig: BaseConfig): Seq[BaseHipEnvironment] = {
     validate(baseConfig)
 
-    baseConfig.environments
+    baseConfig.usedEnvironments
       .map(
         base => BaseHipEnvironment(
           id = base.id,
@@ -260,7 +264,7 @@ object ConfigurationHipEnvironmentsImpl {
 
   private def validateProduction(baseConfig: BaseConfig): Unit = {
     // production id must be real, and production cannot promote
-    val productionEnvironment = baseConfig.environments
+    val productionEnvironment = baseConfig.usedEnvironments
       .find(_.id == baseConfig.production)
       .getOrElse(throw new IllegalArgumentException(s"production id ${baseConfig.production} must match one of the configured environments."))
     if (productionEnvironment.promoteTo.isDefined) {
@@ -276,18 +280,18 @@ object ConfigurationHipEnvironmentsImpl {
 
   private def validateDeployTo(baseConfig: BaseConfig): Unit = {
     // deployTo must be real
-    baseConfig.environments.find(_.id == baseConfig.deployTo).getOrElse(throw new IllegalArgumentException(s"deployTo id ${baseConfig.deployTo} must match one of the configured environments."))
+    baseConfig.usedEnvironments.find(_.id == baseConfig.deployTo).getOrElse(throw new IllegalArgumentException(s"deployTo id ${baseConfig.deployTo} must match one of the configured environments."))
   }
 
   private def validateValidateIn(baseConfig: BaseConfig): Unit = {
     // validateIn must be real
-    baseConfig.environments.find(_.id == baseConfig.validateIn).getOrElse(throw new IllegalArgumentException(s"validateIn id ${baseConfig.validateIn} must match one of the configured environments."))
+    baseConfig.usedEnvironments.find(_.id == baseConfig.validateIn).getOrElse(throw new IllegalArgumentException(s"validateIn id ${baseConfig.validateIn} must match one of the configured environments."))
   }
 
   private def validatePromoteTos(baseConfig: BaseConfig): Unit = {
     // promoteTo must be real, unique, and not cyclical
-    val actualIds = baseConfig.environments.map(_.id).toSet
-    val actualPromoteTos = baseConfig.environments.flatMap(_.promoteTo)
+    val actualIds = baseConfig.usedEnvironments.map(_.id).toSet
+    val actualPromoteTos = baseConfig.usedEnvironments.flatMap(_.promoteTo)
     val actualPromoteTosSet = actualPromoteTos.toSet
 
     if (!actualPromoteTos.size.equals(actualPromoteTosSet.size)) {
@@ -298,14 +302,14 @@ object ConfigurationHipEnvironmentsImpl {
       throw new IllegalArgumentException("promoteTo ids must be real.")
     }
 
-    baseConfig.environments.foreach(env => {
+    baseConfig.usedEnvironments.foreach(env => {
       val thisEnvId = env.id
       var promoteTo = env.promoteTo
       while (promoteTo.isDefined) {
         if (promoteTo.get.equals(thisEnvId)) {
           throw new IllegalArgumentException("environments cannot cyclically promoteTo themselves.")
         }
-        promoteTo = baseConfig.environments.find(_.id == promoteTo.get).flatMap(_.promoteTo)
+        promoteTo = baseConfig.usedEnvironments.find(_.id == promoteTo.get).flatMap(_.promoteTo)
       }
     })
   }

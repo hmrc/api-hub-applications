@@ -37,7 +37,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |            secret = "apim-stub-secret",
          |            useProxy = false,
          |            apimEnvironmentName = "production",
-         |            isProductionLike = true
+         |            isProductionLike = true,
+         |            used = true
          |        },
          |        test = {
          |            id = "test",
@@ -49,7 +50,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |            apiKey = "some-magic-key"
          |            promoteTo = "production",
          |            apimEnvironmentName = "test",
-         |            isProductionLike = false
+         |            isProductionLike = false,
+         |            used = true
          |        }
          |    },
          |    production = "production",
@@ -79,7 +81,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production"
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        test = {
            |            id = "test",
@@ -91,7 +94,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key"
            |            promoteTo = "production",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production",
@@ -115,7 +119,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        test = {
            |            id = "test",
@@ -127,7 +132,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key"
            |            promoteTo = "production",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production",
@@ -151,7 +157,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        test = {
            |            id = "test",
@@ -163,7 +170,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key"
            |            promoteTo = "production",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production",
@@ -187,7 +195,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        test = {
            |            id = "production",
@@ -199,7 +208,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key"
            |            promoteTo = "production",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production",
@@ -223,11 +233,23 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
+           |        },
+           |        productionish = {
+           |            id = "productionish",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production",
+           |            isProductionLike = true,
+           |            used = false
            |        },
            |        test = {
            |            id = "test",
-           |            rank = 2,
+           |            rank = 3,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
            |            secret = "apim-stub-secret",
@@ -235,7 +257,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key"
            |            promoteTo = "production",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "productionish",
@@ -260,7 +283,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            useProxy = false,
            |            apimEnvironmentName = "production",
            |            promoteTo = "brigadoon",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        brigadoon = {
            |            id = "brigadoon",
@@ -271,7 +295,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            useProxy = true,
            |            apiKey = "some-magic-key"
            |            apimEnvironmentName = "brigadoon",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production",
@@ -294,7 +319,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production",
@@ -305,6 +331,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
 
       e.getMessage mustBe "production environment must be productionLike."
     }
+
     "must have a real deployTo environment" in {
       val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
         s"""
@@ -318,7 +345,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        test = {
            |            id = "test",
@@ -330,7 +358,21 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key"
            |            promoteTo = "production",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
+           |        },
+           |        testish = {
+           |            id = "testish",
+           |            rank = 3,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test",
+           |            isProductionLike = false,
+           |            used = false
            |        }
            |    },
            |    production = "production",
@@ -340,6 +382,58 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |""".stripMargin))))
       e.getMessage mustBe "deployTo id testish must match one of the configured environments."
     }
+
+    "must have a real validateIn environment" in {
+      val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+        s"""
+           |hipEnvironments = {
+           |    environments = {
+           |        production = {
+           |            id = "production",
+           |            rank = 1,
+           |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = false,
+           |            apimEnvironmentName = "production",
+           |            isProductionLike = true,
+           |            used = true
+           |        },
+           |        test = {
+           |            id = "test",
+           |            rank = 2,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test",
+           |            isProductionLike = false,
+           |            used = true
+           |        },
+           |        validate = {
+           |            id = "validate",
+           |            rank = 3,
+           |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+           |            clientId = "apim-stub-client-id",
+           |            secret = "apim-stub-secret",
+           |            useProxy = true,
+           |            apiKey = "some-magic-key"
+           |            promoteTo = "production",
+           |            apimEnvironmentName = "test",
+           |            isProductionLike = false,
+           |            used = false
+           |        }
+           |    },
+           |    production = "production",
+           |    deployTo = "test",
+           |    validateIn = "validate"
+           |}
+           |""".stripMargin))))
+      e.getMessage mustBe "validateIn id validate must match one of the configured environments."
+    }
+
     "can only promoteTo real environment" in {
       val e = the[IllegalArgumentException] thrownBy (new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
         s"""
@@ -353,7 +447,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        test = {
            |            id = "test",
@@ -365,7 +460,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key"
            |            promoteTo = "productionish",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production",
@@ -388,7 +484,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        coventry = {
            |            id = "coventry",
@@ -399,7 +496,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            useProxy = false,
            |            apimEnvironmentName = "coventry",
            |            promoteTo = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        },
            |        preProduction = {
            |            id = "preProduction",
@@ -410,7 +508,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            useProxy = false,
            |            apimEnvironmentName = "preProduction",
            |            promoteTo = "coventry",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        },
            |        test = {
            |            id = "test",
@@ -422,7 +521,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            apiKey = "some-magic-key",
            |            promoteTo = "preProduction",
            |            apimEnvironmentName = "test",
-           |            isProductionLike = false
+           |            isProductionLike = false,
+           |            used = true
            |        }
            |    },
            |    production = "production"
@@ -445,7 +545,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = false,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        }
            |    }
            |    production = "production"
@@ -468,7 +569,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |            secret = "apim-stub-secret",
            |            useProxy = true,
            |            apimEnvironmentName = "production",
-           |            isProductionLike = true
+           |            isProductionLike = true,
+           |            used = true
            |        }
            |    }
            |    production = "production"
@@ -492,7 +594,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |            secret = "apim-stub-secret",
          |            useProxy = false,
          |            apimEnvironmentName = "production",
-         |            isProductionLike = true
+         |            isProductionLike = true,
+         |            used = true
          |        },
          |        preProduction = {
          |            id = "preProduction",
@@ -503,7 +606,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |            useProxy = false,
          |            apimEnvironmentName = "preProduction",
          |            promoteTo = "production",
-         |            isProductionLike = true
+         |            isProductionLike = true,
+         |            used = true
          |        },
          |        test = {
          |            id = "test",
@@ -515,7 +619,8 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |            apiKey = "some-magic-key",
          |            promoteTo = "preProduction",
          |            apimEnvironmentName = "test",
-         |            isProductionLike = false
+         |            isProductionLike = false,
+         |            used = true
          |        }
          |    },
          |    production = "production"
@@ -525,4 +630,44 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |""".stripMargin)))
     succeed
   }
+
+  "only returns used environments" in {
+    val hipEnvironments = new ConfigurationHipEnvironmentsImpl(Configuration(ConfigFactory.parseString(
+      s"""
+         |hipEnvironments = {
+         |    environments = {
+         |        production = {
+         |            id = "production",
+         |            rank = 1,
+         |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
+         |            clientId = "apim-stub-client-id",
+         |            secret = "apim-stub-secret",
+         |            useProxy = false,
+         |            apimEnvironmentName = "production",
+         |            isProductionLike = true,
+         |            used = true
+         |        },
+         |        test = {
+         |            id = "test",
+         |            rank = 2,
+         |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
+         |            clientId = "apim-stub-client-id",
+         |            secret = "apim-stub-secret",
+         |            useProxy = true,
+         |            apiKey = "some-magic-key"
+         |            promoteTo = "production",
+         |            apimEnvironmentName = "test",
+         |            isProductionLike = false,
+         |            used = false
+         |        }
+         |    },
+         |    production = "production",
+         |    deployTo = "production",
+         |    validateIn = "production"
+         |}
+         |""".stripMargin))).environments
+
+    hipEnvironments.map(_.id) mustBe Seq("production")
+  }
+
 }

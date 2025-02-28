@@ -96,13 +96,14 @@ class ScopeFixer @Inject()(
     requiredScopes: Set[String]
   )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     Future.sequence(
-      hipEnvironments.environments.flatMap(
+      hipEnvironments.environments.flatMap {
         hipEnvironment =>
+          val scopes = allowedScopes(hipEnvironment, requiredScopes, accessRequests)
           Seq(
-            minimiseScopesInEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests)),
-            addScopesToEnvironment(hipEnvironment, credentials, allowedScopes(hipEnvironment, requiredScopes, accessRequests))
+            minimiseScopesInEnvironment(hipEnvironment, credentials, scopes),
+            addScopesToEnvironment(hipEnvironment, credentials, scopes)
           )
-      )
+      }
     )
       .map(useFirstApplicationsException)
       .map(result => result.map(_ => ()))
@@ -114,16 +115,16 @@ class ScopeFixer @Inject()(
     accessRequests: Seq[AccessRequest]
   ): Set[String] = {
     if (hipEnvironment.isProductionLike) {
-      allowedProductionScopes(requiredScopes, accessRequests)
+      allowedProductionLikeScopes(requiredScopes, accessRequests, hipEnvironment)
     }
     else {
       requiredScopes
     }
   }
 
-  private def allowedProductionScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest]): Set[String] = {
+  private def allowedProductionLikeScopes(requiredScopes: Set[String], accessRequests: Seq[AccessRequest], hipEnvironment: HipEnvironment): Set[String] = {
     accessRequests
-      .filter(_.status == Approved)
+      .filter(ar => ar.status == Approved && ar.environmentId.contains(hipEnvironment.id))
       .flatMap(_.endpoints.flatMap(_.scopes))
       .toSet
       .intersect(requiredScopes)
