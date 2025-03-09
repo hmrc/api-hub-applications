@@ -25,9 +25,15 @@ class MetricsService @Inject()(metricRegistry: MetricRegistry) {
 
   private lazy val apimDeploymentStatusUnknownMetric: Meter = metricRegistry.meter(MetricsKeys.APIM.apimDeploymentStatusUnknown)
 
+  private def apimCheckStatusMetric(environment: String, metricName: String, status: String): Meter =
+    metricRegistry.meter(s"${MetricsKeys.APIM.apimSyntheticMonitoringMetric}.$environment.$metricName.$status")
+
   def apimUnknownFailure(): Unit = {
     apimDeploymentStatusUnknownMetric.mark()
   }
+
+  def apimSyntheticCheck(environment: String, metricName: String, issue: String): Unit =
+    apimCheckStatusMetric(environment, metricName, issue).mark()
 
 }
 
@@ -38,6 +44,8 @@ object MetricsService {
     object APIM {
 
       val apimDeploymentStatusUnknown: String = "apim-deployment-status-unknown"
+
+      val apimSyntheticMonitoringMetric: String = "synthetic"
 
     }
 
