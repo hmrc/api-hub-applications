@@ -20,6 +20,7 @@ import play.api.inject.{Binding, bind as bindz}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.apihubapplications.connectors.*
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, HipEnvironmentActionProvider, HipEnvironmentActionProviderImpl, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.scheduler.ApimSyntheticMonitoringScheduler
 import uk.gov.hmrc.apihubapplications.services.*
 import uk.gov.hmrc.apihubapplications.tasks.DatabaseStatisticMetricOrchestratorTask
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
@@ -46,7 +47,8 @@ class Module extends play.api.inject.Module {
       bindz(classOf[ApplicationsSearchService]).to(classOf[ApplicationsSearchServiceImpl]).eagerly(),
       bindz(classOf[HipEnvironments]).to(classOf[ConfigurationHipEnvironmentsImpl]).eagerly(),
       bindz(classOf[HipEnvironmentActionProvider]).to(classOf[HipEnvironmentActionProviderImpl]).eagerly(),
-      bindz(classOf[AutopublishConnector]).to(classOf[AutopublishConnectorImpl]).eagerly()
+      bindz(classOf[AutopublishConnector]).to(classOf[AutopublishConnectorImpl]).eagerly(),
+      bind[ApimSyntheticMonitoringScheduler].toSelf.eagerly(),
     )
 
     val authTokenInitialiserBindings: Seq[Binding[?]] = if (configuration.get[Boolean]("create-internal-auth-token-on-start")) {
