@@ -17,12 +17,14 @@
 package uk.gov.hmrc.apihubapplications.scheduler
 
 import com.typesafe.config.ConfigFactory
+import org.apache.pekko.actor.ActorSystem
 import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
+import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.apim.DeploymentDetails
@@ -31,6 +33,8 @@ import uk.gov.hmrc.apihubapplications.services.MetricsService
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.{GatewayTimeoutException, HeaderCarrier}
+import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -160,6 +164,10 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
     val apimConnector = mock[APIMConnector]
     val idmsConnector = mock[IdmsConnector]
     val metricsService = mock[MetricsService]
+    val mongoLockRepository = mock[MongoLockRepository]
+    val timestampSupport = mock[TimestampSupport]
+    given ActorSystem = ActorSystem()
+    given ApplicationLifecycle = DefaultApplicationLifecycle()
     val schedulerConfig = Configuration(ConfigFactory.parseString(
         s"""
            |apimSyntheticMonitoringScheduler {
@@ -179,6 +187,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
       metricsService,
       schedulerConfig,
       hipEnvironments,
+      mongoLockRepository,
+      timestampSupport,
     )
     Fixture(
       apimSyntheticMonitoringScheduler,
