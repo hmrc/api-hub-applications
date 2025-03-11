@@ -17,12 +17,16 @@
 package uk.gov.hmrc.apihubapplications.scheduler
 
 import com.google.inject.{Inject, Singleton}
+import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
+import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.services.MetricsService
 import uk.gov.hmrc.http.{GatewayTimeoutException, HeaderCarrier}
+import uk.gov.hmrc.mongo.lock.{MongoLockRepository, ScheduledLockService}
+import uk.gov.hmrc.mongo.TimestampSupport
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -34,11 +38,14 @@ class ApimSyntheticMonitoringScheduler @Inject()(
                                                   metricsService: MetricsService,
                                                   configuration: Configuration,
                                                   hipEnvironments: HipEnvironments,
-                             )(implicit ec: ExecutionContext) extends BaseScheduler {
+                                                  mongoLockRepository : MongoLockRepository,
+                                                  timestampSupport    : TimestampSupport,
+                             )(implicit as: ActorSystem, alc: ApplicationLifecycle, ec: ExecutionContext) extends BaseScheduler {
 
   private val schedulerConfig: SchedulerConfig = SchedulerConfig(configuration, "apimSyntheticMonitoringScheduler")
   private val additionalConfiguration = schedulerConfig.additionalConfiguration
   private val publisherReference: String = additionalConfiguration.get[String]("publisherReference")
+  private given HeaderCarrier = HeaderCarrier()
 
   override protected[scheduler] def run()(implicit hc: HeaderCarrier): Future[Unit] =
     Future.sequence(
@@ -68,5 +75,11 @@ class ApimSyntheticMonitoringScheduler @Inject()(
     case Left(IdmsException(_, cause, _)) => Left(Option(cause))
     case Right(_) => Right(())
   }
+
+  scheduleWithTimePeriodLock(
+    label           = "ApimSyntheticMonitoringScheduler",
+    schedulerConfig = schedulerConfig,
+    lock            = ScheduledLockService(mongoLockRepository, "apim-synthetic-monitoring-scheduler", timestampSupport, schedulerConfig.interval)
+  )
 
 }
