@@ -43,8 +43,3 @@ object SchedulerConfig {
     )
   }
 }
-
-@Singleton
-class SchedulerConfigs @Inject()(configuration: Configuration) {
-  val apimMonitoringSchdulerConfig: SchedulerConfig = SchedulerConfig(configuration, "apimSyntheticMonitoringScheduler")
-}

@@ -5,15 +5,15 @@ import sbt._
 
 object AppDependencies {
 
-  private val bootstrapVersion = "9.8.0"
-  private val hmrcMongoVersion = "2.2.0"
-  private val internalAuthVersion = "3.0.0"
+  private val bootstrapVersion = "9.11.0"
+  private val hmrcMongoVersion = "2.5.0"
+  private val internalAuthVersion = "3.1.0"
 
   val compile = Seq(
     "uk.gov.hmrc"             %% "bootstrap-backend-play-30"    % bootstrapVersion,
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-metrix-play-30"    % hmrcMongoVersion,
     "uk.gov.hmrc"             %% "internal-auth-client-play-30" % internalAuthVersion,
-    "uk.gov.hmrc"             %% "crypto-json-play-30"          % "8.1.0",
+    "uk.gov.hmrc"             %% "crypto-json-play-30"          % "8.2.0",
     "io.swagger.parser.v3" % "swagger-parser" % "2.1.22"
       excludeAll(
       ExclusionRule("com.fasterxml.jackson.core", "jackson-databind"),
