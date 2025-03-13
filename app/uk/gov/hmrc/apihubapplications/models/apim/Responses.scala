@@ -19,6 +19,8 @@ package uk.gov.hmrc.apihubapplications.models.apim
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{Format, JsPath, Json, Reads, Writes}
 
+import java.time.Instant
+
 sealed trait ValidateResponse
 
 case object SuccessfulValidateResponse extends ValidateResponse {
@@ -45,18 +47,17 @@ object InvalidOasResponse {
 
 sealed trait DeploymentResponse
 
-case class SuccessfulDeploymentResponse(id: String, oasVersion: String) extends DeploymentResponse
+case class SuccessfulDeploymentResponse(
+  id: String,
+  deploymentTimestamp: Option[Instant],
+  deploymentVersion: Option[String],
+  oasVersion: String = "unknown",
+  buildVersion: Option[String]
+) extends DeploymentResponse
 
 object SuccessfulDeploymentResponse {
 
-  private val readsWithDefaultOasVersion: Reads[SuccessfulDeploymentResponse] = (
-    (JsPath \ "id").read[String] and
-      (JsPath \ "oasVersion").readNullable[String]
-  )((id, oasVersion) => SuccessfulDeploymentResponse(id, oasVersion.getOrElse("unknown")))
-
-  private val writes: Writes[SuccessfulDeploymentResponse] = Json.writes[SuccessfulDeploymentResponse]
-
-  implicit val formatDeploymentResponse: Format[SuccessfulDeploymentResponse] = Format(readsWithDefaultOasVersion, writes)
+  implicit val formatDeploymentResponse: Format[SuccessfulDeploymentResponse] = Json.using[Json.WithDefaultValues].format[SuccessfulDeploymentResponse]
 
 }
 

@@ -89,7 +89,7 @@ class DeploymentsService @Inject()(
     publisherRef: String
   )(implicit hc: HeaderCarrier): Future[DeploymentStatus] = {
     apimConnector.getDeployment(publisherRef, hipEnvironment).map {
-      case Right(Some(SuccessfulDeploymentResponse(_, version))) => Deployed(hipEnvironment.id, version)
+      case Right(Some(SuccessfulDeploymentResponse(_, _, _, version, _))) => Deployed(hipEnvironment.id, version)
       case Right(None) => NotDeployed(hipEnvironment.id)
       case Left(exception) =>
         logger.warn(customUnknownDeploymentStatusMessage, exception)

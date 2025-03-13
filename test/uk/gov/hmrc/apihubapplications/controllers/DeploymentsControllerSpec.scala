@@ -43,6 +43,7 @@ import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 
+import java.time.Instant
 import scala.concurrent.Future
 
 class DeploymentsControllerSpec
@@ -670,7 +671,7 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoS
   )
 
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
-  val deploymentResponse: SuccessfulDeploymentResponse = SuccessfulDeploymentResponse("publisher_ref", "1")
+  val deploymentResponse: SuccessfulDeploymentResponse = SuccessfulDeploymentResponse("publisher_ref", Some(Instant.now()), Some("test-deployment-version"), "1", Some("test-build-version"))
 
   val invalidOasResponse: InvalidOasResponse = InvalidOasResponse(
     failure = FailuresResponse(

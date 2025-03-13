@@ -131,7 +131,7 @@ class DeploymentsServiceSpec
     "must pass the request to the APIM connector and return the response" in {
       val fixture = buildFixture()
       val publisherRef = "test-publisher-ref"
-      val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
+      val deploymentResponse = SuccessfulDeploymentResponse("test-id", Some(Instant.now()), Some("test-deployment-version"), "1", Some("test-build-version"))
 
       when(fixture.apimConnector.getDeployment(any, any)(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
 
@@ -146,7 +146,7 @@ class DeploymentsServiceSpec
     "must handle missing valid responses and return NotDeployed" in {
       val fixture = buildFixture()
       val publisherRef = "test-publisher-ref"
-      val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
+      val deploymentResponse = SuccessfulDeploymentResponse("test-id", Some(Instant.now()), Some("test-deployment-version"), "1", Some("test-build-version"))
 
       when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
       when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.preProductionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
@@ -163,7 +163,7 @@ class DeploymentsServiceSpec
     "must handle response failures, return Unknown and record the failure on a metric" in {
       val fixture = buildFixture()
       val publisherRef = "test-publisher-ref"
-      val deploymentResponse = SuccessfulDeploymentResponse("test-id", "1")
+      val deploymentResponse = SuccessfulDeploymentResponse("test-id", Some(Instant.now()), Some("test-deployment-version"), "1", Some("test-build-version"))
 
       when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.productionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))
       when(fixture.apimConnector.getDeployment(any, eqTo(FakeHipEnvironments.preProductionEnvironment))(any)).thenReturn(Future.successful(Right(Some(deploymentResponse))))

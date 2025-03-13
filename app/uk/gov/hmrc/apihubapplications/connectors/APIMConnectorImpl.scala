@@ -27,7 +27,7 @@ import play.api.libs.json.{JsPath, Json, JsonValidationError}
 import play.api.mvc.MultipartFormData.DataPart
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
-import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentResponse, DeploymentsRequest, DeploymentsResponse, DetailsResponse, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata, ValidateResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentResponse, DeploymentsRequest, DeploymentsResponse, DetailsResponse, FailuresResponse, InvalidOasResponse, RedeploymentRequest, StatusResponse, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata, ValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits.*
@@ -257,6 +257,53 @@ class APIMConnectorImpl @Inject()(
       .execute[Either[UpstreamErrorResponse, Seq[EgressGateway]]]
       .map {
         case Right(egressGateways) => Right(egressGateways)
+        case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
+      }
+  }
+
+  override def getOpenApiSpecification(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, String]] = {
+    val context = Seq(
+      "publisherReference" -> publisherReference,
+      "hipEnvironment" -> hipEnvironment.id
+    ).withCorrelationId()
+
+    httpClient.get(url"${hipEnvironment.apimUrl}/v1/oas-deployments/$publisherReference/oas")
+      .setHeader(headersForEnvironment(hipEnvironment) *)
+      .withProxyIfRequired(hipEnvironment)
+      .withCorrelationId()
+      .setHeader("Accept" -> "application/yaml")
+      .execute[HttpResponse]
+      .map(
+        response =>
+          if (is2xx(response.status)) {
+            Right(response.body)
+          }
+          else if (response.status == NOT_FOUND) {
+            Left(raiseApimException.serviceNotFound(publisherReference))
+          }
+          else {
+            Left(raiseApimException.unexpectedResponse(response.status, context))
+          }
+      )
+  }
+
+  override def getDeploymentStatus(publisherReference: String, mergeRequestIid: String, version: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, StatusResponse]] = {
+    val context = Seq(
+      "publisherReference" -> publisherReference,
+      "mergeRequestIid" -> mergeRequestIid,
+      "version" -> version,
+      "hipEnvironment" -> hipEnvironment.id
+    ).withCorrelationId()
+
+    httpClient.get(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/deployments/$publisherReference/status?mr-iid=$mergeRequestIid&version=$version")
+      .setHeader(headersForEnvironment(hipEnvironment)*)
+      .setHeader("Accept" -> "application/json")
+      .withCorrelationId()
+      .withProxyIfRequired(hipEnvironment)
+      .execute[Either[UpstreamErrorResponse, StatusResponse]]
+      .map {
+        case Right(statusResponse) => Right(statusResponse)
+        case Left(e) if e.statusCode == 404 => Left(raiseApimException.serviceNotFound(publisherReference))
         case Left(e) => Left(raiseApimException.unexpectedResponse(e.statusCode, context))
       }
   }

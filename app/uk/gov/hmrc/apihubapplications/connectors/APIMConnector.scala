@@ -42,4 +42,8 @@ trait APIMConnector {
 
   def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]]
 
+  def getOpenApiSpecification(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, String]]
+
+  def getDeploymentStatus(publisherReference: String, mergeRequestIid: String, version: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, StatusResponse]]
+
 }
