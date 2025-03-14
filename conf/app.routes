@@ -57,3 +57,11 @@ POST       /oas/validate                                                        
 GET        /egresses/gateways/:environmentName                                      uk.gov.hmrc.apihubapplications.controllers.EgressController.listEgressGateways(environmentName: String)
 
 GET        /config/environments                                                     uk.gov.hmrc.apihubapplications.controllers.ConfigController.listEnvironments()
+
+GET        /support/apim/get-deployments/:environment                               uk.gov.hmrc.apihubapplications.controllers.ApimController.getDeployments(environment: String)
+GET        /support/apim/get-deployment/:environment/:publisherRef                  uk.gov.hmrc.apihubapplications.controllers.ApimController.getDeployment(environment: String, publisherRef: String)
+GET        /support/apim/get-open-api-specification/:environment/:publisherRef      uk.gov.hmrc.apihubapplications.controllers.ApimController.getOpenApiSpecification(environment: String, publisherRef: String)
+GET        /support/apim/get-deployment-details/:environment/:publisherRef          uk.gov.hmrc.apihubapplications.controllers.ApimController.getDeploymentDetails(environment: String, publisherRef: String)
+GET        /support/apim/get-deployment-status/:environment/:publisherRef           uk.gov.hmrc.apihubapplications.controllers.ApimController.getDeploymentStatus(environment: String, publisherRef: String, mergeRequestIid: String, version: String)
+GET        /support/apim/list-egress-gateways/:environment                          uk.gov.hmrc.apihubapplications.controllers.ApimController.listEgressGateways(environment: String)
+GET        /support/apim/fetch-client-scopes/:environment/:clientId                 uk.gov.hmrc.apihubapplications.controllers.ApimController.fetchClientScopes(environment: String, clientId: String)

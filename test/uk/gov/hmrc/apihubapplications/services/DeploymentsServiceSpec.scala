@@ -196,7 +196,7 @@ class DeploymentsServiceSpec
         egress = Some("test-egress")
       )
 
-      when(fixture.apimConnector.getDeploymentDetails(eqTo(publisherRef))(any))
+      when(fixture.apimConnector.getDeploymentDetails(eqTo(publisherRef), eqTo(FakeHipEnvironments.deployTo))(any))
         .thenReturn(Future.successful(Right(deploymentDetails)))
       fixture.deploymentsService.getDeploymentDetails(publisherRef)(HeaderCarrier()).map {
         result =>

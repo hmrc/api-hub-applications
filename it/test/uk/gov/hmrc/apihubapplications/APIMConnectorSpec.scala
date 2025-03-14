@@ -488,7 +488,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.value mustBe detailsResponse.toDeploymentDetails
       )
@@ -522,7 +522,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual => {
           actual.value mustBe deploymentDetailsWithoutEgressOrPrefixes
         }
@@ -555,7 +555,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual => {
           actual.value mustBe deploymentDetailsWithoutEgressOrPrefixes
         }
@@ -575,7 +575,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.value mustBe detailsResponseWithoutDetails.toDeploymentDetails
       )
@@ -590,7 +590,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.left.value mustBe ApimException.serviceNotFound(serviceId)
       )
@@ -607,7 +607,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
       )

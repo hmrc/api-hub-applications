@@ -25,12 +25,10 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
-import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.apim.DeploymentDetails
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.services.MetricsService
-import uk.gov.hmrc.apihubapplications.services.ApplicationsService
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.{GatewayTimeoutException, HeaderCarrier}
 import uk.gov.hmrc.mongo.TimestampSupport
@@ -60,9 +58,9 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
           .thenReturn(Future.successful(Right(Seq.empty)))
         when(fixture.idmsConnector.fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc))
           .thenReturn(Future.successful(Right(Seq.empty)))
+        when(fixture.apimConnector.getDeploymentDetails(publisherReference, hipEnvironment)(hc))
+          .thenReturn(Future.successful(Right(DeploymentDetails(None, None, None, None, None, None, Seq.empty, None))))
       )
-      when(fixture.apimConnector.getDeploymentDetails(publisherReference)(hc))
-        .thenReturn(Future.successful(Right(DeploymentDetails(None, None, None, None, None, None, Seq.empty, None))))
 
       fixture.apimSyntheticMonitoringScheduler.run().futureValue
 
@@ -70,8 +68,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.apimConnector).getDeployment(publisherReference, hipEnvironment)(hc)
         verify(fixture.apimConnector).listEgressGateways(hipEnvironment)(hc)
         verify(fixture.idmsConnector).fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc)
+        verify(fixture.apimConnector).getDeploymentDetails(publisherReference, hipEnvironment)(hc)
       )
-      verify(fixture.apimConnector).getDeploymentDetails(publisherReference)(hc)
       verifyNoMoreInteractions(fixture.apimConnector)
       verifyNoMoreInteractions(fixture.idmsConnector)
 
@@ -79,8 +77,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeployment", "success")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "listEgressGateways", "success")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "fetchClientScopes", "success")
+        verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeploymentDetails", "success")
       )
-      verify(fixture.metricsService).apimSyntheticCheck(FakeHipEnvironments.deployTo.id, "getDeploymentDetails", "success")
       verifyNoMoreInteractions(fixture.metricsService)
     }
 
@@ -94,9 +92,9 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
           .thenReturn(Future.failed(new RuntimeException))
         when(fixture.idmsConnector.fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc))
           .thenReturn(Future.successful(Left(IdmsException("message", new RuntimeException, IdmsException.ClientNotFound))))
+        when(fixture.apimConnector.getDeploymentDetails(publisherReference, hipEnvironment)(hc))
+          .thenReturn(Future.successful(Left(ApimException("message", new RuntimeException, ApimException.InvalidResponse))))
       )
-      when(fixture.apimConnector.getDeploymentDetails(publisherReference)(hc))
-        .thenReturn(Future.successful(Left(ApimException("message", new RuntimeException, ApimException.InvalidResponse))))
 
       fixture.apimSyntheticMonitoringScheduler.run().futureValue
 
@@ -104,8 +102,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.apimConnector).getDeployment(publisherReference, hipEnvironment)(hc)
         verify(fixture.apimConnector).listEgressGateways(hipEnvironment)(hc)
         verify(fixture.idmsConnector).fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc)
+        verify(fixture.apimConnector).getDeploymentDetails(publisherReference, hipEnvironment)(hc)
       )
-      verify(fixture.apimConnector).getDeploymentDetails(publisherReference)(hc)
       verifyNoMoreInteractions(fixture.apimConnector)
       verifyNoMoreInteractions(fixture.idmsConnector)
 
@@ -113,8 +111,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeployment", "error")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "listEgressGateways", "error")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "fetchClientScopes", "error")
+        verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeploymentDetails", "error")
       )
-      verify(fixture.metricsService).apimSyntheticCheck(FakeHipEnvironments.deployTo.id, "getDeploymentDetails", "error")
       verifyNoMoreInteractions(fixture.metricsService)
     }
 
@@ -128,9 +126,9 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
           .thenReturn(Future.successful(Left(ApimException("message", new RuntimeException, ApimException.ServiceNotFound))))
         when(fixture.idmsConnector.fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc))
           .thenReturn(Future.successful(Left(IdmsException("message", new GatewayTimeoutException("timeout exception"), IdmsException.ClientNotFound))))
+        when(fixture.apimConnector.getDeploymentDetails(publisherReference, hipEnvironment)(hc))
+          .thenReturn(Future.failed(new GatewayTimeoutException("timeout exception")))
       )
-      when(fixture.apimConnector.getDeploymentDetails(publisherReference)(hc))
-        .thenReturn(Future.failed(new GatewayTimeoutException("timeout exception")))
 
       fixture.apimSyntheticMonitoringScheduler.run().futureValue
 
@@ -138,8 +136,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.apimConnector).getDeployment(publisherReference, hipEnvironment)(hc)
         verify(fixture.apimConnector).listEgressGateways(hipEnvironment)(hc)
         verify(fixture.idmsConnector).fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc)
+        verify(fixture.apimConnector).getDeploymentDetails(publisherReference, hipEnvironment)(hc)
       )
-      verify(fixture.apimConnector).getDeploymentDetails(publisherReference)(hc)
       verifyNoMoreInteractions(fixture.apimConnector)
       verifyNoMoreInteractions(fixture.idmsConnector)
 
@@ -147,8 +145,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeployment", "error")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "listEgressGateways", "error")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "fetchClientScopes", "timeout")
+        verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeploymentDetails", "timeout")
       )
-      verify(fixture.metricsService).apimSyntheticCheck(FakeHipEnvironments.deployTo.id, "getDeploymentDetails", "timeout")
       verifyNoMoreInteractions(fixture.metricsService)
     }
   }

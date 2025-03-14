@@ -168,9 +168,7 @@ class APIMConnectorImpl @Inject()(
       }
   }
 
-  override def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
-    val hipEnvironment = hipEnvironments.deployTo
-
+  override def getDeploymentDetails(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
     val context = Seq("publisherReference" -> publisherReference)
       .withCorrelationId()
 
