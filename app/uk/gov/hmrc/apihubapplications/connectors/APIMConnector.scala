@@ -34,12 +34,16 @@ trait APIMConnector {
 
   def getDeployment(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Option[DeploymentResponse]]]
 
-  def getDeploymentDetails(publisherReference: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]]
+  def getDeploymentDetails(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]]
 
   def promoteAPI(publisherReference: String, environmentFrom: HipEnvironment, environmentTo: HipEnvironment, egress: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]]
 
   def getDeployments(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[ApiDeployment]]]
 
   def listEgressGateways(hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, Seq[EgressGateway]]]
+
+  def getOpenApiSpecification(publisherReference: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, String]]
+
+  def getDeploymentStatus(publisherReference: String, mergeRequestIid: String, version: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, StatusResponse]]
 
 }

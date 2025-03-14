@@ -66,9 +66,10 @@ class ApimSyntheticMonitoringScheduler @Inject()(
       Seq(
         () => checkAndMeter("getDeployment", hipEnvironment, apimConnector.getDeployment(publisherReference, hipEnvironment).map(transform)),
         () => checkAndMeter("listEgressGateways", hipEnvironment, apimConnector.listEgressGateways(hipEnvironment).map(transform)),
-        () => checkAndMeter("fetchClientScopes", hipEnvironment, idmsConnector.fetchClientScopes(hipEnvironment, hipEnvironment.clientId).map(transform))
-      ),
-  ) :+ (() => checkAndMeter("getDeploymentDetails", hipEnvironments.deployTo, apimConnector.getDeploymentDetails(publisherReference).map(transform)))
+        () => checkAndMeter("fetchClientScopes", hipEnvironment, idmsConnector.fetchClientScopes(hipEnvironment, hipEnvironment.clientId).map(transform)),
+        () => checkAndMeter("getDeploymentDetails", hipEnvironment, apimConnector.getDeploymentDetails(publisherReference, hipEnvironment).map(transform))
+      )
+    )
 
   private def transform(result: Either[ApimException | IdmsException, ?]): Either[Option[Throwable], Unit] = result match {
     case Left(ApimException(_, cause, _)) => Left(Option(cause))

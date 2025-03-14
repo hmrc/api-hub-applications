@@ -25,10 +25,9 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.{BaseHipEnvironment, DefaultHipEnvironment, HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, APIMConnectorImpl}
 import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
-import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentsRequest, DetailsResponse, EgressMapping, Error, FailuresResponse, InvalidOasResponse, RedeploymentRequest, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata}
+import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentsRequest, DetailsResponse, EgressMapping, Error, FailuresResponse, InvalidOasResponse, RedeploymentRequest, StatusResponse, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidCredential
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
-import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 
@@ -457,10 +456,7 @@ class APIMConnectorSpec
     }
 
     "must default OAS version to 'unknown' when not returned by APIM" in {
-      val expected = SuccessfulDeploymentResponse(
-        id = successfulDeploymentResponse.id,
-        oasVersion = "unknown"
-      )
+      val expected = SuccessfulDeploymentResponse(publisherRef, None, None, "unknown", None)
 
       stubFor(
         get(urlEqualTo(s"/${primaryEnvironment.id}/v1/oas-deployments/publisher_ref"))
@@ -492,7 +488,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.value mustBe detailsResponse.toDeploymentDetails
       )
@@ -526,7 +522,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual => {
           actual.value mustBe deploymentDetailsWithoutEgressOrPrefixes
         }
@@ -559,7 +555,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual => {
           actual.value mustBe deploymentDetailsWithoutEgressOrPrefixes
         }
@@ -579,7 +575,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.value mustBe detailsResponseWithoutDetails.toDeploymentDetails
       )
@@ -594,7 +590,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.left.value mustBe ApimException.serviceNotFound(serviceId)
       )
@@ -611,7 +607,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).getDeploymentDetails(serviceId)(HeaderCarrier(requestId = requestId)).map(
+      buildConnector(this).getDeploymentDetails(serviceId, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map(
         actual =>
           actual.left.value mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context)
       )
@@ -782,6 +778,152 @@ class APIMConnectorSpec
     }
   }
 
+  "APIMConnector.getOpenApiSpecification" - {
+    "must place the correct request and return the OAS on success" in {
+      val environment = secondaryEnvironment
+      val oas = "test-oas"
+
+      stubFor(
+        get(urlEqualTo(s"/${environment.id}/v1/oas-deployments/$publisherRef/oas"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
+          .withHeader("Accept", equalTo("application/yaml"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
+          .willReturn(
+            aResponse()
+              .withBody(oas)
+              .withHeader("Content-Type", "application/yaml")
+          )
+      )
+
+      buildConnector(this).getOpenApiSpecification(publisherRef, environment)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Right(oas)
+      }
+    }
+
+    "must return serviceNotFound when the service does not exist" in {
+      val environment = secondaryEnvironment
+
+      stubFor(
+        get(urlEqualTo(s"/${environment.id}/v1/oas-deployments/$publisherRef/oas"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector(this).getOpenApiSpecification(publisherRef, environment)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Left(ApimException.serviceNotFound(publisherRef))
+      }
+    }
+
+    "must return unexpectedResponse when APIM returns an unexpected response" in {
+      val environment = secondaryEnvironment
+
+      val context = Seq(
+        "publisherReference" -> publisherRef,
+        "hipEnvironment" -> environment.id,
+        "X-Correlation-Id" -> correlationId
+      )
+
+      stubFor(
+        get(urlEqualTo(s"/${environment.id}/v1/oas-deployments/$publisherRef/oas"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector(this).getOpenApiSpecification(publisherRef, environment)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Left(ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context))
+      }
+    }
+  }
+
+  "APIMConnector.getDeploymentStatus" - {
+    "must place the correct request and return the deployment status" in {
+      val environment = secondaryEnvironment
+
+      val mergeRequestIid = "test-merge-request-iid"
+      val version = "test-version"
+
+      val statusResponse = StatusResponse(
+        status = "test-status",
+        message = Some("test-message"),
+        health = Some("test-health")
+      )
+
+      stubFor(
+        get(urlEqualTo(s"/${environment.id}/v1/simple-api-deployment/deployments/$publisherRef/status?mr-iid=$mergeRequestIid&version=$version"))
+          .withHeader("Authorization", equalTo(authorizationTokenSecondary))
+          .withHeader("x-api-key", equalTo(secondaryApiKey))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(statusResponse).toString)
+              .withHeader("Content-Type", "application/json")
+          )
+      )
+
+      buildConnector(this).getDeploymentStatus(publisherRef, mergeRequestIid, version, environment)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Right(statusResponse)
+      }
+    }
+
+    "must return serviceNotFound when the deployment does not exist" in {
+      val environment = secondaryEnvironment
+
+      val mergeRequestIid = "test-merge-request-iid"
+      val version = "test-version"
+
+      stubFor(
+        get(urlEqualTo(s"/${environment.id}/v1/simple-api-deployment/deployments/$publisherRef/status?mr-iid=$mergeRequestIid&version=$version"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector(this).getDeploymentStatus(publisherRef, mergeRequestIid, version, environment)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Left(ApimException.serviceNotFound(publisherRef))
+      }
+    }
+
+    "must return unexpectedResponse when APIM returns an unexpected response" in {
+      val environment = secondaryEnvironment
+
+      val mergeRequestIid = "test-merge-request-iid"
+      val version = "test-version"
+
+      val context = Seq(
+        "publisherReference" -> publisherRef,
+        "mergeRequestIid" -> mergeRequestIid,
+        "version" -> version,
+        "hipEnvironment" -> environment.id,
+        "X-Correlation-Id" -> correlationId
+      )
+
+      stubFor(
+        get(urlEqualTo(s"/${environment.id}/v1/simple-api-deployment/deployments/$publisherRef/status?mr-iid=$mergeRequestIid&version=$version"))
+          .willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+      )
+
+      buildConnector(this).getDeploymentStatus(publisherRef, mergeRequestIid, version, environment)(HeaderCarrier(requestId = requestId)).map {
+        actual =>
+          actual mustBe Left(ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR, context))
+      }
+    }
+  }
+
 }
 
 object APIMConnectorSpec extends HttpClientV2Support {
@@ -849,7 +991,7 @@ object APIMConnectorSpec extends HttpClientV2Support {
     ))
   )
 
-  private val successfulDeploymentResponse = SuccessfulDeploymentResponse(publisherRef, "1")
+  private val successfulDeploymentResponse = SuccessfulDeploymentResponse(publisherRef, Some(Instant.now()), Some("test-deployment-version"), "1", Some("test-build-version"))
 
   private val successfulDeploymentsResponse =
     SuccessfulDeploymentsResponse(
