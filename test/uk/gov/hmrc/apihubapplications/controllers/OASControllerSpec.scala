@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.when
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
@@ -35,6 +35,7 @@ import uk.gov.hmrc.apihubapplications.models.apim.{FailuresResponse, InvalidOasR
 import uk.gov.hmrc.apihubapplications.models.apim.ValidateResponse.formatValidateResponse
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
 import uk.gov.hmrc.apihubapplications.services.OASService
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
 import scala.concurrent.Future
 
@@ -51,7 +52,7 @@ class OASControllerSpec
       val validResult = SuccessfulValidateResponse
       val expectedResult = Json.toJson(validResult)(formatValidateResponse)
 
-      when(fixture.oasService.validateInPrimary(eqTo(oas))(any, any)).thenReturn(Future.successful(Right(validResult)))
+      when(fixture.oasService.validate(eqTo(oas), any)(any, any)).thenReturn(Future.successful(Right(validResult)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.OASController.validateOAS())
@@ -70,7 +71,7 @@ class OASControllerSpec
       val invalidResult = InvalidOasResponse(FailuresResponse("code", "reason", None))
       val expectedResult = Json.toJson(invalidResult)(formatValidateResponse)
 
-      when(fixture.oasService.validateInPrimary(eqTo(oas))(any, any))
+      when(fixture.oasService.validate(eqTo(oas), any)(any, any))
         .thenReturn(Future.successful(Right(invalidResult)))
 
       running(fixture.application) {
@@ -88,7 +89,7 @@ class OASControllerSpec
       val fixture = buildFixture()
       val oas = "invalid oas"
 
-      when(fixture.oasService.validateInPrimary(eqTo(oas))(any, any))
+      when(fixture.oasService.validate(eqTo(oas), any)(any, any))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
       running(fixture.application) {

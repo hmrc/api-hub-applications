@@ -18,7 +18,9 @@ package uk.gov.hmrc.apihubapplications.scheduler
 
 import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorSystem
-import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
+import org.mockito.ArgumentMatchers
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -26,7 +28,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.apim.DeploymentDetails
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentDetails, InvalidOasResponse, SuccessfulValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.services.MetricsService
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
@@ -60,6 +62,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
           .thenReturn(Future.successful(Right(Seq.empty)))
         when(fixture.apimConnector.getDeploymentDetails(publisherReference, hipEnvironment)(hc))
           .thenReturn(Future.successful(Right(DeploymentDetails(None, None, None, None, None, None, Seq.empty, None))))
+        when(fixture.apimConnector.validateOas(any, ArgumentMatchers.eq(hipEnvironment))(ArgumentMatchers.eq(hc))).thenReturn(Future.successful(Right(SuccessfulValidateResponse)))
       )
 
       fixture.apimSyntheticMonitoringScheduler.run().futureValue
@@ -69,6 +72,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.apimConnector).listEgressGateways(hipEnvironment)(hc)
         verify(fixture.idmsConnector).fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc)
         verify(fixture.apimConnector).getDeploymentDetails(publisherReference, hipEnvironment)(hc)
+        verify(fixture.apimConnector).validateOas(any, ArgumentMatchers.eq(hipEnvironment))(any)
       )
       verifyNoMoreInteractions(fixture.apimConnector)
       verifyNoMoreInteractions(fixture.idmsConnector)
@@ -78,6 +82,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "listEgressGateways", "success")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "fetchClientScopes", "success")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeploymentDetails", "success")
+        verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "validateOas", "success")
       )
       verifyNoMoreInteractions(fixture.metricsService)
     }
@@ -94,6 +99,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
           .thenReturn(Future.successful(Left(IdmsException("message", new RuntimeException, IdmsException.ClientNotFound))))
         when(fixture.apimConnector.getDeploymentDetails(publisherReference, hipEnvironment)(hc))
           .thenReturn(Future.successful(Left(ApimException("message", new RuntimeException, ApimException.InvalidResponse))))
+        when(fixture.apimConnector.validateOas(any, ArgumentMatchers.eq(hipEnvironment))(ArgumentMatchers.eq(hc))).thenReturn(Future.successful(Left(ApimException("message", new RuntimeException, ApimException.UnexpectedResponse))))
       )
 
       fixture.apimSyntheticMonitoringScheduler.run().futureValue
@@ -103,6 +109,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.apimConnector).listEgressGateways(hipEnvironment)(hc)
         verify(fixture.idmsConnector).fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc)
         verify(fixture.apimConnector).getDeploymentDetails(publisherReference, hipEnvironment)(hc)
+        verify(fixture.apimConnector).validateOas(any, ArgumentMatchers.eq(hipEnvironment))(ArgumentMatchers.eq(hc))
       )
       verifyNoMoreInteractions(fixture.apimConnector)
       verifyNoMoreInteractions(fixture.idmsConnector)
@@ -112,6 +119,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "listEgressGateways", "error")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "fetchClientScopes", "error")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeploymentDetails", "error")
+        verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "validateOas", "error")
       )
       verifyNoMoreInteractions(fixture.metricsService)
     }
@@ -128,6 +136,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
           .thenReturn(Future.successful(Left(IdmsException("message", new GatewayTimeoutException("timeout exception"), IdmsException.ClientNotFound))))
         when(fixture.apimConnector.getDeploymentDetails(publisherReference, hipEnvironment)(hc))
           .thenReturn(Future.failed(new GatewayTimeoutException("timeout exception")))
+        when(fixture.apimConnector.validateOas(any, ArgumentMatchers.eq(hipEnvironment))(ArgumentMatchers.eq(hc))).thenReturn(Future.successful(Left(ApimException("message", new RuntimeException, ApimException.UnexpectedResponse))))
       )
 
       fixture.apimSyntheticMonitoringScheduler.run().futureValue
@@ -137,6 +146,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.apimConnector).listEgressGateways(hipEnvironment)(hc)
         verify(fixture.idmsConnector).fetchClientScopes(hipEnvironment, hipEnvironment.clientId)(hc)
         verify(fixture.apimConnector).getDeploymentDetails(publisherReference, hipEnvironment)(hc)
+        verify(fixture.apimConnector).validateOas(any, ArgumentMatchers.eq(hipEnvironment))(ArgumentMatchers.eq(hc))
       )
       verifyNoMoreInteractions(fixture.apimConnector)
       verifyNoMoreInteractions(fixture.idmsConnector)
@@ -146,6 +156,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "listEgressGateways", "error")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "fetchClientScopes", "timeout")
         verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "getDeploymentDetails", "timeout")
+        verify(fixture.metricsService).apimSyntheticCheck(hipEnvironment.id, "validateOas", "error")
       )
       verifyNoMoreInteractions(fixture.metricsService)
     }
@@ -186,7 +197,7 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
       schedulerConfig,
       hipEnvironments,
       mongoLockRepository,
-      timestampSupport,
+      timestampSupport
     )
     Fixture(
       apimSyntheticMonitoringScheduler,

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException
@@ -27,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class OASService @Inject()(apimConnector: APIMConnector) {
 
-  def validateInPrimary(oas: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[ApimException, ValidateResponse]] =
-      apimConnector.validateInPrimary(oas)
+  def validate(oas: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[ApimException, ValidateResponse]] =
+      apimConnector.validateOas(oas, hipEnvironment)
 
 }
