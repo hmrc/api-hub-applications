@@ -20,6 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{Format, JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.apim.{InvalidOasResponse, SuccessfulValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.apim.ValidateResponse
@@ -32,7 +33,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class OASController @Inject()(
   cc: ControllerComponents,
   identify: IdentifierAction,
-  oasService: OASService
+  oasService: OASService,
+  hipEnvironments: HipEnvironments
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   private implicit val formatValidateResponse: Format[ValidateResponse] = ValidateResponse.formatValidateResponse
@@ -40,7 +42,7 @@ class OASController @Inject()(
   def validateOAS(): Action[AnyContent] = identify.async {
     implicit request =>
       request.body.asText.map(oasYaml =>
-        oasService.validateInPrimary(oasYaml)
+        oasService.validate(oasYaml, hipEnvironments.validateIn)
           .map(_.fold(
             e => InternalServerError(e.message),
             {

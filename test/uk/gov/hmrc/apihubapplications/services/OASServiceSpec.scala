@@ -24,8 +24,9 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.APIMConnector
 import uk.gov.hmrc.apihubapplications.models.apim.SuccessfulValidateResponse
-import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
 import uk.gov.hmrc.http.HeaderCarrier
+
 import scala.concurrent.Future
 
 class OASServiceSpec
@@ -39,8 +40,8 @@ class OASServiceSpec
       val fixture = buildFixture()
       val oas = "valid oas content"
       val validResponse = SuccessfulValidateResponse
-      when(fixture.apimConnector.validateInPrimary(eqTo(oas))(any)).thenReturn(Future.successful(Right(validResponse)))
-      fixture.oasService.validateInPrimary(oas)(HeaderCarrier()).map {
+      when(fixture.apimConnector.validateOas(eqTo(oas), eqTo(FakeHipEnvironments.production))(any)).thenReturn(Future.successful(Right(validResponse)))
+      fixture.oasService.validate(oas, FakeHipEnvironments.production)(HeaderCarrier()).map {
         result =>
           result.value mustBe validResponse
       }

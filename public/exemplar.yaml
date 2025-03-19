@@ -1,0 +1,926 @@
+---
+openapi: 3.0.3
+info:
+  title: HIP Board Game Store
+  description: |
+    # Description
+    This is an example OpenAPI schema defining an imaginary HIP Exemplar Board Game Store API.
+    The following text is intended to bump the file size over 55Kb.
+    
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus convallis ac eros eu vehicula. Integer quis diam id lorem blandit consequat. Pellentesque aliquam augue metus, a facilisis ex lacinia ut. Nunc lorem dolor, ornare a lacus interdum, rhoncus tincidunt mauris. Fusce vel fermentum lectus. Vestibulum egestas lacus sit amet dolor luctus accumsan. Integer at cursus nunc.
+
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse scelerisque sodales justo, sed fermentum tellus porta nec. Praesent vitae sollicitudin dolor, id molestie magna. Proin mauris tortor, elementum eu turpis nec, varius dictum sem. Sed molestie imperdiet nisl, at tincidunt leo. Nulla sollicitudin, lorem ac consequat elementum, dui mi tincidunt nisl, vel varius massa diam eget ex. Nunc dictum hendrerit felis, a tempor mauris. Mauris non bibendum lectus. Duis semper ornare diam, fermentum sodales arcu. Sed quis massa at purus luctus ornare id vel lacus. Sed erat nulla, fermentum sit amet sagittis et, feugiat vel dolor. Morbi et ultrices magna, quis eleifend odio. Sed bibendum orci et laoreet viverra. Morbi id sem ac justo maximus ultricies. Integer at nibh eget elit tempor ullamcorper ac non massa.
+  
+  Ut efficitur est et lectus aliquet laoreet. Ut leo felis, mollis a lacinia sit amet, maximus at massa. In rutrum volutpat lorem sed tempus. Sed vel venenatis nulla. Vestibulum at sapien eu turpis accumsan varius. Proin tempor ornare consectetur. Nunc faucibus eros a velit luctus laoreet id vel nibh. Aliquam eros urna, consectetur feugiat dui sit amet, accumsan laoreet risus. Duis lectus lectus, malesuada eu pharetra ut, sodales vitae risus. Quisque accumsan, purus vehicula iaculis bibendum, nibh ipsum sollicitudin elit, non malesuada nisi ligula ac libero. Aenean leo felis, rhoncus quis consequat eu, congue at odio. Donec sem odio, consequat sed nisl eget, lacinia elementum nulla. Ut vel quam dignissim, aliquet mi sit amet, sollicitudin est. Suspendisse ullamcorper enim sit amet velit dictum, non cursus nibh pretium.
+  
+  Aliquam bibendum ullamcorper turpis, sit amet sagittis dui efficitur faucibus. Duis sit amet tincidunt lectus. Etiam sit amet orci cursus, luctus mauris ac, placerat libero. Donec ac enim ut mi consectetur bibendum eget vitae enim. Aliquam erat volutpat. Nullam laoreet sem nec dui facilisis congue. Nam ipsum quam, scelerisque ac odio at, sodales gravida urna. Duis consequat velit id fermentum malesuada.
+  
+  Nullam et varius lorem, sed maximus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse malesuada egestas purus, eu dapibus ante sagittis et. Nunc hendrerit, ipsum a consectetur gravida, ligula sem fermentum lacus, quis gravida lectus velit id purus. Aliquam leo libero, convallis at accumsan at, placerat in dolor. Donec quis lorem nisl. Sed ut convallis nunc. Mauris in dui eu tellus luctus varius at ac diam. Aliquam nec fringilla sapien. Nullam volutpat placerat consequat. Aenean gravida ante lorem, at euismod metus sagittis id. Mauris nisi metus, commodo eget augue id, placerat auctor lorem. Nunc aliquet tellus justo. Phasellus pharetra enim non risus placerat sollicitudin.
+  
+  Nulla fermentum gravida mauris, tincidunt tincidunt sem vehicula vel. Donec auctor ex tortor, vel molestie justo molestie a. Donec eget scelerisque diam. Integer ullamcorper sed dui sit amet convallis. Aliquam tristique turpis in porta faucibus. In a suscipit turpis. Vestibulum dolor massa, dignissim sit amet justo vel, sollicitudin sollicitudin tellus. Interdum et malesuada fames ac ante ipsum primis in faucibus. Praesent viverra ut massa nec dapibus. Quisque cursus enim non libero aliquam facilisis. Phasellus facilisis elit sed sapien mollis, at ultrices nibh aliquam. Sed id pellentesque justo, vitae laoreet ipsum. Mauris sit amet orci ut sapien iaculis luctus. Integer diam sapien, sollicitudin eu leo sit amet, ullamcorper pharetra nisi.
+  
+  Morbi accumsan gravida mauris, consequat pretium eros eleifend nec. Donec scelerisque quam vel dignissim interdum. Suspendisse in dapibus tortor. Praesent vulputate accumsan lorem et convallis. Cras diam metus, ultricies ut magna sit amet, luctus consectetur sapien. Praesent rutrum, massa id convallis condimentum, eros nulla cursus enim, vel dapibus ligula lacus id turpis. Etiam cursus leo eu dui lacinia porta. Donec non dui a arcu porta rutrum gravida quis lacus. Mauris blandit ullamcorper ante, non imperdiet nunc tempus ac. In hac habitasse platea dictumst. Nulla facilisi. Morbi eu consequat lorem, vel molestie lorem. Mauris a laoreet est, ac ullamcorper dui. Sed at ligula volutpat tortor interdum mattis. Sed tincidunt congue lorem, id venenatis felis feugiat et.
+  
+  Quisque fringilla semper auctor. Nullam mi nisl, consequat in tincidunt at, accumsan quis ipsum. Duis pulvinar nulla id consequat tempor. Proin lacus libero, fermentum vitae massa at, tristique tempor massa. Vestibulum varius mauris ut fringilla consequat. Nam nulla ipsum, pharetra id tristique consequat, dapibus ac enim. Suspendisse velit nisi, condimentum quis vulputate non, mollis at nisi. Sed nisi ipsum, sodales vel interdum eget, dignissim eu lorem. Vestibulum sed vestibulum ipsum, vitae accumsan ante. Nullam commodo gravida maximus. Sed blandit magna quis egestas convallis. Nulla eget est in quam suscipit porttitor. Aenean molestie lacinia sem, in bibendum ex vestibulum quis. Fusce cursus tincidunt sollicitudin. Phasellus mauris ipsum, faucibus id euismod sit amet, mattis volutpat ante. Aenean id efficitur est.
+  
+  Donec faucibus velit vitae tincidunt congue. Nam et vehicula ex. Donec vestibulum mauris vitae rhoncus porttitor. Curabitur at neque sed mi pharetra bibendum quis at leo. Maecenas porta, eros sit amet vestibulum tincidunt, tortor odio ornare metus, ac tempor lacus velit eu ex. Mauris tincidunt nunc sed nulla suscipit, eu tristique mi placerat. Nullam at venenatis augue. Nulla dapibus neque velit, vel luctus turpis ullamcorper et. Duis sollicitudin, ex a pulvinar luctus, diam lectus ullamcorper diam, sit amet commodo elit nunc nec magna. Phasellus quis urna et lorem mollis ullamcorper et nec justo. Maecenas in euismod metus, quis porta libero. Donec convallis mi eget dictum luctus. Pellentesque euismod sagittis felis, ut maximus est imperdiet ac. Suspendisse vulputate lacinia orci, quis egestas turpis viverra id. Fusce vestibulum dictum porttitor. Cras massa erat, fringilla nec lectus sit amet, pellentesque sollicitudin felis.
+  
+  Etiam maximus vehicula est. Etiam vitae ultrices enim, ac feugiat ante. Nunc lacinia condimentum justo non faucibus. Maecenas congue interdum odio bibendum eleifend. Vestibulum scelerisque, augue at ultrices tristique, urna sapien finibus arcu, a efficitur eros metus non ante. Vestibulum justo tortor, egestas ac ex at, posuere facilisis eros. Quisque mattis condimentum metus.
+  
+  Praesent faucibus aliquet congue. Morbi tincidunt sapien vel lobortis pretium. Praesent id magna nec orci dignissim tempus vitae id tellus. Sed eget porttitor diam. Donec vitae bibendum leo, eu pharetra magna. Morbi semper velit non odio ullamcorper ultrices. Nam vulputate nulla sit amet turpis faucibus tincidunt. Donec erat felis, convallis pretium ligula et, vestibulum porttitor ipsum. Pellentesque ornare, lectus eget pharetra dapibus, est est tempor nisi, sit amet vulputate quam tortor id eros. Praesent lobortis urna ut mi tincidunt varius. Nunc quis lectus elit. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+  
+  Suspendisse bibendum pharetra mi ac sollicitudin. Nullam at tincidunt leo. In ultricies, diam eu efficitur sagittis, ligula purus imperdiet eros, ac pulvinar augue nisl sed libero. Pellentesque porttitor, eros sed placerat blandit, orci purus varius massa, sit amet bibendum nulla felis sit amet lacus. Sed sed risus ultricies, fringilla velit id, tincidunt magna. Duis pulvinar metus odio. Proin vestibulum mollis sem, vel blandit quam fermentum vitae. Morbi porta, eros quis ultrices vehicula, dolor felis faucibus ex, ac mollis sem lacus ac tellus. Pellentesque vitae elit euismod, euismod nibh ac, elementum eros. Nulla facilisis magna quis dolor luctus, quis eleifend ipsum iaculis. Nam ligula sem, tristique et odio id, mattis efficitur neque. Maecenas aliquet nibh vitae orci consequat, vel volutpat tortor rutrum. Donec vitae semper ligula, ut finibus enim.
+  
+  Donec rutrum nunc at massa luctus, vitae lacinia ex posuere. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nullam venenatis quis dui quis finibus. Suspendisse molestie, mauris vel semper semper, urna purus mattis erat, in iaculis orci nisl in arcu. Fusce vel efficitur dui, ac vehicula ligula. Morbi auctor leo urna, quis condimentum ligula convallis in. Sed auctor bibendum enim, sit amet ullamcorper est malesuada sed. Maecenas fermentum eros rutrum nisl efficitur aliquet. Nunc augue tellus, dictum a nulla eget, scelerisque volutpat tellus.
+  
+  Aenean dui lacus, tincidunt eu dapibus nec, vestibulum ac nulla. Nullam facilisis ullamcorper imperdiet. Duis ipsum arcu, consectetur sed blandit vitae, porta in massa. Suspendisse ut nunc ut quam volutpat posuere et vitae urna. Sed viverra lacinia mauris, eget aliquet dui hendrerit ut. Quisque congue sagittis velit nec aliquam. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+  
+  Praesent ultricies tempus erat, at sagittis massa auctor in. Donec ac aliquet ante. Duis lacinia est at arcu fringilla elementum. Sed fermentum, risus ac tincidunt mollis, felis neque tristique eros, varius eleifend mauris nisi quis lacus. Maecenas a volutpat augue. Phasellus euismod leo eu risus vulputate rhoncus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;
+  
+  Pellentesque pulvinar nulla dolor. Maecenas a est lectus. Vestibulum tincidunt vel sem vel dignissim. Sed volutpat sollicitudin dictum. Mauris dapibus velit nulla, molestie pretium quam semper nec. Phasellus urna ligula, tincidunt ac vestibulum a, pulvinar vel tellus. Sed ornare ac eros nec facilisis. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Fusce sodales sodales interdum. Nullam commodo metus nec justo scelerisque luctus. Pellentesque pellentesque ultricies nunc eu tristique. Ut at ante turpis.
+  
+  Curabitur et dapibus felis. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Fusce sagittis, arcu et porttitor semper, nunc mi dapibus est, sodales accumsan elit tellus vel magna. Curabitur sit amet dui eu tellus viverra vehicula. Nullam vitae fringilla quam, eget feugiat metus. Aliquam rhoncus nisl in dolor aliquet consectetur. Quisque consequat fringilla enim, vitae vestibulum tortor molestie id. In hac habitasse platea dictumst. Donec tortor metus, iaculis nec quam a, sollicitudin sagittis ex. Nam suscipit sodales nulla id vehicula. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
+  
+  Vestibulum sit amet arcu non est gravida consequat. Sed urna risus, rhoncus vitae bibendum eu, hendrerit non magna. Nunc aliquet maximus augue, ac viverra neque congue vel. Integer id justo dignissim, lobortis purus sit amet, lobortis dolor. Etiam auctor, orci sed elementum vestibulum, quam libero pharetra tellus, ac auctor ex tellus a tellus. Suspendisse sollicitudin urna erat, ut accumsan est consectetur a. Nam aliquam, lectus vel lacinia pellentesque, tellus risus rhoncus leo, ut aliquet lacus odio sodales odio. In posuere ultrices tortor, sit amet molestie mauris tristique in. Vivamus eleifend arcu ligula, nec consequat nibh gravida sed. Fusce sodales porttitor turpis sit amet viverra. Integer vel quam dictum massa mattis vestibulum mattis in odio. Pellentesque at magna eu turpis convallis rhoncus.
+  
+  Donec lobortis vehicula placerat. Vestibulum tristique sollicitudin rhoncus. Ut vel tincidunt nunc. Morbi et tortor at elit vulputate lobortis. Nunc pretium feugiat lorem. Praesent varius sem id eleifend vestibulum. Etiam nulla mauris, vestibulum quis venenatis sed, euismod in ex. In hac habitasse platea dictumst. Vivamus lacinia odio vel pretium lacinia. Vivamus sed dui nisl. Ut quis elit felis. Aliquam erat volutpat.
+  
+  Cras posuere lacus a est condimentum maximus quis eu mi. Nunc porta justo id interdum lobortis. Ut iaculis quis velit nec pharetra. Suspendisse potenti. Suspendisse convallis lacinia odio, non ultrices lorem varius in. In sodales odio nisi, egestas placerat purus pellentesque eget. Aliquam molestie aliquet felis non porta. Duis magna leo, fermentum vel volutpat ut, rutrum a leo. Praesent ut felis nec nisi eleifend luctus ut vel turpis.
+  
+  Proin eleifend libero nibh, auctor eleifend risus faucibus eget. Cras id ante sed libero laoreet volutpat. Proin mollis orci libero, nec cursus magna pharetra vel. Morbi faucibus varius nunc, non molestie quam sagittis eu. Nunc euismod odio quis ex interdum condimentum. Fusce dolor est, ultricies sit amet elementum sit amet, aliquam quis nisl. Donec cursus tristique bibendum. Pellentesque tempus fermentum volutpat. Nulla tempor dapibus lorem a tincidunt.
+  
+  Integer egestas mi orci, et iaculis massa lobortis non. Nullam et interdum massa. Aenean ac blandit ex, et dignissim libero. Sed pulvinar urna augue, et dignissim neque gravida eget. Praesent et ultrices ipsum. Etiam imperdiet est id arcu tristique, at congue justo tempor. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Phasellus tellus diam, tristique non mi maximus, rhoncus molestie justo. Mauris gravida neque magna. Etiam posuere mi in sapien mollis rhoncus. Mauris ornare sed quam id lacinia.
+  
+  Mauris quis congue magna, ut vulputate tortor. Ut nec porttitor tellus, non viverra ante. Nam aliquam cursus ex, in bibendum quam aliquet a. Nunc volutpat nisi mauris, congue finibus metus sollicitudin ac. Suspendisse neque nisi, elementum vehicula nulla eget, semper pellentesque est. Donec interdum eros tortor, a mollis mauris tincidunt et. Quisque eleifend elementum nunc, ac vulputate sapien euismod at.
+  
+  Sed eget porttitor neque. Sed aliquam augue vel justo efficitur lobortis. Donec justo risus, varius vel tempor scelerisque, eleifend pretium eros. Fusce quis porttitor ligula. Nulla iaculis mi in metus rhoncus condimentum. Ut metus enim, vehicula sit amet ligula quis, dignissim aliquam odio. Phasellus gravida mauris nec consequat pulvinar.
+  
+  Maecenas tellus dui, malesuada non sagittis id, finibus eu neque. Sed congue porttitor volutpat. Cras vel gravida dolor. Pellentesque posuere, lectus et viverra condimentum, lacus sem feugiat nisl, et cursus purus risus ut nunc. Ut sodales neque ut sagittis laoreet. Vivamus pulvinar interdum neque, et aliquam mauris pellentesque ut. Vivamus rutrum scelerisque congue. Nullam eu nulla neque. Maecenas tincidunt turpis nisi, vel dictum velit pulvinar eu. Vivamus ac felis id erat ultrices tempor.
+  
+  Nullam congue tempus lorem, nec iaculis nulla consectetur et. Integer ut sem congue, suscipit leo a, lacinia nulla. Etiam imperdiet orci eu viverra dapibus. Mauris fermentum viverra arcu, nec placerat erat viverra quis. Nulla posuere lectus at ligula pharetra, vitae lobortis diam egestas. Phasellus viverra, est ut tempor imperdiet, dolor mi eleifend ligula, lobortis congue augue justo vitae risus. Etiam quis nunc ac purus dapibus posuere non dapibus libero. Donec vulputate pellentesque leo. Morbi tincidunt, enim ac vulputate vehicula, urna sem egestas arcu, sit amet euismod urna ante eget ligula. Mauris ac nibh accumsan, sagittis lacus fringilla, mollis metus. Nam congue tempor lacus. Curabitur quis convallis orci. Duis eleifend felis tortor, ut suscipit nulla tempus non.
+  
+  Mauris ultricies auctor sem euismod maximus. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus ullamcorper, ante sed hendrerit venenatis, quam enim consectetur risus, sed porta lacus erat at lectus. Nulla ligula neque, molestie a nibh ut, malesuada euismod sapien. Nulla tempus eleifend pharetra. Etiam iaculis turpis dolor, nec tempus orci condimentum id. Sed eu neque posuere massa volutpat volutpat vel sit amet ante. Cras mattis quis odio quis faucibus. Sed aliquet metus vel tortor maximus, a mollis augue feugiat. Cras et malesuada lorem. Phasellus ut turpis est. Duis eu diam augue. Curabitur vitae nulla pellentesque, accumsan sapien ac, tempus nunc. Morbi magna orci, sollicitudin eu purus sit amet, ullamcorper egestas libero. Nam lorem augue, bibendum vitae dictum eu, pellentesque at nisl. Donec posuere egestas finibus.
+  
+  Vestibulum et neque sit amet massa dictum ultricies. Praesent sollicitudin elit lectus, id accumsan tellus lobortis vel. Aliquam consequat porta nunc venenatis ultricies. Sed eget dui nec diam varius porta mollis non dui. Pellentesque varius lectus eu massa tristique, et vehicula ante pellentesque. Praesent accumsan metus quis blandit sagittis. Pellentesque fringilla, ligula sagittis volutpat porttitor, sem massa mollis lacus, eget posuere nibh sem eu magna. Morbi at nibh hendrerit neque lacinia lacinia sit amet vel libero.
+  
+  Ut sagittis ante id sodales fringilla. Donec blandit ligula vitae condimentum sollicitudin. Pellentesque semper congue posuere. Phasellus placerat venenatis dui eget pellentesque. Morbi tortor turpis, pretium sed elit iaculis, tempus vestibulum nulla. Aenean auctor volutpat gravida. Nunc vel magna orci. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse pretium fringilla commodo. Donec at metus odio. Praesent sed blandit purus.
+  
+  Aliquam eget cursus dui, quis suscipit lacus. Sed finibus luctus neque, vitae ultricies nibh vulputate ut. Nulla sed tristique justo. Proin fermentum lacus sed arcu imperdiet, id tempor mauris convallis. Curabitur ullamcorper odio hendrerit libero blandit bibendum. Fusce eleifend id velit eu faucibus. In id tortor eget tellus hendrerit egestas vitae a justo.
+  
+  Sed ac elit diam. Aenean maximus leo non quam efficitur mattis. Phasellus eu faucibus felis, sit amet blandit lectus. Phasellus vel enim vulputate, egestas sem eget, suscipit arcu. Suspendisse enim ex, iaculis quis accumsan et, malesuada ac diam. Praesent sed ornare metus, vitae auctor lacus. Nunc condimentum, ex sed laoreet pellentesque, eros diam ornare metus, nec mollis ex velit vitae odio. Ut cursus eleifend elementum. Duis sed mauris condimentum, sagittis enim in, facilisis odio. Donec a luctus justo. Cras suscipit consectetur commodo. Fusce sed sem id sem tempor tempor.
+  
+  Cras porta erat sem, in facilisis lectus mattis eu. Sed rutrum nisi placerat metus ullamcorper, at ultrices ex porttitor. Cras sagittis arcu id nunc interdum, a sagittis mi facilisis. Fusce condimentum porttitor nisi vel fermentum. Donec gravida fermentum risus vitae aliquam. Duis pellentesque velit id suscipit convallis. Vestibulum molestie maximus libero vel mollis. Nam vel lorem rhoncus, faucibus lacus ut, tempus enim. Nullam tristique, erat et lacinia dignissim, turpis enim dignissim lorem, bibendum porta tortor velit eget ex. Nunc molestie volutpat enim, eu posuere nisi consectetur ut. Pellentesque aliquet tempor nibh quis aliquam. Aliquam mattis nisl tellus, vel porta arcu dapibus ac. Donec sed augue vel erat faucibus mollis. Morbi a erat sit amet arcu efficitur aliquet. Sed eget orci nisi.
+  
+  Nulla ut pulvinar lacus. Ut cursus quam ac lacinia dapibus. Nullam eget mauris erat. Donec ac quam consequat metus tristique malesuada a sed purus. Duis varius pretium pharetra. Nulla feugiat quam neque, eget luctus dolor viverra ac. Mauris egestas metus vel magna ultrices finibus tempor sit amet arcu. Vestibulum et placerat lectus, maximus congue tellus. Etiam cursus magna ac rhoncus convallis. Etiam eget nisi quis metus condimentum venenatis. Proin maximus velit bibendum nisi efficitur, eget interdum lorem blandit. Nulla a egestas dolor.
+  
+  Etiam et nisi in est pellentesque hendrerit in in ipsum. Donec et leo id urna pulvinar tempor. Fusce sit amet enim metus. Morbi in eros ex. Phasellus ultrices nec tellus nec ultrices. Nulla hendrerit massa at magna laoreet porttitor. Donec feugiat mauris condimentum urna dignissim tempus. Etiam felis lacus, varius ac augue eu, auctor egestas sapien. Aenean eleifend posuere elit et euismod. Etiam condimentum interdum quam. Etiam vehicula imperdiet nisi id ornare. Maecenas non tellus ornare, euismod ipsum sed, porttitor leo.
+  
+  Aliquam vestibulum bibendum odio et feugiat. Curabitur gravida et mauris id sollicitudin. Nulla fringilla, tortor a fermentum semper, nulla quam pulvinar nunc, vel mollis est augue sed ex. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent vel maximus orci, quis faucibus lorem. Maecenas varius metus ac massa imperdiet faucibus. Nunc malesuada feugiat quam eget tincidunt. Praesent dictum urna at tempus aliquet.
+  
+  Interdum et malesuada fames ac ante ipsum primis in faucibus. Curabitur mollis eu neque ut blandit. Fusce sollicitudin leo nec ornare aliquet. Nunc a egestas tellus. Mauris id erat dictum dolor venenatis viverra. Fusce vitae mollis ante. Quisque placerat augue eu lacus rutrum, sit amet commodo nibh eleifend.
+  
+  Morbi euismod laoreet neque, quis consequat eros condimentum ut. Quisque pellentesque tristique nisi. Mauris sed elit ut nunc cursus fringilla. Sed in massa neque. Cras placerat non arcu id semper. Pellentesque a lorem id velit lobortis accumsan vitae vel nulla. Suspendisse vel ligula sed arcu pharetra consequat. Phasellus blandit blandit felis, et pellentesque elit facilisis ac. Aliquam vel velit convallis, placerat urna eget, sodales urna. Maecenas mollis libero tortor, eu consequat arcu consectetur ac. Curabitur scelerisque sem mi, quis interdum purus vehicula vitae. Sed non dolor ultricies sapien facilisis auctor vel vitae ligula. In vulputate iaculis sem, eu lacinia nisi porta eu.
+  
+  Duis nec purus dapibus, ullamcorper augue vitae, semper neque. Ut malesuada elit ac urna volutpat fringilla. Donec feugiat quis erat et mollis. Nam eu leo nec ligula tempus pretium. Nunc gravida sollicitudin elit, sed iaculis magna fermentum in. Sed pellentesque purus ac eros consectetur, id rutrum sapien posuere. Aenean a velit a enim varius condimentum ut efficitur risus.
+  
+  Aliquam vulputate molestie nibh ut condimentum. Quisque semper tristique eros, quis vulputate sapien efficitur vitae. Suspendisse gravida ut mauris nec egestas. Sed convallis lectus eu nisi lobortis, quis vestibulum augue accumsan. Cras a varius ipsum. Nam in efficitur arcu. Nulla malesuada ultricies nulla sed iaculis. In sed felis et neque sollicitudin semper at vitae arcu. Cras a tempor erat.
+  
+  Mauris consectetur ante vestibulum, gravida justo et, tincidunt nulla. Quisque posuere massa sem, viverra consectetur dolor molestie eu. Curabitur ut mi ac mauris sagittis ultricies. Pellentesque ut vestibulum ligula. Donec a tortor tincidunt, rutrum mauris et, cursus ligula. Integer quis mattis sem. Nam quis leo ac est efficitur dictum.
+  
+  Nunc porttitor neque nisl, in vulputate purus maximus non. Integer posuere arcu eget nisi commodo, vel eleifend risus mattis. Etiam lobortis velit sed odio sodales aliquam. Pellentesque maximus lobortis magna, at pellentesque velit. Proin aliquet convallis lectus, sed fermentum augue faucibus ac. Donec urna est, tincidunt eu consectetur sed, suscipit a felis. Quisque semper rhoncus mollis. Fusce suscipit quam nisl, quis imperdiet sapien mollis non.
+  
+  Maecenas fringilla ante sed velit venenatis bibendum. Pellentesque imperdiet turpis risus. Nam eget tempus ipsum, at bibendum felis. Integer placerat, quam in egestas pulvinar, leo turpis efficitur justo, vitae condimentum odio magna et massa. Pellentesque dapibus nisi sed feugiat pharetra. Nam faucibus sodales odio quis lacinia. Curabitur quis dui ac ex tincidunt fringilla a vitae ligula. Nullam at lobortis ex. Maecenas blandit felis quis enim semper, sed sodales enim dapibus. Fusce gravida, ex in facilisis lobortis, nisl justo porta lectus, eget pretium neque turpis sed urna. Donec ultrices quam risus, ut vehicula dui accumsan sit amet. Fusce sed facilisis neque, et blandit tellus. Proin posuere odio ligula, vitae dapibus nisi cursus nec. Aliquam ac ante risus. Mauris id accumsan mi, in varius purus.
+  
+  Sed vitae metus congue, rhoncus tortor sed, convallis lectus. Etiam eget egestas ante. Aliquam dapibus augue eu feugiat vestibulum. Donec in diam tristique, auctor diam ut, finibus tortor. Mauris ultrices vehicula sem, id porta tellus bibendum id. Nulla iaculis augue et dolor rhoncus varius. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
+  
+  Mauris bibendum erat nisl. Nunc id consectetur tellus, ut sollicitudin ante. Ut interdum, neque vel aliquam vestibulum, quam neque pellentesque nulla, ac tincidunt nunc diam sed mauris. Cras et maximus justo. Suspendisse lacinia sit amet elit vitae mollis. Morbi venenatis nunc sit amet mollis facilisis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
+  
+  Sed in nulla a risus interdum tempus. Phasellus pellentesque enim et pharetra ullamcorper. Integer venenatis ex eget ipsum vehicula, in luctus augue rutrum. Aliquam sed consequat est, ut sollicitudin turpis. Mauris non dolor eu enim cursus rutrum. Suspendisse potenti. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Phasellus vehicula ultrices erat, in ultrices quam maximus in. Maecenas ornare lorem vitae feugiat faucibus. Vestibulum eu lectus eget ante maximus posuere nec a ligula. Ut efficitur elit vel ipsum fermentum, ac varius turpis interdum. Sed in neque id tortor facilisis euismod sollicitudin ac sem. Suspendisse vel sollicitudin velit, quis congue diam. Vestibulum in ligula ante. Suspendisse dictum lacinia nisi a molestie. Integer varius nisi a libero lacinia, et sagittis sapien tempor.
+  
+  Quisque eleifend lacus eu laoreet dictum. Donec vel blandit ligula. Etiam efficitur ultrices lorem eget accumsan. Vivamus aliquam aliquam lectus, id molestie diam accumsan ut. Praesent at massa tristique purus egestas ultrices ac eget odio. Etiam tempus eu eros ut placerat. Duis vestibulum ipsum quis ante sodales faucibus. Nam eu dolor mi. Cras varius leo non dui porta, sit amet semper ligula rhoncus. Proin ligula diam, blandit nec turpis dignissim, aliquam ultrices sem. Morbi dictum a dui eget viverra. Sed molestie scelerisque turpis, nec aliquet magna porta in. Vestibulum ac faucibus ante.
+  
+  Aliquam et purus consectetur, fringilla ligula non, bibendum erat. Ut feugiat, ligula at tempus sollicitudin, enim mauris maximus velit, ac interdum erat dui id dolor. Integer sed ligula non orci pretium tincidunt. Vestibulum dui elit, suscipit a lacinia sodales, convallis ac tellus. Vivamus at mattis enim. Integer odio ipsum, pharetra eu purus auctor, pharetra dapibus libero. Vivamus sed risus scelerisque, semper lectus in, sodales eros. Suspendisse potenti. Praesent pulvinar risus in quam pulvinar scelerisque. Integer placerat at odio id tincidunt. Morbi faucibus mi vitae eros ullamcorper hendrerit. Duis malesuada vitae nisi in semper. Mauris ac urna fermentum, ultrices nunc vitae, vestibulum elit. Nulla facilisi. Sed tristique commodo nisl, sed vehicula arcu congue condimentum. Donec ut feugiat arcu.
+  
+  Sed tincidunt sapien velit, in fermentum eros gravida quis. Quisque molestie massa nec eleifend aliquet. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nam mollis tortor quis turpis aliquet rhoncus. Vestibulum nec porttitor est. Aliquam vehicula vulputate metus, ac tempus ligula suscipit ac. Vivamus ut magna id enim iaculis mollis a vel felis.
+  
+  Pellentesque hendrerit molestie ipsum, sit amet mollis nisl dapibus ultrices. Vivamus pretium, purus a ultrices elementum, ex lectus pellentesque lorem, quis semper elit nibh sed lorem. Nam lobortis sit amet elit non gravida. In vehicula, ligula a consectetur convallis, enim felis auctor dui, nec maximus nisi mi id urna. Vestibulum non purus arcu. Phasellus nunc purus, tincidunt vel magna vitae, varius semper mauris. Quisque quis diam dui. Nullam venenatis lorem in urna tempor molestie. Vestibulum faucibus, libero a vestibulum maximus, mauris nisi tincidunt augue, et imperdiet ante est in justo. In hac habitasse platea dictumst. Nam convallis felis id ultrices suscipit. Phasellus ultrices ex eu purus viverra hendrerit. In gravida, tellus mollis congue ullamcorper, justo enim mollis elit, a ullamcorper odio orci a felis. Proin nec vestibulum ex.
+  
+  Phasellus sed ultricies nunc, in feugiat enim. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nam cursus libero vitae felis viverra, ut fringilla ex placerat. In magna magna, sollicitudin at venenatis a, maximus ac est. Mauris at nisi et odio rhoncus tristique. In vulputate euismod nisl ut fringilla. Etiam felis magna, scelerisque et aliquet sed, placerat et elit. Quisque ac accumsan est. Nam dapibus euismod finibus. Praesent interdum vitae justo vel fringilla. Cras in interdum massa. Proin volutpat felis mi, vel hendrerit ante tempus id. Vestibulum non metus rutrum ipsum pellentesque lobortis in et magna. Sed aliquet, elit non convallis dignissim, odio mi mollis dui, suscipit rhoncus enim arcu quis ipsum. Quisque blandit ante nec nisi facilisis pharetra. Sed placerat nibh nec ultricies interdum.
+  
+  Maecenas eleifend suscipit justo. Nulla pellentesque velit sed odio tincidunt tincidunt. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec diam ligula, feugiat id massa quis, lacinia hendrerit diam. Nam ultricies sit amet massa a tincidunt. Nullam semper mi sollicitudin ipsum ultrices convallis. Vestibulum vitae elit sed nisl lacinia varius ac non lorem. Fusce non sodales felis. Donec sapien nisi, porta vitae condimentum vitae, dictum ut velit. Duis elementum ligula vitae felis ultricies luctus.
+  
+  Nam gravida, arcu sit amet tempor cursus, dui elit eleifend mi, quis venenatis justo mauris vel eros. Nam ultrices turpis urna, non condimentum lacus tincidunt vel. Mauris quis sapien lorem. Integer convallis quam malesuada ornare volutpat. Nulla accumsan tortor et ultrices aliquet. Curabitur ultricies, erat et interdum ultricies, libero risus viverra erat, vel iaculis urna nibh in odio. Morbi blandit posuere nibh a maximus. Cras et eleifend metus, et fringilla libero. Donec porta placerat nisi non condimentum. Curabitur consequat mollis aliquam. Ut imperdiet quam ac lacus bibendum, sed mattis tellus lobortis. Aliquam sagittis non risus vel consectetur. Vestibulum commodo interdum massa, at mattis nibh iaculis ut.
+  
+  Proin dapibus vehicula sapien et eleifend. Vivamus a vestibulum nunc. Ut libero felis, rhoncus a eros non, condimentum scelerisque enim. Etiam vehicula diam quis est congue commodo. In interdum ligula eget metus rutrum suscipit. Maecenas felis mi, vehicula et semper in, faucibus porta turpis. Etiam volutpat consequat augue egestas interdum. Proin ut sem eget nisi ullamcorper bibendum ac a magna. Nullam ullamcorper mattis ante, vel cursus purus mollis in. Aliquam erat volutpat.
+  
+  Donec faucibus lorem dignissim, interdum eros vel, luctus neque. Donec id ipsum ultricies, tincidunt ligula et, gravida odio. Sed placerat non lectus ac vulputate. Mauris aliquam libero id ex pretium, in ultrices dui imperdiet. Vivamus eu vehicula leo, id condimentum sem. Vivamus a nunc aliquet, egestas eros ac, lacinia mi. Donec et nulla arcu. Sed neque lorem, placerat hendrerit nibh at, blandit posuere felis. Pellentesque lacinia, leo ac egestas scelerisque, tortor lorem lacinia enim, et bibendum sapien mauris in ex. Integer leo lorem, sodales et ornare venenatis, rhoncus ac metus.
+  
+  Morbi egestas nibh neque, non pulvinar nisi convallis sit amet. Fusce ex odio, mattis egestas arcu sed, finibus ultricies neque. Proin sit amet libero in mauris bibendum tincidunt non at ipsum. Cras vestibulum consectetur aliquet. Vestibulum ante enim, eleifend et rhoncus a, posuere eu sapien. Etiam sit amet risus pharetra, fringilla odio et, varius felis. Praesent et dui imperdiet, rhoncus justo vitae, semper sem. Proin nec tincidunt quam. Morbi sit amet maximus diam, at tempor purus. Maecenas rutrum eros ante, sed volutpat nibh aliquet eu. Morbi sed nulla finibus lectus porttitor rutrum. Fusce cursus magna odio, id dictum ligula convallis vel. Phasellus bibendum maximus nisi eu lobortis. Vivamus sollicitudin magna quis dui finibus, sit amet commodo dolor fringilla. Nulla facilisi. Etiam ac lobortis elit.
+  
+  Sed iaculis fermentum imperdiet. Nullam hendrerit pretium metus, id lacinia felis fermentum sed. Proin imperdiet massa bibendum libero viverra, at finibus dolor euismod. Vestibulum a quam tempor, bibendum nisi at, tincidunt odio. Etiam nec felis nec leo suscipit suscipit. Nam ac aliquam arcu. Pellentesque viverra sed sem ut interdum. Pellentesque imperdiet eget nunc suscipit convallis.
+  
+  Phasellus at tempor nulla. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Fusce condimentum lacus magna, non congue eros blandit nec. Pellentesque metus quam, consectetur eget nisi fermentum, finibus malesuada ipsum. Cras vestibulum tellus ipsum, quis ultricies massa convallis facilisis. Duis cursus placerat libero in suscipit. Nulla ac enim lectus. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et vehicula turpis.
+  
+  Fusce rutrum ipsum eu est imperdiet, nec hendrerit odio placerat. Nulla porttitor leo id rutrum rhoncus. Duis fermentum lobortis velit. Vivamus sit amet nunc a lorem tristique tincidunt ac non libero. Aenean malesuada hendrerit elementum. Nunc nec mauris aliquam, tincidunt magna id, rhoncus nisi. Cras malesuada rhoncus tincidunt. Proin bibendum leo sit amet neque blandit tempor. Phasellus ullamcorper suscipit bibendum.
+  
+  Vivamus fermentum suscipit est sit amet imperdiet. Fusce ut magna ac libero tincidunt facilisis. Aenean rutrum sodales justo sed aliquet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris sapien tellus, consectetur fringilla ligula quis, faucibus consequat urna. Ut augue purus, facilisis at sodales at, bibendum et justo. Donec cursus elit non justo aliquet pharetra. Nam imperdiet urna ac dignissim egestas. Morbi pharetra nulla et ante vestibulum faucibus. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec diam est, sagittis quis sem egestas, sagittis faucibus quam. Sed hendrerit scelerisque ipsum, sit amet efficitur lacus egestas et.
+  
+  Pellentesque libero est, ultrices eu urna vitae, euismod placerat sem. Quisque eget mi lectus. Cras tincidunt dui nibh, at euismod tortor eleifend id. Quisque sit amet dolor eu tortor pharetra rutrum nec eu dolor. Nulla ac quam sem. Sed blandit libero at nulla pellentesque, et egestas magna tristique. Cras massa massa, dignissim sit amet dui eleifend, finibus pellentesque libero. Phasellus aliquet, sapien id varius maximus, sem sapien iaculis nunc, vitae sagittis orci massa mollis turpis.
+  
+  Aenean tempor nunc non quam egestas, eget convallis enim pellentesque. Vivamus scelerisque tincidunt ultricies. Pellentesque nibh augue, dignissim ut erat vel, blandit viverra elit. Ut non auctor lorem. Proin dictum viverra lacus, ut tempor urna tincidunt eu. Aliquam rutrum dignissim justo, quis rhoncus mi posuere et. Praesent tincidunt ante vitae ante euismod dictum. Ut vel arcu justo. Nunc ac tincidunt lectus, ut vestibulum velit. Vivamus faucibus, massa ut pretium fringilla, purus orci mollis urna, eget molestie urna augue ac turpis. Praesent iaculis malesuada ex, quis rutrum erat finibus ac. Mauris ornare massa ac enim vestibulum, sit amet porttitor sem hendrerit. Fusce ante neque, faucibus in ullamcorper ac, convallis a turpis. Cras ut nisi arcu. Vestibulum ornare sapien id eros malesuada, et cursus tellus imperdiet. Maecenas feugiat nisl vitae massa rutrum lacinia.
+  
+  Donec tempor diam elit, eleifend accumsan elit tempus fermentum. Aenean sodales mauris viverra, varius tortor eget, semper nisi. Morbi dapibus auctor lectus, non hendrerit risus euismod ut. Mauris sed risus in nisl egestas condimentum at et felis. Maecenas in ligula ligula. Nulla facilisi. In at accumsan quam. Nullam suscipit dictum leo, a molestie odio ultricies et. Nullam eget arcu laoreet, scelerisque metus bibendum, tincidunt lorem. Nunc cursus tellus interdum cursus interdum. Aliquam erat volutpat. Donec vulputate, sem sit amet pharetra porta, felis eros viverra erat, et rhoncus ante tellus hendrerit felis. Duis tortor lacus, pharetra a finibus id, tristique ut tellus. Quisque ac est lacus.
+  
+  In ut sem non dui finibus volutpat vel eu justo. Nam vulputate leo a magna finibus, id placerat eros elementum. Sed porta purus eget orci blandit dapibus. Mauris erat massa, sagittis sed purus et, sodales finibus leo. Integer faucibus porta lorem a congue. Vivamus pellentesque ullamcorper ex. Aliquam id tortor eget ex rutrum venenatis quis sed lacus. Maecenas feugiat quam eu pellentesque posuere. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Morbi efficitur orci at ligula ultricies vestibulum. Aenean dolor tellus, blandit ut quam quis, pellentesque egestas nibh. Quisque malesuada felis sodales enim iaculis dictum. Nam a tellus leo.
+  
+  Etiam in orci lacus. Etiam eget sollicitudin urna, eu sollicitudin felis. Donec tristique lectus ligula, at rhoncus nisl auctor eget. Vivamus non gravida enim. Sed volutpat dolor eget sagittis ultricies. Phasellus turpis lacus, vulputate at varius in, egestas sit amet libero. Aenean auctor ac nibh non venenatis. Donec blandit elementum vulputate. Donec sed velit venenatis, commodo nisi ultricies, consequat ipsum.
+  
+  Morbi est nisi, congue quis placerat eu, pharetra eu ipsum. Donec et feugiat sem, nec bibendum leo. Donec quis rhoncus sem, in varius massa. In id lacus id ante accumsan ornare. Sed eleifend interdum elit id iaculis. Etiam at scelerisque elit. Integer in erat risus. Aenean at massa massa. Donec nibh neque, congue non arcu non, tristique consectetur quam. Fusce posuere libero non nunc pellentesque posuere. Praesent a urna elit. Cras a tincidunt nunc. In et consequat dui, vel sollicitudin urna. Maecenas gravida, leo id efficitur ornare, libero elit accumsan mauris, efficitur mollis ex turpis ultricies ipsum. Proin in leo et lorem sollicitudin euismod. Maecenas lacus lorem, volutpat congue vehicula id, vehicula id augue.
+  
+  Sed rutrum magna sed purus tristique, id consequat nisi malesuada. Ut dignissim lacinia sem, vitae egestas sem mattis in. Mauris tristique, dolor et porta rhoncus, elit erat dictum sem, et facilisis metus velit non nulla. Duis ac augue lobortis, efficitur quam ac, ultricies nibh. Duis leo nisi, cursus eget molestie id, elementum ac nisi. Sed volutpat sem sit amet purus semper, sed semper nibh bibendum. Phasellus luctus mauris sit amet magna mattis, ut tempor ipsum feugiat.
+  
+  Quisque condimentum blandit sapien, sit amet malesuada nisi. Vivamus vitae tempus nisl. Morbi vel quam mi. Mauris quis erat mauris. Sed fermentum luctus dapibus. Phasellus vulputate aliquam laoreet. Praesent rhoncus diam at vestibulum tincidunt. Proin eu mattis orci. Curabitur accumsan bibendum erat. Donec ac eleifend lectus, vel malesuada leo. Integer id tellus est.
+  
+  Aliquam gravida, neque sit amet auctor pellentesque, turpis velit eleifend mi, ut efficitur massa arcu vel diam. Nulla et leo dapibus, dictum sem vitae, venenatis dolor. In egestas erat non mi pharetra, quis sollicitudin elit commodo. Phasellus condimentum vitae quam vehicula rutrum. Mauris efficitur nisi eu mattis vehicula. Aliquam molestie fermentum neque vel bibendum. Vivamus ultrices leo non augue malesuada porta. Pellentesque est velit, efficitur in cursus luctus, vestibulum vitae odio. Etiam id turpis et nunc interdum pulvinar.
+  
+  Donec vitae fringilla massa. Vivamus auctor nisl ligula, et dictum sapien sagittis vel. Proin porttitor scelerisque metus. Maecenas facilisis tortor tellus. Sed in enim non felis aliquet placerat ut nec velit. Nam lorem eros, commodo quis mauris vitae, laoreet mollis erat. Maecenas non condimentum nibh. Nulla eu ante condimentum, viverra orci a, sagittis purus.
+  
+  Integer id massa facilisis, gravida lorem eu, porttitor quam. Nam sollicitudin velit vitae mauris venenatis, vitae gravida nibh aliquam. Donec blandit nibh ac dapibus sodales. Nunc at accumsan mauris. Maecenas fermentum lacinia ante. Quisque dapibus, dui non sagittis efficitur, erat risus viverra ex, quis ultricies felis enim quis urna. In diam lorem, hendrerit nec augue non, condimentum vestibulum neque.
+  
+  Vestibulum at euismod felis. In sit amet eros semper, elementum urna vel, eleifend enim. Vivamus finibus, erat id suscipit imperdiet, massa turpis euismod diam, pellentesque tincidunt sem ligula nec massa. Cras bibendum tortor eu enim posuere, nec tristique orci interdum. Mauris bibendum odio tempus enim faucibus dictum. Mauris ornare nisl eget porttitor pulvinar. Aliquam consectetur vestibulum lorem sit amet dignissim. Nullam non tempus neque, non porta augue. Cras quis feugiat tellus. Suspendisse interdum sapien vel odio mattis blandit. Curabitur bibendum tempus ipsum, id consequat sapien. Ut fermentum, ligula vel maximus aliquam, ante justo laoreet magna, nec maximus massa dui sed dolor. Fusce ullamcorper tortor vitae arcu tincidunt efficitur.
+  
+  Sed et neque congue, tempor tortor vel, ultrices metus. Suspendisse ligula dui, cursus eget varius ut, dapibus non ligula. Maecenas dolor justo, efficitur at auctor ac, tincidunt et metus. Aliquam posuere metus ut est aliquet, in pretium mi fermentum. Donec maximus lobortis neque quis ullamcorper. Duis quis odio vitae sem euismod pharetra accumsan sed elit. Curabitur vel felis nec lacus cursus molestie eget at orci. Aliquam vehicula mauris sit amet turpis viverra tristique. Vivamus feugiat bibendum tempus. Praesent viverra id quam id malesuada. Etiam consectetur finibus maximus.
+  
+  In finibus ante vel leo varius, ut vehicula nisl iaculis. Sed in ligula eleifend, sollicitudin lorem eget, posuere urna. Quisque turpis mauris, hendrerit a semper ut, volutpat eget ex. Etiam ut urna consequat, sodales nisl nec, porta sem. Mauris id ante ante. Nullam pellentesque dui mauris, vitae vehicula tellus scelerisque non. Sed tincidunt nisl tellus. Pellentesque nisl neque, facilisis at ultricies ac, gravida id sapien. Pellentesque sagittis feugiat leo id porttitor.
+  
+  Pellentesque pretium lorem risus, sed malesuada tortor tincidunt sed. Quisque bibendum sodales ex eget molestie. Praesent tempor elit mauris, eu laoreet mauris efficitur nec. Aenean dictum magna urna, rutrum commodo ligula lacinia nec. Praesent ut arcu at justo consectetur dictum sit amet at arcu. Quisque at nisl mattis, feugiat dolor non, suscipit felis. Vivamus eget cursus tortor. Cras quis consectetur purus. Proin porta, massa vitae tincidunt euismod, augue metus semper turpis, id pharetra nunc neque a justo. Fusce ut diam viverra, tristique lacus sit amet, lacinia nisi. Sed molestie, leo eu imperdiet ultrices, metus eros lobortis eros, a molestie sem tortor sed enim.
+  
+  Maecenas eleifend iaculis semper. Duis eu sem ligula. In porta rutrum urna. Mauris at dolor id nulla porta feugiat a quis ipsum. Interdum et malesuada fames ac ante ipsum primis in faucibus. Vestibulum in massa eu sapien aliquam feugiat nec sed metus. Fusce quam dolor, condimentum et purus sed, viverra lobortis velit. Morbi maximus et dui eu rhoncus.
+  
+  Donec id lorem sodales lectus volutpat ultrices at sed leo. Integer nec nunc quis augue blandit varius a sed purus. Duis id sem mi. Praesent suscipit ex quis purus pulvinar, non sagittis neque egestas. Vestibulum aliquet elementum hendrerit. Proin ultrices varius nibh id condimentum. Etiam nec egestas velit. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Sed eget elit cursus, aliquet mauris vel, tempus sem. Phasellus non commodo lacus. Proin a felis mauris. Suspendisse et laoreet odio.
+  
+  
+    # Purpose
+    This schema is designed to showcase some of the functionality of HIP Simple APIs by providing a number of endpoints
+    and some information on what functionality each one demonstrates.
+  version: 0.1.0
+  x-integration-catalogue:
+    reviewed-date: 2023-04-13T12:00:00Z
+    publisher-reference: hip-exemplar-boardgames
+    short-description: The HIP Exemplar Board Game Store API
+    status: ALPHA
+    platform: HIP
+    backends:
+    - internal
+externalDocs:
+  description: Find out more about the HIP Exemplar Board Game Store
+  url: '*TODO*'
+servers:
+- url: https://api.hip.prod.eis.ns2p.corp.hmrc.gov.uk/demo/
+  description: Corporate - Production
+- url: https://api.hip.test.eis.ns2n.corp.hmrc.gov.uk/demo/
+  description: Corporate - Test
+- url: https://hip.ws.hmrc.gov.uk/demo/
+  description: MDTP - Production
+- url: https://hip.ws.ibt.hmrc.gov.uk/demo/
+  description: MDTP - QA
+tags:
+- name: boardgame
+  description: Endpoints related to board games
+- name: store
+  description: Endpoints related to store operations
+paths:
+  /v1/boardgames:
+    post:
+      tags:
+      - boardgame
+      summary: Add a new board game to the store
+      description: |
+        # Description
+        Add a new board game to the store.
+
+        # Functionality demonstrated
+        * A POST request with a JSON payload that will be validated against a schema
+        * Multiple Scopes all of which are required to perform the operation
+        * Multiple possible response status codes
+      operationId: addBoardGame
+      requestBody:
+        $ref: '#/components/requestBodies/BoardGame'
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGame'
+              example:
+                $ref: '#/components/examples/ValidBoardGame'
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidPayload:
+                  $ref: '#/components/examples/InvalidPayload'
+      security:
+      - oAuth2:
+        - read:exemplar-boardgames
+        - write:exemplar-boardgames
+  /v1/boardgames/findByStatus:
+    get:
+      tags:
+      - boardgame
+      summary: Finds board games by status
+      description: |
+        # Description
+        Multiple status values can be provided with comma separated strings
+
+        # Functionality demonstrated
+        * A GET request with QueryString parameters that are validated
+        * Enum parameters
+        * A single Scope required to perform the operation
+      operationId: findBoardGamesByStatus
+      parameters:
+      - name: status
+        in: query
+        description: Status values that need to be considered for filter
+        required: false
+        schema:
+          default: available
+          enum:
+          - available
+          - pending
+          - sold
+          type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoardGame'
+              example:
+                $ref: '#/components/examples/ValidBoardGames'
+        "400":
+          description: Invalid status value
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidParameter:
+                  $ref: '#/components/examples/InvalidParameter'
+      security:
+      - oAuth2:
+        - read:exemplar-boardgames
+  /v1/boardgames/findByTags:
+    get:
+      tags:
+      - boardgame
+      summary: Finds board games by tags
+      description: |
+        # Description
+        Multiple tags can be provided with comma separated strings.
+
+        # Functionality demonstrated
+        * A GET request with array of QueryString parameters that are validated
+      operationId: findBoardGamesByTags
+      parameters:
+      - name: tags
+        in: query
+        description: Tags to filter by
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoardGame'
+              example:
+                $ref: '#/components/examples/ValidBoardGames'
+        "400":
+          description: Invalid tag value
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidParameter:
+                  $ref: '#/components/examples/InvalidParameter'
+      security:
+      - oAuth2:
+        - read:exemplar-boardgames
+  /v1/boardgames/{boardGameId}:
+    get:
+      tags:
+      - boardgame
+      summary: Find board game by ID
+      description: |
+        # Description
+        Find a single board game by it's boardGameId.
+
+        # Functionality demonstrated
+        * A GET request with a Path variable that is validated
+      operationId: getBoardGameById
+      parameters:
+      - name: boardGameId
+        in: path
+        description: ID of board game to return
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGame'
+              example:
+                $ref: '#/components/examples/ValidBoardGame'
+        "400":
+          description: Invalid ID supplied
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidParameter:
+                  $ref: '#/components/examples/InvalidParameter'
+        "404":
+          description: Board game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/NotFound'
+      security:
+      - oAuth2:
+        - read:exemplar-boardgames
+    put:
+      tags:
+      - boardgame
+      summary: Update an existing board game
+      description: |
+        # Description
+        Update an existing board game by boardGameId.
+
+        # Functionality demonstrated
+        * A PUT request with Path parameter and a JSON body that will be validated
+      operationId: updateBoardGame
+      parameters:
+      - name: boardGameId
+        in: path
+        description: ID of board game to update
+        required: true
+        schema:
+          format: int64
+          type: integer
+      requestBody:
+        description: Update an existing board game in the store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardGame'
+            example:
+              $ref: '#/components/examples/ValidBoardGame'
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGame'
+              example:
+                $ref: '#/components/examples/ValidBoardGame'
+        "400":
+          description: Invalid boardGameId or JSON payload supplied
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidPayload:
+                  $ref: '#/components/examples/InvalidPayload'
+                invalidParameter:
+                  $ref: '#/components/examples/InvalidParameter'
+        "404":
+          description: Board game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/NotFound'
+      security:
+      - oAuth2:
+        - write:exemplar-boardgames
+    delete:
+      tags:
+      - boardgame
+      summary: Deletes a board game
+      description: |
+        # Description
+        Deletes a board game from the store. Requires a header containing the board game name to be provided confirming the deletion.
+
+        # Functionality demonstrated
+        * A DELETE request with both a Path variable and Header variable that will be validated
+        * Scopes
+        * Multiple possible response status codes
+      operationId: deleteBoardGame
+      parameters:
+      - name: boardGameName
+        in: header
+        description: The name of the board game to be deleted
+        required: true
+        schema:
+          type: string
+      - name: boardGameId
+        in: path
+        description: Board game id to delete
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          description: successful operation
+        "400":
+          description: Invalid boardGameId or boardGameName supplied
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidParameter:
+                  $ref: '#/components/examples/InvalidParameter'
+        "404":
+          description: Board game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/NotFound'
+      security:
+      - oAuth2:
+        - write:exemplar-boardgames
+  /v1/store/inventory:
+    get:
+      tags:
+      - store
+      summary: Returns board game inventories by status
+      description: |
+        # Description
+        Returns a map of status codes to quantities
+
+        # Functionality demonstrated
+        * A GET request without parameters
+        * An inline JSON response schema without $ref
+      operationId: getInventory
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  format: int32
+                  type: integer
+              example: |
+                {
+                  "property": 1,
+                  "anotherProperty": 70
+                }
+      security:
+      - oAuth2:
+        - read:exemplar-store
+  /v1/store/orders:
+    post:
+      tags:
+      - store
+      summary: Place an order for a board game
+      description: "# Description\nPlace a new order for a board game in the store.\
+        \    \n\n# Functionality demonstrated\n* A POST request with JSON payload\
+        \ that is validated.\n* Inline examples in yaml and JSON format\n"
+      operationId: placeOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+            example: |
+              {
+                "id": 543,
+                "boardGameId": 98123,
+                "quantity": 4,
+                "shipDate": "2023-04-13T14:35:28.595Z",
+                "status": "shipped",
+                "complete": false
+              }
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 543
+                boardGameId: 98123
+                quantity: 4
+                shipDate: 2023-04-13T14:35:28.595Z
+                status: shipped
+                complete: false
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidPayload:
+                  $ref: '#/components/examples/InvalidPayload'
+      security:
+      - oAuth2:
+        - write:exemplar-store
+  /v1/store/orders/{orderId}:
+    get:
+      tags:
+      - store
+      summary: Find purchase order by ID
+      description: |
+        # Description
+        Find an order using the orderId.
+
+        # Functionality demonstrated
+        * A GET request with a Path parameter
+      operationId: getOrderById
+      parameters:
+      - name: orderId
+        in: path
+        description: ID of order that needs to be fetched
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                $ref: '#/components/examples/ValidOrder'
+        "400":
+          description: Invalid ID supplied
+          content:
+            application/json:
+              schema:
+                required:
+                - origin
+                - response
+                type: object
+                properties:
+                  origin:
+                    $ref: '#/components/schemas/HIP-originEnum'
+                  response:
+                    oneOf:
+                    - $ref: '#/components/schemas/HIP-failureResponse'
+                    - $ref: '#/components/schemas/ErrorResponse'
+                additionalProperties: false
+              examples:
+                invalidParameter:
+                  $ref: '#/components/examples/InvalidParameter'
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: NOT_FOUND
+                description: The order does not exist.
+      security:
+      - oAuth2:
+        - read:exemplar-store
+components:
+  schemas:
+    Order:
+      required:
+      - boardGameId
+      - id
+      - quantity
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+          example: 123456
+        boardGameId:
+          format: int64
+          type: integer
+          example: 765
+        quantity:
+          format: int32
+          type: integer
+          example: 1
+        shipDate:
+          format: date-time
+          type: string
+        status:
+          description: Order Status
+          enum:
+          - placed
+          - shipped
+          - delivered
+          type: string
+          example: shipped
+        complete:
+          type: boolean
+    Category:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Card Games
+    Tag:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        name:
+          type: string
+          example: Most Popular
+    BoardGame:
+      required:
+      - category
+      - name
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+          example: 10
+        name:
+          type: string
+          example: Exploding Kittens
+        category:
+          $ref: '#/components/schemas/Category'
+        photoUrls:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        status:
+          description: Board game status in the store
+          enum:
+          - available
+          - pending
+          - sold
+          type: string
+          example: available
+      additionalProperties: false
+    ErrorResponse:
+      description: Schema defining the format of the error response
+      type: object
+      properties:
+        code:
+          description: A code identifying the type of error
+          type: string
+          example: NOT_FOUND
+        message:
+          description: A summary message indicating what the error is
+          type: string
+          example: The order does not exist.
+    HIP-originEnum:
+      enum:
+      - HIP
+      - HoD
+      type: string
+    HIP-failureResponse:
+      required:
+      - failures
+      type: object
+      properties:
+        failures:
+          minItems: 1
+          uniqueItems: true
+          type: array
+          items:
+            required:
+            - type
+            - reason
+            type: object
+            properties:
+              type:
+                type: string
+              reason:
+                type: string
+            additionalProperties: false
+    HIP-originResponse:
+      required:
+      - origin
+      - response
+      type: object
+      properties:
+        origin:
+          $ref: '#/components/schemas/HIP-originEnum'
+        response:
+          $ref: '#/components/schemas/HIP-failureResponse'
+      additionalProperties: false
+  examples:
+    ValidBoardGame:
+      summary: a valid boardgame
+      value: |
+        {
+          "id": 10,
+          "name": "Exploding Kittens",
+          "category": {
+            "id": 1,
+            "name": "Card Games"
+          },
+          "photoUrls": [
+            "string"
+          ],
+          "tags": [
+            {
+              "id": 0,
+              "name": "Most Popular"
+            }
+          ],
+          "status": "available"
+        }
+    ValidBoardGames:
+      summary: an array of boardgames
+      value: |
+        [
+          {
+            "id": 10,
+            "name": "Exploding Kittens",
+            "category": {
+              "id": 1,
+              "name": "Card Games"
+            },
+            "photoUrls": [
+              "string"
+            ],
+            "tags": [
+              {
+                "id": 0,
+                "name": "Most Popular"
+              }
+            ],
+            "status": "available"
+          }
+        ]
+    ValidOrder:
+      summary: a valid order
+      value: |
+        {
+          "id": 543,
+          "boardGameId": 98123,
+          "quantity": 4,
+          "shipDate": "2023-04-13T14:35:28.595Z",
+          "status": "shipped",
+          "complete": false
+        }
+    NotFound:
+      summary: Example of a 404 Not Found
+      value:
+        code: NOT_FOUND
+        description: The board game does not exist.
+    InvalidPayload:
+      summary: Example of an invalid payload
+      value:
+        code: INVALID_PAYLOAD
+        description: The payload provided was invalid.
+    InvalidParameter:
+      summary: Example of an invalid parameter
+      value:
+        code: INVALID_PARAMETER
+        description: One of the parameters provided was invalid.
+  requestBodies:
+    BoardGame:
+      description: BoardGame object that needs to be added or updated into the store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BoardGame'
+      required: true
+  securitySchemes:
+    oAuth2:
+      type: oauth2
+      description: OAuth2 Client Credentials Flow
+      flows:
+        clientCredentials:
+          tokenUrl: /tokenUrl/not-required
+          scopes:
+            read:exemplar-boardgames: read board game information
+            read:exemplar-store: read store information
+            write:exemplar-boardgames: create and modify board games
+            write:exemplar-store: create and modify store information

@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.scheduler
 
 import com.google.inject.{Inject, Singleton}
 import org.apache.pekko.actor.ActorSystem
-import play.api.Configuration
+import play.api.{Configuration, Environment, Play}
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IdmsConnector}
@@ -28,6 +28,7 @@ import uk.gov.hmrc.http.{GatewayTimeoutException, HeaderCarrier}
 import uk.gov.hmrc.mongo.lock.{MongoLockRepository, ScheduledLockService}
 import uk.gov.hmrc.mongo.TimestampSupport
 
+import java.io.InputStream
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -39,13 +40,16 @@ class ApimSyntheticMonitoringScheduler @Inject()(
                                                   configuration: Configuration,
                                                   hipEnvironments: HipEnvironments,
                                                   mongoLockRepository : MongoLockRepository,
-                                                  timestampSupport    : TimestampSupport,
+                                                  timestampSupport    : TimestampSupport
                              )(implicit as: ActorSystem, alc: ApplicationLifecycle, ec: ExecutionContext) extends BaseScheduler {
 
   private val schedulerConfig: SchedulerConfig = SchedulerConfig(configuration, "apimSyntheticMonitoringScheduler")
   private val additionalConfiguration = schedulerConfig.additionalConfiguration
   private val publisherReference: String = additionalConfiguration.get[String]("publisherReference")
   private given HeaderCarrier = HeaderCarrier()
+
+  private lazy val oas = String(ClassLoader.getSystemResourceAsStream("public/exemplar.yaml").readAllBytes())
+
 
   override protected[scheduler] def run()(implicit hc: HeaderCarrier): Future[Unit] =
     Future.sequence(
@@ -67,7 +71,8 @@ class ApimSyntheticMonitoringScheduler @Inject()(
         () => checkAndMeter("getDeployment", hipEnvironment, apimConnector.getDeployment(publisherReference, hipEnvironment).map(transform)),
         () => checkAndMeter("listEgressGateways", hipEnvironment, apimConnector.listEgressGateways(hipEnvironment).map(transform)),
         () => checkAndMeter("fetchClientScopes", hipEnvironment, idmsConnector.fetchClientScopes(hipEnvironment, hipEnvironment.clientId).map(transform)),
-        () => checkAndMeter("getDeploymentDetails", hipEnvironment, apimConnector.getDeploymentDetails(publisherReference, hipEnvironment).map(transform))
+        () => checkAndMeter("getDeploymentDetails", hipEnvironment, apimConnector.getDeploymentDetails(publisherReference, hipEnvironment).map(transform)),
+        () => checkAndMeter("validateOas", hipEnvironment, apimConnector.validateOas(oas, hipEnvironment).map(transform))
       )
     )
 

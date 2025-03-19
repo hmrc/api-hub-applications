@@ -52,12 +52,12 @@ class APIMConnectorImpl @Inject()(
   import ProxySupport.*
   import CorrelationIdSupport.*
 
-  override def validateInPrimary(oas: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
-    val hipEnvironment = hipEnvironments.production
+  override def validateOas(oas: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
 
     httpClient.post(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/validate")
       .setHeader("Authorization" -> authorizationForEnvironment(hipEnvironment))
       .setHeader("Content-Type" -> "application/yaml")
+      .withProxyIfRequired(hipEnvironment)
       .withCorrelationId()
       .withBody(oas)
       .execute[HttpResponse]

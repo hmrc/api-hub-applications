@@ -61,7 +61,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).validateOas(oas, primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(SuccessfulValidateResponse)
       }
@@ -77,7 +77,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).validateOas(oas, primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failuresResponse))
       }
@@ -92,7 +92,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).validateOas(oas, primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
       }
@@ -107,7 +107,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).validateOas(oas, primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException(
             ApplicationsException.addContext(s"Invalid credential response 401", Seq.empty),
@@ -125,7 +125,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).validateOas(oas, primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException(
             ApplicationsException.addContext(s"Invalid credential response 403", Seq.empty),
@@ -143,7 +143,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).validateInPrimary(oas)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).validateOas(oas, primaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500))
       }
