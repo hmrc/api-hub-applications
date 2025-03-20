@@ -54,6 +54,16 @@ class ScopeFixer @Inject()(
     } yield ()).value
   }
 
+  def fix(
+    application: Application,
+    accessRequests: Seq[AccessRequest],
+    hipEnvironment: HipEnvironment
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    val environmentCredentials = application.getCredentials(hipEnvironment).toSet
+    fix(application, accessRequests, environmentCredentials)
+  }
+
+
   private def requiredScopes(application: Application)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Set[String]]] = {
     Future
       .sequence(
