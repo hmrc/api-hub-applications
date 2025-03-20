@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services.helpers
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{verify, verifyNoInteractions, verifyNoMoreInteractions, when}
+import org.mockito.Mockito.{never, verify, verifyNoInteractions, verifyNoMoreInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -36,6 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.LocalDateTime
 import scala.concurrent.Future
+
 
 class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with EitherValues {
 
@@ -392,6 +393,44 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
       }
     }
 
+    "must fix scopes for the specific environment only" in {
+      val api = baseApi(apiId1)
+        .addEndpoint(endpointForScope1)
+
+      val application = applicationWithCredentials
+        .addCredential(FakeHipEnvironments.productionEnvironment, credential3)
+        .addCredential(FakeHipEnvironments.testEnvironment, credential4)
+        .addApi(buildApi(api))
+
+      val accessRequests = Seq(
+        buildApprovedAccessRequest(application, api, FakeHipEnvironments.productionEnvironment.id),
+      )
+
+      val fixture = buildFixture()
+
+      when(fixture.integrationCatalogueConnector.findById(any)(any)).thenReturn(Future.successful(Right(api)))
+
+      stubIdmsFetchClientScopes(application, fixture, Map.empty, noScopesFor = Set(clientId1, clientId2, clientId3, clientId4))
+
+      when(fixture.idmsConnector.deleteClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.idmsConnector.addClientScope(any, any, any)(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.scopeFixer.fix(application, accessRequests, FakeHipEnvironments.productionEnvironment)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.integrationCatalogueConnector).findById(eqTo(api.id))(any)
+          verifyNoMoreInteractions(fixture.integrationCatalogueConnector)
+
+          verifyIdmsFetchClientScopesForEnvironment(application, FakeHipEnvironments.productionEnvironment, fixture, Set.empty)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.productionEnvironment), eqTo(clientId1), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector).addClientScope(eqTo(FakeHipEnvironments.productionEnvironment), eqTo(clientId3), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector, never).addClientScope(eqTo(FakeHipEnvironments.testEnvironment), eqTo(clientId2), eqTo(scopeName1))(any)
+          verify(fixture.idmsConnector, never).addClientScope(eqTo(FakeHipEnvironments.testEnvironment), eqTo(clientId4), eqTo(scopeName1))(any)
+          verifyNoMoreInteractions(fixture.idmsConnector)
+
+          result.value mustBe()
+      }
+    }
+
     "must always grant all allowed scopes (self-healing)" in {
       val api = baseApi(apiId1)
         .addEndpoint(endpointForScope1)
@@ -669,16 +708,20 @@ class ScopeFixerSpec extends AsyncFreeSpec with Matchers with MockitoSugar with 
     )
   }
 
+  private def verifyIdmsFetchClientScopesForEnvironment(application: Application, hipEnvironment: HipEnvironment, fixture: Fixture, ignoreClientIds: Set[String] = Set.empty): Unit = {
+    application
+      .getCredentials(hipEnvironment)
+      .filterNot(credential => ignoreClientIds.contains(credential.clientId))
+      .foreach(
+        credential =>
+          verify(fixture.idmsConnector).fetchClientScopes(eqTo(hipEnvironment), eqTo(credential.clientId))(any)
+      )
+  }
+
   private def verifyIdmsFetchClientScopes(application: Application, fixture: Fixture, ignoreClientIds: Set[String] = Set.empty) = {
     FakeHipEnvironments.environments.map(
       hipEnvironment =>
-        application
-          .getCredentials(hipEnvironment)
-          .filterNot(credential => ignoreClientIds.contains(credential.clientId))
-          .foreach(
-            credential =>
-              verify(fixture.idmsConnector).fetchClientScopes(eqTo(hipEnvironment), eqTo(credential.clientId))(any)
-          )
+        verifyIdmsFetchClientScopesForEnvironment(application, hipEnvironment, fixture, ignoreClientIds)
     )
   }
 

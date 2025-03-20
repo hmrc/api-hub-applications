@@ -19,6 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
@@ -38,7 +39,8 @@ class AccessRequestsService @Inject()(
                                        searchService: ApplicationsSearchService,
                                        clock: Clock,
                                        emailConnector: EmailConnector,
-                                       scopeFixer: ScopeFixer
+                                       scopeFixer: ScopeFixer,
+                                       hipEnvironments: HipEnvironments
                                      )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
@@ -91,7 +93,7 @@ class AccessRequestsService @Inject()(
           _ <- EitherT(accessRequestsRepository.update(approved))
           _ <- EitherT(sendAccessApprovedEmails(accessRequest, application)).orElse(EitherT.rightT(())) // ignore email errors
           accessRequests <- EitherT.right(getAccessRequests(Some(accessRequest.applicationId), None))
-          _ <- EitherT(scopeFixer.fix(application, accessRequests))
+          _ <- EitherT(scopeFixer.fix(application, accessRequests, hipEnvironments.forId(accessRequest.environmentId)))
         } yield ()).value
 
       case Some(accessRequest) =>
