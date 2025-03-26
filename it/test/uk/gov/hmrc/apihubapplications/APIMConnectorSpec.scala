@@ -28,6 +28,7 @@ import uk.gov.hmrc.apihubapplications.models.api.EgressGateway
 import uk.gov.hmrc.apihubapplications.models.apim.{ApiDeployment, CreateMetadata, DeploymentDetails, DeploymentFrom, DeploymentsRequest, DetailsResponse, EgressMapping, Error, FailuresResponse, InvalidOasResponse, RedeploymentRequest, StatusResponse, SuccessfulDeploymentResponse, SuccessfulDeploymentsResponse, SuccessfulValidateResponse, UpdateMetadata}
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.InvalidCredential
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ApplicationsException}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 
@@ -1038,31 +1039,22 @@ object APIMConnectorSpec extends HttpClientV2Support {
     override protected val baseEnvironments: Seq[BaseHipEnvironment] = Seq.empty
 
     override val environments: Seq[HipEnvironment] = Seq(
-      DefaultHipEnvironment(
-        id = "production",
-        rank = 1,
-        isProductionLike = true,
+      DefaultHipEnvironment(FakeHipEnvironments.production).copy(
         apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/production",
         clientId = primaryClientId,
         secret = primarySecret,
         useProxy = false,
-        apiKey = None,
-        promoteTo = None,
-        apimEnvironmentName = "production"
+        apiKey = None
       ),
-      DefaultHipEnvironment(
-        id = "test",
-        rank = 2,
-        isProductionLike = false,
+      DefaultHipEnvironment(FakeHipEnvironments.testEnvironment).copy(
         apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/test",
         clientId = secondaryClientId,
         secret = secondarySecret,
         useProxy = false,
-        apiKey = Some(secondaryApiKey),
-        promoteTo = None,
-        apimEnvironmentName = "test"
+        apiKey = Some(secondaryApiKey)
       )
     )
+
     override def production: HipEnvironment = environments.head
     override def deployTo: HipEnvironment = environments.last
 

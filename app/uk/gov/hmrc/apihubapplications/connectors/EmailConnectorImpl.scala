@@ -20,12 +20,13 @@ import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestRequest}
 import uk.gov.hmrc.apihubapplications.models.api.ApiDetail
 import uk.gov.hmrc.apihubapplications.models.application.{Application, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.{EmailException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -34,7 +35,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class EmailConnectorImpl @Inject()(
   servicesConfig: ServicesConfig,
-  httpClient: HttpClientV2
+  httpClient: HttpClientV2,
+  hipEnvironments: HipEnvironments
 )(implicit ec: ExecutionContext) extends EmailConnector with Logging with ExceptionRaising {
 
   private def getAndValidate(configKey: String): String = {
@@ -75,6 +77,7 @@ class EmailConnectorImpl @Inject()(
         case throwable => Left(raiseEmailException.error(throwable))
       }
   }
+
   def sendAddTeamMemberEmail(application: Application)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val to = application
       .teamMembers
@@ -153,7 +156,8 @@ class EmailConnectorImpl @Inject()(
         templateId,
         Map(
           "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
+          "apispecificationname" -> accessRequest.apiName,
+          "environmentname" -> hipEnvironments.forId(accessRequest.environmentId).name
         )
       )
       doPost(request)
@@ -162,6 +166,7 @@ class EmailConnectorImpl @Inject()(
       Future.successful(Right(()))
     }
   }
+
   override def sendAccessApprovedEmailToTeam(application: Application, accessRequest: AccessRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     sendAccessEmailToTeam(application, accessRequest, accessApprovedToTeamTemplateId)
   }
@@ -170,14 +175,14 @@ class EmailConnectorImpl @Inject()(
     sendAccessEmailToTeam(application, accessRequest, accessRejectedToTeamTemplateId)
   }
 
-
   override def sendAccessRequestSubmittedEmailToRequester(application: Application, accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Either[EmailException, Unit]] = {
     val request = SendEmailRequest(
       Seq(accessRequest.requestedBy),
       accessRequestSubmittedToToRequesterTemplateId,
       Map(
         "applicationname" -> application.name,
-        "apispecificationname" -> accessRequest.apis.map(api => api.apiName).mkString(" and ")
+        "apispecificationname" -> accessRequest.apis.map(api => api.apiName).mkString(" and "),
+        "environmentname" -> hipEnvironments.forId(accessRequest.environmentId).name
       )
     )
     doPost(request)
@@ -189,7 +194,8 @@ class EmailConnectorImpl @Inject()(
       newAccessRequestToApproversTemplateId,
       Map(
         "applicationname" -> application.name,
-        "apispecificationname" -> accessRequest.apis.map(api => api.apiName).mkString(" and ")
+        "apispecificationname" -> accessRequest.apis.map(api => api.apiName).mkString(" and "),
+        "environmentname" -> hipEnvironments.forId(accessRequest.environmentId).name
       )
     )
 
