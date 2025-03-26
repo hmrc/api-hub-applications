@@ -51,7 +51,7 @@ class ApimSyntheticMonitoringScheduler @Inject()(
   private given HeaderCarrier = HeaderCarrier()
 
   private val weekendDays = Seq(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
-  private val dateTimeRangeApimServicesAreOff = (
+  private val dateTimeRangeApimServicesAreOn = (
     LocalTime.of(7, 35),
     LocalTime.of(18, 55),
   )
@@ -59,7 +59,7 @@ class ApimSyntheticMonitoringScheduler @Inject()(
   private lazy val oas = String(ClassLoader.getSystemResourceAsStream("public/exemplar.yaml").readAllBytes())
 
   private def canMonitor: Boolean = {
-    val (fromTime, toTime) = dateTimeRangeApimServicesAreOff
+    val (fromTime, toTime) = dateTimeRangeApimServicesAreOn
     val now = ZonedDateTime.now(clock)
     val currentTime = now.toLocalTime
     !weekendDays.contains(now.getDayOfWeek) && currentTime.isAfter(fromTime) && currentTime.isBefore(toTime)
