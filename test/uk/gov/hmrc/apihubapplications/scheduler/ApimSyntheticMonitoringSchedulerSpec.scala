@@ -20,15 +20,16 @@ import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
+import org.mockito.Mockito.{verify, verifyNoInteractions, verifyNoMoreInteractions, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IdmsConnector}
-import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentDetails, InvalidOasResponse, SuccessfulValidateResponse}
+import uk.gov.hmrc.apihubapplications.models.apim.{DeploymentDetails, SuccessfulValidateResponse}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.services.MetricsService
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
@@ -36,6 +37,7 @@ import uk.gov.hmrc.http.{GatewayTimeoutException, HeaderCarrier}
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
+import java.time.{Clock, Instant, ZoneId, ZonedDateTime}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -44,7 +46,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
   with MockitoSugar
   with ScalaFutures
   with ExceptionRaising
-  with play.api.Logging {
+  with play.api.Logging
+  with TableDrivenPropertyChecks {
 
   private val publisherReference = "test-reference"
   private implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -160,6 +163,40 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
       )
       verifyNoMoreInteractions(fixture.metricsService)
     }
+
+    "not run during weekends" in {
+      forAll(Table(
+        "weekendDates",
+        ZonedDateTime.of(2025, 3, 22, 11, 0, 0, 0, ZoneId.systemDefault()),
+        ZonedDateTime.of(2025, 3, 23, 11, 0, 0, 0, ZoneId.systemDefault())
+      )) { date =>
+
+        val fixture = buildFixture(date)
+
+        fixture.apimSyntheticMonitoringScheduler.run().futureValue
+
+        verifyNoInteractions(fixture.apimConnector)
+        verifyNoInteractions(fixture.idmsConnector)
+        verifyNoInteractions(fixture.metricsService)
+      }
+    }
+
+    "not run during hours in which APIM shuts its services" in {
+      forAll(Table(
+        "offHours",
+        ZonedDateTime.of(2025, 3, 26, 7, 29, 0, 0, ZoneId.systemDefault()),
+        ZonedDateTime.of(2025, 3, 26, 19, 0, 0, 0, ZoneId.systemDefault())
+      )) { date =>
+
+        val fixture = buildFixture(date)
+
+        fixture.apimSyntheticMonitoringScheduler.run().futureValue
+
+        verifyNoInteractions(fixture.apimConnector)
+        verifyNoInteractions(fixture.idmsConnector)
+        verifyNoInteractions(fixture.metricsService)
+      }
+    }
   }
 
   private case class Fixture(
@@ -169,12 +206,13 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
                               metricsService: MetricsService,
                             )
 
-  private def buildFixture(): Fixture = {
+  private def buildFixture(dateTime: ZonedDateTime = ZonedDateTime.of(2025, 3, 26, 11, 0, 0, 0, ZoneId.systemDefault())): Fixture = {
     val apimConnector = mock[APIMConnector]
     val idmsConnector = mock[IdmsConnector]
     val metricsService = mock[MetricsService]
     val mongoLockRepository = mock[MongoLockRepository]
     val timestampSupport = mock[TimestampSupport]
+    val clock = Clock.fixed(dateTime.toInstant, ZoneId.systemDefault())
     given ActorSystem = ActorSystem()
     given ApplicationLifecycle = DefaultApplicationLifecycle()
     val schedulerConfig = Configuration(ConfigFactory.parseString(
@@ -197,7 +235,8 @@ class ApimSyntheticMonitoringSchedulerSpec extends AnyFreeSpec
       schedulerConfig,
       hipEnvironments,
       mongoLockRepository,
-      timestampSupport
+      timestampSupport,
+      clock
     )
     Fixture(
       apimSyntheticMonitoringScheduler,
