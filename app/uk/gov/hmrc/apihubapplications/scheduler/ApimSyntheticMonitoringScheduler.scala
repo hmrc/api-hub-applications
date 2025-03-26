@@ -29,6 +29,7 @@ import uk.gov.hmrc.mongo.lock.{MongoLockRepository, ScheduledLockService}
 import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.io.InputStream
+import java.time.{Clock, DayOfWeek, LocalTime, ZonedDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -40,7 +41,8 @@ class ApimSyntheticMonitoringScheduler @Inject()(
                                                   configuration: Configuration,
                                                   hipEnvironments: HipEnvironments,
                                                   mongoLockRepository : MongoLockRepository,
-                                                  timestampSupport    : TimestampSupport
+                                                  timestampSupport    : TimestampSupport,
+                                                  clock: Clock,
                              )(implicit as: ActorSystem, alc: ApplicationLifecycle, ec: ExecutionContext) extends BaseScheduler {
 
   private val schedulerConfig: SchedulerConfig = SchedulerConfig(configuration, "apimSyntheticMonitoringScheduler")
@@ -48,13 +50,27 @@ class ApimSyntheticMonitoringScheduler @Inject()(
   private val publisherReference: String = additionalConfiguration.get[String]("publisherReference")
   private given HeaderCarrier = HeaderCarrier()
 
+  private val weekendDays = Seq(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+  private val dateTimeRangeApimServicesAreOn = (
+    LocalTime.of(7, 35),
+    LocalTime.of(18, 55),
+  )
+
   private lazy val oas = String(ClassLoader.getSystemResourceAsStream("public/exemplar.yaml").readAllBytes())
 
+  private def canMonitor: Boolean = {
+    val (fromTime, toTime) = dateTimeRangeApimServicesAreOn
+    val now = ZonedDateTime.now(clock)
+    val currentTime = now.toLocalTime
+    !weekendDays.contains(now.getDayOfWeek) && currentTime.isAfter(fromTime) && currentTime.isBefore(toTime)
+  }
 
   override protected[scheduler] def run()(implicit hc: HeaderCarrier): Future[Unit] =
-    Future.sequence(
-      apimChecks().map(_.apply())
-    ).map(_ => ())
+    if canMonitor then
+      Future.sequence(
+        apimChecks().map(_.apply())
+      ).map(_ => ())
+    else Future.unit
 
   private def checkAndMeter(operation: String, hipEnvironment: HipEnvironment, f: Future[Either[Option[Throwable], Unit]]): Future[Unit] =
     f.recover {
