@@ -146,6 +146,7 @@ private object DeletePreProductionCredentialsJobSpec extends MockitoSugar {
 
   val preProdHipEnvironment: HipEnvironment = DefaultHipEnvironment(
     id = "preprod",
+    name = "Pre-production",
     rank = 1,
     isProductionLike = false,
     apimUrl = "test-apim-url",

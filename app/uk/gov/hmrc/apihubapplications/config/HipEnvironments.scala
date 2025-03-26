@@ -29,6 +29,7 @@ import scala.util.Try
 // Define the attributes of an environment in an abstract way
 trait AbstractHipEnvironment[T] {
   def id: String
+  def name: String
   def rank: Int
   def isProductionLike: Boolean
   def apimUrl: String
@@ -45,6 +46,7 @@ trait AbstractHipEnvironment[T] {
 // Use this as the input to HipEnvironments and to pass from BE to FE
 case class BaseHipEnvironment(
   id: String,
+  name: String,
   rank: Int,
   isProductionLike: Boolean,
   apimUrl: String,
@@ -68,6 +70,7 @@ trait HipEnvironment extends AbstractHipEnvironment[HipEnvironment]
 // Default implementation for use in fakes etc
 case class DefaultHipEnvironment(
   id: String,
+  name: String,
   rank: Int,
   isProductionLike: Boolean,
   apimUrl: String,
@@ -76,7 +79,28 @@ case class DefaultHipEnvironment(
   useProxy: Boolean,
   apiKey: Option[String],
   promoteTo: Option[HipEnvironment],
-  apimEnvironmentName: String ) extends HipEnvironment
+  apimEnvironmentName: String
+) extends HipEnvironment
+
+object DefaultHipEnvironment {
+
+  def apply(hipEnvironment: HipEnvironment): DefaultHipEnvironment = {
+    DefaultHipEnvironment(
+      id = hipEnvironment.id,
+      name = hipEnvironment.name,
+      rank = hipEnvironment.rank,
+      isProductionLike = hipEnvironment.isProductionLike,
+      apimUrl = hipEnvironment.apimUrl,
+      clientId = hipEnvironment.clientId,
+      secret = hipEnvironment.secret,
+      useProxy = hipEnvironment.useProxy,
+      apiKey = hipEnvironment.apiKey,
+      promoteTo = hipEnvironment.promoteTo,
+      apimEnvironmentName = hipEnvironment.apimEnvironmentName
+    )
+  }
+
+}
 
 trait HipEnvironments {
 
@@ -88,6 +112,7 @@ trait HipEnvironments {
         base =>
           new Object with HipEnvironment:
             override val id: String = base.id
+            override val name: String = base.name
             override val rank: Int = base.rank
             override val isProductionLike: Boolean = base.isProductionLike
             override val apimUrl: String = base.apimUrl
@@ -144,6 +169,7 @@ object ConfigurationHipEnvironmentsImpl {
 
   case class ConfigHipEnvironment(
     id: String,
+    name: String,
     rank: Int,
     apimUrl: String,
     clientId: String,
@@ -164,6 +190,7 @@ object ConfigurationHipEnvironmentsImpl {
 
         ConfigHipEnvironment(
           id = config.getString("id"),
+          name = config.getString("name"),
           rank = config.getInt("rank"),
           apimUrl = config.getString("apimUrl"),
           clientId = config.getString("clientId"),
@@ -217,6 +244,7 @@ object ConfigurationHipEnvironmentsImpl {
       .map(
         base => BaseHipEnvironment(
           id = base.id,
+          name = base.name,
           rank = base.rank,
           isProductionLike = base.isProductionLike,
           apimUrl = base.apimUrl,

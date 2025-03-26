@@ -31,6 +31,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |    environments = {
          |        production = {
          |            id = "production",
+         |            name = "Production",
          |            rank = 1,
          |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
          |            clientId = "apim-stub-client-id",
@@ -42,6 +43,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |        },
          |        test = {
          |            id = "test",
+         |            name = "Test",
          |            rank = 2,
          |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
          |            clientId = "apim-stub-client-id",
@@ -75,6 +77,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -86,6 +89,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 3,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -113,6 +117,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -124,6 +129,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 1,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -151,6 +157,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 2,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -162,6 +169,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 3,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -189,6 +197,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -200,6 +209,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 2,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -227,6 +237,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -238,6 +249,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        productionish = {
            |            id = "productionish",
+           |            name = "Productionish",
            |            rank = 2,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -249,6 +261,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 3,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -276,6 +289,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -288,6 +302,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        brigadoon = {
            |            id = "brigadoon",
+           |            name = "Brigadoon",
            |            rank = 2,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -313,6 +328,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -339,6 +355,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -350,6 +367,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 2,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -363,6 +381,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        testish = {
            |            id = "testish",
+           |            name = "Testish",
            |            rank = 3,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -390,6 +409,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -401,6 +421,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 2,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -414,6 +435,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        validate = {
            |            id = "validate",
+           |            name = "Validate",
            |            rank = 3,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -441,6 +463,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |        production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -452,6 +475,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 2,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
            |            clientId = "apim-stub-client-id",
@@ -478,6 +502,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |      production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
            |            clientId = "apim-stub-client-id",
@@ -489,6 +514,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        coventry = {
            |            id = "coventry",
+           |            name = "Coventry",
            |            rank = 2,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
            |            clientId = "apim-stub-client-id",
@@ -501,6 +527,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        preProduction = {
            |            id = "preProduction",
+           |            name = "Pre-production",
            |            rank = 3,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
            |            clientId = "apim-stub-client-id",
@@ -513,6 +540,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |        },
            |        test = {
            |            id = "test",
+           |            name = "Test",
            |            rank = 4,
            |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs",
            |            clientId = "apim-stub-client-id",
@@ -539,6 +567,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |      production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "httq://localhost:15026/api-hub-apim-stubs",
            |            clientId = "apim-stub-client-id",
@@ -563,6 +592,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
            |    environments = {
            |      production = {
            |            id = "production",
+           |            name = "Production",
            |            rank = 1,
            |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
            |            clientId = "apim-stub-client-id",
@@ -588,6 +618,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |    environments = {
          |      production = {
          |            id = "production",
+         |            name = "Production",
          |            rank = 1,
          |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
          |            clientId = "apim-stub-client-id",
@@ -599,6 +630,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |        },
          |        preProduction = {
          |            id = "preProduction",
+         |            name = "Pre-production",
          |            rank = 2,
          |            apimUrl = "http://localhost:15026/api-hub-apim-stubs",
          |            clientId = "apim-stub-client-id",
@@ -611,6 +643,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |        },
          |        test = {
          |            id = "test",
+         |            name = "Test",
          |            rank = 3,
          |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs",
          |            clientId = "apim-stub-client-id",
@@ -638,6 +671,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |    environments = {
          |        production = {
          |            id = "production",
+         |            name = "Production",
          |            rank = 1,
          |            apimUrl = "http://localhost:15026/api-hub-apim-stubs"
          |            clientId = "apim-stub-client-id",
@@ -649,6 +683,7 @@ class HipEnvironmentsSpec  extends AsyncFreeSpec with Matchers with MockitoSugar
          |        },
          |        test = {
          |            id = "test",
+         |            name = "Test",
          |            rank = 2,
          |            apimUrl = "http://localhost:15027/apim-proxy/api-hub-apim-stubs"
          |            clientId = "apim-stub-client-id",

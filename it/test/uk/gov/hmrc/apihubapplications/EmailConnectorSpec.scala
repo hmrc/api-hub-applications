@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
@@ -27,12 +27,12 @@ import play.api.http.Status.{ACCEPTED, BAD_GATEWAY}
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.{EmailConnector, EmailConnectorImpl, SendEmailRequest}
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestApi, AccessRequestRequest, Pending}
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses._
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException
 import uk.gov.hmrc.apihubapplications.models.exception.EmailException.{CallError, UnexpectedResponse}
 import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.apihubapplications.testhelpers.ApiDetailGenerators
+import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -256,7 +256,8 @@ class EmailConnectorSpec
         accessApprovedEmailToTeamTemplateId,
         Map(
           "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
+          "apispecificationname" -> accessRequest.apiName,
+          "environmentname" -> FakeHipEnvironments.testEnvironment.name
         )
       )
 
@@ -296,7 +297,8 @@ class EmailConnectorSpec
         accessApprovedEmailToTeamTemplateId,
         Map(
           "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
+          "apispecificationname" -> accessRequest.apiName,
+          "environmentname" -> FakeHipEnvironments.testEnvironment.name
         )
       )
 
@@ -340,7 +342,8 @@ class EmailConnectorSpec
         accessRequestSubmittedEmailToRequesterTemplateId,
         Map(
           "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
+          "apispecificationname" -> accessRequest.apiName,
+          "environmentname" -> FakeHipEnvironments.testEnvironment.name
         )
       )
 
@@ -414,7 +417,8 @@ class EmailConnectorSpec
         newAccessRequestEmailToApproversTemplateId,
         Map(
           "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
+          "apispecificationname" -> accessRequest.apiName,
+          "environmentname" -> FakeHipEnvironments.testEnvironment.name
         )
       )
 
@@ -486,7 +490,8 @@ class EmailConnectorSpec
         accessRejectedEmailToTeamTemplateId,
         Map(
           "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
+          "apispecificationname" -> accessRequest.apiName,
+          "environmentname" -> FakeHipEnvironments.testEnvironment.name
         )
       )
 
@@ -526,7 +531,8 @@ class EmailConnectorSpec
         accessRejectedEmailToTeamTemplateId,
         Map(
           "applicationname" -> application.name,
-          "apispecificationname" -> accessRequest.apiName
+          "apispecificationname" -> accessRequest.apiName,
+          "environmentname" -> FakeHipEnvironments.testEnvironment.name
         )
       )
 
@@ -915,7 +921,7 @@ object EmailConnectorSpec extends HttpClientV2Support with TableDrivenPropertyCh
       ))
     )
 
-    new EmailConnectorImpl(servicesConfig, httpClientV2)
+    new EmailConnectorImpl(servicesConfig, httpClientV2, FakeHipEnvironments)
   }
 
   val nonSuccessResponses: TableFor1[Int] = Table(

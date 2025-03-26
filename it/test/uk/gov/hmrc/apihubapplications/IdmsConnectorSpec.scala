@@ -23,21 +23,17 @@ import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor1}
-import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.{BaseHipEnvironment, DefaultHipEnvironment, HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.connectors.{IdmsConnector, IdmsConnectorImpl}
-import uk.gov.hmrc.apihubapplications.models.WithName
-import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, Credential}
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.IdmsException
-import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.{CallError, InvalidCredential}
+import uk.gov.hmrc.apihubapplications.models.exception.IdmsException.CallError
 import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
+import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
-import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
 
-import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 class IdmsConnectorSpec
@@ -599,31 +595,22 @@ object IdmsConnectorImplSpec extends HttpClientV2Support with TableDrivenPropert
     override protected val baseEnvironments: Seq[BaseHipEnvironment] = Seq.empty
 
     override val environments: Seq[HipEnvironment] = Seq(
-      DefaultHipEnvironment(
-        id = "production",
-        rank = 1,
-        isProductionLike = true,
+      DefaultHipEnvironment(FakeHipEnvironments.productionEnvironment).copy(
         apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/production",
         clientId = primaryClientId,
         secret = primarySecret,
         useProxy = false,
-        apiKey = None,
-        promoteTo = None,
-        apimEnvironmentName = "production"
+        apiKey = None
       ),
-      DefaultHipEnvironment(
-        id = "test",
-        rank = 2,
-        isProductionLike = false,
+      DefaultHipEnvironment(FakeHipEnvironments.testEnvironment).copy(
         apimUrl = s"http://${wireMockSupport.wireMockHost}:${wireMockSupport.wireMockPort}/test",
         clientId = secondaryClientId,
         secret = secondarySecret,
         useProxy = false,
-        apiKey = Some(secondaryApiKey),
-        apimEnvironmentName = "test",
-        promoteTo = None
+        apiKey = Some(secondaryApiKey)
       )
     )
+
     override def production: HipEnvironment = environments.head
     override def deployTo: HipEnvironment = environments.last
     override def validateIn: HipEnvironment = production

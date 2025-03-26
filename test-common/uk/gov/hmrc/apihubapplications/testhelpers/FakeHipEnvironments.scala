@@ -22,6 +22,7 @@ object FakeHipEnvironments extends HipEnvironments {
 
   val productionEnvironment: HipEnvironment = DefaultHipEnvironment(
     id = "production",
+    name = "Production",
     rank = 1,
     isProductionLike = true,
     apimUrl = "http://apim.test/production",
@@ -34,6 +35,7 @@ object FakeHipEnvironments extends HipEnvironments {
   )
   val preProductionEnvironment: HipEnvironment = DefaultHipEnvironment(
     id = "pre-production",
+    name = "Pre-production",
     rank = 2,
     isProductionLike = true,
     apimUrl = "http://apim.test/pre-production",
@@ -46,6 +48,7 @@ object FakeHipEnvironments extends HipEnvironments {
   )
   val testEnvironment: HipEnvironment = DefaultHipEnvironment(
     id = "test",
+    name = "Test",
     rank = 3,
     isProductionLike = false,
     apimUrl = "http://apim.test/test",

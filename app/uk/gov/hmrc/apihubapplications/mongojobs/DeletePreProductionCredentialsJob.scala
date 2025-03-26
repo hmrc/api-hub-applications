@@ -236,6 +236,7 @@ object DeletePreProductionCredentialsJob {
 
       DefaultHipEnvironment(
         id = "preprod",
+        name = "Pre-production",
         rank = 0,
         isProductionLike = false,
         apimUrl = config.getString("apimUrl"),
