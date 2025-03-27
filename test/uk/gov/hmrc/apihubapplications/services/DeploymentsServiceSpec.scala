@@ -238,8 +238,8 @@ class DeploymentsServiceSpec
     "must pass the correct request to Integrations Catalogue and send appropriate emails and return the response" in {
       val fixture = buildFixture()
       val apiDetail = sampleApiDetail().copy(teamId = Some("team1"))
-      val team1 = Team.apply("team 1", Seq(TeamMember("team1.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
-      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
+      val team1 = Team.apply("team 1", Seq(TeamMember("team1.member1")), clock = Clock.fixed(Instant.now(), ZoneOffset.UTC))
+      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), clock = Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team1"))).thenReturn(Future.successful(Right(team1)))
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
@@ -261,7 +261,7 @@ class DeploymentsServiceSpec
     "must handle no existing team" in {
       val fixture = buildFixture()
       val apiDetail = sampleApiDetail().copy(teamId = None)
-      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
+      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), clock = Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
@@ -282,7 +282,7 @@ class DeploymentsServiceSpec
     "must handle email failure" in {
       val fixture = buildFixture()
       val apiDetail = sampleApiDetail().copy(teamId = None)
-      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
+      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), clock = Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
@@ -301,7 +301,7 @@ class DeploymentsServiceSpec
     "must propagate errors from call to integrationCatalogueConnector.updateApiTeam" in {
       val fixture = buildFixture()
       val apiDetail = sampleApiDetail().copy(teamId = None)
-      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), Clock.fixed(Instant.now(), ZoneOffset.UTC))
+      val team2 = Team.apply("team 2", Seq(TeamMember("team2.member1")), clock = Clock.fixed(Instant.now(), ZoneOffset.UTC))
 
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))

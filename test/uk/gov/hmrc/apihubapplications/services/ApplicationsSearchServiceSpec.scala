@@ -69,7 +69,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val team = Team(
         id = Some(teamId),
         name = "test-team-name",
-        created = LocalDateTime.now(clock),
+        created = Some(LocalDateTime.now(clock)),
         teamMembers = Seq(TeamMember("test-email"))
       )
 
@@ -141,7 +141,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val fixture = buildFixture
       import fixture.*
 
-      val team = Team(Some("test-team-id-1"), "test-team-name", LocalDateTime.now(clock), Seq.empty)
+      val team = Team("test-team-name", Seq.empty, id = Some("test-team-id-1"), created = Some(LocalDateTime.now(clock)))
 
       val applications = Seq(
         Application(Some("test-id-1"), "test-name-1", Creator("test-email-1"), Seq(TeamMember("test-email-1"))),
@@ -237,7 +237,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val team = Team(
         id = Some(teamId),
         name = "test-team-name",
-        created = LocalDateTime.now(clock),
+        created = Some(LocalDateTime.now(clock)),
         teamMembers = Seq(TeamMember("test-email"))
       )
 
@@ -334,7 +334,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val team = Team(
         id = Some(teamId),
         name = "test-team-name",
-        created = LocalDateTime.now(clock),
+        created = Some(LocalDateTime.now(clock)),
         teamMembers = Seq(TeamMember("test-email"))
       )
 
@@ -426,7 +426,7 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val team = Team(
         id = Some(teamId),
         name = "test-team-name",
-        created = LocalDateTime.now(clock),
+        created = Some(LocalDateTime.now(clock)),
         teamMembers = Seq(TeamMember("test-email"))
       )
       val primaryClientId = "test-primary-client-id"
@@ -497,8 +497,8 @@ class ApplicationsSearchServiceSpec extends AsyncFreeSpec with Matchers with Moc
       val team = Team(
         id = Some(teamId),
         name = teamName,
-        created = LocalDateTime.now(),
         teamMembers = teamMembers,
+        created = Some(LocalDateTime.now()),
       )
 
       when(teamsService.findById(eqTo(teamId)))

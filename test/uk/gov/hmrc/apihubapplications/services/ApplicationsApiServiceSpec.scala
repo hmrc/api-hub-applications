@@ -260,7 +260,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     val teamId = "test-team-id"
     val oldTeamId = "test-old-team-id"
 
-    val team = Team("team-name", Seq.empty, clock)
+    val team = Team("team-name", Seq.empty, clock = clock)
 
     val onceUponATime = LocalDateTime.now(clock).minusDays(1)
 

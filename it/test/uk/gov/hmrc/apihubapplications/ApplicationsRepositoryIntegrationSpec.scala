@@ -179,9 +179,9 @@ class ApplicationsRepositoryIntegrationSpec
     "must retrieve all applications owned by given teams that are not soft deleted from MongoDb" in {
       setMdcData()
 
-      val team1 = Team(Some("test-team-id-1"), "test-team-1", LocalDateTime.now(clock), Seq.empty)
-      val team2 = Team(Some("test-team-id-2"), "test-team-2", LocalDateTime.now(clock), Seq.empty)
-      val team3 = Team(Some("test-team-id-3"), "test-team-3", LocalDateTime.now(clock), Seq.empty)
+      val team1 = Team("test-team-1", Seq.empty, id = Some("test-team-id-1"), created = Some(LocalDateTime.now(clock)))
+      val team2 = Team("test-team-2", Seq.empty, id = Some("test-team-id-2"), created = Some(LocalDateTime.now(clock)))
+      val team3 = Team("test-team-3", Seq.empty, id = Some("test-team-id-3"), created = Some(LocalDateTime.now(clock)))
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty)
@@ -206,9 +206,9 @@ class ApplicationsRepositoryIntegrationSpec
     "must retrieve all applications owned by given teams including soft deleted from MongoDb" in {
       setMdcData()
 
-      val team1 = Team(Some("test-team-id-1"), "test-team-1", LocalDateTime.now(clock), Seq.empty)
-      val team2 = Team(Some("test-team-id-2"), "test-team-2", LocalDateTime.now(clock), Seq.empty)
-      val team3 = Team(Some("test-team-id-3"), "test-team-3", LocalDateTime.now(clock), Seq.empty)
+      val team1 = Team("test-team-1", Seq.empty, id = Some("test-team-id-1"), created = Some(LocalDateTime.now(clock)))
+      val team2 = Team("test-team-2", Seq.empty, id = Some("test-team-id-2"), created = Some(LocalDateTime.now(clock)))
+      val team3 = Team("test-team-3", Seq.empty, id = Some("test-team-id-3"), created = Some(LocalDateTime.now(clock)))
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty)
@@ -234,8 +234,8 @@ class ApplicationsRepositoryIntegrationSpec
       setMdcData()
 
       val teamMemberEmail = "test0email-1"
-      val team1 = Team(Some("test-team-id-1"), "test-team-1", LocalDateTime.now(clock), Seq.empty)
-      val team2 = Team(Some("test-team-id-2"), "test-team-2", LocalDateTime.now(clock), Seq.empty)
+      val team1 = Team("test-team-1", Seq.empty, created = Some(LocalDateTime.now()), id = Some("test-team-id-1"))
+      val team2 = Team("test-team-2", Seq.empty, created = Some(LocalDateTime.now()), id = Some("test-team-id-2"))
 
       val now = LocalDateTime.now()
       val application1 = Application(None, "test-app-1", Creator("test1@test.com"), now, team1.id.value, credentials = Set.empty)
