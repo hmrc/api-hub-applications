@@ -17,7 +17,8 @@
 package uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.models.team.TeamType.ConsumerTeam
+import uk.gov.hmrc.apihubapplications.models.team.{Team, TeamType}
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier
 import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveTeamMember
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
@@ -28,7 +29,9 @@ case class SensitiveTeam(
   id: Option[String],
   name: String,
   created: LocalDateTime,
-  teamMembers: Seq[SensitiveTeamMember]
+  teamMembers: Seq[SensitiveTeamMember],
+  teamType: TeamType = ConsumerTeam,
+  egresses: Seq[String] = Seq.empty
 ) extends Sensitive[Team] with MongoIdentifier {
 
   override def decryptedValue: Team = {
@@ -36,7 +39,9 @@ case class SensitiveTeam(
       id = id,
       name = name,
       created = created,
-      teamMembers = teamMembers.map(_.decryptedValue)
+      teamMembers = teamMembers.map(_.decryptedValue),
+      teamType = teamType,
+      egresses = egresses
     )
   }
 
@@ -49,12 +54,14 @@ object SensitiveTeam {
       id = team.id,
       name = team.name,
       created = team.created,
-      teamMembers = team.teamMembers.map(SensitiveTeamMember(_))
+      teamMembers = team.teamMembers.map(SensitiveTeamMember(_)),
+      teamType = team.teamType,
+      egresses = team.egresses
     )
   }
 
   implicit def formatSensitiveTeam(implicit crypto: Encrypter & Decrypter): Format[SensitiveTeam] = {
-    Json.format[SensitiveTeam]
+    Json.using[Json.WithDefaultValues].format[SensitiveTeam]
   }
 
 }
