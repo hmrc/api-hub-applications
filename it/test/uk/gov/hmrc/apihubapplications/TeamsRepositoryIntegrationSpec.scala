@@ -25,7 +25,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.exception.{NotUpdatedException, TeamNameNotUniqueException, TeamNotFoundException}
-import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.models.team.{Team, TeamType}
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
@@ -278,8 +278,8 @@ object TeamsRepositoryIntegrationSpec {
   val teamMember3: TeamMember = TeamMember("test-team-member-3")
   val teamMember4: TeamMember = TeamMember("test-team-member-4")
 
-  val team1: Team = Team("test-team-1", Seq(teamMember1, teamMember2), created = Some(LocalDateTime.now()))
-  val team2: Team = Team("test-team-2", Seq(teamMember3, teamMember4), created = Some(LocalDateTime.now()))
-  val team3: Team = Team("test-team-3", Seq(teamMember1), created = Some(LocalDateTime.now()))
+  val team1: Team = Team("test-team-1", Seq(teamMember1, teamMember2), created = Some(LocalDateTime.now()), egresses = Seq("test-egress-1"), teamType = TeamType.ConsumerTeam)
+  val team2: Team = Team("test-team-2", Seq(teamMember3, teamMember4), created = Some(LocalDateTime.now()), egresses = Seq("test-egress-2", "test-egress-3"), teamType = TeamType.ConsumerTeam)
+  val team3: Team = Team("test-team-3", Seq(teamMember1), created = Some(LocalDateTime.now()), egresses = Seq.empty, teamType = TeamType.ProducerTeam)
 
 }

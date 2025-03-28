@@ -39,7 +39,8 @@ object Team {
              teamType: TeamType = ConsumerTeam,
              clock: Clock = Clock.systemDefaultZone(),
              id: Option[String] = None,
-             created: Option[LocalDateTime] = None
+             created: Option[LocalDateTime] = None,
+             egresses: Seq[String] = Seq.empty,
            ): Team = {
     Team(
       id,
@@ -47,7 +48,7 @@ object Team {
       created.getOrElse(LocalDateTime.now(clock)),
       teamMembers,
       teamType,
-      Seq.empty
+      egresses
     )
   }
 
