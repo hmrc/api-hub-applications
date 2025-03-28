@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,18 @@
 
 package uk.gov.hmrc.apihubapplications.models.team
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.team.TeamType.ConsumerTeam
+import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
 
-import java.time.Clock
+sealed trait TeamType
 
-case class NewTeam(name: String, teamMembers: Seq[TeamMember], teamType: TeamType = ConsumerTeam) {
+object TeamType extends Enumerable.Implicits {
 
-  def toTeam(clock: Clock): Team = {
-    Team(name, teamMembers, teamType, clock)
-  }
+  case object ConsumerTeam extends WithName("consumer") with TeamType
+  case object ProducerTeam extends WithName("producer") with TeamType
 
-}
+  val values: Seq[TeamType] = Seq(ConsumerTeam, ProducerTeam)
 
-object NewTeam {
-
-  implicit val formatNewTeam: Format[NewTeam] = Json.using[Json.WithDefaultValues].format[NewTeam]
+  implicit val enumerable: Enumerable[TeamType] =
+    Enumerable(values.map(value => value.toString -> value)*)
 
 }

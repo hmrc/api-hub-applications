@@ -513,9 +513,9 @@ object TeamsControllerSpec {
   val teamMember3: TeamMember = TeamMember("test-team-member-3")
   val teamMember4: TeamMember = TeamMember("test-team-member-4")
 
-  val team1: Team = Team("test-team-1", LocalDateTime.now(), Seq(teamMember1, teamMember2))
-  val team2: Team = Team("test-team-2", LocalDateTime.now(), Seq(teamMember3, teamMember4))
-  val team3: Team = Team("test-team-3", LocalDateTime.now(), Seq(teamMember1))
+  val team1: Team = Team("test-team-1", Seq(teamMember1, teamMember2), created = Some(LocalDateTime.now()))
+  val team2: Team = Team("test-team-2", Seq(teamMember3, teamMember4), created = Some(LocalDateTime.now()))
+  val team3: Team = Team("test-team-3", Seq(teamMember1), created = Some(LocalDateTime.now()))
 
   val testCreator: Creator = Creator("test@email.com")
   val testApplication: Application =

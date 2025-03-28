@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.models.team
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
+import uk.gov.hmrc.apihubapplications.models.team.TeamType.ConsumerTeam
 
 import java.time.{Clock, LocalDateTime}
 
@@ -25,19 +26,32 @@ case class Team(
   id: Option[String],
   name: String,
   created: LocalDateTime,
-  teamMembers: Seq[TeamMember]
+  teamMembers: Seq[TeamMember],
+  teamType: TeamType,
+  egresses: Seq[String]
 )
 
 object Team {
 
-  def apply(name: String, created: LocalDateTime, teamMembers: Seq[TeamMember]): Team = {
-    Team(None, name, created, teamMembers)
+  def apply(
+             name: String,
+             teamMembers: Seq[TeamMember],
+             teamType: TeamType = ConsumerTeam,
+             clock: Clock = Clock.systemDefaultZone(),
+             id: Option[String] = None,
+             created: Option[LocalDateTime] = None,
+             egresses: Seq[String] = Seq.empty,
+           ): Team = {
+    Team(
+      id,
+      name,
+      created.getOrElse(LocalDateTime.now(clock)),
+      teamMembers,
+      teamType,
+      egresses
+    )
   }
 
-  def apply(name: String, teamMembers: Seq[TeamMember], clock: Clock): Team = {
-    Team(None, name, LocalDateTime.now(clock), teamMembers)
-  }
-
-  implicit val formatTeam: Format[Team] = Json.format[Team]
+  implicit val formatTeam: Format[Team] = Json.using[Json.WithDefaultValues].format[Team]
 
 }
