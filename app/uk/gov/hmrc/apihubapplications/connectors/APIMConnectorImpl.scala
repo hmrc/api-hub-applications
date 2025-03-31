@@ -75,9 +75,7 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  override def deployToSecondary(request: DeploymentsRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.deployTo
-
+  override def createApi(request: DeploymentsRequest, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     val metadata = Json.toJson(CreateMetadata(request))
     val context = Seq("metadata" -> Json.prettyPrint(metadata))
       .withCorrelationId()
@@ -110,9 +108,11 @@ class APIMConnectorImpl @Inject()(
       )
   }
 
-  override def redeployToSecondary(publisherReference: String, request: RedeploymentRequest)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    val hipEnvironment = hipEnvironments.deployTo
-
+  override def updateApi(
+                          publisherReference: String,
+                          request: RedeploymentRequest,
+                          hipEnvironment: HipEnvironment,
+                        )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
     val metadata = Json.toJson(UpdateMetadata(request))
     val context = Seq("publisherReference" -> publisherReference, "metadata" -> Json.prettyPrint(metadata))
       .withCorrelationId()

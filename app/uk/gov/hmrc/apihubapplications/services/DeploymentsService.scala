@@ -42,20 +42,20 @@ class DeploymentsService @Inject()(
                                   )(implicit ec: ExecutionContext) extends Logging {
   private[services] val customUnknownDeploymentStatusMessage = "UNKNOWN_APIM_DEPLOYMENT_STATUS"
 
-  def deployToSecondary(
+  def createApi(
                          request: DeploymentsRequest
                        )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
     for {
-      deploymentsResponse <- apimConnector.deployToSecondary(request)
+      deploymentsResponse <- apimConnector.createApi(request, hipEnvironments.deployTo)
       linkApiToTeamResponse <- linkApiToTeam(deploymentsResponse, request.teamId)
     } yield linkApiToTeamResponse
   }
 
-  def redeployToSecondary(
+  def updateApi(
                            publisherRef: String,
                            request: RedeploymentRequest
                          )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
-    apimConnector.redeployToSecondary(publisherRef, request)
+    apimConnector.updateApi(publisherRef, request, hipEnvironments.deployTo)
   }
 
   private def linkApiToTeam(

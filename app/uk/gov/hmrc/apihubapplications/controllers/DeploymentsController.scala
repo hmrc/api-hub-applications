@@ -45,7 +45,7 @@ class DeploymentsController @Inject()(
     implicit request =>
       val jsReq = request.body
       jsReq.validate[DeploymentsRequest] match {
-        case JsSuccess(deploymentsRequest, _) => deploymentsService.deployToSecondary(deploymentsRequest) map {
+        case JsSuccess(deploymentsRequest, _) => deploymentsService.createApi(deploymentsRequest) map {
           case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
           case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
           case Left(e) => throw e
@@ -59,7 +59,7 @@ class DeploymentsController @Inject()(
   def update(publisherRef: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
       request.body.validate[RedeploymentRequest] match {
-        case JsSuccess(redeploymentRequest, _) => deploymentsService.redeployToSecondary(publisherRef, redeploymentRequest) map {
+        case JsSuccess(redeploymentRequest, _) => deploymentsService.updateApi(publisherRef, redeploymentRequest) map {
           case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
           case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
           case Left(e: ApimException) if e.issue == ServiceNotFound => NotFound

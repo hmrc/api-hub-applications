@@ -151,7 +151,7 @@ class APIMConnectorSpec
     }
   }
 
-  "APIMConnector.deployToSecondary" - {
+  "APIMConnector.createApi" - {
     "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
       stubFor(
         post(urlEqualTo(s"/${secondaryEnvironment.id}/v1/simple-api-deployment/deployments"))
@@ -176,7 +176,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).deployToSecondary(deploymentsRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).createApi(deploymentsRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(successfulDeploymentsResponse)
       }
@@ -191,7 +191,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).deployToSecondary(deploymentsRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).createApi(deploymentsRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value.issue mustBe ApimException.InvalidResponse
       }
@@ -207,7 +207,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).deployToSecondary(deploymentsRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).createApi(deploymentsRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failuresResponse))
       }
@@ -222,7 +222,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).deployToSecondary(deploymentsRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).createApi(deploymentsRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
       }
@@ -242,14 +242,14 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).deployToSecondary(deploymentsRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).createApi(deploymentsRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500, context))
       }
     }
   }
 
-  "APIMConnector.redeployToSecondary" - {
+  "APIMConnector.updateApi" - {
     "must place the correct request to the Simple API Deployment service in the secondary environment and return the response" in {
       stubFor(
         put(urlEqualTo(s"/${secondaryEnvironment.id}/v1/simple-api-deployment/deployments/$publisherRef"))
@@ -274,7 +274,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(successfulDeploymentsResponse)
       }
@@ -289,7 +289,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value.issue mustBe ApimException.InvalidResponse
       }
@@ -305,7 +305,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failuresResponse))
       }
@@ -320,7 +320,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
       }
@@ -341,7 +341,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500, context))
       }
@@ -356,7 +356,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.serviceNotFound(publisherRef))
       }
