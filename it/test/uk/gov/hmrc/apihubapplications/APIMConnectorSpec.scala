@@ -274,7 +274,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(successfulDeploymentsResponse)
       }
@@ -289,7 +289,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual.left.value.issue mustBe ApimException.InvalidResponse
       }
@@ -305,7 +305,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Right(InvalidOasResponse(failuresResponse))
       }
@@ -320,7 +320,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(400))
       }
@@ -341,7 +341,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.unexpectedResponse(500, context))
       }
@@ -356,7 +356,7 @@ class APIMConnectorSpec
           )
       )
 
-      buildConnector(this).updateApi(publisherRef, redeploymentRequest)(HeaderCarrier(requestId = requestId)).map {
+      buildConnector(this).updateApi(publisherRef, redeploymentRequest, secondaryEnvironment)(HeaderCarrier(requestId = requestId)).map {
         actual =>
           actual mustBe Left(ApimException.serviceNotFound(publisherRef))
       }
