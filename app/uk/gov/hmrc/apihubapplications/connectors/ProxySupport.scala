@@ -24,13 +24,9 @@ trait ProxySupport {
   object ProxySupport {
     implicit class RequestBuilderOps(requestBuilder: RequestBuilder) {
 
-      def withProxyIfRequired(hipEnvironment: HipEnvironment): RequestBuilder = {
-        (hipEnvironment.isProductionLike, hipEnvironment.useProxy) match {
-          case (true, _) => requestBuilder
-          case (false, true) => requestBuilder.withProxy
-          case (false, false) => requestBuilder
-        }
-      }
+      def withProxyIfRequired(hipEnvironment: HipEnvironment): RequestBuilder =
+        if hipEnvironment.useProxy then requestBuilder.withProxy
+        else requestBuilder
 
     }
   }

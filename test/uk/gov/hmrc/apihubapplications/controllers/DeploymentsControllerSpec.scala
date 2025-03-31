@@ -86,7 +86,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.createApi(eqTo(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -125,7 +125,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.createApi(eqTo(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -162,7 +162,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.createApi(eqTo(deployRequest))(any()))
           .thenReturn(Future.successful(Right(deployResponse)))
 
         val result = route(fixture.application, request).value
@@ -214,7 +214,7 @@ class DeploymentsControllerSpec
           )
           .withBody(json)
 
-        when(fixture.deploymentsService.deployToSecondary(eqTo(deployRequest))(any()))
+        when(fixture.deploymentsService.createApi(eqTo(deployRequest))(any()))
           .thenReturn(Future.successful(response))
 
         val result = route(fixture.application, request).value
@@ -248,7 +248,7 @@ class DeploymentsControllerSpec
           )
           .withBody(Json.toJson(deployRequest))
 
-        when(fixture.deploymentsService.deployToSecondary(any())(any()))
+        when(fixture.deploymentsService.createApi(any())(any()))
           .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
         val result = route(fixture.application, request).value
@@ -270,7 +270,7 @@ class DeploymentsControllerSpec
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.redeployToSecondary(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
+        when(fixture.deploymentsService.updateApi(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
           .thenReturn(Future.successful(Right(deploymentsResponse)))
 
         val result = route(fixture.application, request).value
@@ -289,7 +289,7 @@ class DeploymentsControllerSpec
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.redeployToSecondary(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
+        when(fixture.deploymentsService.updateApi(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
           .thenReturn(Future.successful(Right(invalidOasResponse)))
 
         val result = route(fixture.application, request).value
@@ -323,7 +323,7 @@ class DeploymentsControllerSpec
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.redeployToSecondary(any(), any())(any()))
+        when(fixture.deploymentsService.updateApi(any(), any())(any()))
           .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
         val result = route(fixture.application, request).value
@@ -342,7 +342,7 @@ class DeploymentsControllerSpec
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.redeployToSecondary(any(), any())(any()))
+        when(fixture.deploymentsService.updateApi(any(), any())(any()))
           .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
 
         val result = route(fixture.application, request).value

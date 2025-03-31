@@ -48,17 +48,17 @@ class DeploymentsServiceSpec
 
   import DeploymentsServiceSpec._
 
-  "deployToSecondary" - {
+  "createApi" - {
     "must pass the request to APIM and return the response" in {
       val fixture = buildFixture()
 
-      when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
+      when(fixture.apimConnector.createApi(any, any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
       when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      fixture.deploymentsService.createApi(deploymentsRequest)(HeaderCarrier()).map {
         result =>
           result mustBe Right(deploymentsResponse)
-          verify(fixture.apimConnector).deployToSecondary(eqTo(deploymentsRequest))(any)
+          verify(fixture.apimConnector).createApi(eqTo(deploymentsRequest), eqTo(FakeHipEnvironments.deployTo))(any)
           succeed
       }
     }
@@ -67,10 +67,10 @@ class DeploymentsServiceSpec
       val fixture = buildFixture()
       val apiTeam = ApiTeam(deploymentsResponse.id, deploymentsRequest.teamId)
 
-      when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
+      when(fixture.apimConnector.createApi(any, any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
       when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      fixture.deploymentsService.createApi(deploymentsRequest)(HeaderCarrier()).map {
         _ =>
           verify(fixture.integrationCatalogueConnector).linkApiToTeam(eqTo(apiTeam))(any)
           succeed
@@ -80,9 +80,9 @@ class DeploymentsServiceSpec
     "must return any failure from APIM" in {
       val fixture = buildFixture()
 
-      when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Left(ApimException.unexpectedResponse(BAD_REQUEST))))
+      when(fixture.apimConnector.createApi(any, any)(any)).thenReturn(Future.successful(Left(ApimException.unexpectedResponse(BAD_REQUEST))))
 
-      fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      fixture.deploymentsService.createApi(deploymentsRequest)(HeaderCarrier()).map {
         result =>
           result mustBe Left(ApimException.unexpectedResponse(BAD_REQUEST))
       }
@@ -91,26 +91,26 @@ class DeploymentsServiceSpec
     "must return any failure from Integration Catalogue" in {
       val fixture = buildFixture()
 
-      when(fixture.apimConnector.deployToSecondary(any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
+      when(fixture.apimConnector.createApi(any, any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
       when(fixture.integrationCatalogueConnector.linkApiToTeam(any)(any)).thenReturn(Future.successful(Left(IntegrationCatalogueException.unexpectedResponse(BAD_REQUEST))))
 
-      fixture.deploymentsService.deployToSecondary(deploymentsRequest)(HeaderCarrier()).map {
+      fixture.deploymentsService.createApi(deploymentsRequest)(HeaderCarrier()).map {
         result =>
           result mustBe Left(IntegrationCatalogueException.unexpectedResponse(BAD_REQUEST))
       }
     }
   }
 
-  "redeployToSecondary" - {
+  "updateApi" - {
     "must pass the request to APIM and return the response" in {
       val fixture = buildFixture()
 
-      when(fixture.apimConnector.redeployToSecondary(any, any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
+      when(fixture.apimConnector.updateApi(any, any, any)(any)).thenReturn(Future.successful(Right(deploymentsResponse)))
 
-      fixture.deploymentsService.redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+      fixture.deploymentsService.updateApi(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
         result =>
           result mustBe Right(deploymentsResponse)
-          verify(fixture.apimConnector).redeployToSecondary(eqTo(publisherRef), eqTo(redeploymentRequest))(any)
+          verify(fixture.apimConnector).updateApi(eqTo(publisherRef), eqTo(redeploymentRequest), eqTo(FakeHipEnvironments.deployTo))(any)
           succeed
       }
     }
@@ -118,9 +118,9 @@ class DeploymentsServiceSpec
     "must return any failure from APIM" in {
       val fixture = buildFixture()
 
-      when(fixture.apimConnector.redeployToSecondary(any, any)(any)).thenReturn(Future.successful(Left(ApimException.unexpectedResponse(BAD_REQUEST))))
+      when(fixture.apimConnector.updateApi(any, any, any)(any)).thenReturn(Future.successful(Left(ApimException.unexpectedResponse(BAD_REQUEST))))
 
-      fixture.deploymentsService.redeployToSecondary(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
+      fixture.deploymentsService.updateApi(publisherRef, redeploymentRequest)(HeaderCarrier()).map {
         result =>
           result mustBe Left(ApimException.unexpectedResponse(BAD_REQUEST))
       }
