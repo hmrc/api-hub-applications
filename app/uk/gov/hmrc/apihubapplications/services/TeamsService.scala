@@ -21,8 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, Team, RenameTeamRequest}
+import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
+import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest, Team}
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -102,5 +102,15 @@ class TeamsService @Inject()(
         Future.successful(Left(e))
     }
   }
+
+  def addEgressesToTeam(id: String, assignEgressesRequest: AddEgressesRequest): Future[Either[ApplicationsException, Unit]] = {
+    repository.findById(id).flatMap {
+      case Right(team) =>
+        repository.update(team.addEgresses(assignEgressesRequest.egresses))
+      case Left(e) =>
+        Future.successful(Left(e))
+    }
+  }
+
 
 }

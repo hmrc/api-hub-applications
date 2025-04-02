@@ -40,6 +40,7 @@ GET        /teams/name/:name                                                    
 POST       /teams/:id/members                                                       uk.gov.hmrc.apihubapplications.controllers.TeamsController.addTeamMember(id: String)
 DELETE     /teams/:id/members/:encryptedEmail                                       uk.gov.hmrc.apihubapplications.controllers.TeamsController.removeTeamMember(id: String, encryptedEmail: String)
 PUT        /teams/:id                                                               uk.gov.hmrc.apihubapplications.controllers.TeamsController.renameTeam(id: String)
+PUT        /teams/:id/egresses                                                      uk.gov.hmrc.apihubapplications.controllers.TeamsController.addEgressesToTeam(id: String)
 
 GET        /apis/:publisherRef/deployment-status                                    uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatus(publisherRef: String)
 GET        /apis/:publisherRef/environment/:environment/deployment-status           uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatusForEnvironment(environment: String, publisherRef: String)

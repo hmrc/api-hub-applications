@@ -24,7 +24,7 @@ import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, LastTeamMemberException, TeamMemberDoesNotExistException, TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest}
+import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest}
 import uk.gov.hmrc.apihubapplications.services.{ApplicationsSearchService, TeamsService}
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -119,6 +119,20 @@ class TeamsController @Inject()(
             case Left(_: TeamNameNotUniqueException) => Conflict
             case Left(e) => throw e
           }
+        case e: JsError =>
+          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+          Future.successful(BadRequest)
+      }
+  }
+
+  def addEgressesToTeam(id: String): Action[JsValue] = identify(parse.json).async {
+    implicit request =>
+      request.body.validate[AddEgressesRequest] match {
+        case JsSuccess(validRequest, _) => teamsService.addEgressesToTeam(id, validRequest).map {
+          case Right(_) => Created
+          case Left(_: TeamNotFoundException) => NotFound
+          case Left(e) => throw e
+        }
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
