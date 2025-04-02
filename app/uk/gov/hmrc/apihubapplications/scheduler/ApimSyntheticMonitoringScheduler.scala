@@ -21,14 +21,13 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.{Configuration, Environment, Play}
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
-import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, IdmsConnector}
+import uk.gov.hmrc.apihubapplications.connectors.{APIMConnector, CorrelationIdSupport, IdmsConnector}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, ExceptionRaising, IdmsException}
 import uk.gov.hmrc.apihubapplications.services.MetricsService
 import uk.gov.hmrc.http.{GatewayTimeoutException, HeaderCarrier}
 import uk.gov.hmrc.mongo.lock.{MongoLockRepository, ScheduledLockService}
 import uk.gov.hmrc.mongo.TimestampSupport
 
-import java.io.InputStream
 import java.time.{Clock, DayOfWeek, LocalTime, ZonedDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -43,12 +42,12 @@ class ApimSyntheticMonitoringScheduler @Inject()(
                                                   mongoLockRepository : MongoLockRepository,
                                                   timestampSupport    : TimestampSupport,
                                                   clock: Clock,
-                             )(implicit as: ActorSystem, alc: ApplicationLifecycle, ec: ExecutionContext) extends BaseScheduler {
+                             )(implicit as: ActorSystem, alc: ApplicationLifecycle, ec: ExecutionContext) extends BaseScheduler with CorrelationIdSupport {
 
   private val schedulerConfig: SchedulerConfig = SchedulerConfig(configuration, "apimSyntheticMonitoringScheduler")
   private val additionalConfiguration = schedulerConfig.additionalConfiguration
   private val publisherReference: String = additionalConfiguration.get[String]("publisherReference")
-  private given HeaderCarrier = HeaderCarrier()
+  private given HeaderCarrier = HeaderCarrier().withExtraHeaders(CorrelationIdSupport.correlationIdHeader -> "701fedaf-4b81-4796-8f89-3ae1e116772c")
 
   private val weekendDays = Seq(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
   private val dateTimeRangeApimServicesAreOn = (
