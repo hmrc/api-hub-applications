@@ -21,5 +21,5 @@ import play.api.libs.json.{Format, Json}
 case class AddEgressesRequest(egresses: Seq[String])
 
 object AddEgressesRequest {
-  implicit val formatTeamName: Format[AddEgressesRequest] = Json.format[AddEgressesRequest]
+  implicit val formatEgressRequest: Format[AddEgressesRequest] = Json.format[AddEgressesRequest]
 }
