@@ -407,7 +407,7 @@ class DeploymentsControllerSpec
         egress = Some("test-egress")
       )
 
-      when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef))(any()))
+      when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef), any())(any()))
         .thenReturn(Future.successful(Right(deploymentDetails)))
 
       running(fixture.application) {
@@ -422,11 +422,71 @@ class DeploymentsControllerSpec
     "must return 404 Not Found when the service does not exist in APIM" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef))(any()))
+      when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef), any())(any()))
         .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.getDeploymentDetails(publisherRef))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
+  "getDeploymentDetailsForEnvironment" - {
+    "must return 200 Ok and a DeploymentDetails JSON payload when returned by APIM" in {
+      forAll(Table(
+        "environment",
+        FakeHipEnvironments.testEnvironment,
+        FakeHipEnvironments.preProductionEnvironment,
+        FakeHipEnvironments.productionEnvironment,
+      )) { hipEnvironment =>
+        val fixture = buildFixture()
+
+        val deploymentDetails = DeploymentDetails(
+          description = Some("test-description"),
+          status = Some("test-status"),
+          domain = Some("test-domain"),
+          subDomain = Some("test-dub-domain"),
+          hods = Some(Seq("test-backend-1", "test-backend-2")),
+          egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
+          prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
+          egress = Some("test-egress")
+        )
+
+        when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef), eqTo(hipEnvironment))(any()))
+          .thenReturn(Future.successful(Right(deploymentDetails)))
+
+        running(fixture.application) {
+          val request = FakeRequest(routes.DeploymentsController.getDeploymentDetailsForEnvironment(publisherRef, hipEnvironment.id))
+          val result = route(fixture.application, request).value
+
+          status(result) mustBe OK
+          contentAsJson(result) mustBe Json.toJson(deploymentDetails)
+        }
+      }
+    }
+
+    "must return 404 Not Found when the service does not exist in APIM" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.getDeploymentDetails(eqTo(publisherRef), eqTo(FakeHipEnvironments.productionEnvironment))(any()))
+        .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.getDeploymentStatusForEnvironment(publisherRef, FakeHipEnvironments.productionEnvironment.id))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 404 Not Found when the environment does not exist" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.getDeploymentStatusForEnvironment(publisherRef, "fake-environment-id"))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
