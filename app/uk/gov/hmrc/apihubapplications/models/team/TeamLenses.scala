@@ -39,6 +39,12 @@ object TeamLenses {
       set = (team, teamMembers) => team.copy(teamMembers = teamMembers)
     )
 
+  val teamEgresses: Lens[Team, Seq[String]] =
+    Lens[Team, Seq[String]](
+      get = _.egresses,
+      set = (team, egresses) => team.copy(egresses = egresses)
+    )
+
   implicit class TeamLensOps(team: Team) {
 
     def setId(id: String): Team = {
@@ -79,6 +85,12 @@ object TeamLenses {
       hasTeamMember(teamMember.email)
     }
 
+    def addEgresses(egresses: Seq[String]): Team = {
+      teamEgresses.set(
+        team,
+        (team.egresses :++ egresses).distinct
+      )
+    }
   }
 
 }

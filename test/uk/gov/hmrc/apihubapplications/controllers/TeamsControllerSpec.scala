@@ -34,7 +34,7 @@ import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, 
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
+import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest, Team}
 import uk.gov.hmrc.apihubapplications.services.{ApplicationsSearchService, TeamsService}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
 import uk.gov.hmrc.crypto.ApplicationCrypto
@@ -482,6 +482,63 @@ class TeamsControllerSpec
         val result = route(fixture.application, request).value
 
         status(result) mustBe CONFLICT
+      }
+    }
+  }
+  "addEgressesToTeam" - {
+    "must add the egresses and return 201 Created when the request is valid" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val assignEgressesRequest = AddEgressesRequest(Seq("egress1", "egress2"))
+
+      when(fixture.teamsService.addEgressesToTeam(any, eqTo(assignEgressesRequest))).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.addEgressesToTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(assignEgressesRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe CREATED
+        verify(fixture.teamsService).addEgressesToTeam(eqTo(id), eqTo(assignEgressesRequest))
+      }
+    }
+    "must return 400 bad request when the request is invalid" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.addEgressesToTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.obj())
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+    "must return 404 not found when the team does not exist" in {
+      val fixture = buildFixture()
+      val id = "bad-test-id"
+      val assignEgressesRequest = AddEgressesRequest(Seq("egress1", "egress2"))
+
+      when(fixture.teamsService.addEgressesToTeam(eqTo(id), eqTo(assignEgressesRequest))).thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.addEgressesToTeam(id))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(assignEgressesRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
       }
     }
   }

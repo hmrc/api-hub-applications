@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{never, verify, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
@@ -24,15 +24,16 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.exception._
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.TeamLenses._
-import uk.gov.hmrc.apihubapplications.models.team.{NewTeam, RenameTeamRequest, Team}
+import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
+import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest, Team}
 import uk.gov.hmrc.apihubapplications.repositories.TeamsRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
+import scala.util.Right
 
 class TeamsServiceSpec
   extends AsyncFreeSpec
@@ -365,6 +366,42 @@ class TeamsServiceSpec
           result mustBe Left(expected)
       }
     }
+  }
+  "addEgressesToTeam" - {
+    "must add the set of egresses to the team when the team has no egresses" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+
+      val request = AddEgressesRequest(Seq("egress1", "egress1", "egress2"))
+      fixture.service.addEgressesToTeam(id, request).map {
+        result =>
+          verify(fixture.repository).update(eqTo(team.copy(egresses = Seq("egress1", "egress2"))))
+          result mustBe Right(())
+      }
+    }
+
+    "must add the set of egresses to the team when the team has some egresses" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team.addEgresses(Seq("egress1","egress2")))))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+
+      val request = AddEgressesRequest(Seq("egress2","egress3"))
+      fixture.service.addEgressesToTeam(id, request).map {
+        result =>
+          verify(fixture.repository).update(eqTo(team.copy(egresses = Seq("egress1","egress2","egress3"))))
+          result mustBe Right(())
+      }
+    }
+
   }
 
   private case class Fixture(
