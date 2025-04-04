@@ -20,8 +20,8 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.apihubapplications.config.HipEnvironments
-import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
+import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentAction, HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.apim.*
 import uk.gov.hmrc.apihubapplications.models.exception.ApimException.ServiceNotFound
 import uk.gov.hmrc.apihubapplications.models.exception.AutopublishException.DeploymentNotFound
@@ -89,12 +89,22 @@ class DeploymentsController @Inject()(
 
   def getDeploymentDetails(publisherRef: String): Action[AnyContent] = identify.async {
     implicit request =>
-      deploymentsService.getDeploymentDetails(publisherRef).map {
-        case Right(deploymentDetails) => Ok(Json.toJson(deploymentDetails))
-        case Left(e) if e.issue == ServiceNotFound => NotFound
-        case Left(e) => throw e
-      }
+      deploymentsService.getDeploymentDetails(publisherRef)
+        .map(handleDeploymentDetailsResult)
   }
+
+  def getDeploymentDetailsForEnvironment(publisherRef: String, environment: String): Action[AnyContent] = (identify andThen hipEnvironment(environment)).async {
+    implicit request =>
+      deploymentsService.getDeploymentDetails(publisherRef, request.hipEnvironment)
+        .map(handleDeploymentDetailsResult)
+  }
+
+  private def handleDeploymentDetailsResult(result: Either[ApimException, DeploymentDetails]) =
+    result match {
+      case Right(deploymentDetails) => Ok(Json.toJson(deploymentDetails))
+      case Left(e) if e.issue == ServiceNotFound => NotFound
+      case Left(e) => throw e
+    }
 
   def promoteAPI(publisherRef: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>

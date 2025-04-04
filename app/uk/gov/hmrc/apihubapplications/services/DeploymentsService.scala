@@ -98,8 +98,8 @@ class DeploymentsService @Inject()(
     }
   }
 
-  def getDeploymentDetails(publisherRef: String)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
-    apimConnector.getDeploymentDetails(publisherRef, hipEnvironments.deployTo)
+  def getDeploymentDetails(publisherRef: String, hipEnvironment: HipEnvironment = hipEnvironments.deployTo)(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentDetails]] = {
+    apimConnector.getDeploymentDetails(publisherRef, hipEnvironment)
   }
 
   def promoteAPI(
