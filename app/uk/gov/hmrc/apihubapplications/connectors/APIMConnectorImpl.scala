@@ -55,8 +55,8 @@ class APIMConnectorImpl @Inject()(
   override def validateOas(oas: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApimException, ValidateResponse]] = {
 
     httpClient.post(url"${hipEnvironment.apimUrl}/v1/simple-api-deployment/validate")
-      .setHeader("Authorization" -> authorizationForEnvironment(hipEnvironment))
       .setHeader("Content-Type" -> "application/yaml")
+      .setHeader(headersForEnvironment(hipEnvironment)*)
       .withProxyIfRequired(hipEnvironment)
       .withCorrelationId()
       .withBody(oas)
