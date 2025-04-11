@@ -962,7 +962,8 @@ object APIMConnectorSpec extends HttpClientV2Support {
     subDomain = "a subdomain",
     hods = Seq("a hod"),
     Seq("test-prefix-1", "test-prefix-2"),
-    Some(Seq(EgressMapping("prefix", "egress-prefix")))
+    Some(Seq(EgressMapping("prefix", "egress-prefix"))),
+    "test-base-path"
   )
 
   private val redeploymentRequest = RedeploymentRequest(
@@ -975,6 +976,7 @@ object APIMConnectorSpec extends HttpClientV2Support {
     prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
     egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
     egress = Some("test-egress"),
+    basePath = "test-base-path"
   )
 
   private val deploymentFrom = DeploymentFrom(
