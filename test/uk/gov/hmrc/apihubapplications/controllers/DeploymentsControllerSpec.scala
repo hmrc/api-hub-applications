@@ -74,7 +74,8 @@ class DeploymentsControllerSpec
           "a subdomain",
           Seq("a hod"),
           Seq.empty,
-          None
+          None,
+          "test-base-path"
         )
 
         val deployResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")
@@ -112,7 +113,8 @@ class DeploymentsControllerSpec
           "a subdomain",
           Seq("a hod"),
           Seq.empty,
-          None
+          None,
+          "test-base-path"
         )
 
         val errors = Seq(Error("test-type", "test-message"))
@@ -150,7 +152,8 @@ class DeploymentsControllerSpec
           "a subdomain",
           Seq("a hod"),
           Seq.empty,
-          None
+          None,
+          "test-base-path"
         )
 
         val deployResponse = InvalidOasResponse(FailuresResponse("failure_code", "failure_reason", None))
@@ -201,7 +204,8 @@ class DeploymentsControllerSpec
           "a subdomain",
           Seq("a hod"),
           Seq.empty,
-          None
+          None,
+          "test-base-path"
         )
 
         val response = Right(InvalidOasResponse(FailuresResponse("failure_code", "failure_reason", None)))
@@ -238,7 +242,8 @@ class DeploymentsControllerSpec
         "a subdomain",
         Seq("a hod"),
         Seq.empty,
-        None
+        None,
+        "test-base-path"
       )
 
       running(fixture.application) {
@@ -728,6 +733,7 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoS
     prefixesToRemove = Seq("test-prefix-1", "test-prefix-2"),
     egressMappings = Some(Seq(EgressMapping("prefix", "egress-prefix"))),
     egress = Some("test-egress"),
+    basePath = "test-base-path"
   )
 
   val deploymentsResponse: SuccessfulDeploymentsResponse = SuccessfulDeploymentsResponse("example-api-id", "v1.2.3", 666, "example-uri")

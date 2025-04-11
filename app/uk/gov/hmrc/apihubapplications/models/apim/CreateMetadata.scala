@@ -29,7 +29,8 @@ case class CreateMetadata(
   subdomain: String,
   backends: Seq[String],
   prefixesToRemove: Seq[String],
-  egressMappings: Option[Seq[EgressMapping]]
+  egressMappings: Option[Seq[EgressMapping]],
+  basePath: String
 )
 
 object CreateMetadata {
@@ -48,7 +49,8 @@ object CreateMetadata {
       subdomain = request.subDomain,
       backends = request.hods,
       prefixesToRemove = request.prefixesToRemove,
-      egressMappings = request.egressMappings
+      egressMappings = request.egressMappings,
+      basePath = request.basePath
     )
   }
 
