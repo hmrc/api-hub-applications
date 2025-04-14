@@ -217,6 +217,12 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseEgressNotFoundException {
+    def forTeamAndEgress(team: Team, egressId: String): EgressNotFoundException = {
+      log(EgressNotFoundException.forTeamAndEgress(team, egressId))
+    }
+  }
+
   private def log[T <: ApplicationsException](e: T): T = {
     e match {
       case emailException: EmailException => logger.error("Raised EmailException:", emailException)

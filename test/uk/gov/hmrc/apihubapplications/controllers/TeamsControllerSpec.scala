@@ -543,6 +543,60 @@ class TeamsControllerSpec
     }
   }
 
+  "removeEgressFromTeam" - {
+    "must remove the egress and return 204 No Content when it exists" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val egressId = "test-egress-id"
+
+      when(fixture.teamsService.removeEgressFromTeam(any, any)).thenReturn(Future.successful(Right(())))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.removeEgressFromTeam(id, egressId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NO_CONTENT
+        verify(fixture.teamsService).removeEgressFromTeam(eqTo(id), eqTo(egressId))
+      }
+    }
+
+    "must return 404 Not Found when the team does not exist" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val egressId = "test-egress-id"
+      val exception = TeamNotFoundException.forId(id)
+
+      when(fixture.teamsService.removeEgressFromTeam(any, any)).thenReturn(Future.successful(Left(exception)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.removeEgressFromTeam(id, egressId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 404 Not Found when the egress has not been added to the team" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val team = team1.setId(id)
+      val egressId = "test-egress-id"
+      val exception = EgressNotFoundException.forTeamAndEgress(team, egressId)
+
+      when(fixture.teamsService.removeEgressFromTeam(any, any)).thenReturn(Future.successful(Left(exception)))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.TeamsController.removeEgressFromTeam(id, egressId))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
+
   private case class Fixture(application: PlayApplication, teamsService: TeamsService, applicationsService: ApplicationsSearchService)
 
   private def buildFixture(): Fixture = {

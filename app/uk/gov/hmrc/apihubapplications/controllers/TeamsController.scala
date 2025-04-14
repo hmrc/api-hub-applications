@@ -22,7 +22,7 @@ import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.application.Application
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, LastTeamMemberException, TeamMemberDoesNotExistException, TeamMemberExistsException, TeamNameNotUniqueException, TeamNotFoundException}
+import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest}
 import uk.gov.hmrc.apihubapplications.services.{ApplicationsSearchService, TeamsService}
@@ -136,6 +136,16 @@ class TeamsController @Inject()(
         case e: JsError =>
           logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
           Future.successful(BadRequest)
+      }
+  }
+
+  def removeEgressFromTeam(id: String, egressId: String): Action[AnyContent] = identify.async {
+    implicit request =>
+      teamsService.removeEgressFromTeam(id, egressId).map {
+        case Right(()) => NoContent
+        case Left(_: TeamNotFoundException) => NotFound
+        case Left(_: EgressNotFoundException) => NotFound
+        case Left(e) => throw e
       }
   }
 

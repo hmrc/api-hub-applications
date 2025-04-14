@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.services
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, EgressNotFoundException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
 import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest, Team}
@@ -112,5 +112,17 @@ class TeamsService @Inject()(
     }
   }
 
+  def removeEgressFromTeam(id: String, egressId: String): Future[Either[ApplicationsException, Unit]] = {
+    repository.findById(id).flatMap {
+      case Right(team) =>
+        if (team.hasEgress(egressId)) {
+          repository.update(team.removeEgress(egressId))
+        }
+        else {
+          Future.successful(Left(raiseEgressNotFoundException.forTeamAndEgress(team, egressId)))
+        }
+      case Left(e) => Future.successful(Left(e))
+    }
+  }
 
 }

@@ -91,6 +91,17 @@ object TeamLenses {
         (team.egresses :++ egresses).distinct
       )
     }
+
+    def hasEgress(egressId: String): Boolean = {
+      team.egresses.exists(_.equals(egressId))
+    }
+
+    def removeEgress(egressId: String): Team = {
+      teamEgresses.set(
+        team,
+        team.egresses.filterNot(_.equals(egressId))
+      )
+    }
   }
 
 }
