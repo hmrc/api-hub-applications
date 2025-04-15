@@ -41,7 +41,7 @@ class TeamsServiceSpec
   with MockitoSugar
   with EitherValues {
 
-  import TeamsServiceSpec._
+  import TeamsServiceSpec.*
 
   "create" - {
     "must transform NewTeam to Team, pass it to the repository, and return the saved result" in {
@@ -298,7 +298,7 @@ class TeamsServiceSpec
 
       fixture.service.removeTeamMember(id, teamMember1.email)(HeaderCarrier()).map {
         result =>
-          result mustBe Left((LastTeamMemberException.forTeam(team)))
+          result mustBe Left(LastTeamMemberException.forTeam(team))
       }
     }
 
@@ -402,6 +402,74 @@ class TeamsServiceSpec
       }
     }
 
+  }
+
+  "removeEgressFromTeam" - {
+    "must remove the egress from the team when it exists" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val egressId1 = "test-egress-id-1"
+      val egressId2 = "test-egress-id-2"
+
+      val team = team1
+        .setId(id)
+        .addEgresses(Seq(egressId1, egressId2))
+
+      val expected = team1
+        .setId(id)
+        .addEgresses(Seq(egressId2))
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+      when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+
+      fixture.service.removeEgressFromTeam(id, egressId1).map {
+        result =>
+          verify(fixture.repository).update(eqTo(expected))
+          result mustBe Right(())
+      }
+    }
+
+    "must return EgressNotFoundException when the egress has not been added to the team" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val egressId1 = "test-egress-id-1"
+      val egressId2 = "test-egress-id-2"
+
+      val team = team1
+        .setId(id)
+        .addEgresses(Seq(egressId2))
+
+      val expected = EgressNotFoundException.forTeamAndEgress(team, egressId1)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
+
+      fixture.service.removeEgressFromTeam(id, egressId1).map {
+        result =>
+          verify(fixture.repository, never()).update(any)
+          result mustBe Left(expected)
+      }
+    }
+
+    "must return TeamNotFoundException when the team does not exist in the repository" in {
+      val fixture = buildFixture()
+
+      val id = "test-id"
+      val egressId = "test-egress-id-1"
+
+      val team = team1.setId(id)
+
+      val expected = TeamNotFoundException.forTeam(team)
+
+      when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Left(expected)))
+
+      fixture.service.removeEgressFromTeam(id, egressId).map {
+        result =>
+          verify(fixture.repository, never()).update(any)
+          result mustBe Left(expected)
+      }
+    }
   }
 
   private case class Fixture(

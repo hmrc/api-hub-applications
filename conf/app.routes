@@ -42,6 +42,7 @@ POST       /teams/:id/members                                                   
 DELETE     /teams/:id/members/:encryptedEmail                                       uk.gov.hmrc.apihubapplications.controllers.TeamsController.removeTeamMember(id: String, encryptedEmail: String)
 PUT        /teams/:id                                                               uk.gov.hmrc.apihubapplications.controllers.TeamsController.renameTeam(id: String)
 PUT        /teams/:id/egresses                                                      uk.gov.hmrc.apihubapplications.controllers.TeamsController.addEgressesToTeam(id: String)
+DELETE     /teams/:id/egresses/:egressId                                            uk.gov.hmrc.apihubapplications.controllers.TeamsController.removeEgressFromTeam(id: String, egressId: String)
 
 GET        /apis/:publisherRef/deployment-status                                    uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatus(publisherRef: String)
 GET        /apis/:publisherRef/environment/:environment/deployment-status           uk.gov.hmrc.apihubapplications.controllers.DeploymentsController.getDeploymentStatusForEnvironment(environment: String, publisherRef: String)
