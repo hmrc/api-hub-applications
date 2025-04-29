@@ -68,3 +68,7 @@ GET        /support/apim/get-deployment-details/:environment/:publisherRef      
 GET        /support/apim/get-deployment-status/:environment/:publisherRef           uk.gov.hmrc.apihubapplications.controllers.ApimController.getDeploymentStatus(environment: String, publisherRef: String, mergeRequestIid: String, version: String)
 GET        /support/apim/list-egress-gateways/:environment                          uk.gov.hmrc.apihubapplications.controllers.ApimController.listEgressGateways(environment: String)
 GET        /support/apim/fetch-client-scopes/:environment/:clientId                 uk.gov.hmrc.apihubapplications.controllers.ApimController.fetchClientScopes(environment: String, clientId: String)
+
+GET        /api-hub-applications/events/:id                                         uk.gov.hmrc.apihubapplications.controllers.EventsController.findById(id)
+GET        /api-hub-applications/events/entity-type/:entityType/entity/:entityId    uk.gov.hmrc.apihubapplications.controllers.EventsController.findByEvent(entityType: String, entityId: String)
+GET        /api-hub-applications/events/user/:encryptedEmail                        uk.gov.hmrc.apihubapplications.controllers.EventsController.findByUser(encryptedEmail: String)

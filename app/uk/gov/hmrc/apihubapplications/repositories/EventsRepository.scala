@@ -63,7 +63,7 @@ class EventsRepository @Inject()(
 
   override lazy val requiresTtlIndex = false // There are no requirements to expire applications
 
-  def insert(event: Event): Future[Either[ApplicationsException, Event]] = {
+  def insert(event: Event): Future[Event] = {
     Mdc.preservingMdc {
       collection
         .insertOne(
@@ -72,7 +72,7 @@ class EventsRepository @Inject()(
         .toFuture()
     } map (
       result =>
-        Right(event.copy(id = Some(result.getInsertedId.asObjectId().getValue.toString)))
+        event.copy(id = Some(result.getInsertedId.asObjectId().getValue.toString))
     ) 
   }
 
@@ -87,7 +87,7 @@ class EventsRepository @Inject()(
           case Some(event) => Right(event.decryptedValue)
           case None => Left(raiseTeamNotFoundException.forId(id))
         }
-      case None => Future.successful(Left(raiseTeamNotFoundException.forId(id)))
+      case None => Future.successful(Left(raiseEventNotFoundException.forId(id)))
     }
   }
 
