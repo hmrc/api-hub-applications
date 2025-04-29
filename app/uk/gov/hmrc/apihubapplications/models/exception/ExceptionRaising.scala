@@ -195,6 +195,16 @@ trait ExceptionRaising {
     }
   }
 
+  object raiseEventNotFoundException {
+    def forId(id: String): EventNotFoundException = {
+      log(EventNotFoundException.forId(id))
+    }
+
+    def forTeam(team: Team): TeamNotFoundException = {
+      log(TeamNotFoundException.forTeam(team))
+    }
+  }
+
   object raiseIntegrationCatalogueException {
     def unexpectedResponse(statusCode: Int): IntegrationCatalogueException = {
       log(IntegrationCatalogueException.unexpectedResponse(statusCode))
