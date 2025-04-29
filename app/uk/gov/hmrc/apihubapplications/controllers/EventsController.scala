@@ -51,14 +51,15 @@ class EventsController @Inject()(
       events => Ok(Json.toJson(events))
     )
   }
-  
+
   def findByEvent(entityType: String, entityId: String): Action[AnyContent] = identify.async {
     val maybeEntityType = EntityType.enumerable.withName(entityType.toUpperCase)
 
-    maybeEntityType match
-      case Some(entityType) => Future.successful(Ok(eventsService.findByEntity(entityId, entityType)))
-      case _ => Future.successful(BadRequest)
-    
+    if (maybeEntityType.isEmpty) {
+      Future.successful(BadRequest)
+    }
+
+    eventsService.findByEntity(entityId, maybeEntityType.get) flatMap  (events => Future.successful(Ok(Json.toJson(events))))
   }
 
   private def decrypt(encrypted: String): String = {
