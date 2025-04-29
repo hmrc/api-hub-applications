@@ -60,19 +60,12 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def getApplications(teamMember: Option[String], includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
-      request.headers.get("Encrypted-User-Email") foreach {
-        encryptedEmail =>
-          val decryptedEmail = crypto.QueryParameterCrypto.decrypt(Crypted(encryptedEmail)).value
-          logger.info(s"Encrypted-User-Email: $encryptedEmail")
-          logger.info(s"Decrypted Email: $decryptedEmail")
-      }
-
       println("===============" + request.attrs.get(UserEmailKey))
 
       applicationsService
-      .findAll(teamMember.map(decrypt), includeDeleted)
-      .map(Json.toJson(_))
-      .map(Ok(_))
+        .findAll(teamMember.map(decrypt), includeDeleted)
+        .map(Json.toJson(_))
+        .map(Ok(_))
   }
 
   def getApplicationsUsingApi(apiId: String, includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
