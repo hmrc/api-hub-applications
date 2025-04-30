@@ -61,7 +61,7 @@ class EventsRepository @Inject()(
     s"Crypto algorithm provided is not deterministic."
   )
 
-  override lazy val requiresTtlIndex = false // There are no requirements to expire applications
+  override lazy val requiresTtlIndex = false // There are no requirements to expire events
 
   def insert(event: Event): Future[Event] = {
     Mdc.preservingMdc {
@@ -73,7 +73,7 @@ class EventsRepository @Inject()(
     } map (
       result =>
         event.copy(id = Some(result.getInsertedId.asObjectId().getValue.toString))
-    ) 
+    )
   }
 
   def findById(id: String): Future[Either[ApplicationsException, Event]] = {

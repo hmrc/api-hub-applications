@@ -43,7 +43,10 @@ case object Updated extends WithName("UPDATED") with EventType
 
 object EventType extends Enumerable.Implicits {
 
-  val values: Seq[EventType] = Seq()
+  val values: Seq[EventType] = Seq(ApiAdded, EgressAdded, MemberAdded, Approved, Canceled, TeamChanged, Created,
+    CredentialCreated, Deleted, ScopesFixed, Promoted, Registered, Rejected, ApiRemoved, EgressRemoved, MemberRemoved,
+    Renamed, CredentialRevoked, Updated
+  )
 
   implicit val enumerable: Enumerable[EventType] =
     Enumerable(values.map(value => value.toString -> value)*)

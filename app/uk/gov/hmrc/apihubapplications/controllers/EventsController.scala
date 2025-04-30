@@ -18,15 +18,11 @@ package uk.gov.hmrc.apihubapplications.controllers
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
-import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.event.EntityType
-import uk.gov.hmrc.apihubapplications.models.exception.*
-import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest}
-import uk.gov.hmrc.apihubapplications.services.{ApplicationsSearchService, EventsService, TeamsService}
+import uk.gov.hmrc.apihubapplications.services.EventsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -55,11 +51,9 @@ class EventsController @Inject()(
   def findByEvent(entityType: String, entityId: String): Action[AnyContent] = identify.async {
     val maybeEntityType = EntityType.enumerable.withName(entityType.toUpperCase)
 
-    if (maybeEntityType.isEmpty) {
-      Future.successful(BadRequest)
-    }
-
-    eventsService.findByEntity(entityId, maybeEntityType.get) flatMap  (events => Future.successful(Ok(Json.toJson(events))))
+    maybeEntityType match
+      case Some(entityType) => eventsService.findByEntity(entityId, maybeEntityType.get) flatMap  (events => Future.successful(Ok(Json.toJson(events))))
+      case None => Future.successful(BadRequest)
   }
 
   private def decrypt(encrypted: String): String = {
