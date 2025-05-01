@@ -175,7 +175,7 @@ object EventsRepositoryIntegrationSpec {
          }
     """))
 
-  val event2 = event1.copy(entityId = entityId1, entityType = AccessRequest)
+  val event2 = event1.copy(entityId = entityId1, entityType = Team)
 
-  val event3 = event1.copy(entityId = entityId2, entityType = AccessRequest, user = "a.different.user@digital.hmrc.gov.uk")
+  val event3 = event1.copy(entityId = entityId2, entityType = Team, user = "a.different.user@digital.hmrc.gov.uk")
 }
