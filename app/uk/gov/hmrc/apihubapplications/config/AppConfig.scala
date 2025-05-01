@@ -31,5 +31,6 @@ class AppConfig @Inject()(config: Configuration) {
   val databaseStatisticsTaskInterval: Duration = config.get[Duration]("tasks.databaseStatistics.interval")
 
   val appAuthToken: String = config.get[String]("internal-auth.token")
+  val eventsEnabled: Boolean = config.getOptional[Boolean]("feature.eventsEnabled").getOrElse(false)
 
 }
