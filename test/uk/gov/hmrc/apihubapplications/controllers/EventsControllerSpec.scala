@@ -93,7 +93,7 @@ class EventsControllerSpec
       when(fixture.eventsService.findByEntity(Team, entityId)).thenReturn(Future.successful(Seq(event1, event3)))
 
       running(fixture.application) {
-        val request = FakeRequest(routes.EventsController.findByEvent(entityType, entityId))
+        val request = FakeRequest(routes.EventsController.findByEntity(entityType, entityId))
 
         val result = route(fixture.application, request).value
 
