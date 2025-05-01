@@ -199,10 +199,6 @@ trait ExceptionRaising {
     def forId(id: String): EventNotFoundException = {
       log(EventNotFoundException.forId(id))
     }
-
-    def forTeam(team: Team): TeamNotFoundException = {
-      log(TeamNotFoundException.forTeam(team))
-    }
   }
 
   object raiseIntegrationCatalogueException {
