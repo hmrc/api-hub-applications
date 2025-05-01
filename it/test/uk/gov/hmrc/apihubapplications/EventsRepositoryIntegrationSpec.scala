@@ -140,7 +140,7 @@ class EventsRepositoryIntegrationSpec
       val saved3 = repository.insert(event3).futureValue
 
       val result = repository
-        .findByEntity(entityId1, Application)
+        .findByEntity(Application, entityId1)
         .map(ResultWithMdcData(_))
         .futureValue
 

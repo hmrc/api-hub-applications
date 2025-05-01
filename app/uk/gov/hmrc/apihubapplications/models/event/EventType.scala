@@ -26,14 +26,14 @@ case object Deleted extends WithName("DELETED") with EventType
 case object Updated extends WithName("UPDATED") with EventType
 
 // Common to Applications
-case object Approved extends WithName("APPROVED") with EventType
-case object Canceled extends WithName("CANCELED") with EventType
+case object AccessRequestApproved extends WithName("ACCESS_REQUEST_APPROVED") with EventType
+case object AccessRequestCanceled extends WithName("ACCESS_REQUEST_CANCELED") with EventType
+case object AccessRequestRejected extends WithName("ACCESS_REQUEST_REJECTED") with EventType
 case object CredentialCreated extends WithName("CREDENTIAL_CREATED") with EventType
 case object AccessRequestCreated extends WithName("CREDENTIAL_CREATED") with EventType
 case object ScopesFixed extends WithName("SCOPES_FIXED") with EventType
 case object Promoted extends WithName("PROMOTED") with EventType
 case object Registered extends WithName("REGISTERED") with EventType
-case object Rejected extends WithName("REJECTED") with EventType
 case object ApiRemoved extends WithName("API_REMOVED") with EventType
 case object CredentialRevoked extends WithName("CREDENTIAL_REVOKED") with EventType
 case object ApiAdded extends WithName("API_ADDED") with EventType
@@ -52,8 +52,8 @@ case object Renamed extends WithName("RENAMED") with EventType
 
 object EventType extends Enumerable.Implicits {
 
-  val values: Seq[EventType] = Seq(ApiAdded, EgressAdded, MemberAdded, Approved, Canceled, TeamChanged, Created,
-    CredentialCreated, AccessRequestCreated, Deleted, ScopesFixed, Promoted, Registered, Rejected, ApiRemoved, EgressRemoved, MemberRemoved,
+  val values: Seq[EventType] = Seq(ApiAdded, EgressAdded, MemberAdded, AccessRequestApproved, AccessRequestCanceled, TeamChanged, Created,
+    CredentialCreated, AccessRequestCreated, Deleted, ScopesFixed, Promoted, Registered, AccessRequestRejected, ApiRemoved, EgressRemoved, MemberRemoved,
     Renamed, CredentialRevoked, Updated
   )
 

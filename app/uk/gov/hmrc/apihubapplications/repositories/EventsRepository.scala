@@ -89,7 +89,7 @@ class EventsRepository @Inject()(
     }
   }
 
-  def findByEntity(entityId: String, entityType: EntityType): Future[Seq[Event]] = {
+  def findByEntity(entityType: EntityType, entityId: String): Future[Seq[Event]] = {
     Mdc.preservingMdc {
       collection
         .find(Filters.and(Filters.equal("entityId", entityId), Filters.equal("entityType", entityType.toString)))

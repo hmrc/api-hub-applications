@@ -95,9 +95,9 @@ class EventsServiceSpec
       val entityId = UUID.randomUUID().toString
       val entityType = Team
 
-      when(fixture.repository.findByEntity(entityId, entityType)).thenReturn(Future.successful(Seq(event1, event2)))
+      when(fixture.repository.findByEntity(entityType, entityId)).thenReturn(Future.successful(Seq(event1, event2)))
 
-      fixture.service.findByEntity(entityId, entityType).map(
+      fixture.service.findByEntity(entityType, entityId).map(
         result => result must contain theSameElementsAs Seq(event1,event2)
       )
     }

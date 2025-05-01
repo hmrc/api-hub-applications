@@ -53,8 +53,8 @@ class EventsService @Inject()(
   }
 
 
-  def findByEntity(entityId: String, entityType: EntityType): Future[Seq[Event]] = {
-    repository.findByEntity(entityId, entityType)
+  def findByEntity(entityType: EntityType, entityId: String): Future[Seq[Event]] = {
+    repository.findByEntity(entityType, entityId)
   }
 
   def findByUser(user: String): Future[Seq[Event]] = {

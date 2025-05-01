@@ -48,11 +48,11 @@ class EventsController @Inject()(
     )
   }
 
-  def findByEvent(entityType: String, entityId: String): Action[AnyContent] = identify.async {
+  def findByEntity(entityType: String, entityId: String): Action[AnyContent] = identify.async {
     val maybeEntityType = EntityType.enumerable.withName(entityType.toUpperCase)
 
     maybeEntityType match
-      case Some(entityType) => eventsService.findByEntity(entityId, maybeEntityType.get) flatMap  (events => Future.successful(Ok(Json.toJson(events))))
+      case Some(entityType) => eventsService.findByEntity(maybeEntityType.get, entityId) flatMap  (events => Future.successful(Ok(Json.toJson(events))))
       case None => Future.successful(BadRequest)
   }
 
