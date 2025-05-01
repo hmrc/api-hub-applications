@@ -16,30 +16,20 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
-import java.util.UUID
-import org.mockito.ArgumentMatchers.{any, anyString, eq as eqTo}
-import org.mockito.Mockito.{never, verify, verifyNoInteractions, verifyNoMoreInteractions, when}
+import org.mockito.ArgumentMatchers.{anyString, eq as eqTo}
+import org.mockito.Mockito.{verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.config.AppConfig
-import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
-import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.event.{Application, Created, EntityType, Event}
-import uk.gov.hmrc.apihubapplications.models.exception.*
-import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
-import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest, Team}
+import uk.gov.hmrc.apihubapplications.models.event.*
 import uk.gov.hmrc.apihubapplications.repositories.EventsRepository
-import uk.gov.hmrc.apihubapplications.services.EventsServiceSpec.event2
-import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.{Clock, Instant, LocalDateTime, ZoneId}
+import java.time.LocalDateTime
+import java.util.UUID
 import scala.concurrent.Future
-import scala.util.Right
-import uk.gov.hmrc.apihubapplications.models.event.AccessRequest
 
 class EventsServiceSpec
   extends AsyncFreeSpec
@@ -103,7 +93,7 @@ class EventsServiceSpec
       val fixture = buildFixture()
 
       val entityId = UUID.randomUUID().toString
-      val entityType = AccessRequest
+      val entityType = Team
 
       when(fixture.repository.findByEntity(entityId, entityType)).thenReturn(Future.successful(Seq(event1, event2)))
 

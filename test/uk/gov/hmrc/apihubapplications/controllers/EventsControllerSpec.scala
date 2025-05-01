@@ -89,8 +89,8 @@ class EventsControllerSpec
       val fixture = buildFixture()
 
       val entityId = UUID.randomUUID().toString
-      val entityType = "accessrequest"
-      when(fixture.eventsService.findByEntity(entityId, AccessRequest)).thenReturn(Future.successful(Seq(event1, event3)))
+      val entityType = "team"
+      when(fixture.eventsService.findByEntity(entityId, Team)).thenReturn(Future.successful(Seq(event1, event3)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.EventsController.findByEvent(entityType, entityId))
