@@ -21,13 +21,12 @@ import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
 sealed trait EntityType
 
 case object Application extends WithName("APPLICATION") with EntityType
-case object AccessRequest extends WithName("ACCESSREQUEST") with EntityType
 case object Team  extends WithName("TEAM") with EntityType
 case object Api extends WithName("API") with EntityType
 
 object EntityType extends Enumerable.Implicits {
 
-  val values: Seq[EntityType] = Seq(Application, AccessRequest, Team, Api)
+  val values: Seq[EntityType] = Seq(Application, Team, Api)
 
   implicit val enumerable: Enumerable[EntityType] =
     Enumerable(values.map(value => value.toString -> value)*)

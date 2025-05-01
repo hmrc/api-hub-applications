@@ -29,6 +29,7 @@ case object Canceled extends WithName("CANCELED") with EventType
 case object TeamChanged extends WithName("TEAM_CHANGED") with EventType
 case object Created extends WithName("CREATED") with EventType
 case object CredentialCreated extends WithName("CREDENTIAL_CREATED") with EventType
+case object AccessRequestCreated extends WithName("CREDENTIAL_CREATED") with EventType
 case object Deleted extends WithName("DELETED") with EventType
 case object ScopesFixed extends WithName("SCOPES_FIXED") with EventType
 case object Promoted extends WithName("PROMOTED") with EventType
@@ -44,7 +45,7 @@ case object Updated extends WithName("UPDATED") with EventType
 object EventType extends Enumerable.Implicits {
 
   val values: Seq[EventType] = Seq(ApiAdded, EgressAdded, MemberAdded, Approved, Canceled, TeamChanged, Created,
-    CredentialCreated, Deleted, ScopesFixed, Promoted, Registered, Rejected, ApiRemoved, EgressRemoved, MemberRemoved,
+    CredentialCreated, AccessRequestCreated, Deleted, ScopesFixed, Promoted, Registered, Rejected, ApiRemoved, EgressRemoved, MemberRemoved,
     Renamed, CredentialRevoked, Updated
   )
 
