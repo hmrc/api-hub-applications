@@ -37,7 +37,7 @@ class EventsController @Inject()(
 )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def findByUser(encryptedEmail: String): Action[AnyContent] = identify.async {
-    eventsService.findByUser(decrypt(encryptedEmail)).map(
+    eventsService.findByUser(encryptedEmail).map(
       events => Ok(Json.toJson(events))
     )
   }
@@ -54,10 +54,6 @@ class EventsController @Inject()(
     maybeEntityType match
       case Some(entityType) => eventsService.findByEntity(entityId, maybeEntityType.get) flatMap  (events => Future.successful(Ok(Json.toJson(events))))
       case None => Future.successful(BadRequest)
-  }
-
-  private def decrypt(encrypted: String): String = {
-    crypto.QueryParameterCrypto.decrypt(Crypted(encrypted)).value
   }
 
 }

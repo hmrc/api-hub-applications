@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.apihubapplications.models.event
 
-import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.apihubapplications.models.{Enumerable, WithName}
 
 sealed trait EntityType

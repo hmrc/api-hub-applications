@@ -22,16 +22,10 @@ import com.mongodb.ErrorCategory
 import org.mongodb.scala.model.*
 import org.mongodb.scala.{MongoWriteException, ObservableFuture, SingleObservableFuture}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.models.application.TeamMember
 import uk.gov.hmrc.apihubapplications.models.event.{EntityType, Event, SensitiveEvent}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
-import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
-import uk.gov.hmrc.apihubapplications.repositories.EventsRepository.{caseInsensitiveCollation, isDuplicateKey}
 import uk.gov.hmrc.apihubapplications.repositories.RepositoryHelpers.{sensitiveStringFormat, stringToObjectId}
 import uk.gov.hmrc.apihubapplications.repositories.models.MongoIdentifier.formatDataWithMongoIdentifier
-import uk.gov.hmrc.apihubapplications.repositories.models.application.encrypted.SensitiveTeamMember
-import uk.gov.hmrc.apihubapplications.repositories.models.team.encrypted.SensitiveTeam
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -52,7 +46,11 @@ class EventsRepository @Inject()(
     indexes = Seq(
       IndexModel(Indexes.ascending("entityId","entityType")),
       IndexModel(Indexes.ascending("user"))
-    )
+    ),
+    extraCodecs = Seq(
+      // Sensitive string codec so we can operate on individual string fields
+      Codecs.playFormatCodec(sensitiveStringFormat(crypto))
+    ),
   ) with Logging with ExceptionRaising {
 
   // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
@@ -94,7 +92,7 @@ class EventsRepository @Inject()(
   def findByEntity(entityId: String, entityType: EntityType): Future[Seq[Event]] = {
     Mdc.preservingMdc {
       collection
-        .find(Filters.and(Filters.equal("entityId", entityId), Filters.equal("entityType", entityType)))
+        .find(Filters.and(Filters.equal("entityId", entityId), Filters.equal("entityType", entityType.toString)))
         .toFuture()
     }.map(_.map(_.decryptedValue))
   }
