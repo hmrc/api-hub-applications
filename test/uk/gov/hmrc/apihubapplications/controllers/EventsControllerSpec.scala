@@ -62,6 +62,21 @@ class EventsControllerSpec
         contentAsJson(result) mustBe Json.toJson(event1)
       }
     }
+
+    "must call the service and return not found if event is missing" in {
+      val fixture = buildFixture()
+
+      val id = UUID.randomUUID().toString
+      when(fixture.eventsService.findById(id)).thenReturn(Future.successful(None))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.EventsController.findById(id))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
   }
 
 
