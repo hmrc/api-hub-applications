@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
-import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{verify, verifyNoInteractions, when}
+import org.mockito.Mockito.when
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -30,16 +29,11 @@ import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
 import uk.gov.hmrc.apihubapplications.controllers.actions.{FakeIdentifierAction, IdentifierAction}
-import uk.gov.hmrc.apihubapplications.models.event.{AccessRequest, Application, Created, Deleted, Event}
-import uk.gov.hmrc.apihubapplications.models.exception.*
-import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
-import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
-import uk.gov.hmrc.apihubapplications.models.team.{AddEgressesRequest, NewTeam, RenameTeamRequest, Team}
+import uk.gov.hmrc.apihubapplications.models.event.*
 import uk.gov.hmrc.apihubapplications.services.{ApplicationsSearchService, EventsService}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
-import uk.gov.hmrc.crypto.ApplicationCrypto
 
-import java.time.{Clock, LocalDateTime}
+import java.time.LocalDateTime
 import java.util.UUID
 import scala.concurrent.Future
 
