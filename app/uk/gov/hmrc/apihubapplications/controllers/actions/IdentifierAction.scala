@@ -17,14 +17,18 @@
 package uk.gov.hmrc.apihubapplications.controllers.actions
 
 import com.google.inject.Inject
-import play.api.mvc._
-import uk.gov.hmrc.internalauth.client._
+import play.api.libs.typedmap.TypedKey
+import play.api.mvc.*
+import uk.gov.hmrc.apihubapplications.controllers.actions.AuthenticatedIdentifierAction.UserEmailKey
+import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
+import uk.gov.hmrc.internalauth.client.*
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait IdentifierAction extends ActionBuilder[Request, AnyContent] with ActionFunction[Request, Request]
 
 class AuthenticatedIdentifierAction @Inject()(val parser: BodyParsers.Default,
+                                              crypto: ApplicationCrypto,
                                               auth: BackendAuthComponents
                                              )(implicit val executionContext: ExecutionContext) extends IdentifierAction {
 
@@ -34,9 +38,16 @@ class AuthenticatedIdentifierAction @Inject()(val parser: BodyParsers.Default,
   )
 
   override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = {
+    val decryptedEmail = request.headers.get("Encrypted-User-Email").map(encryptedEmail => crypto.QueryParameterCrypto.decrypt(Crypted(encryptedEmail)).value)
+
     auth.authorizedAction(
       permission,
       onUnauthorizedError = Future.successful(Results.Unauthorized),
-      onForbiddenError = Future.successful(Results.Forbidden)).invokeBlock(request, block)
+      onForbiddenError = Future.successful(Results.Forbidden)
+    ).invokeBlock(request.addAttr(UserEmailKey, decryptedEmail), block)
   }
+}
+
+object AuthenticatedIdentifierAction {
+  val UserEmailKey = TypedKey[Option[String]]("User-Email")
 }
