@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.controllers.actions
 
-import org.mockito.ArgumentMatchers.{eq => eqTo}
+import org.mockito.ArgumentMatchers.eq as eqTo
 import org.mockito.Mockito.when
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -25,11 +25,12 @@ import play.api.http.Status
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.Results.Ok
-import play.api.mvc._
-import play.api.test.Helpers._
+import play.api.mvc.*
+import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
+import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.internalauth.client._
+import uk.gov.hmrc.internalauth.client.*
 import uk.gov.hmrc.internalauth.client.test.{BackendAuthComponentsStub, StubBehaviour}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,7 +40,12 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
 
 
   class Harness(authAction: IdentifierAction) {
-    def onPageLoad(): Action[AnyContent] = authAction { _ => Results.Ok }
+    var request: Request[AnyContent] = _
+    def onPageLoad(): Action[AnyContent] = authAction { request => {
+        this.request = request
+        Results.Ok
+      }
+    }
   }
 
   "Auth Action" - {
@@ -52,7 +58,7 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
 
         running(application) {
           val bodyParsers = application.injector.instanceOf[BodyParsers.Default]
-          val authAction = new AuthenticatedIdentifierAction(bodyParsers, application.injector.instanceOf[BackendAuthComponents])
+          val authAction = new AuthenticatedIdentifierAction(bodyParsers, application.injector.instanceOf[ApplicationCrypto], application.injector.instanceOf[BackendAuthComponents])
           val controller = new Harness(authAction)
           val result = controller.onPageLoad()(FakeRequest())
 
@@ -63,7 +69,7 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
 
     "when the client has set an auth header is authorized" - {
 
-      "must return ok" in {
+      "must return ok and add user email to request attributes" in {
         implicit val cc = Helpers.stubControllerComponents()
         val mockStubBehaviour = mock[StubBehaviour]
         val stubAuth = BackendAuthComponentsStub(mockStubBehaviour)
@@ -87,53 +93,18 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
 
           when (mockStubBehaviour.stubAuth(eqTo(Some(canAccessPredicate)), eqTo(Retrieval.EmptyRetrieval))).thenReturn(Future.unit)
 
+          var blockRequest: Request[AnyContent] = null
           val result = authAction.invokeBlock(
-            FakeRequest().withHeaders("Authorization" -> "Anything whatsoever"),
-            (_: Request[AnyContent]) => {
+            FakeRequest().withHeaders("Authorization" -> "Anything whatsoever").withHeaders("Encrypted-User-Email" -> "z2y0wqM9NOko/nAMBcRqkA=="),
+            (req: Request[AnyContent]) => {
+              blockRequest = req
               Future.successful(Ok)
             }
           )
 
           status(result) mustBe OK
+          blockRequest.attrs.get(AuthenticatedIdentifierAction.UserEmailKey) mustBe Some(Some("test-email"))
         }
-      }
-    }
-  }
-
-  "when the client has set an auth header is authorized" - {
-
-    "must return ok" in {
-      implicit val cc = Helpers.stubControllerComponents()
-      val mockStubBehaviour = mock[StubBehaviour]
-      val stubAuth = BackendAuthComponentsStub(mockStubBehaviour)
-
-      val application = new GuiceApplicationBuilder()
-        .bindings(
-          bind[BackendAuthComponents].toInstance(stubAuth)
-        )
-        .build()
-
-      running(application) {
-        val authAction = application.injector.instanceOf[AuthenticatedIdentifierAction]
-
-        val canAccessPredicate = Predicate.Permission(
-          Resource(
-            ResourceType("api-hub-applications"),
-            ResourceLocation("*")
-          ),
-          IAAction("WRITE")
-        )
-
-        when(mockStubBehaviour.stubAuth(eqTo(Some(canAccessPredicate)), eqTo(Retrieval.EmptyRetrieval))).thenReturn(Future.unit)
-
-        val result = authAction.invokeBlock(
-          FakeRequest().withHeaders("Authorization" -> "Anything whatsoever"),
-          (_: Request[AnyContent]) => {
-            Future.successful(Ok)
-          }
-        )
-
-        status(result) mustBe OK
       }
     }
   }
