@@ -22,6 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.apihubapplications.controllers.actions.IdentifierAction
 import uk.gov.hmrc.apihubapplications.models.event.EntityType
+import uk.gov.hmrc.apihubapplications.models.exception.ApplicationNotFoundException
 import uk.gov.hmrc.apihubapplications.services.EventsService
 import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -30,11 +31,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class EventsController @Inject()(
-  cc: ControllerComponents,
-  identify: IdentifierAction,
-  eventsService: EventsService,
-  crypto: ApplicationCrypto
-)(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
+                                  cc: ControllerComponents,
+                                  identify: IdentifierAction,
+                                  eventsService: EventsService,
+                                  crypto: ApplicationCrypto
+                                )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def findByUser(encryptedEmail: String): Action[AnyContent] = identify.async {
     eventsService.findByUser(encryptedEmail).map(
@@ -43,9 +44,10 @@ class EventsController @Inject()(
   }
 
   def findById(id: String): Action[AnyContent] = identify.async {
-    eventsService.findById(id).map(
-      events => Ok(Json.toJson(events))
-    )
+    eventsService.findById(id).map {
+      case Some(event) => Ok(Json.toJson(event))
+      case None => NotFound
+    }
   }
 
   def findByEntity(entityType: String, entityId: String): Action[AnyContent] = identify.async {
