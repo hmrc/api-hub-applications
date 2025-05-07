@@ -21,9 +21,9 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
+import uk.gov.hmrc.apihubapplications.controllers.actions.AuthenticatedIdentifierAction.UserEmailKey
 import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.*
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -59,10 +59,13 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
   }
 
   def getApplications(teamMember: Option[String], includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
-    applicationsService
-      .findAll(teamMember.map(decrypt), includeDeleted)
-      .map(Json.toJson(_))
-      .map(Ok(_))
+    implicit request =>
+      println("===============" + request.attrs.get(UserEmailKey))
+
+      applicationsService
+        .findAll(teamMember.map(decrypt), includeDeleted)
+        .map(Json.toJson(_))
+        .map(Ok(_))
   }
 
   def getApplicationsUsingApi(apiId: String, includeDeleted: Boolean): Action[AnyContent] = identify.compose(Action).async {
