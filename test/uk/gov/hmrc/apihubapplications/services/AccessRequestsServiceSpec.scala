@@ -915,7 +915,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
   }
 
   "cancelAccessRequests" - {
-    "must cancel all pending access requests for the application and API" in {
+    "must cancel all pending access requests for the application and API and record appropriate events" in {
       val fixture = buildFixture()
 
       val applicationId = "test-application-id"
@@ -929,7 +929,22 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.accessRequestsRepository.find(any(), any())).thenReturn(Future.successful(requests))
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
 
-      val cancelled = AccessRequestCancelled(LocalDateTime.now(fixture.clock), "system")
+      val now = LocalDateTime.now(clock)
+
+      val cancelled = AccessRequestCancelled(now, "system")
+      val expectedEvent: Event = Event(
+        id = None,
+        entityId = applicationId,
+        entityType = ApplicationEvent,
+        eventType = AccessRequestCanceledEvent,
+        user = "system",
+        timestamp = now,
+        description = descriptionOf(AccessRequestCanceledEvent),
+        detail = s"Access request id: ${request1.id.get}",
+        parameters = Json.toJson(AccessRequestCancelRequest("system"))
+      )
+
+      val expectedEvent2: Event = expectedEvent.copy(detail = s"Access request id: ${request2.id.get}")
 
       fixture.accessRequestsService.cancelAccessRequests(applicationId, request1.apiId).map {
         result =>
@@ -937,11 +952,14 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
           verify(fixture.accessRequestsRepository).update(eqTo(request1.cancel(cancelled)))
           verify(fixture.accessRequestsRepository).update(eqTo(request2.cancel(cancelled)))
           verifyNoMoreInteractions(fixture.accessRequestsRepository)
+          verify(fixture.eventsService).log(expectedEvent)
+          verify(fixture.eventsService).log(expectedEvent2)
+          verifyNoMoreInteractions(fixture.eventsService)
           result.value mustBe ()
       }
     }
 
-    "must cancel all pending access requests for an application" in {
+    "must cancel all pending access requests for an application and record appropriate events" in {
       val fixture = buildFixture()
 
       val applicationId = "test-application-id"
@@ -951,8 +969,25 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
 
       when(fixture.accessRequestsRepository.find(any(), any())).thenReturn(Future.successful(Seq(pending1, pending2)))
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
-      val cancelled = AccessRequestCancelled(LocalDateTime.now(fixture.clock), "system")
+      val now = LocalDateTime.now(fixture.clock)
+
+      val cancelled = AccessRequestCancelled(now, "system")
+
+      val expectedEvent: Event = Event(
+        id = None,
+        entityId = applicationId,
+        entityType = ApplicationEvent,
+        eventType = AccessRequestCanceledEvent,
+        user = "system",
+        timestamp = now,
+        description = descriptionOf(AccessRequestCanceledEvent),
+        detail = s"Access request id: ${pending1.id.get}",
+        parameters = Json.toJson(AccessRequestCancelRequest("system"))
+      )
+
+      val expectedEvent2: Event = expectedEvent.copy(detail = s"Access request id: ${pending2.id.get}")
 
       fixture.accessRequestsService.cancelAccessRequests(applicationId).map {
         result =>
@@ -960,6 +995,9 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
           verify(fixture.accessRequestsRepository).update(eqTo(pending1.cancel(cancelled)))
           verify(fixture.accessRequestsRepository).update(eqTo(pending2.cancel(cancelled)))
           verifyNoMoreInteractions(fixture.accessRequestsRepository)
+          verify(fixture.eventsService).log(expectedEvent)
+          verify(fixture.eventsService).log(expectedEvent2)
+          verifyNoMoreInteractions(fixture.eventsService)
           result.value mustBe ()
       }
     }

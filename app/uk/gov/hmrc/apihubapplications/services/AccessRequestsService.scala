@@ -47,6 +47,8 @@ class AccessRequestsService @Inject()(
                                        eventsService: EventsService
                                      )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
+  private val system = "system"
+
   def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
     accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
       requests => for {
@@ -82,13 +84,13 @@ class AccessRequestsService @Inject()(
     )
   }
 
-  private def asEvent(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequestId: String, applicationId: String, eventType: EventType): Event = {
+  private def asEvent(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequestId: String, applicationId: String, eventType: EventType, timestamp:LocalDateTime = LocalDateTime.now(clock)): Event = {
     Event(id = None,
       entityId = applicationId,
       entityType = ApplicationEvent,
       eventType = eventType,
       user = accessRequestCancelRequest.cancelledBy,
-      timestamp = LocalDateTime.now(clock),
+      timestamp = timestamp,
       description = descriptionOf(eventType),
       detail = s"Access request id: $accessRequestId",
       parameters = Json.toJson(accessRequestCancelRequest)
@@ -187,13 +189,23 @@ class AccessRequestsService @Inject()(
     }
   }
 
+
+
   def cancelAccessRequests(applicationId: String): Future[Either[ApplicationsException, Unit]] = {
     getAccessRequests(Some(applicationId), Some(Pending)).flatMap(
       accessRequests => {
-        Future.sequence(accessRequests.map(pendingAccessRequest => accessRequestsRepository.update(
-          pendingAccessRequest
-            .cancel(cancelled = LocalDateTime.now(clock), cancelledBy = "system")
-        ))).map(useFirstApplicationsException).map {
+        Future.sequence(accessRequests.map(pendingAccessRequest => {
+          val now = LocalDateTime.now(clock)
+
+          val cancelAccessRequest = pendingAccessRequest
+            .cancel(cancelled = now, cancelledBy = system)
+
+          val accessRequestAccessRequest : AccessRequestCancelRequest = AccessRequestCancelRequest(system)
+            accessRequestsRepository.update(cancelAccessRequest).map {
+              case Right(()) => Right(eventsService.log(asEvent(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, AccessRequestCanceled, now)))
+              case Left(e: ApplicationsException) => Left(e)
+          }
+        })).map(useFirstApplicationsException).map {
           case Right(_) => Right(())
           case Left(e) => Left(e)
         }
@@ -205,14 +217,19 @@ class AccessRequestsService @Inject()(
       .map(_.filter(_.apiId.equals(apiId)))
       .flatMap(
         accessRequests =>
-          Future
-            .sequence(
-              accessRequests.map(
-                accessRequest =>
-                  accessRequestsRepository.update(
-                    accessRequest.cancel(cancelled = LocalDateTime.now(clock), cancelledBy = "system")
-                  )
-              )
+          Future.sequence(
+              accessRequests.map(pendingAccessRequest => {
+                val now = LocalDateTime.now(clock)
+
+                val cancelAccessRequest = pendingAccessRequest
+                  .cancel(cancelled = now, cancelledBy = system)
+
+                val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
+                accessRequestsRepository.update(cancelAccessRequest).map {
+                  case Right(()) => Right(eventsService.log(asEvent(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, AccessRequestCanceled, now)))
+                  case Left(e: ApplicationsException) => Left(e)
+                }
+              })
             )
             .map(useFirstApplicationsException)
             .map(_.map(_ => ()))
