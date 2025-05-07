@@ -23,10 +23,13 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.AccessRequestLensOps
 import uk.gov.hmrc.apihubapplications.models.application.{Application, Creator, TeamMember}
+import uk.gov.hmrc.apihubapplications.models.event.EventType.descriptionOf
+import uk.gov.hmrc.apihubapplications.models.event.{AccessRequestApproved, AccessRequestCreated, AccessRequestRejected, Event, AccessRequestCanceled as AccessRequestCanceledEvent, Application as ApplicationEvent}
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
@@ -61,6 +64,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.searchService.findById(any())(any)).thenReturn(Future.successful(Right(app)))
       when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(any(), any())(any())).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendNewAccessRequestEmailToApprovers(any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.createAccessRequest(request)(HeaderCarrier()).map {
         result =>
@@ -85,9 +89,9 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
 
       when(fixture.accessRequestsRepository.insert(any())).thenReturn(Future.successful(accessRequests))
       when(fixture.searchService.findById(eqTo(accessRequestRequest.applicationId))(any)).thenReturn(Future.successful(Right(app)))
-
       when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(eqTo(app), eqTo(accessRequestRequest))(any())).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendNewAccessRequestEmailToApprovers(any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.createAccessRequest(accessRequestRequest)(HeaderCarrier()).map {
         result =>
@@ -116,12 +120,52 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.searchService.findById(eqTo(accessRequestRequest.applicationId))(any)).thenReturn(Future.successful(Right(app)))
       when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(eqTo(app), eqTo(accessRequestRequest))(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
       when(fixture.emailConnector.sendNewAccessRequestEmailToApprovers(eqTo(app), eqTo(accessRequestRequest))(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.createAccessRequest(accessRequestRequest)(HeaderCarrier()).map {
         result =>
           verify(fixture.emailConnector).sendAccessRequestSubmittedEmailToRequester(eqTo(app), eqTo(accessRequestRequest))(any())
           verify(fixture.emailConnector).sendNewAccessRequestEmailToApprovers(eqTo(app), eqTo(accessRequestRequest))(any())
 
+          result mustBe accessRequests
+      }
+    }
+
+    "must log the create access request event" in {
+      val fixture = buildFixture()
+      val accessRequestRequest = sampleAccessRequestRequest()
+      val accessRequests = accessRequestRequest.toAccessRequests(fixture.clock)
+      val app = Application(
+        id = Some(accessRequestRequest.applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        credentials = Set.empty
+      )
+
+      when(fixture.accessRequestsRepository.insert(any())).thenReturn(Future.successful(accessRequests))
+      when(fixture.searchService.findById(eqTo(accessRequestRequest.applicationId))(any)).thenReturn(Future.successful(Right(app)))
+      when(fixture.emailConnector.sendAccessRequestSubmittedEmailToRequester(eqTo(app), eqTo(accessRequestRequest))(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.emailConnector.sendNewAccessRequestEmailToApprovers(any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
+
+      val expectedEvent: Event = Event(
+        id = None,
+        entityId = accessRequestRequest.applicationId,
+        entityType = ApplicationEvent,
+        eventType = AccessRequestCreated,
+        user = accessRequestRequest.requestedBy,
+        timestamp = LocalDateTime.now(clock),
+        description = descriptionOf(AccessRequestCreated),
+        detail = s"Access request ids: ${accessRequests.flatMap(_.id).mkString(",")}",
+        parameters = Json.toJson(accessRequestRequest)
+      )
+
+      fixture.accessRequestsService.createAccessRequest(accessRequestRequest)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.eventsService).log(expectedEvent)
           result mustBe accessRequests
       }
     }
@@ -208,6 +252,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.emailConnector.sendAccessApprovedEmailToTeam(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
       when(fixture.scopeFixer.fix(any, any, eqTo(FakeHipEnvironments.testEnvironment))(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
@@ -254,6 +299,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.emailConnector.sendAccessApprovedEmailToTeam(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
       when(fixture.scopeFixer.fix(any, any, eqTo(FakeHipEnvironments.testEnvironment))(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
@@ -294,12 +340,68 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
       when(fixture.scopeFixer.fix(any, any, eqTo(FakeHipEnvironments.testEnvironment))(any)).thenReturn(Future.successful(Right(())))
-
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
       when(fixture.emailConnector.sendAccessApprovedEmailToTeam(eqTo(application), eqTo(accessRequest))(any()))
         .thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
 
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
+          result mustBe Right(())
+      }
+    }
+
+    "must log the approve access request event" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", None)
+
+      val applicationId = "test-application-id"
+      val application = buildApplication(applicationId)
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None,
+        cancelled = None,
+        environmentId = "test"
+      )
+
+      val updated = accessRequest
+        .setStatus(Approved)
+        .setDecision(LocalDateTime.now(fixture.clock), decisionRequest.decidedBy)
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.searchService.findById(any)(any)).thenReturn(Future.successful(Right(application)))
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
+      when(fixture.scopeFixer.fix(any, any, eqTo(FakeHipEnvironments.testEnvironment))(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
+      when(fixture.emailConnector.sendAccessApprovedEmailToTeam(eqTo(application), eqTo(accessRequest))(any()))
+        .thenReturn(Future.successful(Right(())))
+
+
+      val expectedEvent: Event = Event(
+        id = None,
+        entityId = applicationId,
+        entityType = ApplicationEvent,
+        eventType = AccessRequestApproved,
+        user = decisionRequest.decidedBy,
+        timestamp = LocalDateTime.now(clock),
+        description = descriptionOf(AccessRequestApproved),
+        detail = s"Access request id: $id",
+        parameters = Json.toJson(decisionRequest)
+      )
+
+      fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.eventsService).log(expectedEvent)
           result mustBe Right(())
       }
     }
@@ -421,6 +523,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.emailConnector.sendAccessApprovedEmailToTeam(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(fixture.accessRequestsRepository.find(any, any)).thenReturn(Future.successful(Seq(accessRequest)))
       when(fixture.scopeFixer.fix(any, any, eqTo(FakeHipEnvironments.testEnvironment))(any)).thenReturn(Future.successful(Left(exception)))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.approveAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
@@ -468,6 +571,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.searchService.findById(eqTo(accessRequest.applicationId))(any)).thenReturn(Future.successful(Right(app)))
       when(fixture.emailConnector.sendAccessRejectedEmailToTeam(any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.rejectAccessRequest(id, decisionRequest)(new HeaderCarrier()).map {
         result =>
@@ -556,12 +660,73 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(app)))
-
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
       when(fixture.emailConnector.sendAccessRejectedEmailToTeam(eqTo(app), eqTo(accessRequest))(any())).thenReturn(Future.successful(Right(())))
+
       fixture.accessRequestsService.rejectAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
           verify(fixture.accessRequestsRepository).update(eqTo(updated))
           verify(fixture.emailConnector).sendAccessRejectedEmailToTeam(eqTo(app), eqTo(accessRequest))(any())
+          result mustBe Right(())
+      }
+    }
+
+    "must log the access request rejected event" in {
+      val fixture = buildFixture()
+      val id = "test-id"
+      val decisionRequest = AccessRequestDecisionRequest("test-decided-by", None)
+      val applicationId = "test-application-id"
+
+      val accessRequest = AccessRequest(
+        id = Some(id),
+        applicationId = applicationId,
+        apiId = "test-api-id",
+        apiName = "test-api-name",
+        status = Pending,
+        endpoints = Seq.empty,
+        supportingInformation = "test-supporting-information",
+        requested = LocalDateTime.now(fixture.clock),
+        requestedBy = "test-requested-by",
+        decision = None,
+        cancelled = None,
+        environmentId = "test"
+      )
+
+      val app = Application(
+        id = Some(applicationId),
+        name = "test-app-name",
+        created = LocalDateTime.now(fixture.clock),
+        createdBy = Creator("createdby-email"),
+        lastUpdated = LocalDateTime.now(fixture.clock),
+        teamMembers = Seq(TeamMember(email = "team-email")),
+        credentials = Set.empty
+      )
+
+      val updated = accessRequest
+        .setStatus(Rejected)
+        .setDecision(LocalDateTime.now(fixture.clock), decisionRequest.decidedBy)
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(app)))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
+      when(fixture.emailConnector.sendAccessRejectedEmailToTeam(eqTo(app), eqTo(accessRequest))(any())).thenReturn(Future.successful(Right(())))
+
+      val expectedEvent: Event = Event(
+        id = None,
+        entityId = applicationId,
+        entityType = ApplicationEvent,
+        eventType = AccessRequestRejected,
+        user = decisionRequest.decidedBy,
+        timestamp = LocalDateTime.now(clock),
+        description = descriptionOf(AccessRequestRejected),
+        detail = s"Access request id: $id",
+        parameters = Json.toJson(decisionRequest)
+      )
+
+      fixture.accessRequestsService.rejectAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
+        result =>
+          verify(fixture.eventsService).log(expectedEvent)
           result mustBe Right(())
       }
     }
@@ -605,6 +770,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
       when(fixture.searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(app)))
       when(fixture.emailConnector.sendAccessRejectedEmailToTeam(eqTo(app), eqTo(accessRequest))(any())).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       fixture.accessRequestsService.rejectAccessRequest(id, decisionRequest)(HeaderCarrier()).map {
         result =>
@@ -674,6 +840,7 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
 
       when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
       when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
 
       val expected = accessRequest.cancel(cancelRequest.toCancelled(fixture.clock))
 
@@ -684,6 +851,36 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
           result.value mustBe ()
       }
     }
+
+    "must log the access request cancelled event" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val accessRequest = buildPendingAccessRequest(applicationId, 1)
+      val cancelRequest = AccessRequestCancelRequest("test-requested-by")
+
+      when(fixture.accessRequestsRepository.findById(any())).thenReturn(Future.successful(Some(accessRequest)))
+      when(fixture.accessRequestsRepository.update(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.log(any())).thenReturn(Future.successful(()))
+
+      val expectedEvent: Event = Event(
+        id = None,
+        entityId = applicationId,
+        entityType = ApplicationEvent,
+        eventType = AccessRequestCanceledEvent,
+        user = cancelRequest.cancelledBy,
+        timestamp = LocalDateTime.now(clock),
+        description = descriptionOf(AccessRequestCanceledEvent),
+        detail = s"Access request id: ${accessRequest.id.get}",
+        parameters = Json.toJson(cancelRequest)
+      )
+
+      fixture.accessRequestsService.cancelAccessRequest(accessRequest.id.value, cancelRequest).map {
+        result =>
+          verify(fixture.eventsService).log(expectedEvent)
+          result.value mustBe()
+      }
+    }
+
 
     "must return AccessRequestStatusInvalidException if the access request is not Pending" in {
       val fixture = buildFixture()
@@ -774,7 +971,8 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
     searchService: ApplicationsSearchService,
     accessRequestsService: AccessRequestsService,
     emailConnector: EmailConnector,
-    scopeFixer: ScopeFixer
+    scopeFixer: ScopeFixer,
+    eventsService: EventsService
   )
 
   private def buildFixture(): Fixture = {
@@ -782,8 +980,9 @@ class AccessRequestsServiceSpec extends AsyncFreeSpec with Matchers with Mockito
     val searchService = mock[ApplicationsSearchService]
     val emailConnector = mock[EmailConnector]
     val scopeFixer = mock[ScopeFixer]
-    val accessRequestsService = new AccessRequestsService(accessRequestsRepository, searchService, clock, emailConnector, scopeFixer, FakeHipEnvironments)
-    Fixture(clock, accessRequestsRepository, searchService, accessRequestsService, emailConnector, scopeFixer)
+    val eventsService = mock[EventsService]
+    val accessRequestsService = new AccessRequestsService(accessRequestsRepository, searchService, clock, emailConnector, scopeFixer, FakeHipEnvironments, eventsService)
+    Fixture(clock, accessRequestsRepository, searchService, accessRequestsService, emailConnector, scopeFixer, eventsService)
   }
 
 }
