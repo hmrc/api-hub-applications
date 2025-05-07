@@ -19,11 +19,14 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.application.Application
+import uk.gov.hmrc.apihubapplications.models.event.EventType.descriptionOf
+import uk.gov.hmrc.apihubapplications.models.event.{AccessRequestApproved, AccessRequestCanceled, AccessRequestCreated, AccessRequestRejected, EntityType, Event, EventType, Application as ApplicationEvent}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
@@ -40,15 +43,58 @@ class AccessRequestsService @Inject()(
                                        clock: Clock,
                                        emailConnector: EmailConnector,
                                        scopeFixer: ScopeFixer,
-                                       hipEnvironments: HipEnvironments
+                                       hipEnvironments: HipEnvironments,
+                                       eventsService: EventsService
                                      )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
+
+  private val system = "system"
 
   def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
     accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
-      requests => sendAccessRequestSubmittedEmails(request) map {
-        _ => requests
-      }
+      requests => for {
+        _ <- sendAccessRequestSubmittedEmails(request)
+        _ <- eventsService.log(asEvent(request, requests, AccessRequestCreated))
+        } yield requests
     }
+  }
+
+  private def asEvent(accessRequestRequest: AccessRequestRequest, accessRequests: Seq[AccessRequest], eventType: EventType): Event = {
+    Event(id = None,
+      entityId = accessRequestRequest.applicationId,
+      entityType = ApplicationEvent,
+      eventType = eventType,
+      user = accessRequestRequest.requestedBy,
+      timestamp = LocalDateTime.now(clock),
+      description = descriptionOf(eventType),
+      detail = s"Access request ids: ${accessRequests.flatMap(_.id).mkString(",")}",
+      parameters = Json.toJson(accessRequestRequest)
+    )
+  }
+
+  private def asEvent(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequestId: String, applicationId: String, eventType: EventType): Event = {
+    Event(id = None,
+      entityId = applicationId,
+      entityType = ApplicationEvent,
+      eventType = eventType,
+      user = accessRequestDecisionRequest.decidedBy,
+      timestamp = LocalDateTime.now(clock),
+      description = descriptionOf(eventType),
+      detail = s"Access request id: $accessRequestId",
+      parameters = Json.toJson(accessRequestDecisionRequest)
+    )
+  }
+
+  private def asEvent(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequestId: String, applicationId: String, eventType: EventType, timestamp:LocalDateTime = LocalDateTime.now(clock)): Event = {
+    Event(id = None,
+      entityId = applicationId,
+      entityType = ApplicationEvent,
+      eventType = eventType,
+      user = accessRequestCancelRequest.cancelledBy,
+      timestamp = timestamp,
+      description = descriptionOf(eventType),
+      detail = s"Access request id: $accessRequestId",
+      parameters = Json.toJson(accessRequestCancelRequest)
+    )
   }
 
   private def sendAccessRequestSubmittedEmails(accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier) = {
@@ -92,6 +138,7 @@ class AccessRequestsService @Inject()(
           application <- EitherT(searchService.findById(accessRequest.applicationId))
           _ <- EitherT(accessRequestsRepository.update(approved))
           _ <- EitherT(sendAccessApprovedEmails(accessRequest, application)).orElse(EitherT.rightT(())) // ignore email errors
+          _ <- EitherT.right(eventsService.log(asEvent(decisionRequest, id, application.id.orNull, AccessRequestApproved))) // ignore events logging errors. Application must have an id to get this far.
           accessRequests <- EitherT.right(getAccessRequests(Some(accessRequest.applicationId), None))
           _ <- EitherT(scopeFixer.fix(application, accessRequests, hipEnvironments.forId(accessRequest.environmentId)))
         } yield ()).value
@@ -112,9 +159,10 @@ class AccessRequestsService @Inject()(
             .setDecision(decisionRequest, clock)
         ) flatMap {
           case Right(_) =>
-            sendAccessRejectedEmails(accessRequest).flatMap {
-              _ => Future.successful(Right(()))
-            }
+            for {
+              _ <- sendAccessRejectedEmails(accessRequest)
+              _ <- eventsService.log(asEvent(decisionRequest, id, accessRequest.applicationId, AccessRequestRejected))
+            } yield Right(())
           case Left(exception) => Future.successful(Left(exception))
         }
       case Some(accessRequest) =>
@@ -130,7 +178,10 @@ class AccessRequestsService @Inject()(
         accessRequestsRepository.update(
           accessRequest
             .cancel(cancelRequest.toCancelled(clock))
-        )
+        ).map {
+          case Right(_) => Right(eventsService.log(asEvent(cancelRequest, id, accessRequest.applicationId, AccessRequestCanceled)))
+          case Left(e: ApplicationsException) => Left(e)
+        }
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
       case _ =>
@@ -138,13 +189,23 @@ class AccessRequestsService @Inject()(
     }
   }
 
+
+
   def cancelAccessRequests(applicationId: String): Future[Either[ApplicationsException, Unit]] = {
     getAccessRequests(Some(applicationId), Some(Pending)).flatMap(
       accessRequests => {
-        Future.sequence(accessRequests.map(pendingAccessRequest => accessRequestsRepository.update(
-          pendingAccessRequest
-            .cancel(cancelled = LocalDateTime.now(clock), cancelledBy = "system")
-        ))).map(useFirstApplicationsException).map {
+        Future.sequence(accessRequests.map(pendingAccessRequest => {
+          val now = LocalDateTime.now(clock)
+
+          val cancelAccessRequest = pendingAccessRequest
+            .cancel(cancelled = now, cancelledBy = system)
+
+          val accessRequestAccessRequest : AccessRequestCancelRequest = AccessRequestCancelRequest(system)
+            accessRequestsRepository.update(cancelAccessRequest).map {
+              case Right(()) => Right(eventsService.log(asEvent(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, AccessRequestCanceled, now)))
+              case Left(e: ApplicationsException) => Left(e)
+          }
+        })).map(useFirstApplicationsException).map {
           case Right(_) => Right(())
           case Left(e) => Left(e)
         }
@@ -156,14 +217,19 @@ class AccessRequestsService @Inject()(
       .map(_.filter(_.apiId.equals(apiId)))
       .flatMap(
         accessRequests =>
-          Future
-            .sequence(
-              accessRequests.map(
-                accessRequest =>
-                  accessRequestsRepository.update(
-                    accessRequest.cancel(cancelled = LocalDateTime.now(clock), cancelledBy = "system")
-                  )
-              )
+          Future.sequence(
+              accessRequests.map(pendingAccessRequest => {
+                val now = LocalDateTime.now(clock)
+
+                val cancelAccessRequest = pendingAccessRequest
+                  .cancel(cancelled = now, cancelledBy = system)
+
+                val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
+                accessRequestsRepository.update(cancelAccessRequest).map {
+                  case Right(()) => Right(eventsService.log(asEvent(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, AccessRequestCanceled, now)))
+                  case Left(e: ApplicationsException) => Left(e)
+                }
+              })
             )
             .map(useFirstApplicationsException)
             .map(_.map(_ => ()))

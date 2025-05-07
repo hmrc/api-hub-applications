@@ -60,4 +60,14 @@ object EventType extends Enumerable.Implicits {
   implicit val enumerable: Enumerable[EventType] =
     Enumerable(values.map(value => value.toString -> value)*)
 
+  def descriptionOf(eventType: EventType): String = {
+      eventType match
+        case AccessRequestCreated => "Access request created"
+        case AccessRequestApproved => "Access request approved"
+        case AccessRequestCanceled => "Access request cancelled"
+        case AccessRequestRejected => "Access request rejected"
+        case _ => "No description available yet"
+  }
+
+
 }
