@@ -18,7 +18,9 @@ package uk.gov.hmrc.apihubapplications.models.application
 
 import play.api.libs.json.{Format, Json}
 
-case class Endpoint(httpMethod: String, path: String)
+case class Endpoint(httpMethod: String, path: String) {
+  override def toString: String = s"$httpMethod.toUpperCase $path"
+}
 
 object Endpoint {
 
