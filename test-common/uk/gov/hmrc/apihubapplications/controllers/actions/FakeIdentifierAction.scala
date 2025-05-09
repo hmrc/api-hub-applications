@@ -17,16 +17,35 @@
 package uk.gov.hmrc.apihubapplications.controllers.actions
 
 import com.google.inject.Inject
-import play.api.mvc._
+import play.api.{Configuration, Environment}
+import play.api.mvc.*
+import uk.gov.hmrc.apihubapplications.controllers.actions.AuthenticatedIdentifierAction.UserEmailKey
+import uk.gov.hmrc.crypto.{ApplicationCrypto, Crypted}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class FakeIdentifierAction @Inject()(bodyParsers: PlayBodyParsers) extends IdentifierAction {
 
-  override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = block(request)
+  private val crypto = {
+    val configuration = Configuration.load(Environment.simple())
+    ApplicationCrypto(configuration.underlying)
+  }
+
+  override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = {
+    block(
+      request.headers.get("Encrypted-User-Email")
+        .map(
+          encryptedEmail =>
+            val userEmail = crypto.QueryParameterCrypto.decrypt(Crypted(encryptedEmail)).value
+            request.addAttr(UserEmailKey, userEmail)
+        )
+        .getOrElse(request)
+    )
+  }
 
   override protected def executionContext: ExecutionContext =
     scala.concurrent.ExecutionContext.Implicits.global
 
   override def parser: BodyParser[AnyContent] = bodyParsers.default
+
 }

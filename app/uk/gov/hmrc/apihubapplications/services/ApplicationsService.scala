@@ -36,12 +36,12 @@ class ApplicationsService @Inject()(
   with ApplicationsLifecycleService
   with ApplicationsSearchService {
 
-  override def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    apiService.addApi(applicationId, newApi)
+  override def addApi(applicationId: String, newApi: AddApiRequest, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.addApi(applicationId, newApi, userEmail)
   }
 
-  override def removeApi(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    apiService.removeApi(applicationId, apiId)
+  override def removeApi(applicationId: String, apiId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.removeApi(applicationId, apiId, userEmail)
   }
 
   override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.ArgumentMatchers.{any, same, eq as eqTo}
 import org.mockito.Mockito.{never, times, verify, verifyNoMoreInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
@@ -42,7 +42,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
   import ApplicationsLifecycleServiceSpec._
 
   "registerApplication" - {
-    "must build the correct application, submit it to the repository and return it" in {
+    "must build the correct application, submit it to the repository, log the event, and return it" in {
       val fixture = buildFixture
       import fixture._
 
@@ -78,8 +78,11 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationCreatedEmailToCreator(any)(any))
         .thenReturn(Future.successful(Right(())))
 
+      when(eventService.register(any, any, any)).thenReturn(Future.successful(()))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         actual =>
+          verify(fixture.eventService).register(eqTo(saved), eqTo(saved.createdBy.email), eqTo(saved.created))
           actual mustBe Right(saved)
       }
     }
@@ -119,6 +122,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationCreatedEmailToCreator(any)(any))
         .thenReturn(Future.successful(Right(())))
 
+      when(eventService.register(any, any, any)).thenReturn(Future.successful(()))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
           val captor = ArgumentCaptor.forClass(classOf[Application])
@@ -156,6 +161,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationCreatedEmailToCreator(any)(any))
         .thenReturn(Future.successful(Right(())))
 
+      when(eventService.register(any, any, any)).thenReturn(Future.successful(()))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
           verify(emailConnector).sendAddTeamMemberEmail(eqTo(saved))(any)
@@ -189,6 +196,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationCreatedEmailToCreator(any)(any))
         .thenReturn(Future.successful(Right(())))
 
+      when(eventService.register(any, any, any)).thenReturn(Future.successful(()))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
           verify(emailConnector).sendApplicationCreatedEmailToCreator(eqTo(saved))(any)
@@ -211,6 +220,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
         .addCredential(FakeHipEnvironments.testEnvironment, clientResponse.asNewCredential(clock, FakeHipEnvironments.testEnvironment))
 
       when(repository.insert(any)).thenReturn(Future.successful(saved))
+
+      when(eventService.register(any, any, any)).thenReturn(Future.successful(()))
 
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         _ =>
@@ -248,6 +259,8 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationCreatedEmailToCreator(any)(any))
         .thenReturn(Future.successful(Left(EmailException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
 
+      when(eventService.register(any, any, any)).thenReturn(Future.successful(()))
+
       service.registerApplication(newApplication)(HeaderCarrier()) map {
         result =>
           result.isRight mustBe true
@@ -272,6 +285,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(idmsConnector.deleteClient(any, eqTo(clientId))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
+      when(eventService.delete(any, any, any, any)).thenReturn(Future.successful(()))
 
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
@@ -279,6 +293,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
           verify(repository).update(any)
           val captured = captor.getValue
           captured.deleted mustBe Some(Deleted(LocalDateTime.now(clock), currentUser))
+          verify(eventService).delete(eqTo(captured), eqTo(true), eqTo(currentUser), eqTo(LocalDateTime.now(clock)))
           succeed
       }
     }
@@ -298,11 +313,13 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
       when(repository.delete(any)).thenReturn(Future.successful(Right(())))
+      when(eventService.delete(any, any, any, any)).thenReturn(Future.successful(()))
 
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(repository).delete(eqTo(id))
+          verify(eventService).delete(eqTo(application), eqTo(false), eqTo(currentUser), eqTo(LocalDateTime.now(clock)))
           succeed
       }
     }
@@ -327,6 +344,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(idmsConnector.deleteClient(any, eqTo(clientId))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
+      when(eventService.delete(any, any, any, any)).thenReturn(Future.successful(()))
 
       service.delete(application.id.get, currentUser)(HeaderCarrier()) map {
         _ =>
@@ -356,6 +374,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(idmsConnector.deleteClient(any, eqTo(clientId))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
+      when(eventService.delete(any, any, any, any)).thenReturn(Future.successful(()))
 
       service.delete(application.id.get, currentUser)(HeaderCarrier()).map {
         result =>
@@ -403,6 +422,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(eqTo(id))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
+      when(eventService.delete(any, any, any, any)).thenReturn(Future.successful(()))
 
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
@@ -429,6 +449,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
       when(emailConnector.sendApplicationDeletedEmailToTeam(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationDeletedEmailToCurrentUser(eqTo(application), eqTo(currentUser))(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(id)), eqTo(None))).thenReturn(Future.successful(someAccessRequests))
+      when(eventService.delete(any, any, any, any)).thenReturn(Future.successful(()))
 
       service.delete(id, currentUser)(HeaderCarrier()).map {
         actual =>
@@ -613,6 +634,7 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
     repository: ApplicationsRepository,
     idmsConnector: IdmsConnector,
     emailConnector: EmailConnector,
+    eventService: ApplicationsEventService,
     service: ApplicationsLifecycleService
   )
 
@@ -622,8 +644,9 @@ class ApplicationsLifecycleServiceSpec extends AsyncFreeSpec with Matchers with 
     val repository = mock[ApplicationsRepository]
     val idmsConnector = mock[IdmsConnector]
     val emailConnector = mock[EmailConnector]
-    val service = new ApplicationsLifecycleServiceImpl(searchService, accessRequestsService, repository, idmsConnector, emailConnector, clock, FakeHipEnvironments)
-    Fixture(searchService, accessRequestsService, repository, idmsConnector, emailConnector, service)
+    val eventService = mock[ApplicationsEventService]
+    val service = new ApplicationsLifecycleServiceImpl(searchService, accessRequestsService, repository, idmsConnector, emailConnector, clock, FakeHipEnvironments, eventService)
+    Fixture(searchService, accessRequestsService, repository, idmsConnector, emailConnector, eventService, service)
   }
 
 }

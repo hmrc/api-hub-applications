@@ -32,22 +32,37 @@ class AuthenticatedIdentifierAction @Inject()(val parser: BodyParsers.Default,
                                               auth: BackendAuthComponents
                                              )(implicit val executionContext: ExecutionContext) extends IdentifierAction {
 
-  val permission = Predicate.Permission(
+  private val permission = Predicate.Permission(
     resource = Resource.from("api-hub-applications", resourceLocation = "*"),
     action = IAAction("WRITE") // must be one of READ, WRITE or DELETE
   )
 
   override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = {
-    val decryptedEmail = request.headers.get("Encrypted-User-Email").map(encryptedEmail => crypto.QueryParameterCrypto.decrypt(Crypted(encryptedEmail)).value)
+    val decryptedEmail = request.headers.get("Encrypted-User-Email").flatMap(
+      encryptedEmail =>
+        try {
+          Some(crypto.QueryParameterCrypto.decrypt(Crypted(encryptedEmail)).value)
+        } catch {
+          case _: SecurityException => None
+        }
+    )
 
     auth.authorizedAction(
       permission,
       onUnauthorizedError = Future.successful(Results.Unauthorized),
       onForbiddenError = Future.successful(Results.Forbidden)
-    ).invokeBlock(request.addAttr(UserEmailKey, decryptedEmail), block)
+    ).invokeBlock(
+      decryptedEmail
+        .map(
+          email =>
+            request.addAttr(UserEmailKey, email)
+        )
+        .getOrElse(request),
+      block
+    )
   }
 }
 
 object AuthenticatedIdentifierAction {
-  val UserEmailKey = TypedKey[Option[String]]("User-Email")
+  val UserEmailKey: TypedKey[String] = TypedKey[String]("User-Email")
 }

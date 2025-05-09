@@ -203,9 +203,8 @@ class ApplicationsControllerSpec
 
         val expected_json = Json.toJson(expected_apps)
 
-        val crypto = fixture.application.injector.instanceOf[ApplicationCrypto]
         val request = FakeRequest(GET, routes.ApplicationsController.getApplications(
-          Some(encrypt(crypto, teamMemberEmail))).url)
+          Some(encrypt(fixture.crypto, teamMemberEmail))).url)
 
         when(fixture.applicationsService.findAll(eqTo(Some(teamMemberEmail)), eqTo(false)))
           .thenReturn(Future.successful(expected_apps))
@@ -469,11 +468,12 @@ class ApplicationsControllerSpec
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(eqTo(id), eqTo(api))(any())).thenReturn(Future.successful(Right(())))
+        when(fixture.applicationsService.addApi(eqTo(id), eqTo(api), eqTo(testUserEmail))(any())).thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(json)
 
@@ -487,11 +487,12 @@ class ApplicationsControllerSpec
 
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(any[String](), any())(any())).thenReturn(Future.successful(Right(())))
+        when(fixture.applicationsService.addApi(any[String](), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
         val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(Json.toJson("{}"))
 
@@ -506,11 +507,12 @@ class ApplicationsControllerSpec
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(any[String](), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(fixture.applicationsService.addApi(any[String](), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(json)
 
@@ -524,16 +526,35 @@ class ApplicationsControllerSpec
       val json = Json.toJson(api)
       val fixture = buildFixture()
       running(fixture.application) {
-        when(fixture.applicationsService.addApi(any[String](), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(fixture.applicationsService.addApi(any[String](), any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(PUT, routes.ApplicationsController.addApi("id").url)
+          .withHeaders(
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
+          )
+          .withBody(json)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is not present" in {
+      val id = "app-id-1"
+      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val json = Json.toJson(api)
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(PUT, routes.ApplicationsController.addApi(id).url)
           .withHeaders(
             CONTENT_TYPE -> "application/json"
           )
           .withBody(json)
 
         val result = route(fixture.application, request).value
-        status(result) mustBe INTERNAL_SERVER_ERROR
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }
@@ -544,15 +565,16 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val apiId = "test-api-id"
 
-      when(fixture.applicationsService.removeApi(any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsService.removeApi(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
 
-        verify(fixture.applicationsService).removeApi(eqTo(applicationId), eqTo(apiId))(any())
+        verify(fixture.applicationsService).removeApi(eqTo(applicationId), eqTo(apiId), eqTo(testUserEmail))(any())
       }
     }
 
@@ -561,11 +583,12 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val apiId = "test-api-id"
 
-      when(fixture.applicationsService.removeApi(any(), any())(any()))
+      when(fixture.applicationsService.removeApi(any(), any(), any())(any()))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -577,11 +600,12 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val apiId = "test-api-id"
 
-      when(fixture.applicationsService.removeApi(any(), any())(any()))
+      when(fixture.applicationsService.removeApi(any(), any(), any())(any()))
         .thenReturn(Future.successful(Left(ApiNotFoundException.forApplication(applicationId, apiId))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -593,14 +617,28 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val apiId = "test-api-id"
 
-      when(fixture.applicationsService.removeApi(any(), any())(any()))
+      when(fixture.applicationsService.removeApi(any(), any(), any())(any()))
         .thenReturn(Future.successful(Left(IdmsException.clientNotFound("test-client-id"))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe BAD_GATEWAY
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is not present" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val apiId = "test-api-id"
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.removeApi(applicationId, apiId))
         val result = route(fixture.application, request).value
 
-        status(result) mustBe BAD_GATEWAY
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }
@@ -1137,7 +1175,8 @@ object ApplicationsControllerSpec extends MockitoSugar {
 
   case class Fixture(
                       application: PlayApplication,
-                      applicationsService: ApplicationsService
+                      applicationsService: ApplicationsService,
+                      crypto: ApplicationCrypto
                     )
 
   def buildFixture(): Fixture = {
@@ -1152,10 +1191,14 @@ object ApplicationsControllerSpec extends MockitoSugar {
       )
       .build()
 
-    Fixture(application, applicationsService)
+    val crypto = application.injector.instanceOf[ApplicationCrypto]
+
+    Fixture(application, applicationsService, crypto)
   }
 
   private val testCreator = Creator("test@email.com")
+  private val testUserEmail = "test-email"
+  private val userEmailHeader = "Encrypted-User-Email"
 
   def testApplication: Application = {
     Application(Some(UUID.randomUUID().toString), "test-app-name", testCreator, Seq(TeamMember(testCreator.email)))

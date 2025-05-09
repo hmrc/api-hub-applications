@@ -21,9 +21,8 @@ import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
-import uk.gov.hmrc.apihubapplications.controllers.actions.{HipEnvironmentActionProvider, IdentifierAction}
+import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.*
-import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.ApplicationLensOps
 import uk.gov.hmrc.apihubapplications.models.exception.*
 import uk.gov.hmrc.apihubapplications.models.requests.{AddApiRequest, TeamMemberRequest, UserEmail}
 import uk.gov.hmrc.apihubapplications.services.ApplicationsService
@@ -40,7 +39,7 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
                                        hipEnvironment: HipEnvironmentActionProvider,
                                        hipEnvironments: HipEnvironments,
                                       )(implicit ec: ExecutionContext)
-  extends BackendController(cc) with Logging {
+  extends BackendController(cc) with Logging with UserEmailAwareness {
 
   def registerApplication(): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request: Request[JsValue] =>
@@ -106,34 +105,41 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def addApi(id: String): Action[JsValue] = {
     identify.compose(Action(parse.json)).async {
-      implicit request: Request[JsValue] => {
-        val jsReq = request.body
-        jsReq.validate[AddApiRequest] match {
-          case JsSuccess(api, _) =>
-            logger.info(s"Adding api $api to application ID: $id")
-            applicationsService.addApi(id, api).map {
-              case Right(_) => NoContent
-              case Left(_: ApplicationNotFoundException) => NotFound
-              case Left(_: IdmsException) => BadGateway
-              case Left(_) => InternalServerError
+      implicit request => {
+        withUserEmail(
+          userEmail =>
+            val jsReq = request.body
+            jsReq.validate[AddApiRequest] match {
+              case JsSuccess(api, _) =>
+                logger.info(s"Adding api $api to application ID: $id")
+                val user = request.attrs.get(AuthenticatedIdentifierAction.UserEmailKey)
+                applicationsService.addApi(id, api, userEmail).map {
+                  case Right(_) => NoContent
+                  case Left(_: ApplicationNotFoundException) => NotFound
+                  case Left(_: IdmsException) => BadGateway
+                  case Left(_) => InternalServerError
+                }
+              case e: JsError =>
+                logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+                Future.successful(BadRequest)
             }
-          case e: JsError =>
-            logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-            Future.successful(BadRequest)
-        }
+        )
       }
     }
   }
 
   def removeApi(applicationId: String, apiId: String): Action[AnyContent] = identify.async {
     implicit request =>
-      applicationsService.removeApi(applicationId, apiId).map {
-        case Right(_) => NoContent
-        case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: ApiNotFoundException) => NotFound
-        case Left(_: IdmsException) => BadGateway
-        case Left(e) => throw e
-      }
+      withUserEmail(
+        userEmail =>
+          applicationsService.removeApi(applicationId, apiId, userEmail).map {
+            case Right(_) => NoContent
+            case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(_: ApiNotFoundException) => NotFound
+            case Left(_: IdmsException) => BadGateway
+            case Left(e) => throw e
+          }
+      )
   }
 
   def changeOwningTeam(applicationId: String, teamId: String): Action[AnyContent] = identify.async {
