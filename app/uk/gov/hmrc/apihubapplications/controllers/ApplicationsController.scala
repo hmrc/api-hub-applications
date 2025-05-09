@@ -19,7 +19,7 @@ package uk.gov.hmrc.apihubapplications.controllers
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.controllers.actions.{AuthenticatedIdentifierAction, HipEnvironmentActionProvider, IdentifierAction}
 import uk.gov.hmrc.apihubapplications.models.application.*
@@ -130,13 +130,16 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def removeApi(applicationId: String, apiId: String): Action[AnyContent] = identify.async {
     implicit request =>
-      applicationsService.removeApi(applicationId, apiId).map {
-        case Right(_) => NoContent
-        case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: ApiNotFoundException) => NotFound
-        case Left(_: IdmsException) => BadGateway
-        case Left(e) => throw e
-      }
+      withUserEmail(
+        userEmail =>
+          applicationsService.removeApi(applicationId, apiId, userEmail).map {
+            case Right(_) => NoContent
+            case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(_: ApiNotFoundException) => NotFound
+            case Left(_: IdmsException) => BadGateway
+            case Left(e) => throw e
+          }
+      )
   }
 
   def changeOwningTeam(applicationId: String, teamId: String): Action[AnyContent] = identify.async {

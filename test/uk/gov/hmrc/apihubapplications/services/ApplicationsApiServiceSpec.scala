@@ -177,7 +177,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       credentials = Set.empty
     )
 
-    "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
+    "must remove scopes, cancel any pending access requests, log the event, and update the API in MongoDb" in {
       val fixture = buildFixture
       import fixture.*
 
@@ -191,12 +191,14 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(any, any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(eventService.removeApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+      service.removeApi(applicationId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verify(scopeFixer).fix(eqTo(updated), eqTo(Seq.empty))(any)
           verify(repository).update(eqTo(updated))
           verify(accessRequestsService).cancelAccessRequests(eqTo(applicationId), eqTo(apiId))
+          verify(eventService).removeApi(eqTo(application), eqTo(api), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           result.value mustBe()
       }
     }
@@ -208,7 +210,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(applicationId))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
-      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+      service.removeApi(applicationId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.scopeFixer)
           verifyNoInteractions(fixture.accessRequestsService)
@@ -223,7 +225,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(baseApplication)))
 
-      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+      service.removeApi(applicationId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.scopeFixer)
           verifyNoInteractions(fixture.accessRequestsService)
@@ -249,8 +251,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
       when(repository.update(eqTo(updated))).thenReturn(Future.successful(Right(())))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Left(expected)))
+      when(eventService.removeApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.removeApi(application.safeId, apiId)(HeaderCarrier()).map {
+      service.removeApi(application.safeId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }
