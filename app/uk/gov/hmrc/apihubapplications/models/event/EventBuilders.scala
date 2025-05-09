@@ -87,6 +87,8 @@ extension(application: Application) {
       description = accessRequest.apiName,
       detail = s"This access request was created for the ${accessRequest.environmentId} environment requesting access to ${accessRequest.apiName}.",
       parameters = Json.toJson(accessRequest)
+    ).copy(
+      timestamp = accessRequest.requested
     )
   }
 

@@ -22,10 +22,10 @@ import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus, Approved, Cancelled, Rejected}
 import uk.gov.hmrc.apihubapplications.models.application.Application
-import uk.gov.hmrc.apihubapplications.models.event.{Created, EntityType, Event, Registered, toAccessRequestApprovedEvent, toAccessRequestCancelledEvent, toAccessRequestCreatedEvent, toAccessRequestRejectedEvent, toApiAddedEvents, toCreatedEvent, toTeamCreatedEvent, toCredentialCreatedEvents, toEgressesAddedToTeamEvent, toTeamMemberAddedEvents, Application as ApplicationEntity}
+import uk.gov.hmrc.apihubapplications.models.event.{Created, EntityType, Event, Registered, toAccessRequestApprovedEvent, toAccessRequestCancelledEvent, toAccessRequestCreatedEvent, toAccessRequestRejectedEvent, toApiAddedEvents, toCreatedEvent, toCredentialCreatedEvents, toEgressesAddedToTeamEvent, toTeamCreatedEvent, toTeamMemberAddedEvents, Application as ApplicationEntity}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.{ApplicationsRepository, EventsRepository}
-import uk.gov.hmrc.apihubapplications.services.{AccessRequestsService, ApplicationsService, TeamsService}
+import uk.gov.hmrc.apihubapplications.services.{AccessRequestsService, ApplicationsEventService, ApplicationsService, TeamsService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -43,6 +43,7 @@ class EventsMigrationJob @Inject()(
       allApplications <- applicationsService.findAll(includeDeleted = true)
       accessRequestsByApplication <- accessRequestsService.getAccessRequests(None, None).map(_.groupBy(_.applicationId))
       allTeams <- teamsService.findAll(None)
+      
       _ <- runCreateApplicationEventMigration(allApplications)
       _ <- runAddApiToApplicationEventMigration(allApplications)
       _ <- runCreateCredentialEventMigration(allApplications)
@@ -60,7 +61,9 @@ class EventsMigrationJob @Inject()(
   }
 
   private def runCreateApplicationEventMigration(allApplications: Seq[Application]): Future[Seq[Event]] = {
-    createEventFor("Create Application", allApplications, _.toCreatedEvent)
+    createEventFor("Create Application", allApplications, application => {
+      applicationsEventService.register(application, application.createdBy.email, application.created)
+    })
   }
 
   private def runAddApiToApplicationEventMigration(allApplications: Seq[Application]): Future[Seq[Event]] = {
@@ -138,7 +141,7 @@ class EventsMigrationJob @Inject()(
     createEvents(description, entities, eventBuilder, identity)
   }
 
-  private def createEvents[T,E](description: String, entities: Seq[T], eventBuilder: T => E, eventFlattener: E => Seq[Event]) = {
+  private def createEvents[T,E](description: String, entities: Seq[T], eventBuilder: T => E) = {
     logger.info(s"Starting event migration for $description...")
     val events = entities.flatMap(entity => eventFlattener(eventBuilder(entity)))
     eventsRepository.insertMany(events).map(insertedEvents => {
