@@ -31,7 +31,7 @@ import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
-import uk.gov.hmrc.apihubapplications.testhelpers.{AccessRequestGenerator, FakeHipEnvironments}
+import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -50,7 +50,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val testAppId = "test-app-id"
       when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
-      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
+      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")), testUserEmail)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
@@ -72,19 +72,21 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         credentials = Set.empty
       )
 
-      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-//      val appWithScopesAdded = app.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
-      val appWithApisAdded = app.setApis(apis = Seq(Api(api.id, api.title, api.endpoints)))
+      val addApiRequest = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints)
+      val appWithApisAdded = app.setApis(apis = Seq(api))
 
       when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(app)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithApisAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(eventService.addApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.addApi(testAppId, api)(HeaderCarrier()) map {
+      service.addApi(testAppId, addApiRequest, testUserEmail)(HeaderCarrier()) map {
         actual =>
           verify(scopeFixer).fix(eqTo(appWithApisAdded), eqTo(Seq.empty))(any)
           verify(repository).update(eqTo(appWithApisAdded))
+          verify(eventService).addApi(eqTo(appWithApisAdded), eqTo(api), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           actual mustBe Right(())
       }
     }
@@ -109,17 +111,17 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         Seq(api)
       )
 
-//      val appWithScopesAdded = appWithApiAlreadyAdded.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
-
       when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(appWithApiAlreadyAdded)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithApiAlreadyAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(eventService.addApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.addApi(testAppId, addApiRequest)(HeaderCarrier()) map {
+      service.addApi(testAppId, addApiRequest, testUserEmail)(HeaderCarrier()) map {
         actual =>
           verify(scopeFixer).fix(eqTo(appWithApiAlreadyAdded), eqTo(Seq.empty))(any)
           verify(repository).update(eqTo(appWithApiAlreadyAdded))
+          verify(eventService).addApi(eqTo(appWithApiAlreadyAdded), eqTo(api), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           actual mustBe Right(())
       }
     }
@@ -148,7 +150,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(updatedApp)))
 
-      service.addApi(testAppId, api)(HeaderCarrier()) map {
+      service.addApi(testAppId, api, testUserEmail)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
@@ -472,6 +474,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     repository: ApplicationsRepository,
     emailConnector: EmailConnector,
     scopeFixer: ScopeFixer,
+    eventService: ApplicationsEventService,
     service: ApplicationsApiService
   )
 
@@ -482,8 +485,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     val repository = mock[ApplicationsRepository]
     val emailConnector = mock[EmailConnector]
     val scopeFixer = mock[ScopeFixer]
-    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, clock)
-    Fixture(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, service)
+    val eventService = mock[ApplicationsEventService]
+    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, clock, eventService)
+    Fixture(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, eventService, service)
   }
 
 }
@@ -491,5 +495,6 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 object ApplicationsApiServiceSpec {
 
   val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+  val testUserEmail = "test.user@hmrc-gov.uk"
 
 }

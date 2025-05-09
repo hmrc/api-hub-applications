@@ -34,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait ApplicationsApiService {
 
-  def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+  def addApi(applicationId: String, newApi: AddApiRequest, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
   def removeApi(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
@@ -54,19 +54,22 @@ class ApplicationsApiServiceImpl @Inject()(
   repository: ApplicationsRepository,
   emailConnector: EmailConnector,
   scopeFixer: ScopeFixer,
-  clock: Clock
+  clock: Clock,
+  eventService: ApplicationsEventService
 )(implicit ec: ExecutionContext) extends ApplicationsApiService with Logging with ExceptionRaising {
 
-  override def addApi(applicationId: String, addApiRequest: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  override def addApi(applicationId: String, addApiRequest: AddApiRequest, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
 
     searchService.findById(applicationId).flatMap {
       case Right(application) =>
+        val api = Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints)
         val updated = application
-          .replaceApi(Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints))
+          .replaceApi(api)
           .updated(clock)
 
         (for {
           _ <- EitherT(repository.update(updated))
+          _ <- EitherT.right(eventService.addApi(updated, api, userEmail, LocalDateTime.now(clock)))
           accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(applicationId), None))
           _ <- EitherT(scopeFixer.fix(updated, accessRequests))
         } yield ()).value
