@@ -16,18 +16,21 @@
 
 package uk.gov.hmrc.apihubapplications.controllers
 
+import play.api.Logging
 import play.api.mvc.Results.Unauthorized
 import play.api.mvc.{Request, Result}
 import uk.gov.hmrc.apihubapplications.controllers.actions.AuthenticatedIdentifierAction
 
 import scala.concurrent.Future
 
-trait UserEmailAwareness {
+trait UserEmailAwareness extends Logging {
 
   def withUserEmail(f: String => Future[Result])(implicit request: Request[?]): Future[Result] = {
     request.attrs.get(AuthenticatedIdentifierAction.UserEmailKey) match {
       case Some(userEmail) => f.apply(userEmail)
-      case _ => Future.successful(Unauthorized)
+      case _ =>
+        logger.warn("Request does not specify a user email header")
+        Future.successful(Unauthorized)
     }
   }
 
