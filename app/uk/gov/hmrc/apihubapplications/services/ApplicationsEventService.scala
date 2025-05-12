@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.config.HipEnvironments
+import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Credential, NewApplication}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.event
@@ -150,7 +150,7 @@ class ApplicationsEventService @Inject()(
     )
   }
 
-  def revokeCredential(application: Application, credential: Credential, user: String, timestamp: LocalDateTime): Future[Unit] = {
+  def revokeCredential(application: Application, hipEnvironment: HipEnvironment, clientId: String, user: String, timestamp: LocalDateTime): Future[Unit] = {
     eventService.log(
       Event.newEvent(
         entityId = application.safeId,
@@ -161,8 +161,8 @@ class ApplicationsEventService @Inject()(
         description = "",
         detail = "",
         parameters = 
-          Parameter("environmentId", credential.environmentId), 
-          Parameter("clientId", credential.clientId)
+          Parameter("environmentId", hipEnvironment.id),
+          Parameter("clientId", clientId)
       )
     )
   }

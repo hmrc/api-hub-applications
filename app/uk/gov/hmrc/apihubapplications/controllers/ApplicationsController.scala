@@ -181,14 +181,17 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def deleteCredential(applicationId: String, environmentName: String, clientId: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      applicationsService.deleteCredential(applicationId, request.hipEnvironment, clientId).map {
-        case Right(_) => NoContent
-        case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: CredentialNotFoundException) => NotFound
-        case Left(_: ApplicationCredentialLimitException) => Conflict
-        case Left(_: IdmsException) => BadGateway
-        case Left(_) => InternalServerError
-      }
+      withUserEmail(
+        userEmail =>
+          applicationsService.deleteCredential(applicationId, request.hipEnvironment, clientId, userEmail).map {
+            case Right(_) => NoContent
+            case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(_: CredentialNotFoundException) => NotFound
+            case Left(_: ApplicationCredentialLimitException) => Conflict
+            case Left(_: IdmsException) => BadGateway
+            case Left(_) => InternalServerError
+          }
+      )
   }
 
   def addTeamMember(applicationId: String): Action[JsValue] = identify.compose(Action(parse.json)).async {

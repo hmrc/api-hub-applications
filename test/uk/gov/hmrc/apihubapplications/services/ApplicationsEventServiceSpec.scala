@@ -232,7 +232,7 @@ class ApplicationsEventServiceSpec extends AsyncFreeSpec with Matchers with Mock
 
       when(fixture.eventService.log(any)).thenReturn(Future.successful(()))
 
-      fixture.applicationsEventService.revokeCredential(application, credential, user, timestamp).map(
+      fixture.applicationsEventService.revokeCredential(application, FakeHipEnvironments.productionEnvironment, credential.clientId, user, timestamp).map(
         _ =>
           verify(fixture.eventService).log(eqTo(expected))
           succeed

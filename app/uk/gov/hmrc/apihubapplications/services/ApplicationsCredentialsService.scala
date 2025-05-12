@@ -40,7 +40,7 @@ trait ApplicationsCredentialsService {
 
   def addCredential(applicationId: String, hipEnvironment: HipEnvironment, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]
 
-  def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+  def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
   def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]]
 
@@ -140,15 +140,15 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     } yield newCredential).value
   }
 
-  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId).flatMap {
       case Right(application) =>
         application.getCredentials(hipEnvironment).find(_.clientId == clientId) match {
           case Some(_) =>
             if (application.getCredentials(hipEnvironment).size > 1) {
               idmsConnector.deleteClient(hipEnvironment, clientId).flatMap {
-                case Right(_) => deleteCredential(application, hipEnvironment, clientId)
-                case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, hipEnvironment, clientId)
+                case Right(_) => deleteCredential(application, hipEnvironment, clientId, userEmail)
+                case Left(e: IdmsException) if e.issue == ClientNotFound => deleteCredential(application, hipEnvironment, clientId, userEmail)
                 case Left(e) => Future.successful(Left(e))
               }
             }
@@ -161,12 +161,16 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  private def deleteCredential(application: Application, hipEnvironment: HipEnvironment, clientId: String): Future[Either[ApplicationsException, Unit]] = {
-    repository.update(
-      application
-        .removeCredential(hipEnvironment, clientId)
-        .copy(lastUpdated = LocalDateTime.now(clock))
-    )
+  private def deleteCredential(application: Application, hipEnvironment: HipEnvironment, clientId: String, userEmail: String): Future[Either[ApplicationsException, Unit]] = {
+    val timestamp = LocalDateTime.now(clock)
+    val updated = application
+      .removeCredential(hipEnvironment, clientId)
+      .updated(timestamp)
+
+    (for {
+      update <- EitherT(repository.update(updated))
+      _ <- EitherT.right(eventService.revokeCredential(updated, hipEnvironment, clientId, userEmail, timestamp))
+    } yield update).value
   }
 
   override def fetchAllScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[CredentialScopes]]] = {

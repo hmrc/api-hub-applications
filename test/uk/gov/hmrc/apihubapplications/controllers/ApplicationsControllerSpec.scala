@@ -901,14 +901,15 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(FakeHipEnvironments.productionEnvironment), eqTo(clientId))(any())
+        verify(fixture.applicationsService).deleteCredential(eqTo(applicationId), eqTo(FakeHipEnvironments.productionEnvironment), eqTo(clientId), eqTo(testUserEmail))(any())
       }
     }
 
@@ -924,11 +925,12 @@ class ApplicationsControllerSpec
         ("another one", Status.NOT_FOUND),
       )
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
       
       running(fixture.application) {
         forAll(validEnvironmentNames) { (environment, expectedStatus) =>
           val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, environment, clientId).url)
+            .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
           val result = route(fixture.application, request).value
 
           status(result) mustBe expectedStatus
@@ -941,10 +943,11 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -956,10 +959,11 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(CredentialNotFoundException.forClientId(clientId))))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any(), any())(any())).thenReturn(Future.successful(Left(CredentialNotFoundException.forClientId(clientId))))
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, "primary", clientId).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -971,10 +975,11 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any(), any())(any())).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe BAD_GATEWAY
@@ -986,10 +991,11 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, FakeHipEnvironments.productionEnvironment))))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any(), any())(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException.forId(applicationId, FakeHipEnvironments.productionEnvironment))))
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe CONFLICT
@@ -1001,13 +1007,27 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val clientId = "test-client-id"
 
-      when(fixture.applicationsService.deleteCredential(any(), any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+      when(fixture.applicationsService.deleteCredential(any(), any(), any(), any())(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+
+      running(fixture.application) {
+        val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is missing" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
+      val clientId = "test-client-id"
 
       running(fixture.application) {
         val request = FakeRequest(DELETE, routes.ApplicationsController.deleteCredential(applicationId, FakeHipEnvironments.productionEnvironment.id, clientId).url)
         val result = route(fixture.application, request).value
 
-        status(result) mustBe INTERNAL_SERVER_ERROR
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }

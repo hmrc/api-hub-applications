@@ -64,8 +64,8 @@ class ApplicationsService @Inject()(
     credentialsService.addCredential(applicationId, hipEnvironment, userEmail)
   }
 
-  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    credentialsService.deleteCredential(applicationId, hipEnvironment, clientId)
+  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    credentialsService.deleteCredential(applicationId, hipEnvironment, clientId, userEmail)
   }
 
   override def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
