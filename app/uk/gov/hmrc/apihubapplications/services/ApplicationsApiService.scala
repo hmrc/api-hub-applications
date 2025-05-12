@@ -22,7 +22,7 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
-import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, ExceptionRaising}
+import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationNotFoundException, ApplicationsException, ExceptionRaising, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
@@ -38,7 +38,7 @@ trait ApplicationsApiService {
 
   def removeApi(applicationId: String, apiId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
-  def changeOwningTeam(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+  def changeOwningTeam(applicationId: String, apiId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
   def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
@@ -108,26 +108,40 @@ class ApplicationsApiServiceImpl @Inject()(
     } yield ()).value
   }
 
-  override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  override def changeOwningTeam(applicationId: String, teamId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     searchService.findById(applicationId, includeDeleted = true).flatMap {
-      case Right(application) => changeOwningTeam(application, teamId)
+      case Right(application) => changeOwningTeam(application, teamId, userEmail)
       case Left(_: ApplicationNotFoundException) => Future.successful(Left(raiseApplicationNotFoundException.forId(applicationId)))
       case Left(e) => Future.successful(Left(e))
     }
   }
 
-  private def changeOwningTeam(application: Application, teamId: String)(implicit hc: HeaderCarrier) = {
-    val updated = application
-      .setTeamId(teamId)
-      .updated(clock)
+  private def changeOwningTeam(application: Application, teamId: String, userEmail: String)(implicit hc: HeaderCarrier) = {
+    val timestamp = LocalDateTime.now(clock)
 
-    teamsService.findById(teamId).flatMap {
-      case Right(team) =>
-        for {
-          updateResult <- repository.update(updated)
-          _ <- sendNotificationOnOwningTeamChange(application, updated, team)
-        } yield updateResult
-      case _ => Future.successful(Left(raiseTeamNotFoundException.forId(teamId)))
+    val oldTeamId = application.teamId
+
+    (for {
+      newTeam <- EitherT(teamsService.findById(teamId))
+      oldTeam <- EitherT(fetchOldTeam(oldTeamId))
+      updated = application
+        .setTeamId(teamId)
+        .updated(timestamp)
+      updateResult <- EitherT(repository.update(updated))
+      _ <- EitherT.right(eventService.changeTeam(updated, newTeam, oldTeam, userEmail, timestamp))
+      _ <- EitherT(sendNotificationOnOwningTeamChange(updated, oldTeam, newTeam))
+    } yield updateResult).value
+  }
+
+  private def fetchOldTeam(teamId: Option[String]): Future[Either[ApplicationsException, Option[Team]]] = {
+    teamId match {
+      case Some(teamId) =>
+        teamsService.findById(teamId).map {
+          case Right(team) => Right(Some(team))
+          case Left(_: TeamNotFoundException) => Right(None)
+          case Left(e) => Left(e)
+        }
+      case _ => Future.successful(Right(None))
     }
   }
 
@@ -142,18 +156,18 @@ class ApplicationsApiServiceImpl @Inject()(
 
   private def sendNotificationOnOwningTeamChange(
                                                   application: Application,
-                                                  updated: Application,
+                                                  oldTeam: Option[Team],
                                                   newTeam: Team,
-                                                )(implicit hc: HeaderCarrier) =
-    (application.teamId, updated.teamId) match {
-      case (Some(oldTeamId), Some(newTeamId)) if oldTeamId != newTeamId =>
+                                                )(implicit hc: HeaderCarrier) = {
+    oldTeam match {
+      case Some(oldTeam) =>
         (for {
-          oldTeam <- EitherT(teamsService.findById(oldTeamId))
           _ <- EitherT(emailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers(oldTeam, newTeam, application))
           _ <- EitherT(emailConnector.sendApplicationOwnershipChangedEmailToNewTeamMembers(newTeam, application))
         } yield ()).value
       case _ => Future.successful(Right(()))
     }
+  }
 
   override def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     (for {

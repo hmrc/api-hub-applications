@@ -44,8 +44,8 @@ class ApplicationsService @Inject()(
     apiService.removeApi(applicationId, apiId, userEmail)
   }
 
-  override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    apiService.changeOwningTeam(applicationId, teamId)
+  override def changeOwningTeam(applicationId: String, teamId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.changeOwningTeam(applicationId, teamId, userEmail)
   }
 
   override def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

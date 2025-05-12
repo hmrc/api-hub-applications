@@ -649,15 +649,16 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val teamId = "team-id"
 
-      when(fixture.applicationsService.changeOwningTeam(any(), any())(any())).thenReturn(Future.successful(Right(())))
+      when(fixture.applicationsService.changeOwningTeam(any(), any(), any())(any())).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
 
-        verify(fixture.applicationsService).changeOwningTeam(eqTo(applicationId), eqTo(teamId))(any())
+        verify(fixture.applicationsService).changeOwningTeam(eqTo(applicationId), eqTo(teamId), eqTo(testUserEmail))(any())
       }
     }
 
@@ -666,11 +667,12 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val teamId = "team-id"
 
-      when(fixture.applicationsService.changeOwningTeam(any(), any())(any()))
+      when(fixture.applicationsService.changeOwningTeam(any(), any(), any())(any()))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -682,30 +684,28 @@ class ApplicationsControllerSpec
       val applicationId = "test-application-id"
       val teamId = "team-id"
 
-      when(fixture.applicationsService.changeOwningTeam(any(), any())(any()))
+      when(fixture.applicationsService.changeOwningTeam(any(), any(), any())(any()))
         .thenReturn(Future.successful(Left(TeamNotFoundException.forId(teamId))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
       }
     }
 
-    "must return Bad Gateway when an IDMS exception is encountered" in {
+    "must return 401 Unauthorized when the user email header is not present" in {
       val fixture = buildFixture()
       val applicationId = "test-application-id"
       val teamId = "team-id"
-
-      when(fixture.applicationsService.changeOwningTeam(any(), any())(any()))
-        .thenReturn(Future.successful(Left(IdmsException.clientNotFound("test-client-id"))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.changeOwningTeam(applicationId, teamId))
         val result = route(fixture.application, request).value
 
-        status(result) mustBe BAD_GATEWAY
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }

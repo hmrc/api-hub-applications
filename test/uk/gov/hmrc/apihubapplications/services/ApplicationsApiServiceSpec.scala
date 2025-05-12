@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{never, verify, verifyNoInteractions, when}
+import org.mockito.Mockito.{never, timeout, verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -29,6 +29,7 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.models.team.TeamType.ConsumerTeam
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
@@ -262,10 +263,11 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
   "changeOwningTeam" - {
     val applicationId = "test-application-id"
-    val teamId = "test-team-id"
+    val newTeamId = "test-new-team-id"
     val oldTeamId = "test-old-team-id"
 
-    val team = Team("team-name", Seq.empty, clock = clock)
+    val newTeam = buildTeam(newTeamId, "test-new-team-name")
+    val oldTeam = buildTeam(oldTeamId, "test-old-team-name")
 
     val onceUponATime = LocalDateTime.now(clock).minusDays(1)
 
@@ -284,24 +286,53 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       import fixture.*
 
       val application = baseApplication.setTeamId(oldTeamId)
+      val timestamp = LocalDateTime.now(clock)
       val updated = application
-        .setTeamId(teamId)
-        .updated(clock)
+        .setTeamId(newTeamId)
+        .updated(timestamp)
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
+      when(teamsService.findById(eqTo(newTeamId))).thenReturn(Future.successful(Right(newTeam)))
+      when(teamsService.findById(eqTo(oldTeamId))).thenReturn(Future.successful(Right(oldTeam)))
       when(emailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
         .thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any))
         .thenReturn(Future.successful(Right(())))
+      when(eventService.changeTeam(any, any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verify(repository).update(eqTo(updated))
-          verify(teamsService).findById(eqTo(teamId))
-          verify(emailConnector).sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any)
-          verify(emailConnector).sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any)
+          verify(teamsService).findById(eqTo(newTeamId))
+          verify(teamsService).findById(eqTo(oldTeamId))
+          verify(emailConnector).sendApplicationOwnershipChangedEmailToOldTeamMembers(eqTo(oldTeam), eqTo(newTeam), eqTo(updated))(any)
+          verify(emailConnector).sendApplicationOwnershipChangedEmailToNewTeamMembers(eqTo(newTeam), eqTo(updated))(any)
+          verify(eventService).changeTeam(updated, newTeam, Some(oldTeam), testUserEmail, timestamp)
+          result.value mustBe()
+      }
+    }
+
+    "must log events correctly and not send emails when the application was not previously owned by a global team" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val application = baseApplication
+      val timestamp = LocalDateTime.now(clock)
+      val updated = application
+        .setTeamId(newTeamId)
+        .updated(timestamp)
+
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(teamsService.findById(eqTo(newTeamId))).thenReturn(Future.successful(Right(newTeam)))
+      when(eventService.changeTeam(any, any, any, any, any)).thenReturn(Future.successful(()))
+
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
+        result =>
+          verify(emailConnector, never).sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any)
+          verify(emailConnector, never).sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any)
+          verify(eventService).changeTeam(updated, newTeam, None, testUserEmail, timestamp)
           result.value mustBe()
       }
     }
@@ -313,7 +344,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
@@ -326,13 +357,13 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       import fixture.*
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
-      when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException(""))))
+      when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException.forId(newTeamId))))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
-          result mustBe Left(TeamNotFoundException.forId(teamId))
+          result mustBe Left(TeamNotFoundException.forId(newTeamId))
       }
     }
 
@@ -343,9 +374,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val expected = IdmsException.clientNotFound("test-client-id")
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
-      when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
+      when(teamsService.findById(any)).thenReturn(Future.successful(Right(newTeam)))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
@@ -499,5 +530,16 @@ object ApplicationsApiServiceSpec {
 
   val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
   val testUserEmail = "test.user@hmrc-gov.uk"
+
+  def buildTeam(id: String, name: String): Team = {
+    Team(
+      id = Some(id),
+      name = name,
+      created = LocalDateTime.now(clock),
+      teamMembers = Seq.empty,
+      teamType = ConsumerTeam,
+      egresses = Seq.empty
+    )
+  }
 
 }
