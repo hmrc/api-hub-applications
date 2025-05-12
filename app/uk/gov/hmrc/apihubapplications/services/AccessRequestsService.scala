@@ -19,14 +19,11 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
-import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.application.Application
-import uk.gov.hmrc.apihubapplications.models.event.EventType.values
-import uk.gov.hmrc.apihubapplications.models.event.{AccessRequestApproved, AccessRequestCanceled, AccessRequestCreated, AccessRequestRejected, EntityType, Event, EventType, Application as ApplicationEvent}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.Helpers.useFirstApplicationsException
@@ -101,7 +98,7 @@ class AccessRequestsService @Inject()(
         (for {
           application <- EitherT(searchService.findById(accessRequest.applicationId))
           _ <- EitherT(accessRequestsRepository.update(approved))
-          _ <- EitherT.right(accessRequestsEventService.approve(decisionRequest, id, application.id.orNull, LocalDateTime.now(clock)))
+          _ <- EitherT.right(accessRequestsEventService.approve(decisionRequest, accessRequest, LocalDateTime.now(clock)))
           _ <- EitherT(sendAccessApprovedEmails(accessRequest, application)).orElse(EitherT.rightT(())) // ignore email errors
           accessRequests <- EitherT.right(getAccessRequests(Some(accessRequest.applicationId), None))
           _ <- EitherT(scopeFixer.fix(application, accessRequests, hipEnvironments.forId(accessRequest.environmentId)))
@@ -122,7 +119,7 @@ class AccessRequestsService @Inject()(
           _ <- EitherT(accessRequestsRepository.update(accessRequest
             .setStatus(Rejected)
             .setDecision(decisionRequest, clock)))
-          _ <- EitherT.right(accessRequestsEventService.reject(decisionRequest, id, accessRequest.applicationId, LocalDateTime.now(clock)))
+          _ <- EitherT.right(accessRequestsEventService.reject(decisionRequest, accessRequest, LocalDateTime.now(clock)))
           _ <- EitherT(sendAccessRejectedEmails(accessRequest)).orElse(EitherT.rightT(())) // ignore email errors
         } yield ()).value
       case Some(accessRequest) =>
@@ -139,7 +136,7 @@ class AccessRequestsService @Inject()(
           _ <- EitherT(accessRequestsRepository.update(
             accessRequest
               .cancel(cancelRequest.toCancelled(clock))))
-          _ <- EitherT.right(accessRequestsEventService.cancel(cancelRequest, id, accessRequest.applicationId, LocalDateTime.now(clock)))
+          _ <- EitherT.right(accessRequestsEventService.cancel(cancelRequest, accessRequest, LocalDateTime.now(clock)))
         } yield ()).value
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
@@ -158,7 +155,7 @@ class AccessRequestsService @Inject()(
             val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
             (for {
               _ <- EitherT(accessRequestsRepository.update(cancelAccessRequest))
-              _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, now))
+              _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest, now))
             } yield ()).value
           }))
           .map(useFirstApplicationsException).map {
@@ -180,7 +177,7 @@ class AccessRequestsService @Inject()(
               val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
               (for {
                 _ <- EitherT(accessRequestsRepository.update(cancelAccessRequest))
-                _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, now))
+                _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest, now))
               } yield ()).value
             }))
             .map(useFirstApplicationsException).map {

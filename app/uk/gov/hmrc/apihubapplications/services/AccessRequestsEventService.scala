@@ -18,6 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.event.*
 
@@ -26,77 +27,71 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 @Singleton
-class AccessRequestsEventService @Inject()(eventService: EventsService, clock: Clock)(implicit ec: ExecutionContext) extends Logging {
+class AccessRequestsEventService @Inject()(eventService: EventsService,
+                                           clock: Clock,
+                                           hipEnvironments: HipEnvironments)(implicit ec: ExecutionContext) extends Logging {
 
-  def approve(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequestId: String, applicationId: String, timestamp: LocalDateTime): Future[Unit] = {
+  def approve(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
     eventService.log(Event.newEvent(
-      entityId = applicationId,
+      entityId = accessRequest.applicationId,
       entityType = Application,
       eventType = AccessRequestApproved,
       user = accessRequestDecisionRequest.decidedBy,
       timestamp = timestamp,
-      description = "Access request approved",
-      detail = s"Access request id: $accessRequestId",
-      parameters = Seq(Parameter("approvedBy", accessRequestDecisionRequest.decidedBy),
-        Parameter("accessRequestId", accessRequestId)) *
+      description = accessRequest.apiName,
+      detail = s"This request for access to ${accessRequest.apiName} was approved and scopes were added to the application's credentials in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment.",
+      parameters = Seq(Parameter("decisionRequest", accessRequestDecisionRequest),
+        Parameter("accessRequestId", accessRequest.id.get)) *
     ))
   }
 
-  def cancel(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequestId: String, applicationId: String, timestamp: LocalDateTime): Future[Unit] = {
-            eventService.log(Event.newEvent(
-             entityId = applicationId,
-             entityType = Application,
-             eventType = AccessRequestCanceled,
-             user = accessRequestCancelRequest.cancelledBy,
-             timestamp = timestamp,
-             description = "Access request cancelled",
-             detail = s"Access request id: $accessRequestId",
-             parameters = Seq(Parameter("cancelledBy", accessRequestCancelRequest.cancelledBy),
-               Parameter("accessRequestId", accessRequestId)) *
-            ))
+  def cancel(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
+    eventService.log(Event.newEvent(
+      entityId = accessRequest.applicationId,
+      entityType = Application,
+      eventType = AccessRequestCanceled,
+      user = accessRequestCancelRequest.cancelledBy,
+      timestamp = timestamp,
+      description = s"Cancelled for ${accessRequest.apiName}",
+      detail = s"This request for access to ${accessRequest.apiName} in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment was cancelled.",
+      parameters = Seq(Parameter("cancelRequest", accessRequestCancelRequest),
+        Parameter("accessRequestId", accessRequest.id.get)) *
+    ))
   }
 
-  def reject(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequestId: String, applicationId: String, timestamp: LocalDateTime): Future[Unit] = {
+  def reject(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
     eventService.log(Event.newEvent(
-      entityId = applicationId,
+      entityId = accessRequest.applicationId,
       entityType = Application,
       eventType = AccessRequestRejected,
       user = accessRequestDecisionRequest.decidedBy,
       timestamp = timestamp,
-      description = "Access request rejected",
-      detail = s"Access request id: $accessRequestId",
-      parameters = Seq(
-        Parameter("rejectedBy", accessRequestDecisionRequest.decidedBy),
-        Parameter("rejectionReason", accessRequestDecisionRequest.decidedBy),
-        Parameter("accessRequestId", accessRequestId)) *
+      description = s"Rejected for ${accessRequest.apiName}",
+      detail = s"This request for access to ${accessRequest.apiName} in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment was rejected.",
+      parameters = Seq(Parameter("decisionRequest", accessRequestDecisionRequest),
+        Parameter("accessRequestId", accessRequest.id.get)) *
     ))
   }
 
   def create(accessRequestRequest: AccessRequestRequest, accessRequests: Seq[AccessRequest]): Future[Unit] = {
 
-    val loggableAccessRequests = accessRequests.map(accessRequest =>
-      (("apiName", accessRequest.apiName),
-        ("endpoints", accessRequest.endpoints),
-        ("accessRequestId", accessRequest.id.get)))
-
     val timestamp = accessRequests.headOption.map(_.requested).getOrElse(LocalDateTime.now(clock))
 
-    eventService.log(Event.newEvent(
-      entityId = accessRequestRequest.applicationId,
-      entityType = Application,
-      eventType = AccessRequestCreated,
-      user = accessRequestRequest.requestedBy,
-      timestamp = timestamp,
-      description = "Access request created",
-      detail = s"Access request ids: ${accessRequests.flatMap(_.id).mkString(",")}",
-      parameters = Seq(
-        Parameter("applicationId", accessRequestRequest.applicationId),
-        Parameter("accessRequests", loggableAccessRequests),
-        Parameter("supportingInformation", accessRequestRequest.supportingInformation),
-        Parameter("requested", timestamp),
-        Parameter("requestedBy", accessRequestRequest.requestedBy),
-        Parameter("environmentId", accessRequestRequest.environmentId)) *
-    ))
+    val eventFutures = accessRequests.map(accessRequest =>
+      eventService.log(Event.newEvent(
+        entityId = accessRequestRequest.applicationId,
+        entityType = Application,
+        eventType = AccessRequestCreated,
+        user = accessRequestRequest.requestedBy,
+        timestamp = timestamp,
+        description = s"${accessRequest.apiName}",
+        detail = s"This access request was created for the ${hipEnvironments.forId(accessRequest.environmentId).name} environment requesting access to ${accessRequest.apiName}.",
+        parameters = Seq(
+          Parameter("accessRequestRequest", accessRequestRequest),
+          Parameter("accessRequestId", accessRequest.id)) *
+      )))
+
+    Future.sequence(eventFutures).map(_ => Future.successful(()))
   }
 
 }
