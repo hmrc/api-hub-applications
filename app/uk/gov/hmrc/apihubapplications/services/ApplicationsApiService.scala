@@ -42,7 +42,7 @@ trait ApplicationsApiService {
 
   def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
-  def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
+  def fixScopes(applicationId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
 }
 
@@ -169,11 +169,12 @@ class ApplicationsApiServiceImpl @Inject()(
     }
   }
 
-  override def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  override def fixScopes(applicationId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     (for {
       application <- EitherT(searchService.findById(applicationId))
       accessRequests <- EitherT.right(accessRequestsService.getAccessRequests(Some(applicationId), None))
       _ <- EitherT(scopeFixer.fix(application, accessRequests))
+      _ <- EitherT.right(eventService.fixScopes(application, userEmail, LocalDateTime.now(clock)))
     } yield ()).value
   }
 

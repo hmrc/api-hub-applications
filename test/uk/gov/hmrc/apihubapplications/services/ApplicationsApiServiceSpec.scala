@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{never, timeout, verify, verifyNoInteractions, when}
+import org.mockito.Mockito.{never, verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -478,10 +478,12 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(baseApplication)))
       when(accessRequestsService.getAccessRequests(eqTo(Some(applicationId)), eqTo(None))).thenReturn(Future.successful(accessRequests))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(eventService.fixScopes(any, any, any)).thenReturn(Future.successful(()))
 
-      service.fixScopes(applicationId)(HeaderCarrier()).map {
+      service.fixScopes(applicationId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verify(scopeFixer).fix(eqTo(baseApplication), eqTo(accessRequests))(any)
+          verify(eventService).fixScopes(eqTo(baseApplication), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           result.value mustBe ()
       }
     }
@@ -494,7 +496,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Left(expected)))
 
-      service.fixScopes(applicationId)(HeaderCarrier()).map {
+      service.fixScopes(applicationId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }

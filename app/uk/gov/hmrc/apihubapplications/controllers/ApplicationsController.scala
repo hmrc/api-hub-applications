@@ -226,11 +226,14 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def fixScopes(applicationId: String): Action[AnyContent] = identify.compose(Action).async {
     implicit request =>
-      applicationsService.fixScopes(applicationId).map {
-        case Right(_) => NoContent
-        case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(e) => throw e
-      }
+      withUserEmail(
+        userEmail =>
+          applicationsService.fixScopes(applicationId, userEmail).map {
+            case Right(_) => NoContent
+            case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(e) => throw e
+          }
+      )
   }
 
 }

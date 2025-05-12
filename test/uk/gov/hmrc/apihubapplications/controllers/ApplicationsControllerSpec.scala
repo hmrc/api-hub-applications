@@ -1140,11 +1140,12 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
       val applicationId = "test-application-id"
 
-      when(fixture.applicationsService.fixScopes(eqTo(applicationId))(any))
+      when(fixture.applicationsService.fixScopes(eqTo(applicationId), eqTo(testUserEmail))(any))
         .thenReturn(Future.successful(Right(testApplication)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.fixScopes(applicationId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
@@ -1155,14 +1156,27 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
       val applicationId = "test-application-id"
 
-      when(fixture.applicationsService.fixScopes(eqTo(applicationId))(any))
+      when(fixture.applicationsService.fixScopes(eqTo(applicationId), eqTo(testUserEmail))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.ApplicationsController.fixScopes(applicationId))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is missing" in {
+      val fixture = buildFixture()
+      val applicationId = "test-application-id"
 
       running(fixture.application) {
         val request = FakeRequest(routes.ApplicationsController.fixScopes(applicationId))
         val result = route(fixture.application, request).value
 
-        status(result) mustBe NOT_FOUND
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }
