@@ -25,7 +25,7 @@ import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
 import uk.gov.hmrc.apihubapplications.models.application.Application
-import uk.gov.hmrc.apihubapplications.models.event.EventType.descriptionOf
+import uk.gov.hmrc.apihubapplications.models.event.EventType.values
 import uk.gov.hmrc.apihubapplications.models.event.{AccessRequestApproved, AccessRequestCanceled, AccessRequestCreated, AccessRequestRejected, EntityType, Event, EventType, Application as ApplicationEvent}
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.repositories.AccessRequestsRepository
@@ -44,57 +44,21 @@ class AccessRequestsService @Inject()(
                                        emailConnector: EmailConnector,
                                        scopeFixer: ScopeFixer,
                                        hipEnvironments: HipEnvironments,
-                                       eventsService: EventsService
+                                       accessRequestsEventService: AccessRequestsEventService
                                      )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
   private val system = "system"
 
   def createAccessRequest(request: AccessRequestRequest)(implicit hc: HeaderCarrier): Future[Seq[AccessRequest]] = {
     accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
-      requests => for {
-        _ <- sendAccessRequestSubmittedEmails(request)
-        _ <- eventsService.log(asEvent(request, requests, AccessRequestCreated))
+      requests =>
+        val emails = sendAccessRequestSubmittedEmails(request)
+        val events = accessRequestsEventService.create(request, requests)
+        for {
+          _ <- emails
+          _ <- events
         } yield requests
     }
-  }
-
-  private def asEvent(accessRequestRequest: AccessRequestRequest, accessRequests: Seq[AccessRequest], eventType: EventType): Event = {
-    Event(id = None,
-      entityId = accessRequestRequest.applicationId,
-      entityType = ApplicationEvent,
-      eventType = eventType,
-      user = accessRequestRequest.requestedBy,
-      timestamp = LocalDateTime.now(clock),
-      description = descriptionOf(eventType),
-      detail = s"Access request ids: ${accessRequests.flatMap(_.id).mkString(",")}",
-      parameters = Json.toJson(accessRequestRequest)
-    )
-  }
-
-  private def asEvent(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequestId: String, applicationId: String, eventType: EventType): Event = {
-    Event(id = None,
-      entityId = applicationId,
-      entityType = ApplicationEvent,
-      eventType = eventType,
-      user = accessRequestDecisionRequest.decidedBy,
-      timestamp = LocalDateTime.now(clock),
-      description = descriptionOf(eventType),
-      detail = s"Access request id: $accessRequestId",
-      parameters = Json.toJson(accessRequestDecisionRequest)
-    )
-  }
-
-  private def asEvent(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequestId: String, applicationId: String, eventType: EventType, timestamp:LocalDateTime = LocalDateTime.now(clock)): Event = {
-    Event(id = None,
-      entityId = applicationId,
-      entityType = ApplicationEvent,
-      eventType = eventType,
-      user = accessRequestCancelRequest.cancelledBy,
-      timestamp = timestamp,
-      description = descriptionOf(eventType),
-      detail = s"Access request id: $accessRequestId",
-      parameters = Json.toJson(accessRequestCancelRequest)
-    )
   }
 
   private def sendAccessRequestSubmittedEmails(accessRequest: AccessRequestRequest)(implicit hc: HeaderCarrier) = {
@@ -137,8 +101,8 @@ class AccessRequestsService @Inject()(
         (for {
           application <- EitherT(searchService.findById(accessRequest.applicationId))
           _ <- EitherT(accessRequestsRepository.update(approved))
+          _ <- EitherT.right(accessRequestsEventService.approve(decisionRequest, id, application.id.orNull, LocalDateTime.now(clock)))
           _ <- EitherT(sendAccessApprovedEmails(accessRequest, application)).orElse(EitherT.rightT(())) // ignore email errors
-          _ <- EitherT.right(eventsService.log(asEvent(decisionRequest, id, application.id.orNull, AccessRequestApproved))) // ignore events logging errors. Application must have an id to get this far.
           accessRequests <- EitherT.right(getAccessRequests(Some(accessRequest.applicationId), None))
           _ <- EitherT(scopeFixer.fix(application, accessRequests, hipEnvironments.forId(accessRequest.environmentId)))
         } yield ()).value
@@ -153,18 +117,14 @@ class AccessRequestsService @Inject()(
   def rejectAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
-        accessRequestsRepository.update(
-          accessRequest
+        (for {
+          application <- EitherT(searchService.findById(accessRequest.applicationId))
+          _ <- EitherT(accessRequestsRepository.update(accessRequest
             .setStatus(Rejected)
-            .setDecision(decisionRequest, clock)
-        ) flatMap {
-          case Right(_) =>
-            for {
-              _ <- sendAccessRejectedEmails(accessRequest)
-              _ <- eventsService.log(asEvent(decisionRequest, id, accessRequest.applicationId, AccessRequestRejected))
-            } yield Right(())
-          case Left(exception) => Future.successful(Left(exception))
-        }
+            .setDecision(decisionRequest, clock)))
+          _ <- EitherT.right(accessRequestsEventService.reject(decisionRequest, id, accessRequest.applicationId, LocalDateTime.now(clock)))
+          _ <- EitherT(sendAccessRejectedEmails(accessRequest)).orElse(EitherT.rightT(())) // ignore email errors
+        } yield ()).value
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
       case _ =>
@@ -172,43 +132,39 @@ class AccessRequestsService @Inject()(
     }
   }
 
-  def cancelAccessRequest(id: String, cancelRequest: AccessRequestCancelRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  def cancelAccessRequest(id: String, cancelRequest: AccessRequestCancelRequest)(implicit hc: HeaderCarrier) = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
-        accessRequestsRepository.update(
-          accessRequest
-            .cancel(cancelRequest.toCancelled(clock))
-        ).map {
-          case Right(_) => Right(eventsService.log(asEvent(cancelRequest, id, accessRequest.applicationId, AccessRequestCanceled)))
-          case Left(e: ApplicationsException) => Left(e)
-        }
+        (for {
+          _ <- EitherT(accessRequestsRepository.update(
+            accessRequest
+              .cancel(cancelRequest.toCancelled(clock))))
+          _ <- EitherT.right(accessRequestsEventService.cancel(cancelRequest, id, accessRequest.applicationId, LocalDateTime.now(clock)))
+        } yield ()).value
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
       case _ =>
         Future.successful(Left(raiseAccessRequestNotFoundException.forId(id)))
     }
   }
-
-
 
   def cancelAccessRequests(applicationId: String): Future[Either[ApplicationsException, Unit]] = {
     getAccessRequests(Some(applicationId), Some(Pending)).flatMap(
       accessRequests => {
         Future.sequence(accessRequests.map(pendingAccessRequest => {
-          val now = LocalDateTime.now(clock)
-
-          val cancelAccessRequest = pendingAccessRequest
-            .cancel(cancelled = now, cancelledBy = system)
-
-          val accessRequestAccessRequest : AccessRequestCancelRequest = AccessRequestCancelRequest(system)
-            accessRequestsRepository.update(cancelAccessRequest).map {
-              case Right(()) => Right(eventsService.log(asEvent(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, AccessRequestCanceled, now)))
-              case Left(e: ApplicationsException) => Left(e)
+            val now = LocalDateTime.now(clock)
+            val cancelAccessRequest = pendingAccessRequest
+              .cancel(cancelled = now, cancelledBy = system)
+            val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
+            (for {
+              _ <- EitherT(accessRequestsRepository.update(cancelAccessRequest))
+              _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, now))
+            } yield ()).value
+          }))
+          .map(useFirstApplicationsException).map {
+            case Right(_) => Right(())
+            case Left(e) => Left(e)
           }
-        })).map(useFirstApplicationsException).map {
-          case Right(_) => Right(())
-          case Left(e) => Left(e)
-        }
       })
   }
 
@@ -216,23 +172,22 @@ class AccessRequestsService @Inject()(
     getAccessRequests(Some(applicationId), Some(Pending))
       .map(_.filter(_.apiId.equals(apiId)))
       .flatMap(
-        accessRequests =>
-          Future.sequence(
-              accessRequests.map(pendingAccessRequest => {
-                val now = LocalDateTime.now(clock)
-
-                val cancelAccessRequest = pendingAccessRequest
-                  .cancel(cancelled = now, cancelledBy = system)
-
-                val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
-                accessRequestsRepository.update(cancelAccessRequest).map {
-                  case Right(()) => Right(eventsService.log(asEvent(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, AccessRequestCanceled, now)))
-                  case Left(e: ApplicationsException) => Left(e)
-                }
-              })
-            )
-            .map(useFirstApplicationsException)
-            .map(_.map(_ => ()))
+        accessRequests => {
+          Future.sequence(accessRequests.map(pendingAccessRequest => {
+              val now = LocalDateTime.now(clock)
+              val cancelAccessRequest = pendingAccessRequest
+                .cancel(cancelled = now, cancelledBy = system)
+              val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
+              (for {
+                _ <- EitherT(accessRequestsRepository.update(cancelAccessRequest))
+                _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest.id.get, applicationId, now))
+              } yield ()).value
+            }))
+            .map(useFirstApplicationsException).map {
+              case Right(_) => Right(())
+              case Left(e) => Left(e)
+            }
+        }
       )
   }
 
