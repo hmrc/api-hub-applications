@@ -167,13 +167,16 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
 
   def addCredential(applicationId: String, environmentName: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {
     implicit request =>
-      applicationsService.addCredential(applicationId, request.hipEnvironment).map {
-        case Right(credential) => Created(Json.toJson(credential))
-        case Left(_: ApplicationNotFoundException) => NotFound
-        case Left(_: ApplicationCredentialLimitException) => Conflict
-        case Left(_: IdmsException) => BadGateway
-        case Left(_) => InternalServerError
-      }
+      withUserEmail(
+        userEmail =>
+          applicationsService.addCredential(applicationId, request.hipEnvironment, userEmail).map {
+            case Right(credential) => Created(Json.toJson(credential))
+            case Left(_: ApplicationNotFoundException) => NotFound
+            case Left(_: ApplicationCredentialLimitException) => Conflict
+            case Left(_: IdmsException) => BadGateway
+            case Left(_) => InternalServerError
+          }
+      )
   }
 
   def deleteCredential(applicationId: String, environmentName: String, clientId: String): Action[AnyContent] = (identify andThen hipEnvironment(environmentName)).async {

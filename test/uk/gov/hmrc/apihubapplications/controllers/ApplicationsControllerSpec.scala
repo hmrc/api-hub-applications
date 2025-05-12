@@ -779,9 +779,15 @@ class ApplicationsControllerSpec
       val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"), FakeHipEnvironments.productionEnvironment.id)
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Right(credential)))
+        when(
+          fixture.applicationsService.addCredential(
+            eqTo(id),
+            eqTo(FakeHipEnvironments.productionEnvironment),
+            eqTo(testUserEmail)
+          )(any())).thenReturn(Future.successful(Right(credential)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.productionEnvironment.id).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CREATED
@@ -804,9 +810,10 @@ class ApplicationsControllerSpec
         forAll(validEnvironmentNames) { (environment, expectedStatus) =>
           val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"), environment)
 
-          when(fixture.applicationsService.addCredential(eqTo(id), any())(any())).thenReturn(Future.successful(Right(credential)))
+          when(fixture.applicationsService.addCredential(eqTo(id), any(), any())(any())).thenReturn(Future.successful(Right(credential)))
 
           val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, environment).url)
+            .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
 
           val result = route(fixture.application, request).value
           status(result) mustBe expectedStatus
@@ -819,9 +826,15 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
+        when(
+          fixture.applicationsService.addCredential(
+            eqTo(id),
+            eqTo(FakeHipEnvironments.productionEnvironment),
+            eqTo(testUserEmail)
+          )(any())).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(id))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, "primary").url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.NOT_FOUND
@@ -833,9 +846,15 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
+        when(
+          fixture.applicationsService.addCredential(
+            eqTo(id),
+            eqTo(FakeHipEnvironments.productionEnvironment),
+            eqTo(testUserEmail)
+          )(any())).thenReturn(Future.successful(Left(UnexpectedApplicationsException)))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.productionEnvironment.id).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.INTERNAL_SERVER_ERROR
@@ -847,12 +866,31 @@ class ApplicationsControllerSpec
       val fixture = buildFixture()
 
       running(fixture.application) {
-        when(fixture.applicationsService.addCredential(eqTo(id), eqTo(FakeHipEnvironments.productionEnvironment))(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
+        when(
+          fixture.applicationsService.addCredential(
+            eqTo(id),
+            eqTo(FakeHipEnvironments.productionEnvironment),
+            eqTo(testUserEmail)
+          )(any())).thenReturn(Future.successful(Left(ApplicationCredentialLimitException("too many credentials"))))
 
         val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.productionEnvironment.id).url)
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
 
         val result = route(fixture.application, request).value
         status(result) mustBe Status.CONFLICT
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is missing" in {
+      val id = "app-id-1"
+      val fixture = buildFixture()
+      val credential = Credential("clientId", LocalDateTime.now, Some("secret-1234"), Some("1234"), FakeHipEnvironments.productionEnvironment.id)
+
+      running(fixture.application) {
+        val request = FakeRequest(POST, routes.ApplicationsController.addCredential(id, FakeHipEnvironments.productionEnvironment.id).url)
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }

@@ -38,7 +38,7 @@ trait ApplicationsCredentialsService {
 
   def getCredentials(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Credential]]]
 
-  def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]
+  def addCredential(applicationId: String, hipEnvironment: HipEnvironment, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]]
 
   def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]]
 
@@ -54,7 +54,8 @@ class ApplicationsCredentialsServiceImpl @Inject()(
   clock: Clock,
   accessRequestsService: AccessRequestsService,
   scopeFixer: ScopeFixer,
-  hipEnvironments: HipEnvironments
+  hipEnvironments: HipEnvironments,
+  eventService: ApplicationsEventService
 )(implicit ec: ExecutionContext) extends ApplicationsCredentialsService with Logging with ExceptionRaising {
 
   import ApplicationsCredentialsServiceImpl.*
@@ -85,7 +86,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  override def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+  override def addCredential(applicationId: String, hipEnvironment: HipEnvironment, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
     searchService.findById(applicationId).map {
       case Right(application) => addCredentialValidation(application, hipEnvironment)
       case Left(e) => Left(e)
@@ -93,7 +94,7 @@ class ApplicationsCredentialsServiceImpl @Inject()(
       case Right(application) => getNewCredential(application, hipEnvironment)
       case Left(e) => Future.successful(Left(e))
     } flatMap {
-      case Right(newCredential: NewCredential) => updateRepository(newCredential)
+      case Right(newCredential: NewCredential) => updateRepository(newCredential, userEmail)
       case Left(e) => Future.successful(Left(e))
     } flatMap {
       case Right(newCredential: NewCredential) => copyScopes(newCredential)
@@ -122,12 +123,14 @@ class ApplicationsCredentialsServiceImpl @Inject()(
     }
   }
 
-  private def updateRepository(newCredential: NewCredential): Future[Either[ApplicationsException, NewCredential]] = {
-    val updated = newCredential.application.copy(lastUpdated = LocalDateTime.now(clock))
-    repository.update(updated).map {
-      case Right(()) => Right(newCredential.copy(application = updated))
-      case Left(e) => Left(e)
-    }
+  private def updateRepository(newCredential: NewCredential, userEmail: String): Future[Either[ApplicationsException, NewCredential]] = {
+    val timestamp = LocalDateTime.now(clock)
+    val updated = newCredential.application.updated(timestamp)
+
+    (for {
+      _ <- EitherT(repository.update(updated))
+      _ <- EitherT.right(eventService.createCredential(updated, newCredential.credential, userEmail, timestamp))
+    } yield newCredential.copy(application = updated)).value
   }
 
   private def copyScopes(newCredential: NewCredential)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, NewCredential]] = {
