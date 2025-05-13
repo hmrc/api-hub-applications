@@ -36,36 +36,36 @@ class ApplicationsService @Inject()(
   with ApplicationsLifecycleService
   with ApplicationsSearchService {
 
-  override def addApi(applicationId: String, newApi: AddApiRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    apiService.addApi(applicationId, newApi)
+  override def addApi(applicationId: String, newApi: AddApiRequest, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.addApi(applicationId, newApi, userEmail)
   }
 
-  override def removeApi(applicationId: String, apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    apiService.removeApi(applicationId, apiId)
+  override def removeApi(applicationId: String, apiId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.removeApi(applicationId, apiId, userEmail)
   }
 
-  override def changeOwningTeam(applicationId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    apiService.changeOwningTeam(applicationId, teamId)
+  override def changeOwningTeam(applicationId: String, teamId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.changeOwningTeam(applicationId, teamId, userEmail)
   }
 
   override def removeOwningTeamFromApplication(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     apiService.removeOwningTeamFromApplication(applicationId)
   }
 
-  override def fixScopes(applicationId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    apiService.fixScopes(applicationId)
+  override def fixScopes(applicationId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    apiService.fixScopes(applicationId, userEmail)
   }
 
   override def getCredentials(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Seq[Credential]]] = {
     credentialsService.getCredentials(applicationId, hipEnvironment)
   }
 
-  override def addCredential(applicationId: String, hipEnvironment: HipEnvironment)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
-    credentialsService.addCredential(applicationId, hipEnvironment)
+  override def addCredential(applicationId: String, hipEnvironment: HipEnvironment, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Credential]] = {
+    credentialsService.addCredential(applicationId, hipEnvironment, userEmail)
   }
 
-  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    credentialsService.deleteCredential(applicationId, hipEnvironment, clientId)
+  override def deleteCredential(applicationId: String, hipEnvironment: HipEnvironment, clientId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    credentialsService.deleteCredential(applicationId, hipEnvironment, clientId, userEmail)
   }
 
   override def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {

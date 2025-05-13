@@ -30,6 +30,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 @Singleton
 class EventsService @Inject()(
@@ -39,7 +40,14 @@ class EventsService @Inject()(
 
   def log(event: Event): Future[Unit] = {
     if (appConfig.eventsEnabled) {
-      repository.insert(event) flatMap (_ => Future.successful(()))
+      repository
+        .insert(event)
+        .map(_ => ())
+        .recoverWith {
+          case NonFatal(ex) =>
+            logger.warn(s"Failed to log an event: entityType=${event.entityType}, entityId=${event.entityId}, eventType=${event.eventType}", ex)
+            Future.successful(())
+        }
     } else {
       Future.successful(())
     }
@@ -51,7 +59,6 @@ class EventsService @Inject()(
       case _ => Future.successful(None)
     }
   }
-
 
   def findByEntity(entityType: EntityType, entityId: String): Future[Seq[Event]] = {
     repository.findByEntity(entityType, entityId)

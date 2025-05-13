@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
+import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
@@ -49,6 +50,7 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
   emailConnector: EmailConnector,
   clock: Clock,
   hipEnvironments: HipEnvironments,
+  eventService: ApplicationsEventService
 )(implicit ec: ExecutionContext) extends ApplicationsLifecycleService with Logging with ExceptionRaising {
 
   override def registerApplication(newApplication: NewApplication)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Application]] = {
@@ -56,6 +58,11 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
       .assertTeamMember(newApplication.createdBy.email)
 
     repository.insert(applicationWithTeamMember).flatMap {
+      application =>
+        eventService
+          .register(application, newApplication.createdBy.email, application.created)
+          .map(_ => application)
+    } flatMap {
       case saved if saved.teamId.isEmpty =>
         searchService.findById(saved.safeId).flatMap {
           case Right(fetched) =>
@@ -85,7 +92,7 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
                       softDelete(application, currentUser)
                     }
                     else {
-                      hardDelete(applicationId)
+                      hardDelete(application, currentUser)
                     }
                 ).flatMap {
                   case Right(_) => sendApplicationDeletedEmails(application, currentUser) flatMap {
@@ -113,12 +120,20 @@ class ApplicationsLifecycleServiceImpl @ Inject()(
       }
 
   private def softDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
-    val softDeletedApplication = application.copy(deleted = Some(Deleted(LocalDateTime.now(clock), currentUser)))
-    repository.update(softDeletedApplication)
+    val timestamp = LocalDateTime.now(clock)
+    val softDeletedApplication = application.copy(deleted = Some(Deleted(timestamp, currentUser)))
+
+    (for {
+      updated <- EitherT(repository.update(softDeletedApplication))
+      _ <- EitherT.right(eventService.delete(softDeletedApplication, true, currentUser, timestamp))
+    } yield updated).value
   }
 
-  private def hardDelete(applicationId: String): Future[Either[ApplicationsException, Unit]] = {
-    repository.delete(applicationId)
+  private def hardDelete(application: Application, currentUser: String): Future[Either[ApplicationsException, Unit]] = {
+    (for {
+      deleted <- EitherT(repository.delete(application.safeId))
+      _ <- EitherT.right(eventService.delete(application, false, currentUser, LocalDateTime.now(clock)))
+    } yield deleted).value
   }
 
   private def sendApplicationDeletedEmails(application: Application, currentUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

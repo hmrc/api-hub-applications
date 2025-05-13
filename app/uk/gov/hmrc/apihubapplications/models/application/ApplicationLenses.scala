@@ -220,8 +220,16 @@ object ApplicationLenses {
       application.apis.exists(_.id.equals(id))
     }
 
+    def api(id: String): Option[Api] = {
+      application.apis.find(_.id.equals(id))
+    }
+
     def updated(clock: Clock): Application = {
-      application.copy(lastUpdated = LocalDateTime.now(clock))
+      updated(LocalDateTime.now(clock))
+    }
+
+    def updated(lastUpdated: LocalDateTime): Application = {
+      application.copy(lastUpdated = lastUpdated)
     }
 
     def delete(deleted: Deleted): Application = {

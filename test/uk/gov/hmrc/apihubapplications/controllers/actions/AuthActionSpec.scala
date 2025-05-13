@@ -103,8 +103,46 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
           )
 
           status(result) mustBe OK
-          blockRequest.attrs.get(AuthenticatedIdentifierAction.UserEmailKey) mustBe Some(Some("test-email"))
+          blockRequest.attrs.get(AuthenticatedIdentifierAction.UserEmailKey) mustBe Some("test-email")
         }
+      }
+    }
+
+    "must return ok and ignore user email when it can't be decrypted" in {
+      implicit val cc = Helpers.stubControllerComponents()
+      val mockStubBehaviour = mock[StubBehaviour]
+      val stubAuth = BackendAuthComponentsStub(mockStubBehaviour)
+
+      val application = new GuiceApplicationBuilder()
+        .bindings(
+          bind[BackendAuthComponents].toInstance(stubAuth)
+        )
+        .build()
+
+      running(application) {
+        val authAction = application.injector.instanceOf[AuthenticatedIdentifierAction]
+
+        val canAccessPredicate = Predicate.Permission(
+          Resource(
+            ResourceType("api-hub-applications"),
+            ResourceLocation("*")
+          ),
+          IAAction("WRITE")
+        )
+
+        when(mockStubBehaviour.stubAuth(eqTo(Some(canAccessPredicate)), eqTo(Retrieval.EmptyRetrieval))).thenReturn(Future.unit)
+
+        var blockRequest: Request[AnyContent] = null
+        val result = authAction.invokeBlock(
+          FakeRequest().withHeaders("Authorization" -> "Anything whatsoever").withHeaders("Encrypted-User-Email" -> "not encrypted"),
+          (req: Request[AnyContent]) => {
+            blockRequest = req
+            Future.successful(Ok)
+          }
+        )
+
+        status(result) mustBe OK
+        blockRequest.attrs.get(AuthenticatedIdentifierAction.UserEmailKey) mustBe None
       }
     }
   }
