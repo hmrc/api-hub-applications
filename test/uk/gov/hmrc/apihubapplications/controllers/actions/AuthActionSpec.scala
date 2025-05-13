@@ -108,7 +108,7 @@ class AuthActionSpec extends AnyFreeSpec with MockitoSugar with Matchers {
       }
     }
 
-    "must return ok and add ignore the user when it can't be decrypted" in {
+    "must return ok and ignore user email when it can't be decrypted" in {
       implicit val cc = Helpers.stubControllerComponents()
       val mockStubBehaviour = mock[StubBehaviour]
       val stubAuth = BackendAuthComponentsStub(mockStubBehaviour)

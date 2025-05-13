@@ -112,7 +112,6 @@ class ApplicationsController @Inject()(identify: IdentifierAction,
             jsReq.validate[AddApiRequest] match {
               case JsSuccess(api, _) =>
                 logger.info(s"Adding api $api to application ID: $id")
-                val user = request.attrs.get(AuthenticatedIdentifierAction.UserEmailKey)
                 applicationsService.addApi(id, api, userEmail).map {
                   case Right(_) => NoContent
                   case Left(_: ApplicationNotFoundException) => NotFound
