@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
+import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
+import play.api.libs.json.JsValue
+import play.api.mvc.Request
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, EgressNotFoundException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
@@ -33,14 +36,17 @@ import scala.concurrent.{ExecutionContext, Future}
 class TeamsService @Inject()(
   repository: TeamsRepository,
   clock: Clock,
-  emailConnector: EmailConnector
+  emailConnector: EmailConnector,
+  eventService: TeamsEventService
 )(implicit ec: ExecutionContext) extends Logging with ExceptionRaising {
 
-  def create(newTeam: NewTeam)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Team]] = {
+  def create(newTeam: NewTeam, requestingUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Team]] = {
     repository.insert(newTeam.toTeam(clock)).flatMap {
-      case Right(team) =>
-        emailConnector.sendTeamMemberAddedEmailToTeamMembers(team.teamMembers, team) flatMap {
-          _ => Future.successful(Right(team))
+      case Right(team) => for {
+          _ <- emailConnector.sendTeamMemberAddedEmailToTeamMembers(team.teamMembers, team)
+          _ <- eventService.create(team, requestingUser)
+        } yield {
+          Right(team)
         }
       case Left(e) => Future.successful(Left(e))
     }
@@ -58,16 +64,14 @@ class TeamsService @Inject()(
     repository.findByName(name)
   }
 
-  def addTeamMember(id: String, request: TeamMemberRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+  def addTeamMember(id: String, request: TeamMemberRequest, requestingUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Right(team) if !team.hasTeamMember(request.email) =>
-        repository.update(team.addTeamMember(request.toTeamMember)) flatMap {
-          case Right(_) =>
-            emailConnector.sendTeamMemberAddedEmailToTeamMembers(Seq(request.toTeamMember), team).flatMap {
-              _ => Future.successful(Right(()))
-            }
-          case Left(exception) => Future.successful(Left(exception))
-        }
+        (for {
+          result <- EitherT(repository.update(team.addTeamMember(request.toTeamMember)))
+          _ <- EitherT.right(emailConnector.sendTeamMemberAddedEmailToTeamMembers(Seq(request.toTeamMember), team))
+          _ <- EitherT.right(eventService.addMember(team, requestingUser, request.email))
+        } yield result).value
       case Right(team) =>
         val future = Future.successful(Left(raiseTeamMemberExistsException.forTeam(team)))
         future
@@ -76,49 +80,56 @@ class TeamsService @Inject()(
     }
   }
 
-  def removeTeamMember(id: String, email: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] =
+  def removeTeamMember(id: String, email: String, requestingUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] =
     repository.findById(id).flatMap {
       case Right(team) if !team.hasTeamMember(email) =>
         Future.successful(Left(raiseTeamMemberDoesNotExistException.forTeam(team)))
       case Right(team) if team.teamMembers.size < 2 =>
         Future.successful(Left(raiseLastTeamMemberException.forTeam(team)))
       case Right(team) =>
-        repository.update(team.removeTeamMember(email)) flatMap {
-          case Right(_) =>
-            emailConnector.sendRemoveTeamMemberFromTeamEmail(email, team).flatMap {
-              _ => Future.successful(Right(()))
-            }
-          case Left(exception) => Future.successful(Left(exception))
-        }
+        (for {
+          result <- EitherT(repository.update(team.removeTeamMember(email)))
+          _ <- EitherT.right(emailConnector.sendRemoveTeamMemberFromTeamEmail(email, team))
+          _ <- EitherT.right(eventService.removeMember(team, requestingUser, email))
+        } yield result).value
       case Left(e) =>
         Future.successful(Left(e))
     }
 
-  def renameTeam(id: String, request: RenameTeamRequest): Future[Either[ApplicationsException, Unit]] = {
+  def renameTeam(id: String, request: RenameTeamRequest, requestingUser: String): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Right(team) =>
-        repository.update(team.setName(request.name))
+        val renamedTeam = team.setName(request.name)
+        (for {
+          result <- EitherT(repository.update(renamedTeam))
+          _ <- EitherT.right(eventService.rename(renamedTeam, requestingUser, team.name))
+        } yield result).value
       case Left(e) =>
         Future.successful(Left(e))
     }
   }
 
-  def addEgressesToTeam(id: String, assignEgressesRequest: AddEgressesRequest): Future[Either[ApplicationsException, Unit]] = {
+  def addEgressesToTeam(id: String, assignEgressesRequest: AddEgressesRequest, requestingUser: String): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Right(team) =>
-        repository.update(team.addEgresses(assignEgressesRequest.egresses))
+        (for {
+          result <- EitherT(repository.update(team.addEgresses(assignEgressesRequest.egresses)))
+          _ <- EitherT.right(eventService.addEgresses(team, requestingUser, assignEgressesRequest.egresses))
+        } yield result).value
       case Left(e) =>
         Future.successful(Left(e))
     }
   }
 
-  def removeEgressFromTeam(id: String, egressId: String): Future[Either[ApplicationsException, Unit]] = {
+  def removeEgressFromTeam(id: String, egressId: String, requestingUser: String): Future[Either[ApplicationsException, Unit]] = {
     repository.findById(id).flatMap {
       case Right(team) =>
         if (team.hasEgress(egressId)) {
-          repository.update(team.removeEgress(egressId))
-        }
-        else {
+          (for {
+            result <- EitherT(repository.update(team.removeEgress(egressId)))
+            _ <- EitherT.right(eventService.removeEgress(team, requestingUser, egressId))
+          } yield result).value
+        } else {
           Future.successful(Left(raiseEgressNotFoundException.forTeamAndEgress(team, egressId)))
         }
       case Left(e) => Future.successful(Left(e))
