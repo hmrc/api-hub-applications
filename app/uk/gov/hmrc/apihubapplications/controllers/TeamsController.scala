@@ -38,21 +38,25 @@ class TeamsController @Inject()(
   teamsService: TeamsService,
   applicationsService: ApplicationsSearchService,
   crypto: ApplicationCrypto
-)(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
+)(implicit ec: ExecutionContext) extends BackendController(cc) with Logging with UserEmailAwareness {
 
   def create(): Action[JsValue] = identify(parse.json).async {
-    implicit request =>
-      request.body.validate[NewTeam] match {
-        case JsSuccess(newTeam, _) =>
-          teamsService.create(newTeam).map {
-            case Right(team) => Created(Json.toJson(team))
-            case Left(_: TeamNameNotUniqueException) => Conflict
-            case Left(e) => throw e
+    implicit request => {
+      withUserEmail(
+        userEmail =>
+          request.body.validate[NewTeam] match {
+            case JsSuccess(newTeam, _) =>
+              teamsService.create(newTeam, userEmail).map {
+                case Right(team) => Created(Json.toJson(team))
+                case Left(_: TeamNameNotUniqueException) => Conflict
+                case Left(e) => throw e
+              }
+            case e: JsError =>
+              logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+              Future.successful(BadRequest)
           }
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
+      )
+    }
   }
 
   def findAll(teamMember: Option[String]): Action[AnyContent] = identify.async {
@@ -83,70 +87,86 @@ class TeamsController @Inject()(
   }
 
   def addTeamMember(id: String): Action[JsValue] = identify(parse.json).async {
-    implicit request =>
-      request.body.validate[TeamMemberRequest] match {
-        case JsSuccess(validRequest, _) =>
-          teamsService.addTeamMember(id, validRequest).map {
-            case Right(_) => NoContent
-            case Left(_: TeamNotFoundException) => NotFound
-            case Left(_: TeamMemberExistsException) => BadRequest
-            case Left(e) => throw e
+    implicit request => {
+      withUserEmail(
+        userEmail =>
+          request.body.validate[TeamMemberRequest] match {
+            case JsSuccess(validRequest, _) =>
+              teamsService.addTeamMember(id, validRequest, userEmail).map {
+                case Right(_) => NoContent
+                case Left(_: TeamNotFoundException) => NotFound
+                case Left(_: TeamMemberExistsException) => BadRequest
+                case Left(e) => throw e
+              }
+            case e: JsError =>
+              logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+              Future.successful(BadRequest)
           }
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
+      )
+    }
   }
 
   def removeTeamMember(id: String, encryptedEmail: String): Action[AnyContent] = identify.async {
-    implicit request =>
-      teamsService.removeTeamMember(id, decrypt(encryptedEmail)).map {
-        case Right(_) => NoContent
-        case Left(_: LastTeamMemberException) => Conflict
-        case Left(_: TeamNotFoundException) => NotFound
-        case Left(_: TeamMemberDoesNotExistException) => NotFound
-        case Left(e) => throw e
-      }
+    implicit request => 
+      withUserEmail(
+        userEmail =>
+          teamsService.removeTeamMember(id, decrypt(encryptedEmail), userEmail).map {
+            case Right(_) => NoContent
+            case Left(_: LastTeamMemberException) => Conflict
+            case Left(_: TeamNotFoundException) => NotFound
+            case Left(_: TeamMemberDoesNotExistException) => NotFound
+            case Left(e) => throw e
+          }
+      )
   }
 
   def renameTeam(id: String): Action[JsValue] = identify(parse.json).async {
     implicit request =>
-      request.body.validate[RenameTeamRequest] match {
-        case JsSuccess(validRequest, _) =>
-          teamsService.renameTeam(id, validRequest).map {
-            case Right(_) => NoContent
-            case Left(_: TeamNotFoundException) => NotFound
-            case Left(_: TeamNameNotUniqueException) => Conflict
-            case Left(e) => throw e
+      withUserEmail(
+        userEmail =>
+          request.body.validate[RenameTeamRequest] match {
+            case JsSuccess(validRequest, _) =>
+              teamsService.renameTeam(id, validRequest, userEmail).map {
+                case Right(_) => NoContent
+                case Left(_: TeamNotFoundException) => NotFound
+                case Left(_: TeamNameNotUniqueException) => Conflict
+                case Left(e) => throw e
+              }
+            case e: JsError =>
+              logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+              Future.successful(BadRequest)
           }
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
+      )
   }
 
   def addEgressesToTeam(id: String): Action[JsValue] = identify(parse.json).async {
     implicit request =>
-      request.body.validate[AddEgressesRequest] match {
-        case JsSuccess(validRequest, _) => teamsService.addEgressesToTeam(id, validRequest).map {
-          case Right(_) => Created
-          case Left(_: TeamNotFoundException) => NotFound
-          case Left(e) => throw e
-        }
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
+      withUserEmail(
+        userEmail =>
+          request.body.validate[AddEgressesRequest] match {
+            case JsSuccess(validRequest, _) => teamsService.addEgressesToTeam(id, validRequest, userEmail).map {
+              case Right(_) => Created
+              case Left(_: TeamNotFoundException) => NotFound
+              case Left(e) => throw e
+            }
+            case e: JsError =>
+              logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+              Future.successful(BadRequest)
+          }
+      )
   }
 
   def removeEgressFromTeam(id: String, egressId: String): Action[AnyContent] = identify.async {
     implicit request =>
-      teamsService.removeEgressFromTeam(id, egressId).map {
-        case Right(()) => NoContent
-        case Left(_: TeamNotFoundException) => NotFound
-        case Left(_: EgressNotFoundException) => NotFound
-        case Left(e) => throw e
-      }
+      withUserEmail(
+        userEmail =>
+          teamsService.removeEgressFromTeam(id, egressId, userEmail).map {
+            case Right(()) => NoContent
+            case Left(_: TeamNotFoundException) => NotFound
+            case Left(_: EgressNotFoundException) => NotFound
+            case Left(e) => throw e
+          }
+      )
   }
 
   private def decrypt(encrypted: String): String = {

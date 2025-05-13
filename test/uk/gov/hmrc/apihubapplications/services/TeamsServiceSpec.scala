@@ -37,11 +37,13 @@ import scala.util.Right
 
 class TeamsServiceSpec
   extends AsyncFreeSpec
-  with Matchers
-  with MockitoSugar
-  with EitherValues {
+    with Matchers
+    with MockitoSugar
+    with EitherValues {
 
   import TeamsServiceSpec.*
+
+  val userEmail = "user@example.com"
 
   "create" - {
     "must transform NewTeam to Team, pass it to the repository, and return the saved result" in {
@@ -49,14 +51,15 @@ class TeamsServiceSpec
 
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val team = newTeam.toTeam(fixture.clock)
-      val saved = team.setId("test-id")
+      val savedTeam = team.setId("test-id")
 
-      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(saved)))
+      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(savedTeam)))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.create(eqTo(savedTeam), eqTo(userEmail))).thenReturn(Future.successful(()))
 
-      fixture.service.create(newTeam)(any).map {
+      fixture.service.create(newTeam, userEmail)(any).map {
         result =>
-          result.value mustBe saved
+          result.value mustBe savedTeam
       }
     }
 
@@ -65,16 +68,17 @@ class TeamsServiceSpec
 
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val team = newTeam.toTeam(fixture.clock)
-      val saved = team.setId("test-id")
+      val savedTeam = team.setId("test-id")
 
-      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(saved)))
+      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(savedTeam)))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.create(eqTo(savedTeam), eqTo(userEmail))).thenReturn(Future.successful(()))
 
-      fixture.service.create(newTeam)(any).map {
+      fixture.service.create(newTeam, userEmail)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember1, teamMember2)), eqTo(saved))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember1, teamMember2)), eqTo(savedTeam))(any)
 
-          result.value mustBe saved
+          result.value mustBe savedTeam
       }
     }
 
@@ -83,16 +87,17 @@ class TeamsServiceSpec
 
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val team = newTeam.toTeam(fixture.clock)
-      val saved = team.setId("test-id")
+      val savedTeam = team.setId("test-id")
 
-      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(saved)))
+      when(fixture.repository.insert(eqTo(team))).thenReturn(Future.successful(Right(savedTeam)))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      when(fixture.eventsService.create(eqTo(savedTeam), eqTo(userEmail))).thenReturn(Future.successful(()))
 
-      fixture.service.create(newTeam)(any).map {
+      fixture.service.create(newTeam, userEmail)(any).map {
         result =>
-          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember1, teamMember2)), eqTo(saved))(any)
+          verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember1, teamMember2)), eqTo(savedTeam))(any)
 
-          result.value mustBe saved
+          result.value mustBe savedTeam
       }
     }
 
@@ -103,7 +108,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.insert(any)).thenReturn(Future.successful(Left(applicationException)))
 
-      fixture.service.create(newTeam)(any).map {
+      fixture.service.create(newTeam, userEmail)(any).map {
         result =>
           result.left.value mustBe applicationException
       }
@@ -188,8 +193,9 @@ class TeamsServiceSpec
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.addMember(any, eqTo(userEmail), eqTo(teamMember3.email), any)).thenReturn(Future.successful(()))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email), userEmail)(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
           result mustBe Right(())
@@ -204,7 +210,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember1.email))(HeaderCarrier()).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember1.email), userEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(TeamMemberExistsException.forTeam(team))
       }
@@ -220,7 +226,7 @@ class TeamsServiceSpec
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email), userEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }
@@ -235,8 +241,9 @@ class TeamsServiceSpec
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.addMember(any, eqTo(userEmail), eqTo(teamMember3.email), any)).thenReturn(Future.successful(()))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email), userEmail)(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
           verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember3)), eqTo(team))(any)
@@ -255,8 +262,9 @@ class TeamsServiceSpec
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendTeamMemberAddedEmailToTeamMembers(any, any)(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
+      when(fixture.eventsService.addMember(any, eqTo(userEmail), eqTo(teamMember3.email), any)).thenReturn(Future.successful(()))
 
-      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email))(HeaderCarrier()).map {
+      fixture.service.addTeamMember(id, TeamMemberRequest(teamMember3.email), userEmail)(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.addTeamMember(teamMember3)))
           verify(fixture.emailConnector).sendTeamMemberAddedEmailToTeamMembers(eqTo(Seq(teamMember3)), eqTo(team))(any)
@@ -279,8 +287,9 @@ class TeamsServiceSpec
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendRemoveTeamMemberFromTeamEmail(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.removeMember(any, eqTo(userEmail), eqTo(teamMember3.email))).thenReturn(Future.successful(()))
 
-      fixture.service.removeTeamMember(id, teamMember3.email)(HeaderCarrier()).map {
+      fixture.service.removeTeamMember(id, teamMember3.email, userEmail)(HeaderCarrier()).map {
         result =>
           verify(fixture.repository).update(eqTo(team.removeTeamMember(teamMember3.email)))
           result mustBe Right(())
@@ -296,7 +305,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
 
-      fixture.service.removeTeamMember(id, teamMember1.email)(HeaderCarrier()).map {
+      fixture.service.removeTeamMember(id, teamMember1.email, userEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(LastTeamMemberException.forTeam(team))
       }
@@ -310,7 +319,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
 
-      fixture.service.removeTeamMember(id, teamMember3.email)(HeaderCarrier()).map {
+      fixture.service.removeTeamMember(id, teamMember3.email, userEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(TeamMemberDoesNotExistException.forTeam(team))
       }
@@ -327,7 +336,7 @@ class TeamsServiceSpec
       when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
       when(fixture.emailConnector.sendRemoveTeamMemberFromTeamEmail(any, any)(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.service.removeTeamMember(id, teamMember1.email)(HeaderCarrier()).map {
+      fixture.service.removeTeamMember(id, teamMember1.email, userEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }
@@ -343,8 +352,9 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.rename(any, eqTo(userEmail), eqTo(team.name))).thenReturn(Future.successful(()))
 
-      fixture.service.renameTeam(id, RenameTeamRequest("new name")).map {
+      fixture.service.renameTeam(id, RenameTeamRequest("new name"), userEmail).map {
         result =>
           verify(fixture.repository).update(eqTo(team.setName("new name")))
           result mustBe Right(())
@@ -361,7 +371,7 @@ class TeamsServiceSpec
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Left(expected)))
 
-      fixture.service.renameTeam(id, RenameTeamRequest("new name")).map {
+      fixture.service.renameTeam(id, RenameTeamRequest("new name"), userEmail).map {
         result =>
           result mustBe Left(expected)
       }
@@ -376,9 +386,10 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.addEgresses(any, eqTo(userEmail), any, any)).thenReturn(Future.successful(()))
 
       val request = AddEgressesRequest(Seq("egress1", "egress1", "egress2"))
-      fixture.service.addEgressesToTeam(id, request).map {
+      fixture.service.addEgressesToTeam(id, request, userEmail).map {
         result =>
           verify(fixture.repository).update(eqTo(team.copy(egresses = Seq("egress1", "egress2"))))
           result mustBe Right(())
@@ -393,9 +404,10 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team.addEgresses(Seq("egress1","egress2")))))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.addEgresses(any, eqTo(userEmail), any, any)).thenReturn(Future.successful(()))
 
       val request = AddEgressesRequest(Seq("egress2","egress3"))
-      fixture.service.addEgressesToTeam(id, request).map {
+      fixture.service.addEgressesToTeam(id, request, userEmail).map {
         result =>
           verify(fixture.repository).update(eqTo(team.copy(egresses = Seq("egress1","egress2","egress3"))))
           result mustBe Right(())
@@ -422,8 +434,9 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
       when(fixture.repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventsService.removeEgress(any, eqTo(userEmail), eqTo(egressId1), any)).thenReturn(Future.successful(()))
 
-      fixture.service.removeEgressFromTeam(id, egressId1).map {
+      fixture.service.removeEgressFromTeam(id, egressId1, userEmail).map {
         result =>
           verify(fixture.repository).update(eqTo(expected))
           result mustBe Right(())
@@ -445,7 +458,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Right(team)))
 
-      fixture.service.removeEgressFromTeam(id, egressId1).map {
+      fixture.service.removeEgressFromTeam(id, egressId1, userEmail).map {
         result =>
           verify(fixture.repository, never()).update(any)
           result mustBe Left(expected)
@@ -464,7 +477,7 @@ class TeamsServiceSpec
 
       when(fixture.repository.findById(eqTo(id))).thenReturn(Future.successful(Left(expected)))
 
-      fixture.service.removeEgressFromTeam(id, egressId).map {
+      fixture.service.removeEgressFromTeam(id, egressId, userEmail).map {
         result =>
           verify(fixture.repository, never()).update(any)
           result mustBe Left(expected)
@@ -473,20 +486,22 @@ class TeamsServiceSpec
   }
 
   private case class Fixture(
-    repository: TeamsRepository,
-    clock: Clock,
-    service: TeamsService,
-    emailConnector: EmailConnector
-  )
+                              repository: TeamsRepository,
+                              clock: Clock,
+                              service: TeamsService,
+                              emailConnector: EmailConnector,
+                              eventsService: TeamsEventService
+                            )
 
   private def buildFixture(): Fixture = {
     val repository = mock[TeamsRepository]
     val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
     val emailConnector = mock[EmailConnector]
+    val eventsService = mock[TeamsEventService]
 
-    val service = new TeamsService(repository, clock, emailConnector)
+    val service = new TeamsService(repository, clock, emailConnector, eventsService)
 
-    Fixture(repository, clock, service, emailConnector)
+    Fixture(repository, clock, service, emailConnector, eventsService)
   }
 
 }

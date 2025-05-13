@@ -45,12 +45,15 @@ import scala.concurrent.Future
 
 class TeamsControllerSpec
   extends AnyFreeSpec
-  with Matchers
-  with MockitoSugar
-  with OptionValues
-  with CryptoUtils {
+    with Matchers
+    with MockitoSugar
+    with OptionValues
+    with CryptoUtils {
 
   import TeamsControllerSpec._
+
+  val userEmail = "user@example.com"
+  val userEmailHeader = "Encrypted-User-Email"
 
   "create" - {
     "must create the team via the service and return 201 Created and the saved team as JSON" in {
@@ -59,12 +62,13 @@ class TeamsControllerSpec
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val saved = newTeam.toTeam(Clock.systemDefaultZone()).setId("test-id")
 
-      when(fixture.teamsService.create(eqTo(newTeam))(any)).thenReturn(Future.successful(Right(saved)))
+      when(fixture.teamsService.create(eqTo(newTeam), eqTo(userEmail))(any)).thenReturn(Future.successful(Right(saved)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.create())
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(newTeam))
 
@@ -81,7 +85,8 @@ class TeamsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.create())
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.obj())
 
@@ -98,12 +103,13 @@ class TeamsControllerSpec
       val newTeam = NewTeam("test-team-name", Seq(teamMember1, teamMember2))
       val exception = TeamNameNotUniqueException.forName(newTeam.name)
 
-      when(fixture.teamsService.create(any)(any)).thenReturn(Future.successful(Left(exception)))
+      when(fixture.teamsService.create(any, eqTo(userEmail))(any)).thenReturn(Future.successful(Left(exception)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.create())
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(newTeam))
 
@@ -251,19 +257,20 @@ class TeamsControllerSpec
       val id = "test-id"
       val teamMemberRequest = TeamMemberRequest(teamMember1.email)
 
-      when(fixture.teamsService.addTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.teamsService.addTeamMember(any, any, eqTo(userEmail))(any)).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addTeamMember(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(teamMemberRequest))
 
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.teamsService).addTeamMember(eqTo(id), eqTo(teamMemberRequest))(any)
+        verify(fixture.teamsService).addTeamMember(eqTo(id), eqTo(teamMemberRequest), eqTo(userEmail))(any)
       }
     }
 
@@ -272,13 +279,14 @@ class TeamsControllerSpec
       val id = "test-id"
       val teamMemberRequest = TeamMemberRequest(teamMember1.email)
 
-      when(fixture.teamsService.addTeamMember(any, any)(any))
+      when(fixture.teamsService.addTeamMember(any, any, any)(any))
         .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addTeamMember(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(teamMemberRequest))
 
@@ -293,13 +301,14 @@ class TeamsControllerSpec
       val id = "test-id"
       val teamMemberRequest = TeamMemberRequest(teamMember1.email)
 
-      when(fixture.teamsService.addTeamMember(any, any)(any))
+      when(fixture.teamsService.addTeamMember(any, any, any)(any))
         .thenReturn(Future.successful(Left(TeamMemberExistsException.forId(id))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addTeamMember(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(teamMemberRequest))
 
@@ -316,7 +325,8 @@ class TeamsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addTeamMember(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.obj())
 
@@ -335,15 +345,18 @@ class TeamsControllerSpec
       val id = "test-id"
       val encryptedEmail = encrypt(crypto, teamMember1.email)
 
-      when(fixture.teamsService.removeTeamMember(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.teamsService.removeTeamMember(any, any, eqTo(userEmail))(any)).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+          .withHeaders(
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
+          )
 
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.teamsService).removeTeamMember(eqTo(id), eqTo(teamMember1.email))(any)
+        verify(fixture.teamsService).removeTeamMember(eqTo(id), eqTo(teamMember1.email), eqTo(userEmail))(any)
       }
     }
 
@@ -353,11 +366,14 @@ class TeamsControllerSpec
       val encryptedEmail = encrypt(crypto, teamMember1.email)
       val id = "test-id"
 
-      when(fixture.teamsService.removeTeamMember(any, any)(any))
+      when(fixture.teamsService.removeTeamMember(any, any, eqTo(userEmail))(any))
         .thenReturn(Future.successful(Left(LastTeamMemberException.forTeam(team1))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+          .withHeaders(
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
+          )
 
         val result = route(fixture.application, request).value
 
@@ -371,11 +387,14 @@ class TeamsControllerSpec
       val encryptedEmail = encrypt(crypto, teamMember1.email)
       val id = "test-id"
 
-      when(fixture.teamsService.removeTeamMember(any, any)(any))
+      when(fixture.teamsService.removeTeamMember(any, any, eqTo(userEmail))(any))
         .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+          .withHeaders(
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
+          )
 
         val result = route(fixture.application, request).value
 
@@ -389,11 +408,14 @@ class TeamsControllerSpec
       val encryptedEmail = encrypt(crypto, teamMember1.email)
       val id = "test-id"
 
-      when(fixture.teamsService.removeTeamMember(any, any)(any))
+      when(fixture.teamsService.removeTeamMember(any, any, eqTo(userEmail))(any))
         .thenReturn(Future.successful(Left(TeamMemberDoesNotExistException.forTeam(team1))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeTeamMember(id, encryptedEmail))
+          .withHeaders(
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
+          )
 
         val result = route(fixture.application, request).value
 
@@ -408,19 +430,20 @@ class TeamsControllerSpec
       val id = "test-id"
       val renameTeamRequest = RenameTeamRequest("new name")
 
-      when(fixture.teamsService.renameTeam(any, any)).thenReturn(Future.successful(Right(())))
+      when(fixture.teamsService.renameTeam(any, any, eqTo(userEmail))).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.renameTeam(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(renameTeamRequest))
 
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.teamsService).renameTeam(eqTo(id), eqTo(renameTeamRequest))
+        verify(fixture.teamsService).renameTeam(eqTo(id), eqTo(renameTeamRequest), eqTo(userEmail))
       }
     }
 
@@ -429,13 +452,14 @@ class TeamsControllerSpec
       val id = "test-id"
       val renameTeamRequest = RenameTeamRequest("new name")
 
-      when(fixture.teamsService.renameTeam(any, any))
+      when(fixture.teamsService.renameTeam(any, any, eqTo(userEmail)))
         .thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.renameTeam(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(renameTeamRequest))
 
@@ -452,7 +476,8 @@ class TeamsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.renameTeam(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.obj())
 
@@ -470,12 +495,13 @@ class TeamsControllerSpec
 
       val exception = TeamNameNotUniqueException.forName("new name")
 
-      when(fixture.teamsService.renameTeam(any, any)).thenReturn(Future.successful(Left(exception)))
+      when(fixture.teamsService.renameTeam(any, any, eqTo(userEmail))).thenReturn(Future.successful(Left(exception)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.renameTeam(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(renameTeamRequest))
 
@@ -491,19 +517,20 @@ class TeamsControllerSpec
       val id = "test-id"
       val assignEgressesRequest = AddEgressesRequest(Seq("egress1", "egress2"))
 
-      when(fixture.teamsService.addEgressesToTeam(any, eqTo(assignEgressesRequest))).thenReturn(Future.successful(Right(())))
+      when(fixture.teamsService.addEgressesToTeam(any, eqTo(assignEgressesRequest), eqTo(userEmail))).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addEgressesToTeam(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(assignEgressesRequest))
 
         val result = route(fixture.application, request).value
 
         status(result) mustBe CREATED
-        verify(fixture.teamsService).addEgressesToTeam(eqTo(id), eqTo(assignEgressesRequest))
+        verify(fixture.teamsService).addEgressesToTeam(eqTo(id), eqTo(assignEgressesRequest), eqTo(userEmail))
       }
     }
     "must return 400 bad request when the request is invalid" in {
@@ -513,7 +540,8 @@ class TeamsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addEgressesToTeam(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.obj())
 
@@ -527,12 +555,13 @@ class TeamsControllerSpec
       val id = "bad-test-id"
       val assignEgressesRequest = AddEgressesRequest(Seq("egress1", "egress2"))
 
-      when(fixture.teamsService.addEgressesToTeam(eqTo(id), eqTo(assignEgressesRequest))).thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
+      when(fixture.teamsService.addEgressesToTeam(eqTo(id), eqTo(assignEgressesRequest), eqTo(userEmail))).thenReturn(Future.successful(Left(TeamNotFoundException.forId(id))))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.addEgressesToTeam(id))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
           )
           .withBody(Json.toJson(assignEgressesRequest))
 
@@ -550,14 +579,17 @@ class TeamsControllerSpec
       val id = "test-id"
       val egressId = "test-egress-id"
 
-      when(fixture.teamsService.removeEgressFromTeam(any, any)).thenReturn(Future.successful(Right(())))
+      when(fixture.teamsService.removeEgressFromTeam(any, any, eqTo(userEmail))).thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeEgressFromTeam(id, egressId))
+          .withHeaders(
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
+          )
         val result = route(fixture.application, request).value
 
         status(result) mustBe NO_CONTENT
-        verify(fixture.teamsService).removeEgressFromTeam(eqTo(id), eqTo(egressId))
+        verify(fixture.teamsService).removeEgressFromTeam(eqTo(id), eqTo(egressId), eqTo(userEmail))
       }
     }
 
@@ -568,10 +600,13 @@ class TeamsControllerSpec
       val egressId = "test-egress-id"
       val exception = TeamNotFoundException.forId(id)
 
-      when(fixture.teamsService.removeEgressFromTeam(any, any)).thenReturn(Future.successful(Left(exception)))
+      when(fixture.teamsService.removeEgressFromTeam(any, any, eqTo(userEmail))).thenReturn(Future.successful(Left(exception)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeEgressFromTeam(id, egressId))
+          .withHeaders(
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
+          )
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -586,10 +621,13 @@ class TeamsControllerSpec
       val egressId = "test-egress-id"
       val exception = EgressNotFoundException.forTeamAndEgress(team, egressId)
 
-      when(fixture.teamsService.removeEgressFromTeam(any, any)).thenReturn(Future.successful(Left(exception)))
+      when(fixture.teamsService.removeEgressFromTeam(any, any, eqTo(userEmail))).thenReturn(Future.successful(Left(exception)))
 
       running(fixture.application) {
         val request = FakeRequest(routes.TeamsController.removeEgressFromTeam(id, egressId))
+          .withHeaders(
+            userEmailHeader -> encrypt(fixture.crypto, userEmail)
+          )
         val result = route(fixture.application, request).value
 
         status(result) mustBe NOT_FOUND
@@ -597,7 +635,7 @@ class TeamsControllerSpec
     }
   }
 
-  private case class Fixture(application: PlayApplication, teamsService: TeamsService, applicationsService: ApplicationsSearchService)
+  private case class Fixture(application: PlayApplication, teamsService: TeamsService, applicationsService: ApplicationsSearchService, crypto: ApplicationCrypto)
 
   private def buildFixture(): Fixture = {
     val teamsService = mock[TeamsService]
@@ -612,7 +650,9 @@ class TeamsControllerSpec
       )
       .build()
 
-    Fixture(application, teamsService, applicationsService)
+    val crypto = application.injector.instanceOf[ApplicationCrypto]
+
+    Fixture(application, teamsService, applicationsService, crypto)
   }
 
 }
