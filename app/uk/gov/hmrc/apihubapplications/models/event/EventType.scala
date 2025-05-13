@@ -60,4 +60,5 @@ object EventType extends Enumerable.Implicits {
   implicit val enumerable: Enumerable[EventType] =
     Enumerable(values.map(value => value.toString -> value)*)
 
+
 }
