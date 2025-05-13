@@ -31,19 +31,28 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
                                            clock: Clock,
                                            hipEnvironments: HipEnvironments)(implicit ec: ExecutionContext) extends Logging {
 
+  private def asParameters(accessRequest: AccessRequest) = {
+    Seq(
+      Parameter("accessRequestId", accessRequest.id.get),
+      Parameter("apiId", accessRequest.apiId),
+      Parameter("apiTitle", accessRequest.apiName),
+      Parameter("environmentId", accessRequest.environmentId)
+    )
+  }
+
   def approve(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
     eventService.log(Event.newEvent(
-      entityId = accessRequest.applicationId,
-      entityType = Application,
-      eventType = AccessRequestApproved,
-      user = accessRequestDecisionRequest.decidedBy,
-      timestamp = timestamp,
-      description = accessRequest.apiName,
-      detail = s"This request for access to ${accessRequest.apiName} was approved and scopes were added to the application's credentials in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment.",
-      parameters = Seq(Parameter("decisionRequest", accessRequestDecisionRequest),
-        Parameter("accessRequestId", accessRequest.id.get)) *
+    entityId = accessRequest.applicationId,
+    entityType = Application,
+    eventType = AccessRequestApproved,
+    user = accessRequestDecisionRequest.decidedBy,
+    timestamp = timestamp,
+    description = accessRequest.apiName,
+    detail = s"This request for access to ${accessRequest.apiName} was approved and scopes were added to the application's credentials in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment.",
+    parameters = asParameters(accessRequest) *
     ))
   }
+
 
   def cancel(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
     eventService.log(Event.newEvent(
@@ -54,8 +63,7 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
       timestamp = timestamp,
       description = s"Cancelled for ${accessRequest.apiName}",
       detail = s"This request for access to ${accessRequest.apiName} in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment was cancelled.",
-      parameters = Seq(Parameter("cancelRequest", accessRequestCancelRequest),
-        Parameter("accessRequestId", accessRequest.id.get)) *
+      parameters = asParameters(accessRequest) *
     ))
   }
 
@@ -68,8 +76,8 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
       timestamp = timestamp,
       description = s"Rejected for ${accessRequest.apiName}",
       detail = s"This request for access to ${accessRequest.apiName} in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment was rejected.",
-      parameters = Seq(Parameter("decisionRequest", accessRequestDecisionRequest),
-        Parameter("accessRequestId", accessRequest.id.get)) *
+      parameters = asParameters(accessRequest) *
+
     ))
   }
 
@@ -86,9 +94,7 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
         timestamp = timestamp,
         description = s"${accessRequest.apiName}",
         detail = s"This access request was created for the ${hipEnvironments.forId(accessRequest.environmentId).name} environment requesting access to ${accessRequest.apiName}.",
-        parameters = Seq(
-          Parameter("accessRequestRequest", accessRequestRequest),
-          Parameter("accessRequestId", accessRequest.id)) *
+        parameters = asParameters(accessRequest) *
       )))
 
     Future.sequence(eventFutures).map(_ => Future.successful(()))

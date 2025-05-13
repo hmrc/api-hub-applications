@@ -69,8 +69,11 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
         description = "test-api-name",
         detail = s"This access request was created for the Test environment requesting access to test-api-name.",
         parameters = Seq(
-          Parameter("accessRequestRequest", accessRequestRequest),
-          Parameter("accessRequestId","access-request-id")) *
+          Parameter("accessRequestId", "access-request-id"),
+          Parameter("apiId","test-api-id"),
+          Parameter("apiTitle","test-api-name"),
+          Parameter("environmentId","test")
+        ) *
       )
 
       fixture.accessRequestsEventService.create(accessRequestRequest, accessRequests).map {
@@ -107,8 +110,11 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           description = "test-api-name",
           detail = "This request for access to test-api-name was approved and scopes were added to the application's credentials in the Test environment.",
           parameters = Seq(
-            Parameter("decisionRequest", approvalRequest),
-            Parameter("accessRequestId", "access-request-id")) *
+            Parameter("accessRequestId", "access-request-id"),
+            Parameter("apiId","api-id"),
+            Parameter("apiTitle","test-api-name"),
+            Parameter("environmentId","test")
+          ) *
         )
 
         fixture.accessRequestsEventService.approve(approvalRequest, accessRequest, now).map {
@@ -146,8 +152,11 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           description = "Rejected for test-api-name",
           detail = "This request for access to test-api-name in the Test environment was rejected.",
           parameters = Seq(
-            Parameter("decisionRequest", rejectionRequest),
-            Parameter("accessRequestId", "access-request-id")) *
+            Parameter("accessRequestId", "access-request-id"),
+            Parameter("apiId","api-id"),
+            Parameter("apiTitle","test-api-name"),
+            Parameter("environmentId","test")
+          ) *
         )
 
         fixture.accessRequestsEventService.reject(rejectionRequest, accessRequest, now).map {
@@ -186,8 +195,11 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           description = "Cancelled for test-api-name",
           detail = "This request for access to test-api-name in the Test environment was cancelled.",
           parameters = Seq(
-            Parameter("cancelRequest", cancelRequest),
-            Parameter("accessRequestId", "access-request-id")) *
+            Parameter("accessRequestId", "access-request-id"),
+            Parameter("apiId","api-id"),
+            Parameter("apiTitle","test-api-name"),
+            Parameter("environmentId","test")
+          ) *
         )
 
         fixture.accessRequestsEventService.cancel(cancelRequest, accessRequest, now).map {
