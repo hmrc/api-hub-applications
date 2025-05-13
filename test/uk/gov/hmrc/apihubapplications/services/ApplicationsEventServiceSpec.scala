@@ -241,20 +241,22 @@ class ApplicationsEventServiceSpec extends AsyncFreeSpec with Matchers with Mock
   }
 
   "fixScopes" - {
-    val fixture = buildFixture()
+    "must log the correct event" in {
+      val fixture = buildFixture()
 
-    val expected = buildEvent(
-      application = application,
-      eventType = ScopesFixed
-    )
+      val expected = buildEvent(
+        application = application,
+        eventType = ScopesFixed
+      )
 
-    when(fixture.eventService.log(any)).thenReturn(Future.successful(()))
+      when(fixture.eventService.log(any)).thenReturn(Future.successful(()))
 
-    fixture.applicationsEventService.fixScopes(application, user, timestamp).map(
-      _ =>
-        verify(fixture.eventService).log(eqTo(expected))
-        succeed
-    )
+      fixture.applicationsEventService.fixScopes(application, user, timestamp).map(
+        _ =>
+          verify(fixture.eventService).log(eqTo(expected))
+          succeed
+      )
+    }
   }
 
   private def buildFixture(): Fixture = {
