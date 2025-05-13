@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{times, verify, verifyNoInteractions, when}
+import org.mockito.Mockito.{clearInvocations, verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -28,7 +28,7 @@ import uk.gov.hmrc.apihubapplications.connectors.IdmsConnector
 import uk.gov.hmrc.apihubapplications.models.application.*
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationCredentialLimitException, ApplicationNotFoundException, CredentialNotFoundException, IdmsException}
-import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope, Secret}
+import uk.gov.hmrc.apihubapplications.models.idms.{Client, ClientResponse, ClientScope}
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
 import uk.gov.hmrc.apihubapplications.testhelpers.FakeHipEnvironments
@@ -192,12 +192,14 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .copy(lastUpdated = LocalDateTime.now(clock))
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(eventService.createCredential(any, any, any, any)).thenReturn(Future.successful(()))
       when(scopeFixer.fix(eqTo(updatedApp), eqTo(Seq.empty), eqTo(expectedCredential))(any)).thenReturn(Future.successful(Right(())))
 
-      service.addCredential(testAppId, secondaryEnvironment)(HeaderCarrier()) map {
+      service.addCredential(testAppId, secondaryEnvironment, testUserEmail)(HeaderCarrier()) map {
         newCredential =>
           verify(idmsConnector).createClient(eqTo(FakeHipEnvironments.testEnvironment), eqTo(expectedClient))(any)
           verify(repository).update(updatedApp)
+          verify(eventService).createCredential(eqTo(updatedApp), eqTo(expectedCredential), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           newCredential mustBe Right(expectedCredential)
       }
     }
@@ -235,10 +237,11 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
         .copy(lastUpdated = LocalDateTime.now(clock))
 
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(eventService.createCredential(any, any, any, any)).thenReturn(Future.successful(()))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
       when(scopeFixer.fix(eqTo(updatedApp), eqTo(Seq.empty), eqTo(expectedCredential))(any)).thenReturn(Future.successful(Right(())))
 
-      service.addCredential(testAppId, primaryEnvironment)(HeaderCarrier()) map {
+      service.addCredential(testAppId, primaryEnvironment, testUserEmail)(HeaderCarrier()) map {
         newCredential =>
           verify(idmsConnector).createClient(eqTo(FakeHipEnvironments.productionEnvironment), eqTo(expectedClient))(any)
           verify(repository).update(updatedApp)
@@ -268,7 +271,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(idmsConnector.fetchClientScopes(any, any)(any)).thenReturn(Future.successful(Right(Seq.empty)))
       when(searchService.findById(any)(any)).thenReturn(Future.successful(Right(application)))
 
-      service.addCredential(applicationId, primaryEnvironment)(HeaderCarrier()).map {
+      service.addCredential(applicationId, primaryEnvironment, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(ApplicationCredentialLimitException.forApplication(application, primaryEnvironment))
       }
@@ -295,20 +298,32 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
           name = "test-name",
           created = LocalDateTime.now(clock),
           createdBy = Creator("test-email"),
-          lastUpdated = LocalDateTime.now(clock),
+          lastUpdated = LocalDateTime.now(clock).minusDays(1),
           teamMembers = Seq(TeamMember(email = "test-email")),
           credentials = Set.empty
         )
           .addCredential(hipEnvironment, Credential("other-credential-id", LocalDateTime.now(clock), None, None, hipEnvironment.id))
           .addCredential(hipEnvironment, Credential(clientId, LocalDateTime.now(clock), None, None, hipEnvironment.id))
 
+        val updated = application
+          .removeCredential(hipEnvironment, clientId)
+          .updated(LocalDateTime.now(clock))
+
         when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
         when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Right(())))
         when(repository.update(any)).thenReturn(Future.successful(Right(())))
+        when(eventService.revokeCredential(any, any, any, any, any)).thenReturn(Future.successful(()))
 
-        service.deleteCredential(applicationId, hipEnvironment, clientId)(HeaderCarrier()).map {
+        service.deleteCredential(applicationId, hipEnvironment, clientId, testUserEmail)(HeaderCarrier()).map {
           result =>
             verify(idmsConnector).deleteClient(eqTo(hipEnvironment), eqTo(clientId))(any)
+            verify(eventService).revokeCredential(
+              eqTo(updated),
+              eqTo(hipEnvironment),
+              eqTo(clientId),
+              eqTo(testUserEmail),
+              eqTo(LocalDateTime.now(clock))
+            )
             result mustBe Right(())
         }
       }
@@ -337,8 +352,9 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(eventService.revokeCredential(any, any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
+      service.deleteCredential(applicationId, primaryEnvironment, clientId, testUserEmail)(HeaderCarrier()).map {
         result =>
           val updated = application
             .copy(lastUpdated = LocalDateTime.now(clock))
@@ -370,8 +386,9 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Left(IdmsException.clientNotFound(clientId))))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(eventService.revokeCredential(any, any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
+      service.deleteCredential(applicationId, primaryEnvironment, clientId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Right(())
       }
@@ -386,7 +403,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
-      service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
+      service.deleteCredential(applicationId, primaryEnvironment, clientId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(ApplicationNotFoundException.forId(applicationId))
       }
@@ -412,7 +429,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
 
-      service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
+      service.deleteCredential(applicationId, primaryEnvironment, clientId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(CredentialNotFoundException.forClientId(clientId))
       }
@@ -440,7 +457,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
       when(idmsConnector.deleteClient(any, any)(any)).thenReturn(Future.successful(Left(IdmsException.unexpectedResponse(500))))
 
-      service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
+      service.deleteCredential(applicationId, primaryEnvironment, clientId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(IdmsException.unexpectedResponse(500))
       }
@@ -466,7 +483,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(application)))
 
-      service.deleteCredential(applicationId, primaryEnvironment, clientId)(HeaderCarrier()).map {
+      service.deleteCredential(applicationId, primaryEnvironment, clientId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(ApplicationCredentialLimitException.forApplication(application, primaryEnvironment))
       }
@@ -561,8 +578,9 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     val accessRequestsService = mock[AccessRequestsService]
     val scopeFixer = mock[ScopeFixer]
     val hipEnvironments = mock[HipEnvironments]
-    val service = new ApplicationsCredentialsServiceImpl(searchService, repository, idmsConnector, clock, accessRequestsService, scopeFixer, hipEnvironments)
-    Fixture(searchService, repository, idmsConnector, accessRequestsService, scopeFixer, service, hipEnvironments)
+    val eventService = mock[ApplicationsEventService]
+    val service = new ApplicationsCredentialsServiceImpl(searchService, repository, idmsConnector, clock, accessRequestsService, scopeFixer, hipEnvironments, eventService)
+    Fixture(searchService, repository, idmsConnector, accessRequestsService, scopeFixer, service, hipEnvironments, eventService)
   }
 
   private case class Fixture (
@@ -572,7 +590,8 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
     accessRequestsService: AccessRequestsService,
     scopeFixer: ScopeFixer,
     service: ApplicationsCredentialsService,
-    hipEnvironments: HipEnvironments
+    hipEnvironments: HipEnvironments,
+    eventService: ApplicationsEventService
   )
 
 }
@@ -580,6 +599,7 @@ class ApplicationsCredentialsServiceSpec extends AsyncFreeSpec with Matchers wit
 object ApplicationsCredentialsServiceSpec {
 
   val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+  val testUserEmail: String = "test-user-email"
 
   val baseApplication: Application = Application(
     id = Some("test-application-id"),

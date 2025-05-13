@@ -29,9 +29,10 @@ import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.exception.{ApiNotFoundException, ApplicationNotFoundException, IdmsException, TeamNotFoundException}
 import uk.gov.hmrc.apihubapplications.models.requests.AddApiRequest
 import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.models.team.TeamType.ConsumerTeam
 import uk.gov.hmrc.apihubapplications.repositories.ApplicationsRepository
 import uk.gov.hmrc.apihubapplications.services.helpers.ScopeFixer
-import uk.gov.hmrc.apihubapplications.testhelpers.{AccessRequestGenerator, FakeHipEnvironments}
+import uk.gov.hmrc.apihubapplications.testhelpers.AccessRequestGenerator
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -50,7 +51,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val testAppId = "test-app-id"
       when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
 
-      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")))(HeaderCarrier()) map {
+      service.addApi(testAppId, AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1")), testUserEmail)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
@@ -72,19 +73,21 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         credentials = Set.empty
       )
 
-      val api = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
-//      val appWithScopesAdded = app.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
-      val appWithApisAdded = app.setApis(apis = Seq(Api(api.id, api.title, api.endpoints)))
+      val addApiRequest = AddApiRequest("api_id", "api_title", Seq(Endpoint("GET", "/foo/bar")), Seq("test-scope-1"))
+      val api = Api(addApiRequest.id, addApiRequest.title, addApiRequest.endpoints)
+      val appWithApisAdded = app.setApis(apis = Seq(api))
 
       when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(app)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithApisAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(eventService.addApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.addApi(testAppId, api)(HeaderCarrier()) map {
+      service.addApi(testAppId, addApiRequest, testUserEmail)(HeaderCarrier()) map {
         actual =>
           verify(scopeFixer).fix(eqTo(appWithApisAdded), eqTo(Seq.empty))(any)
           verify(repository).update(eqTo(appWithApisAdded))
+          verify(eventService).addApi(eqTo(appWithApisAdded), eqTo(api), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           actual mustBe Right(())
       }
     }
@@ -109,17 +112,17 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
         Seq(api)
       )
 
-//      val appWithScopesAdded = appWithApiAlreadyAdded.setScopes(FakeHipEnvironments.secondaryEnvironment, Seq(Scope("test-scope-1")))
-
       when(searchService.findById(eqTo(testAppId))(any)).thenReturn(Future.successful(Right(appWithApiAlreadyAdded)))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
       when(repository.update(eqTo(appWithApiAlreadyAdded))).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(testAppId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(eventService.addApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.addApi(testAppId, addApiRequest)(HeaderCarrier()) map {
+      service.addApi(testAppId, addApiRequest, testUserEmail)(HeaderCarrier()) map {
         actual =>
           verify(scopeFixer).fix(eqTo(appWithApiAlreadyAdded), eqTo(Seq.empty))(any)
           verify(repository).update(eqTo(appWithApiAlreadyAdded))
+          verify(eventService).addApi(eqTo(appWithApiAlreadyAdded), eqTo(api), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           actual mustBe Right(())
       }
     }
@@ -148,7 +151,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(repository.update(eqTo(updatedApp))).thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(testAppId))))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(updatedApp)))
 
-      service.addApi(testAppId, api)(HeaderCarrier()) map {
+      service.addApi(testAppId, api, testUserEmail)(HeaderCarrier()) map {
         actual =>
           actual mustBe Left(ApplicationNotFoundException.forId(testAppId))
       }
@@ -175,7 +178,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       credentials = Set.empty
     )
 
-    "must remove scopes, cancel any pending access requests, and update the API in MongoDb" in {
+    "must remove scopes, cancel any pending access requests, log the event, and update the API in MongoDb" in {
       val fixture = buildFixture
       import fixture.*
 
@@ -189,12 +192,14 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.cancelAccessRequests(any, any)).thenReturn(Future.successful(Right(())))
       when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
+      when(eventService.removeApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+      service.removeApi(applicationId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verify(scopeFixer).fix(eqTo(updated), eqTo(Seq.empty))(any)
           verify(repository).update(eqTo(updated))
           verify(accessRequestsService).cancelAccessRequests(eqTo(applicationId), eqTo(apiId))
+          verify(eventService).removeApi(eqTo(application), eqTo(api), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           result.value mustBe()
       }
     }
@@ -206,7 +211,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(applicationId))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
-      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+      service.removeApi(applicationId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.scopeFixer)
           verifyNoInteractions(fixture.accessRequestsService)
@@ -221,7 +226,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(baseApplication)))
 
-      service.removeApi(applicationId, apiId)(HeaderCarrier()).map {
+      service.removeApi(applicationId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.scopeFixer)
           verifyNoInteractions(fixture.accessRequestsService)
@@ -247,8 +252,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(accessRequestsService.getAccessRequests(eqTo(Some(application.safeId)), eqTo(None))).thenReturn(Future.successful(Seq.empty))
       when(repository.update(eqTo(updated))).thenReturn(Future.successful(Right(())))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Left(expected)))
+      when(eventService.removeApi(any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.removeApi(application.safeId, apiId)(HeaderCarrier()).map {
+      service.removeApi(application.safeId, apiId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }
@@ -257,10 +263,11 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
   "changeOwningTeam" - {
     val applicationId = "test-application-id"
-    val teamId = "test-team-id"
+    val newTeamId = "test-new-team-id"
     val oldTeamId = "test-old-team-id"
 
-    val team = Team("team-name", Seq.empty, clock = clock)
+    val newTeam = buildTeam(newTeamId, "test-new-team-name")
+    val oldTeam = buildTeam(oldTeamId, "test-old-team-name")
 
     val onceUponATime = LocalDateTime.now(clock).minusDays(1)
 
@@ -279,24 +286,53 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       import fixture.*
 
       val application = baseApplication.setTeamId(oldTeamId)
+      val timestamp = LocalDateTime.now(clock)
       val updated = application
-        .setTeamId(teamId)
-        .updated(clock)
+        .setTeamId(newTeamId)
+        .updated(timestamp)
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
       when(repository.update(any)).thenReturn(Future.successful(Right(())))
-      when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
+      when(teamsService.findById(eqTo(newTeamId))).thenReturn(Future.successful(Right(newTeam)))
+      when(teamsService.findById(eqTo(oldTeamId))).thenReturn(Future.successful(Right(oldTeam)))
       when(emailConnector.sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any))
         .thenReturn(Future.successful(Right(())))
       when(emailConnector.sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any))
         .thenReturn(Future.successful(Right(())))
+      when(eventService.changeTeam(any, any, any, any, any)).thenReturn(Future.successful(()))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verify(repository).update(eqTo(updated))
-          verify(teamsService).findById(eqTo(teamId))
-          verify(emailConnector).sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any)
-          verify(emailConnector).sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any)
+          verify(teamsService).findById(eqTo(newTeamId))
+          verify(teamsService).findById(eqTo(oldTeamId))
+          verify(emailConnector).sendApplicationOwnershipChangedEmailToOldTeamMembers(eqTo(oldTeam), eqTo(newTeam), eqTo(updated))(any)
+          verify(emailConnector).sendApplicationOwnershipChangedEmailToNewTeamMembers(eqTo(newTeam), eqTo(updated))(any)
+          verify(eventService).changeTeam(updated, newTeam, Some(oldTeam), testUserEmail, timestamp)
+          result.value mustBe()
+      }
+    }
+
+    "must log events correctly and not send emails when the application was not previously owned by a global team" in {
+      val fixture = buildFixture
+      import fixture.*
+
+      val application = baseApplication
+      val timestamp = LocalDateTime.now(clock)
+      val updated = application
+        .setTeamId(newTeamId)
+        .updated(timestamp)
+
+      when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(application)))
+      when(repository.update(any)).thenReturn(Future.successful(Right(())))
+      when(teamsService.findById(eqTo(newTeamId))).thenReturn(Future.successful(Right(newTeam)))
+      when(eventService.changeTeam(any, any, any, any, any)).thenReturn(Future.successful(()))
+
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
+        result =>
+          verify(emailConnector, never).sendApplicationOwnershipChangedEmailToOldTeamMembers(any, any, any)(any)
+          verify(emailConnector, never).sendApplicationOwnershipChangedEmailToNewTeamMembers(any, any)(any)
+          verify(eventService).changeTeam(updated, newTeam, None, testUserEmail, timestamp)
           result.value mustBe()
       }
     }
@@ -308,7 +344,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any))
         .thenReturn(Future.successful(Left(ApplicationNotFoundException.forId(applicationId))))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
@@ -321,13 +357,13 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       import fixture.*
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Right(baseApplication)))
-      when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException(""))))
+      when(teamsService.findById(any)).thenReturn(Future.successful(Left(TeamNotFoundException.forId(newTeamId))))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
-          result mustBe Left(TeamNotFoundException.forId(teamId))
+          result mustBe Left(TeamNotFoundException.forId(newTeamId))
       }
     }
 
@@ -338,9 +374,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       val expected = IdmsException.clientNotFound("test-client-id")
 
       when(searchService.findById(eqTo(applicationId), eqTo(true))(any)).thenReturn(Future.successful(Left(expected)))
-      when(teamsService.findById(any)).thenReturn(Future.successful(Right(team)))
+      when(teamsService.findById(any)).thenReturn(Future.successful(Right(newTeam)))
 
-      service.changeOwningTeam(applicationId, teamId)(HeaderCarrier()).map {
+      service.changeOwningTeam(applicationId, newTeamId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verifyNoInteractions(fixture.accessRequestsService)
           verify(repository, never).update(any)
@@ -442,10 +478,12 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Right(baseApplication)))
       when(accessRequestsService.getAccessRequests(eqTo(Some(applicationId)), eqTo(None))).thenReturn(Future.successful(accessRequests))
       when(scopeFixer.fix(any, any)(any)).thenReturn(Future.successful(Right(())))
+      when(eventService.fixScopes(any, any, any)).thenReturn(Future.successful(()))
 
-      service.fixScopes(applicationId)(HeaderCarrier()).map {
+      service.fixScopes(applicationId, testUserEmail)(HeaderCarrier()).map {
         result =>
           verify(scopeFixer).fix(eqTo(baseApplication), eqTo(accessRequests))(any)
+          verify(eventService).fixScopes(eqTo(baseApplication), eqTo(testUserEmail), eqTo(LocalDateTime.now(clock)))
           result.value mustBe ()
       }
     }
@@ -458,7 +496,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 
       when(searchService.findById(eqTo(applicationId))(any)).thenReturn(Future.successful(Left(expected)))
 
-      service.fixScopes(applicationId)(HeaderCarrier()).map {
+      service.fixScopes(applicationId, testUserEmail)(HeaderCarrier()).map {
         result =>
           result mustBe Left(expected)
       }
@@ -472,6 +510,7 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     repository: ApplicationsRepository,
     emailConnector: EmailConnector,
     scopeFixer: ScopeFixer,
+    eventService: ApplicationsEventService,
     service: ApplicationsApiService
   )
 
@@ -482,8 +521,9 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
     val repository = mock[ApplicationsRepository]
     val emailConnector = mock[EmailConnector]
     val scopeFixer = mock[ScopeFixer]
-    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, clock)
-    Fixture(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, service)
+    val eventService = mock[ApplicationsEventService]
+    val service = new ApplicationsApiServiceImpl(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, clock, eventService)
+    Fixture(searchService, accessRequestsService, teamsService, repository, emailConnector, scopeFixer, eventService, service)
   }
 
 }
@@ -491,5 +531,17 @@ class ApplicationsApiServiceSpec extends AsyncFreeSpec with Matchers with Mockit
 object ApplicationsApiServiceSpec {
 
   val clock: Clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+  val testUserEmail = "test.user@hmrc-gov.uk"
+
+  def buildTeam(id: String, name: String): Team = {
+    Team(
+      id = Some(id),
+      name = name,
+      created = LocalDateTime.now(clock),
+      teamMembers = Seq.empty,
+      teamType = ConsumerTeam,
+      egresses = Seq.empty
+    )
+  }
 
 }

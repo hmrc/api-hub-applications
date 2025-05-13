@@ -38,15 +38,15 @@ case class Event(
 object Event {
 
   def newEvent(
-                entityId: String,
-                entityType: EntityType,
-                eventType: EventType,
-                user: String,
-                timestamp: LocalDateTime,
-                description: String,
-                detail: String,
-                parameters: Parameter*
-              ): Event = {
+    entityId: String,
+    entityType: EntityType,
+    eventType: EventType,
+    user: String,
+    timestamp: LocalDateTime,
+    description: String,
+    detail: String,
+    parameters: Parameter *
+  ): Event = {
     Event(
       id = None,
       entityId = entityId,
@@ -56,11 +56,10 @@ object Event {
       timestamp = timestamp,
       description = description,
       detail = detail,
-      parameters = Parameters.toJson(parameters *)
+      parameters = Parameters.toJson(parameters*)
     )
   }
 
   implicit val eventFormat: Format[Event] = Json.format[Event]
+
 }
-
-

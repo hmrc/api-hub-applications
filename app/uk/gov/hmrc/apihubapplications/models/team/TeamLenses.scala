@@ -47,6 +47,13 @@ object TeamLenses {
 
   implicit class TeamLensOps(team: Team) {
 
+    def safeId: String = {
+      team.id match {
+        case Some(id) => id
+        case _ => throw new IllegalStateException(s"Team does not have an Id when expected to do so: name=${team.name}")
+      }
+    }
+
     def setId(id: String): Team = {
       teamId.set(team, Some(id))
     }
