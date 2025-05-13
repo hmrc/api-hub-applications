@@ -19,8 +19,6 @@ package uk.gov.hmrc.apihubapplications.services
 import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
-import play.api.libs.json.JsValue
-import play.api.mvc.Request
 import uk.gov.hmrc.apihubapplications.connectors.EmailConnector
 import uk.gov.hmrc.apihubapplications.models.exception.{ApplicationsException, EgressNotFoundException, ExceptionRaising}
 import uk.gov.hmrc.apihubapplications.models.requests.TeamMemberRequest
