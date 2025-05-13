@@ -41,8 +41,8 @@ class TeamsService @Inject()(
   def create(newTeam: NewTeam, requestingUser: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Team]] = {
     repository.insert(newTeam.toTeam(clock)).flatMap {
       case Right(team) => for {
-          _ <- emailConnector.sendTeamMemberAddedEmailToTeamMembers(team.teamMembers, team)
           _ <- eventService.create(team, requestingUser)
+          _ <- emailConnector.sendTeamMemberAddedEmailToTeamMembers(team.teamMembers, team)
         } yield {
           Right(team)
         }
@@ -67,8 +67,8 @@ class TeamsService @Inject()(
       case Right(team) if !team.hasTeamMember(request.email) =>
         (for {
           result <- EitherT(repository.update(team.addTeamMember(request.toTeamMember)))
-          _ <- EitherT.right(emailConnector.sendTeamMemberAddedEmailToTeamMembers(Seq(request.toTeamMember), team))
           _ <- EitherT.right(eventService.addMember(team, requestingUser, request.email))
+          _ <- EitherT.right(emailConnector.sendTeamMemberAddedEmailToTeamMembers(Seq(request.toTeamMember), team))
         } yield result).value
       case Right(team) =>
         val future = Future.successful(Left(raiseTeamMemberExistsException.forTeam(team)))
@@ -87,8 +87,8 @@ class TeamsService @Inject()(
       case Right(team) =>
         (for {
           result <- EitherT(repository.update(team.removeTeamMember(email)))
-          _ <- EitherT.right(emailConnector.sendRemoveTeamMemberFromTeamEmail(email, team))
           _ <- EitherT.right(eventService.removeMember(team, requestingUser, email))
+          _ <- EitherT.right(emailConnector.sendRemoveTeamMemberFromTeamEmail(email, team))
         } yield result).value
       case Left(e) =>
         Future.successful(Left(e))
