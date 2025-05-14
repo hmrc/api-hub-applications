@@ -147,12 +147,12 @@ class DeploymentsService @Inject()(
       response <- EitherT(apimConnector.promoteAPI(publisherRef, environmentFrom, environmentTo, egress))
       _ <- EitherT.right(
         logPromoteApiEvent(
-          apiDetail = apiDetail, 
-          environmentFrom = environmentFrom, 
-          environmentTo = environmentTo, 
-          egress = egress, 
-          deployment = deployment, 
-          response = response, 
+          apiDetail = apiDetail,
+          environmentFrom = environmentFrom,
+          environmentTo = environmentTo,
+          egress = egress,
+          deployment = deployment,
+          response = response,
           userEmail = userEmail
         )
       )
@@ -188,24 +188,24 @@ class DeploymentsService @Inject()(
     }
   }
 
-  def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    integrationCatalogueConnector.findById(apiId) flatMap {
-      case Right(apiDetail) =>
-        resolveCurrentAndNewTeams(apiDetail, teamId) flatMap {
-          case Right(owningTeams) =>
-            integrationCatalogueConnector.updateApiTeam(apiId, teamId) flatMap {
-              case Right(()) => for {
-                  _ <- sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam)
-                  _ <- sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam)
-                } yield () match {
-                  case _ => Right(())
-                }
-              case Left(e) => Future.successful(Left(e))
-            }
-          case Left(e) => Future.successful(Left(e))
-        }
-      case Left(e) => Future.successful(Left(e))
-    }
+  def updateApiTeam(apiId: String, teamId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    (for {
+      apiDetail <- EitherT(integrationCatalogueConnector.findById(apiId))
+      owningTeams <- EitherT(resolveCurrentAndNewTeams(apiDetail, teamId))
+      _ <- EitherT(integrationCatalogueConnector.updateApiTeam(apiId, teamId))
+      _ <- EitherT.right(
+        eventService.changeTeam(
+          apiId = apiDetail.id,
+          newTeam = owningTeams.newTeam,
+          oldTeam = owningTeams.currentTeam,
+          userEmail = userEmail,
+          timestamp = LocalDateTime.now(clock)
+        )
+      )
+      _ <- EitherT.right(sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam))
+      _ <- EitherT.right(sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam))
+
+    } yield ()).value
   }
 
   private case class OwningTeams(currentTeam: Option[Team], newTeam: Team)

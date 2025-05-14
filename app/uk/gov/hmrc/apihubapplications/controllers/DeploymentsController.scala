@@ -133,11 +133,14 @@ class DeploymentsController @Inject()(
 
   def updateApiTeam(apiId: String, teamId: String): Action[AnyContent] = identify.async {
     implicit request =>
-      deploymentsService.updateApiTeam(apiId, teamId) flatMap {
-        case Right(()) => Future.successful(Ok)
-        case Left(_: ApiNotFoundException) => Future.successful(NotFound)
-        case Left(e) => throw e
-      }
+      withUserEmail(
+        userEmail =>
+          deploymentsService.updateApiTeam(apiId, teamId, userEmail) flatMap {
+            case Right(()) => Future.successful(Ok)
+            case Left(_: ApiNotFoundException) => Future.successful(NotFound)
+            case Left(e) => throw e
+          }
+      )
   }
 
   def removeTeam(apiId: String): Action[AnyContent] = identify.compose(Action).async {

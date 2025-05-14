@@ -680,35 +680,47 @@ class DeploymentsControllerSpec
     "must return 200 Ok" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.updateApiTeam(eqTo(apiId), eqTo("team2"))(any))
+      when(fixture.deploymentsService.updateApiTeam(eqTo(apiId), eqTo("team2"), eqTo(testUserEmail))(any))
         .thenReturn(Future.successful(Right(())))
 
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.updateApiTeam(apiId, "team2"))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
         val result = route(fixture.application, request).value
 
         status(result) mustBe OK
 
-        verify(fixture.deploymentsService).updateApiTeam(eqTo(apiId), eqTo("team2"))(any)
+        verify(fixture.deploymentsService).updateApiTeam(eqTo(apiId), eqTo("team2"), eqTo(testUserEmail))(any)
       }
     }
 
     "must return 404 Not found when service returns not found " in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.updateApiTeam(eqTo(apiId), eqTo("team2"))(any))
+      when(fixture.deploymentsService.updateApiTeam(eqTo(apiId), eqTo("team2"), eqTo(testUserEmail))(any))
         .thenReturn(Future.successful(Left(ApiNotFoundException.forId(apiId))))
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.updateApiTeam(apiId, "team2"))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+
+        verify(fixture.deploymentsService).updateApiTeam(eqTo(apiId), eqTo("team2"), eqTo(testUserEmail))(any)
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is missing" in {
+      val fixture = buildFixture()
 
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.updateApiTeam(apiId, "team2"))
         val result = route(fixture.application, request).value
 
-        status(result) mustBe NOT_FOUND
-
-        verify(fixture.deploymentsService).updateApiTeam(eqTo(apiId), eqTo("team2"))(any)
+        status(result) mustBe UNAUTHORIZED
       }
     }
-
   }
 
   "removeApiTeam" - {

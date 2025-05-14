@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{clearInvocations, times, verify, verifyNoInteractions, when}
+import org.mockito.Mockito.{clearInvocations, times, verify, verifyNoInteractions, verifyNoMoreInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -292,13 +292,21 @@ class DeploymentsServiceSpec
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
       when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventService.changeTeam(any, any, any, any, any)).thenReturn(Future.successful(()))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
 
-      fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
+      fixture.deploymentsService.updateApiTeam("apiId", "team2", userEmail)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
+          verify(fixture.eventService).changeTeam(
+            apiId = apiDetail.id,
+            newTeam = team2,
+            oldTeam = Some(team1),
+            userEmail = userEmail,
+            timestamp = LocalDateTime.now(clock)
+          )
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToOldTeamMembers(eqTo(team1), eqTo(team2), eqTo(apiDetail))(any)
           verify(fixture.emailConnector).sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)
           succeed
@@ -313,10 +321,10 @@ class DeploymentsServiceSpec
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
       when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventService.changeTeam(any, any, any, any, any)).thenReturn(Future.successful(()))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Right(())))
 
-
-      fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
+      fixture.deploymentsService.updateApiTeam("apiId", "team2", userEmail)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
@@ -334,9 +342,10 @@ class DeploymentsServiceSpec
       when(fixture.teamsService.findById(eqTo("team2"))).thenReturn(Future.successful(Right(team2)))
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Right(apiDetail)))
       when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Right(())))
+      when(fixture.eventService.changeTeam(any, any, any, any, any)).thenReturn(Future.successful(()))
       when(fixture.emailConnector.sendApiOwnershipChangedEmailToNewTeamMembers(eqTo(team2), eqTo(apiDetail))(any)).thenReturn(Future.successful(Left(EmailException.unexpectedResponse(500))))
 
-      fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
+      fixture.deploymentsService.updateApiTeam("apiId", "team2", userEmail)(HeaderCarrier()).map {
         actual =>
           actual mustBe Right(())
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
@@ -355,7 +364,7 @@ class DeploymentsServiceSpec
       val apiNotFoundException = ApiNotFoundException.forId("apiId")
       when(fixture.integrationCatalogueConnector.updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)).thenReturn(Future.successful(Left(apiNotFoundException)))
 
-      fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
+      fixture.deploymentsService.updateApiTeam("apiId", "team2", userEmail)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(apiNotFoundException)
           verify(fixture.integrationCatalogueConnector).updateApiTeam(eqTo("apiId"), eqTo("team2"))(any)
@@ -371,7 +380,7 @@ class DeploymentsServiceSpec
       val apiNotFoundException = ApiNotFoundException.forId("apiId")
       when(fixture.integrationCatalogueConnector.findById(eqTo("apiId"))(any)).thenReturn(Future.successful(Left(apiNotFoundException)))
 
-      fixture.deploymentsService.updateApiTeam("apiId", "team2")(HeaderCarrier()).map {
+      fixture.deploymentsService.updateApiTeam("apiId", "team2", userEmail)(HeaderCarrier()).map {
         actual =>
           actual mustBe Left(apiNotFoundException)
           verify(fixture.integrationCatalogueConnector).findById(eqTo("apiId"))(any)
