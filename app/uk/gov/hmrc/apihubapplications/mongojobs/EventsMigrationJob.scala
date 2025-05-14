@@ -18,12 +18,10 @@ package uk.gov.hmrc.apihubapplications.mongojobs
 
 import com.google.inject.Inject
 import play.api.Logging
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestCancelRequest, AccessRequestDecisionRequest, AccessRequestRequest, Approved, Cancelled, Rejected}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved, Cancelled, Rejected}
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.services.{AccessRequestsEventService, AccessRequestsService, ApplicationsEventService, ApplicationsService, TeamsEventService, TeamsService}
-
-import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 class EventsMigrationJob @Inject()(
@@ -37,8 +35,6 @@ class EventsMigrationJob @Inject()(
 
   private val MIGRATION_USER = "<migration>"
   private val UNKNOWN = "<unknown>"
-  private val UNUSED_STRING = ""
-  private val UNUSED_SEQ = Seq.empty
 
   override def run(): Future[Unit] = {
     logger.info("Event migration job is running")
@@ -46,15 +42,16 @@ class EventsMigrationJob @Inject()(
     for {
       allApplications <- applicationsService.findAll(includeDeleted = true)
       accessRequestsByApplication <- accessRequestsService.getAccessRequests(None, None).map(_.groupBy(_.applicationId))
+      getAccessRequestsForApplication = (application: Application) => accessRequestsByApplication.getOrElse(application.id.getOrElse(""), Seq.empty)
       allTeams <- teamsService.findAll(None)
       
       _ <- runCreateApplicationEventMigration(allApplications)
       _ <- runAddApiToApplicationEventMigration(allApplications)
       _ <- runCreateCredentialEventMigration(allApplications)
-      _ <- runCreateAccessRequestEventMigration(allApplications, accessRequestsByApplication)
-      _ <- runApproveAccessRequestEventMigration(allApplications, accessRequestsByApplication)
-      _ <- runRejectAccessRequestEventMigration(allApplications, accessRequestsByApplication)
-      _ <- runCancelAccessRequestEventMigration(allApplications, accessRequestsByApplication)
+      _ <- runCreateAccessRequestEventMigration(allApplications, getAccessRequestsForApplication)
+      _ <- runApproveAccessRequestEventMigration(allApplications, getAccessRequestsForApplication)
+      _ <- runRejectAccessRequestEventMigration(allApplications, getAccessRequestsForApplication)
+      _ <- runCancelAccessRequestEventMigration(allApplications, getAccessRequestsForApplication)
       _ <- runCreateTeamEventMigration(allTeams)
       _ <- runAddEgressesToTeamEventMigration(allTeams)
       _ <- runAddTeamMemberToTeamEventMigration(allTeams)
@@ -83,58 +80,38 @@ class EventsMigrationJob @Inject()(
   }
 
   private def runCreateAccessRequestEventMigration(allApplications: Seq[Application],
-                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
+                                                   getAccessRequestsForApplication: Application => Seq[AccessRequest]): Future[Seq[Unit]] = {
     logEventForEach("Create Access Request", allApplications, application => {
-      val accessRequestsForApplication = accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
-      val accessRequestRequest = AccessRequestRequest(
-        application.id.getOrElse(UNKNOWN), UNUSED_STRING, MIGRATION_USER, UNUSED_SEQ, UNUSED_STRING
-      )
-      accessRequestsEventService.create(accessRequestRequest, accessRequestsForApplication)
+      val accessRequestsForApplication = getAccessRequestsForApplication(application)
+      accessRequestsEventService.created(accessRequestsForApplication)
     })
   }
 
   private def runApproveAccessRequestEventMigration(allApplications: Seq[Application],
-                                                    accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
-    logEventsForEach("Approve Access Request", allApplications, application => {
-      accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
+                                                    getAccessRequestsForApplication: Application => Seq[AccessRequest]): Future[Seq[Unit]] = {
+    logEventsForEach("Approve Access Request", allApplications,
+      getAccessRequestsForApplication(_)
         .filter(_.status == Approved)
-        .map(approvedAccessRequest => {
-          val accessRequestDecisionRequest = AccessRequestDecisionRequest( //TODO remove after Mikes change
-            approvedAccessRequest.decision.get.decidedBy,
-            None
-          )
-          accessRequestsEventService.approve(accessRequestDecisionRequest, approvedAccessRequest, LocalDateTime.now()) //TODO remove LDT after mikes change
-        })
-    })
+        .map(accessRequestsEventService.approved(_))
+    )
   }
 
   private def runRejectAccessRequestEventMigration(allApplications: Seq[Application],
-                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
-    logEventsForEach("Reject Access Request", allApplications, application => {
-      accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
+                                                   getAccessRequestsForApplication: Application => Seq[AccessRequest]): Future[Seq[Unit]] = {
+    logEventsForEach("Reject Access Request", allApplications,
+      getAccessRequestsForApplication(_)
         .filter(_.status == Rejected)
-        .map(rejectedAccessRequest => {
-          val accessRequestDecisionRequest = AccessRequestDecisionRequest( //TODO remove after Mikes change
-            rejectedAccessRequest.decision.get.decidedBy,
-            None
-          )
-          accessRequestsEventService.reject(accessRequestDecisionRequest, rejectedAccessRequest, LocalDateTime.now()) //TODO remove LDT after mikes change
-        })
-    })
+        .map(accessRequestsEventService.rejected(_))
+    )
   }
 
   private def runCancelAccessRequestEventMigration(allApplications: Seq[Application],
-                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
-    logEventsForEach("Cancel Access Request", allApplications, application => {
-      accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
+                                                   getAccessRequestsForApplication: Application => Seq[AccessRequest]): Future[Seq[Unit]] = {
+    logEventsForEach("Cancel Access Request", allApplications,
+      getAccessRequestsForApplication(_)
         .filter(_.status == Cancelled)
-        .map(cancelledAccessRequest => {
-          val accessRequestCancelRequest = AccessRequestCancelRequest( //TODO remove after Mikes change
-            cancelledAccessRequest.cancelled.get.cancelledBy
-          )
-          accessRequestsEventService.cancel(accessRequestCancelRequest, cancelledAccessRequest, LocalDateTime.now()) //TODO remove LDT after mikes change
-        })
-    })
+        .map(accessRequestsEventService.cancelled(_))
+    )
   }
 
   private def runCreateTeamEventMigration(allTeams: Seq[Team]): Future[Seq[Unit]] = {

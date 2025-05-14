@@ -81,16 +81,16 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
     ))
   }
 
-  def created(accessRequestRequest: AccessRequestRequest, accessRequests: Seq[AccessRequest]): Future[Unit] = {
+  def created(accessRequests: Seq[AccessRequest]): Future[Unit] = {
 
     val timestamp = accessRequests.headOption.map(_.requested).getOrElse(LocalDateTime.now(clock))
 
     val eventFutures = accessRequests.map(accessRequest =>
       eventService.log(Event.newEvent(
-        entityId = accessRequestRequest.applicationId,
+        entityId = accessRequest.applicationId,
         entityType = Application,
         eventType = AccessRequestCreated,
-        user = accessRequestRequest.requestedBy,
+        user = accessRequest.requestedBy,
         timestamp = timestamp,
         description = s"${accessRequest.apiName}",
         detail = s"This access request was created for the ${hipEnvironments.forId(accessRequest.environmentId).name} environment requesting access to ${accessRequest.apiName}.",
