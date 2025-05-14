@@ -17,24 +17,28 @@
 package uk.gov.hmrc.apihubapplications.mongojobs
 
 import com.google.inject.Inject
-import org.apache.http.client.entity.EntityBuilder
 import play.api.Logging
-import play.api.libs.json.Json
-import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestStatus, Approved, Cancelled, Rejected}
+import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, AccessRequestCancelRequest, AccessRequestDecisionRequest, AccessRequestRequest, Approved, Cancelled, Rejected}
 import uk.gov.hmrc.apihubapplications.models.application.Application
-import uk.gov.hmrc.apihubapplications.models.event.{Created, EntityType, Event, Registered, toAccessRequestApprovedEvent, toAccessRequestCancelledEvent, toAccessRequestCreatedEvent, toAccessRequestRejectedEvent, toApiAddedEvents, toCreatedEvent, toCredentialCreatedEvents, toEgressesAddedToTeamEvent, toTeamCreatedEvent, toTeamMemberAddedEvents, Application as ApplicationEntity}
 import uk.gov.hmrc.apihubapplications.models.team.Team
-import uk.gov.hmrc.apihubapplications.repositories.{ApplicationsRepository, EventsRepository}
-import uk.gov.hmrc.apihubapplications.services.{AccessRequestsService, ApplicationsEventService, ApplicationsService, TeamsService}
+import uk.gov.hmrc.apihubapplications.services.{AccessRequestsEventService, AccessRequestsService, ApplicationsEventService, ApplicationsService, TeamsEventService, TeamsService}
 
+import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 class EventsMigrationJob @Inject()(
-    eventsRepository: EventsRepository,
     applicationsService: ApplicationsService,
     accessRequestsService: AccessRequestsService,
-    teamsService: TeamsService
+    teamsService: TeamsService,
+    applicationsEventService: ApplicationsEventService,
+    accessRequestsEventService: AccessRequestsEventService,
+    teamsEventService: TeamsEventService
 )(implicit ec: ExecutionContext) extends MongoJob with Logging {
+
+  private val MIGRATION_USER = "<migration>"
+  private val UNKNOWN = "<unknown>"
+  private val UNUSED_STRING = ""
+  private val UNUSED_SEQ = Seq.empty
 
   override def run(): Future[Unit] = {
     logger.info("Event migration job is running")
@@ -60,93 +64,111 @@ class EventsMigrationJob @Inject()(
     }
   }
 
-  private def runCreateApplicationEventMigration(allApplications: Seq[Application]): Future[Seq[Event]] = {
-    createEventFor("Create Application", allApplications, application => {
+  private def runCreateApplicationEventMigration(allApplications: Seq[Application]): Future[Seq[Unit]] = {
+    logEventForEach("Create Application", allApplications, application =>
       applicationsEventService.register(application, application.createdBy.email, application.created)
-    })
+    )
   }
 
-  private def runAddApiToApplicationEventMigration(allApplications: Seq[Application]): Future[Seq[Event]] = {
-    createEventsFor("Add API to Application", allApplications, _.toApiAddedEvents)
+  private def runAddApiToApplicationEventMigration(allApplications: Seq[Application]): Future[Seq[Unit]] = {
+    logEventsForEach("Add API to Application", allApplications, application =>
+      application.apis.map(api => applicationsEventService.addApi(application, api, MIGRATION_USER, application.created))
+    )
   }
 
-  private def runCreateCredentialEventMigration(allApplications: Seq[Application]): Future[Seq[Event]] = {
-    createEventsFor("Create Credential for Application", allApplications, _.toCredentialCreatedEvents)
+  private def runCreateCredentialEventMigration(allApplications: Seq[Application]): Future[Seq[Unit]] = {
+    logEventsForEach("Create Credential for Application", allApplications, application =>
+      application.credentials.map(credential => applicationsEventService.createCredential(application, credential, MIGRATION_USER, credential.created)).toSeq
+    )
   }
 
   private def runCreateAccessRequestEventMigration(allApplications: Seq[Application],
-                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Event]] = {
-    createEventsFor("Create Access Request",
-      allApplications,
-      application => accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
-        .map(application.toAccessRequestCreatedEvent(_))
-    )
-  }
-
-  private def runApproveAccessRequestEventMigration(allApplications: Seq[Application],
-                                                    accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Event]] = {
-    createEventsFor("Approve Access Request",
-      allApplications,
-      application => accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
-        .filter(_.status == Approved)
-        .map(application.toAccessRequestApprovedEvent(_))
-    )
-  }
-
-  private def runRejectAccessRequestEventMigration(allApplications: Seq[Application],
-                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Event]] = {
-    createEventsFor("Reject Access Request",
-      allApplications,
-      application => accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
-        .filter(_.status == Rejected)
-        .map(application.toAccessRequestRejectedEvent(_))
-    )
-  }
-
-  private def runCancelAccessRequestEventMigration(allApplications: Seq[Application],
-                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Event]] = {
-    createEventsFor("Cancel Access Request",
-      allApplications,
-      application => accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
-        .filter(_.status == Cancelled)
-        .map(application.toAccessRequestCancelledEvent(_))
-    )
-  }
-
-  private def runCreateTeamEventMigration(allTeams: Seq[Team]): Future[Seq[Event]] = {
-    createEventFor("Create Team", allTeams, _.toTeamCreatedEvent)
-  }
-
-  private def runAddEgressesToTeamEventMigration(allTeams: Seq[Team]): Future[Seq[Event]] = {
-    createEventsFor("Add Egresses to Team", allTeams, team => {
-      team.egresses.size match {
-        case 0 => Seq.empty
-        case _ => Seq(team.toEgressesAddedToTeamEvent)
-      }
+                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
+    logEventForEach("Create Access Request", allApplications, application => {
+      val accessRequestsForApplication = accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
+      val accessRequestRequest = AccessRequestRequest(
+        application.id.getOrElse(UNKNOWN), UNUSED_STRING, MIGRATION_USER, UNUSED_SEQ, UNUSED_STRING
+      )
+      accessRequestsEventService.create(accessRequestRequest, accessRequestsForApplication)
     })
   }
 
-  private def runAddTeamMemberToTeamEventMigration(allTeams: Seq[Team]): Future[Seq[Event]] = {
-    createEventsFor("Add Team Member",
-      allTeams,
-      _.toTeamMemberAddedEvents
+  private def runApproveAccessRequestEventMigration(allApplications: Seq[Application],
+                                                    accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
+    logEventsForEach("Approve Access Request", allApplications, application => {
+      accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
+        .filter(_.status == Approved)
+        .map(approvedAccessRequest => {
+          val accessRequestDecisionRequest = AccessRequestDecisionRequest( //TODO remove after Mikes change
+            approvedAccessRequest.decision.get.decidedBy,
+            None
+          )
+          accessRequestsEventService.approve(accessRequestDecisionRequest, approvedAccessRequest, LocalDateTime.now()) //TODO remove LDT after mikes change
+        })
+    })
+  }
+
+  private def runRejectAccessRequestEventMigration(allApplications: Seq[Application],
+                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
+    logEventsForEach("Reject Access Request", allApplications, application => {
+      accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
+        .filter(_.status == Rejected)
+        .map(rejectedAccessRequest => {
+          val accessRequestDecisionRequest = AccessRequestDecisionRequest( //TODO remove after Mikes change
+            rejectedAccessRequest.decision.get.decidedBy,
+            None
+          )
+          accessRequestsEventService.reject(accessRequestDecisionRequest, rejectedAccessRequest, LocalDateTime.now()) //TODO remove LDT after mikes change
+        })
+    })
+  }
+
+  private def runCancelAccessRequestEventMigration(allApplications: Seq[Application],
+                                                   accessRequestsByApplicationId: Map[String,Seq[AccessRequest]]): Future[Seq[Unit]] = {
+    logEventsForEach("Cancel Access Request", allApplications, application => {
+      accessRequestsByApplicationId.getOrElse(application.id.getOrElse(""), Seq.empty)
+        .filter(_.status == Cancelled)
+        .map(cancelledAccessRequest => {
+          val accessRequestCancelRequest = AccessRequestCancelRequest( //TODO remove after Mikes change
+            cancelledAccessRequest.cancelled.get.cancelledBy
+          )
+          accessRequestsEventService.cancel(accessRequestCancelRequest, cancelledAccessRequest, LocalDateTime.now()) //TODO remove LDT after mikes change
+        })
+    })
+  }
+
+  private def runCreateTeamEventMigration(allTeams: Seq[Team]): Future[Seq[Unit]] = {
+    logEventForEach("Create Team", allTeams, team =>
+      teamsEventService.create(team, MIGRATION_USER)
     )
   }
 
-  private def createEventFor[T](description: String, entities: Seq[T], eventBuilder: T => Event) = {
-    createEvents(description, entities, eventBuilder, Seq(_))
+  private def runAddEgressesToTeamEventMigration(allTeams: Seq[Team]): Future[Seq[Unit]] = {
+    logEventForEach("Add Egresses to Team", allTeams, team =>
+      teamsEventService.addEgresses(team, MIGRATION_USER, team.egresses, team.created)
+    )
   }
 
-  private def createEventsFor[T](description: String, entities: Seq[T], eventBuilder: T => Seq[Event]) = {
-    createEvents(description, entities, eventBuilder, identity)
+  private def runAddTeamMemberToTeamEventMigration(allTeams: Seq[Team]): Future[Seq[Unit]] = {
+    logEventsForEach("Add Member to Team", allTeams, team =>
+      team.teamMembers.map(teamMember => teamsEventService.addMember(team, MIGRATION_USER, teamMember.email, team.created))
+    )
   }
 
-  private def createEvents[T,E](description: String, entities: Seq[T], eventBuilder: T => E) = {
+  private def logEventForEach[T](description: String, entities: Seq[T], eventLogger: T => Future[Unit]): Future[Seq[Unit]] = {
+    logEvents(description, entities, eventLogger, Seq(_))
+  }
+
+  private def logEventsForEach[T](description: String, entities: Seq[T], eventLogger: T => Seq[Future[Unit]]): Future[Seq[Unit]] = {
+    logEvents(description, entities, eventLogger, identity)
+  }
+
+  private def logEvents[T,E](description: String, entities: Seq[T], eventLogger: T => E, flattener: E => Seq[Future[Unit]]): Future[Seq[Unit]] = {
     logger.info(s"Starting event migration for $description...")
-    val events = entities.flatMap(entity => eventFlattener(eventBuilder(entity)))
-    eventsRepository.insertMany(events).map(insertedEvents => {
-      logger.info(s"Inserted ${insertedEvents.size} events for $description")
-      insertedEvents
+    Future.sequence(entities.flatMap(entity => flattener(eventLogger(entity)))).map(insertionResults => {
+      // Can only give a lower bound for number of events inserted because some services insert multiple events for a single call
+      logger.info(s"Inserted at least ${insertionResults.size} events for $description")
+      insertionResults
     })
   }
 

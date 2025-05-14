@@ -73,20 +73,6 @@ class EventsRepository @Inject()(
         event.copy(id = Some(result.getInsertedId.asObjectId().getValue.toString))
     )
   }
-  
-  def insertMany(events: Seq[Event]): Future[Seq[Event]] = {
-    Mdc.preservingMdc {
-      collection
-        .insertMany(events.map(SensitiveEvent(_)))
-        .toFuture()
-    } map (
-      result =>
-        events.zipWithIndex.map {
-          case (event, index) =>
-            event.copy(id = Some(result.getInsertedIds.get(index).asObjectId().getValue.toString))
-        }
-    )
-  }
 
   def findById(id: String): Future[Either[ApplicationsException, Event]] = {
     stringToObjectId(id) match {
