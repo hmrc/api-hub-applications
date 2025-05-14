@@ -77,7 +77,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
         ) *
       )
 
-      fixture.accessRequestsEventService.create(accessRequestRequest, accessRequests).map {
+      fixture.accessRequestsEventService.created(accessRequestRequest, accessRequests).map {
         result =>
           verify(fixture.eventsService).log(expected)
           result mustBe ()
@@ -123,7 +123,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           ) *
         )
 
-        fixture.accessRequestsEventService.approve(approvalRequest, accessRequest).map {
+        fixture.accessRequestsEventService.approved(accessRequest).map {
           result =>
             verify(fixture.eventsService).log(expected)
             result mustBe()
@@ -169,7 +169,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           ) *
         )
 
-        fixture.accessRequestsEventService.reject(rejectionRequest, accessRequest).map {
+        fixture.accessRequestsEventService.rejected(accessRequest).map {
           result =>
             verify(fixture.eventsService).log(expected)
             result mustBe()
@@ -215,7 +215,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           ) *
         )
 
-        fixture.accessRequestsEventService.cancel(cancelRequest, accessRequest).map {
+        fixture.accessRequestsEventService.cancelled(accessRequest).map {
           result =>
             verify(fixture.eventsService).log(expected)
             result mustBe()
