@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.config.HipEnvironments
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
-import uk.gov.hmrc.apihubapplications.models.event.*
+import uk.gov.hmrc.apihubapplications.models.event.{AccessRequestApproved, AccessRequestCreated, AccessRequestRejected, Application, Event, Parameter, AccessRequestCancelled as AccessRequestCancelledEvent}
 
 import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,7 +58,7 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
     eventService.log(Event.newEvent(
       entityId = accessRequest.applicationId,
       entityType = Application,
-      eventType = AccessRequestCanceled,
+      eventType = AccessRequestCancelledEvent,
       user = accessRequestCancelRequest.cancelledBy,
       timestamp = timestamp,
       description = s"Cancelled for ${accessRequest.apiName}",
