@@ -40,13 +40,13 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
     )
   }
 
-  def approve(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
+  def approve(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequest: AccessRequest): Future[Unit] = {
     eventService.log(Event.newEvent(
     entityId = accessRequest.applicationId,
     entityType = Application,
     eventType = AccessRequestApproved,
     user = accessRequestDecisionRequest.decidedBy,
-    timestamp = timestamp,
+    timestamp = accessRequest.decision.get.decided,
     description = accessRequest.apiName,
     detail = s"This request for access to ${accessRequest.apiName} was approved and scopes were added to the application's credentials in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment.",
     parameters = asParameters(accessRequest) *
@@ -54,26 +54,26 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
   }
 
 
-  def cancel(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
+  def cancel(accessRequestCancelRequest: AccessRequestCancelRequest, accessRequest: AccessRequest): Future[Unit] = {
     eventService.log(Event.newEvent(
       entityId = accessRequest.applicationId,
       entityType = Application,
       eventType = AccessRequestCancelledEvent,
       user = accessRequestCancelRequest.cancelledBy,
-      timestamp = timestamp,
+      timestamp = accessRequest.decision.get.decided,
       description = s"Cancelled for ${accessRequest.apiName}",
       detail = s"This request for access to ${accessRequest.apiName} in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment was cancelled.",
       parameters = asParameters(accessRequest) *
     ))
   }
 
-  def reject(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequest: AccessRequest, timestamp: LocalDateTime): Future[Unit] = {
+  def reject(accessRequestDecisionRequest: AccessRequestDecisionRequest, accessRequest: AccessRequest): Future[Unit] = {
     eventService.log(Event.newEvent(
       entityId = accessRequest.applicationId,
       entityType = Application,
       eventType = AccessRequestRejected,
       user = accessRequestDecisionRequest.decidedBy,
-      timestamp = timestamp,
+      timestamp = accessRequest.decision.get.decided,
       description = s"Rejected for ${accessRequest.apiName}",
       detail = s"This request for access to ${accessRequest.apiName} in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment was rejected.",
       parameters = asParameters(accessRequest) *

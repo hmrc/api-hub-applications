@@ -22,7 +22,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.models.application.TeamMember
-import uk.gov.hmrc.apihubapplications.models.event.{Created, EgressAdded, EgressRemoved, Event, MemberAdded, MemberRemoved, Renamed}
+import uk.gov.hmrc.apihubapplications.models.event.{Created, EgressesAdded, EgressRemoved, Event, MemberAdded, MemberRemoved, Renamed}
 import uk.gov.hmrc.apihubapplications.models.team.{Team, TeamType}
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
@@ -133,7 +133,7 @@ class TeamsEventServiceSpec
             Event.newEvent(
               entityId = fixture.team.id.get,
               entityType = event.Team,
-              eventType = EgressAdded,
+              eventType = EgressesAdded,
               user = "requestingUser",
               timestamp = fixture.now,
               description = "",

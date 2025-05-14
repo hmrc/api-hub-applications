@@ -18,7 +18,7 @@ package uk.gov.hmrc.apihubapplications.services
 
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.apihubapplications.models.event
-import uk.gov.hmrc.apihubapplications.models.event.{Created, EgressAdded, EgressRemoved, Event, EventType, MemberAdded, MemberRemoved, Parameter, Renamed}
+import uk.gov.hmrc.apihubapplications.models.event.{Created, EgressesAdded, EgressRemoved, Event, EventType, MemberAdded, MemberRemoved, Parameter, Renamed}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
 
@@ -58,7 +58,7 @@ class TeamsEventService @Inject(
   }
 
   def addEgresses(team: Team, requestingUser: String, newEgresses: Seq[String], timestamp: LocalDateTime = LocalDateTime.now(clock)): Future[Unit] = {
-    logEvent(team, EgressAdded, requestingUser, timestamp,
+    logEvent(team, EgressesAdded, requestingUser, timestamp,
       Parameter("egresses", newEgresses)
     )
   }
