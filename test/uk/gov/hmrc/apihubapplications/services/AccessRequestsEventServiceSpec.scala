@@ -24,7 +24,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.models.accessRequest.*
-import uk.gov.hmrc.apihubapplications.models.event.{AccessRequestApproved, AccessRequestCreated, AccessRequestRejected, AccessRequestCanceled, Event, Parameter, Application as ApplicationEvent}
+import uk.gov.hmrc.apihubapplications.models.event.{AccessRequestApproved, AccessRequestCreated, AccessRequestRejected, AccessRequestCancelled, Event, Parameter, Application as ApplicationEvent}
 import uk.gov.hmrc.apihubapplications.testhelpers.{AccessRequestGenerator, FakeHipEnvironments}
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
@@ -189,7 +189,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
         val expected = Event.newEvent(
           entityId = "applicationId",
           entityType = ApplicationEvent,
-          eventType = AccessRequestCanceled,
+          eventType = AccessRequestCancelled,
           user = "test-requested-by",
           timestamp = now,
           description = "Cancelled for test-api-name",
