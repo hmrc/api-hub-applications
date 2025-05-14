@@ -55,9 +55,6 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
 
 
   def cancelled(accessRequest: AccessRequest): Future[Unit] = {
-
-    Console.println(s"OIYAF: $accessRequest")
-
     eventService.log(Event.newEvent(
       entityId = accessRequest.applicationId,
       entityType = Application,
