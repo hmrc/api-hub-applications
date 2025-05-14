@@ -544,7 +544,7 @@ class DeploymentsControllerSpec
     "must return 200 Ok and a SuccessfulDeploymentsResponse when APIM returns success" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any, any)(any))
         .thenReturn(Future.successful(Right(deploymentsResponse)))
 
       running(fixture.application) {
@@ -554,6 +554,7 @@ class DeploymentsControllerSpec
           "egress"
         )
         val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
           .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
@@ -564,14 +565,16 @@ class DeploymentsControllerSpec
           eqTo(publisherRef),
           eqTo(FakeHipEnvironments.testEnvironment),
           eqTo(FakeHipEnvironments.productionEnvironment),
-          eqTo(requestBody.egress))(any)
+          eqTo(requestBody.egress),
+          eqTo(testUserEmail)
+        )(any)
       }
     }
 
     "must return 400 Bad Request and an InvalidOasResponse when APIM returns failure" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any, any)(any))
         .thenReturn(Future.successful(Right(invalidOasResponse)))
 
       running(fixture.application) {
@@ -581,6 +584,7 @@ class DeploymentsControllerSpec
           "egress"
         )
         val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
           .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
@@ -592,7 +596,7 @@ class DeploymentsControllerSpec
     "must return 404 Not Found when APIM cannot find the service" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any, any)(any))
         .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
 
       running(fixture.application) {
@@ -602,6 +606,28 @@ class DeploymentsControllerSpec
           "egress"
         )
         val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
+          .withBody(Json.toJson(requestBody))
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 404 Not Found when the API is not found in Integration Catalogue" in {
+      val fixture = buildFixture()
+
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any, any)(any))
+        .thenReturn(Future.successful(Left(ApiNotFoundException.forPublisherRef(publisherRef))))
+
+      running(fixture.application) {
+        val requestBody = PromotionRequest(
+          "test",
+          "production",
+          "egress"
+        )
+        val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
           .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
@@ -612,8 +638,27 @@ class DeploymentsControllerSpec
     "must throw ApimException when raised downstream" in {
       val fixture = buildFixture()
 
-      when(fixture.deploymentsService.promoteAPI(any, any, any, any)(any))
+      when(fixture.deploymentsService.promoteAPI(any, any, any, any, any)(any))
         .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR))))
+
+      running(fixture.application) {
+        val requestBody = PromotionRequest(
+          "test",
+          "production",
+          "egress"
+        )
+        val request = FakeRequest(routes.DeploymentsController.promoteAPI(publisherRef))
+          .withHeaders(userEmailHeader -> encrypt(fixture.crypto, testUserEmail))
+          .withBody(Json.toJson(requestBody))
+        val result = route(fixture.application, request).value
+
+        val e = the[ApimException] thrownBy status(result)
+        e mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR)
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is missing" in {
+      val fixture = buildFixture()
 
       running(fixture.application) {
         val requestBody = PromotionRequest(
@@ -625,12 +670,10 @@ class DeploymentsControllerSpec
           .withBody(Json.toJson(requestBody))
         val result = route(fixture.application, request).value
 
-        val e = the[ApimException] thrownBy status(result)
-        e mustBe ApimException.unexpectedResponse(INTERNAL_SERVER_ERROR)
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }
-
 
   "updateApiTeam" - {
     val apiId = "apiId"

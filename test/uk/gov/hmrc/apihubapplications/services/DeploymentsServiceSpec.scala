@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{times, verify, verifyNoInteractions, when}
+import org.mockito.Mockito.{clearInvocations, times, verify, verifyNoInteractions, when}
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -226,9 +226,11 @@ class DeploymentsServiceSpec
     }
   }
 
-  "promoteToProduction" - {
-    "must pass the correct request to APIM and return the response" in {
+  "promoteApi" - {
+    "must pass the correct request to APIM, return the response, and log the event" in {
       val publisherRef = "test-publisher-ref"
+      val statusResponse = SuccessfulDeploymentResponse(apiDetail.publisherReference, None, None, oasVersion, None)
+      val egress = "test-egress"
 
       val responses = Table(
         "response",
@@ -239,16 +241,40 @@ class DeploymentsServiceSpec
       forAll(responses) { (response: Either[ApimException, DeploymentsResponse]) =>
         val fixture = buildFixture()
 
+        when(fixture.integrationCatalogueConnector.findByPublisherRef(eqTo(apiDetail.publisherReference))(any))
+          .thenReturn(Future.successful(Right(apiDetail)))
+        when(fixture.apimConnector.getDeployment(eqTo(apiDetail.publisherReference), eqTo(FakeHipEnvironments.testEnvironment))(any))
+          .thenReturn(Future.successful(Right(Some(statusResponse))))
         when(fixture.apimConnector.promoteAPI(any, any, any, any)(any)).thenReturn(Future.successful(response))
+        when(fixture.eventService.promote(any, any, any, any ,any, any, any, any)).thenReturn(Future.successful(()))
 
-        fixture.deploymentsService.promoteAPI(publisherRef, FakeHipEnvironments.testEnvironment, FakeHipEnvironments.productionEnvironment, "egress")(HeaderCarrier()).map {
+        fixture.deploymentsService.promoteAPI(publisherRef, FakeHipEnvironments.testEnvironment, FakeHipEnvironments.productionEnvironment, egress, userEmail)(HeaderCarrier()).map {
           actual =>
             actual mustBe response
+
             verify(fixture.apimConnector).promoteAPI(
               eqTo(publisherRef),
               eqTo(FakeHipEnvironments.testEnvironment),
               eqTo(FakeHipEnvironments.productionEnvironment),
-              eqTo("egress"))(any)
+              eqTo(egress)
+            )(any)
+
+            response match {
+              case Right(success: SuccessfulDeploymentsResponse) =>
+                verify(fixture.eventService).promote(
+                  apiId = eqTo(apiDetail.id),
+                  fromEnvironment = eqTo(FakeHipEnvironments.testEnvironment),
+                  toEnvironment = eqTo(FakeHipEnvironments.productionEnvironment),
+                  oasVersion = eqTo(oasVersion),
+                  egress = eqTo(egress),
+                  response = eqTo(success),
+                  userEmail = eqTo(userEmail),
+                  timestamp = eqTo(LocalDateTime.now(clock))
+                )
+              case _ =>
+                  verifyNoInteractions(fixture.eventService)
+            }
+
             succeed
         }
       }

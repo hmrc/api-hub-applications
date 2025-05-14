@@ -135,12 +135,57 @@ class DeploymentsService @Inject()(
   }
 
   def promoteAPI(
-                           publisherRef: String,
-                           environmentFrom: HipEnvironment,
-                           environmentTo: HipEnvironment,
-                           egress: String,
-                         )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    apimConnector.promoteAPI(publisherRef, environmentFrom, environmentTo, egress)
+    publisherRef: String,
+    environmentFrom: HipEnvironment,
+    environmentTo: HipEnvironment,
+    egress: String,
+    userEmail: String
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
+    (for {
+      apiDetail <- EitherT(integrationCatalogueConnector.findByPublisherRef(publisherRef))
+      deployment <- EitherT.right(getDeployment(environmentFrom, publisherRef))
+      response <- EitherT(apimConnector.promoteAPI(publisherRef, environmentFrom, environmentTo, egress))
+      _ <- EitherT.right(
+        logPromoteApiEvent(
+          apiDetail = apiDetail, 
+          environmentFrom = environmentFrom, 
+          environmentTo = environmentTo, 
+          egress = egress, 
+          deployment = deployment, 
+          response = response, 
+          userEmail = userEmail
+        )
+      )
+    } yield response).value
+  }
+
+  private def logPromoteApiEvent(
+    apiDetail: ApiDetail,
+    environmentFrom: HipEnvironment,
+    environmentTo: HipEnvironment,
+    egress: String,
+    deployment: DeploymentStatus,
+    response: DeploymentsResponse,
+    userEmail: String
+  ): Future[Unit] = {
+    response match {
+      case success: SuccessfulDeploymentsResponse =>
+        eventService.promote(
+          apiId = apiDetail.id,
+          fromEnvironment = environmentFrom,
+          toEnvironment = environmentTo,
+          oasVersion = deployment match {
+            case Deployed(_, oasVersion) => oasVersion
+            case NotDeployed(_) => "not deployed"
+            case Unknown(_) => "unknown"
+          },
+          egress = egress,
+          response = success,
+          userEmail = userEmail,
+          timestamp = LocalDateTime.now(clock)
+        )
+      case _ => Future.successful(())
+    }
   }
 
   def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {

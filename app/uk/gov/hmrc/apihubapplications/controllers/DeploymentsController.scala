@@ -112,19 +112,23 @@ class DeploymentsController @Inject()(
 
   def promoteAPI(publisherRef: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
-      request.body.validate[PromotionRequest] match {
-        case JsSuccess(promotionRequest, _) =>
-          val (deployFromEnvironment, deployToEnvironment) = (hipEnvironments.forId(promotionRequest.environmentFrom), hipEnvironments.forId(promotionRequest.environmentTo))
-          deploymentsService.promoteAPI(publisherRef, deployFromEnvironment, deployToEnvironment, promotionRequest.egress).map {
-            case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
-            case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
-            case Left(e) if e.issue == ServiceNotFound => NotFound
-            case Left(e) => throw e
+      withUserEmail(
+        userEmail =>
+          request.body.validate[PromotionRequest] match {
+            case JsSuccess(promotionRequest, _) =>
+              val (deployFromEnvironment, deployToEnvironment) = (hipEnvironments.forId(promotionRequest.environmentFrom), hipEnvironments.forId(promotionRequest.environmentTo))
+              deploymentsService.promoteAPI(publisherRef, deployFromEnvironment, deployToEnvironment, promotionRequest.egress, userEmail).map {
+                case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
+                case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
+                case Left(_: ApiNotFoundException) => NotFound
+                case Left(e: ApimException) if e.issue == ServiceNotFound => NotFound
+                case Left(e) => throw e
+              }
+            case e: JsError =>
+              logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+              Future.successful(BadRequest)
           }
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
+      )
   }
 
   def updateApiTeam(apiId: String, teamId: String): Action[AnyContent] = identify.async {
