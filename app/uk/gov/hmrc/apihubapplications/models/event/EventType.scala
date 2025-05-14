@@ -29,8 +29,8 @@ case object Updated extends WithName("UPDATED") with EventType
 case object AccessRequestApproved extends WithName("ACCESS_REQUEST_APPROVED") with EventType
 case object AccessRequestCanceled extends WithName("ACCESS_REQUEST_CANCELED") with EventType
 case object AccessRequestRejected extends WithName("ACCESS_REQUEST_REJECTED") with EventType
+case object AccessRequestCreated extends WithName("ACCESS_REQUEST_CREATED") with EventType
 case object CredentialCreated extends WithName("CREDENTIAL_CREATED") with EventType
-case object AccessRequestCreated extends WithName("CREDENTIAL_CREATED") with EventType
 case object ScopesFixed extends WithName("SCOPES_FIXED") with EventType
 case object Promoted extends WithName("PROMOTED") with EventType
 case object Registered extends WithName("REGISTERED") with EventType
