@@ -39,7 +39,7 @@ case object CredentialRevoked extends WithName("CREDENTIAL_REVOKED") with EventT
 case object ApiAdded extends WithName("API_ADDED") with EventType
 
 // Common to Teams
-case object EgressAdded extends WithName("EGRESS_ADDED") with EventType
+case object EgressesAdded extends WithName("EGRESSES_ADDED") with EventType
 case object MemberAdded extends WithName("MEMBER_ADDED") with EventType
 case object TeamChanged extends WithName("TEAM_CHANGED") with EventType
 case object EgressRemoved extends WithName("EGRESS_REMOVED") with EventType
@@ -52,7 +52,7 @@ case object Renamed extends WithName("RENAMED") with EventType
 
 object EventType extends Enumerable.Implicits {
 
-  val values: Seq[EventType] = Seq(ApiAdded, EgressAdded, MemberAdded, AccessRequestApproved, AccessRequestCancelled, TeamChanged, Created,
+  val values: Seq[EventType] = Seq(ApiAdded, EgressesAdded, MemberAdded, AccessRequestApproved, AccessRequestCancelled, TeamChanged, Created,
     CredentialCreated, AccessRequestCreated, Deleted, ScopesFixed, Promoted, Registered, AccessRequestRejected, ApiRemoved, EgressRemoved, MemberRemoved,
     Renamed, CredentialRevoked, Updated
   )

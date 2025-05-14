@@ -29,6 +29,7 @@ import uk.gov.hmrc.apihubapplications.testhelpers.{AccessRequestGenerator, FakeH
 
 import java.time.{Clock, Instant, LocalDateTime, ZoneId}
 import scala.concurrent.Future
+import uk.gov.hmrc.apihubapplications.models.accessRequest.AccessRequestLenses.*
 
 class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with MockitoSugar with AccessRequestGenerator with TableDrivenPropertyChecks with OptionValues with EitherValues {
 
@@ -76,7 +77,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
         ) *
       )
 
-      fixture.accessRequestsEventService.create(accessRequestRequest, accessRequests).map {
+      fixture.accessRequestsEventService.created(accessRequestRequest, accessRequests).map {
         result =>
           verify(fixture.eventsService).log(expected)
           result mustBe ()
@@ -99,7 +100,12 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           supportingInformation = "supporting information",
           requested = now,
           requestedBy = "test-requested-by",
-          environmentId = "test").copy(id = Some("access-request-id"))
+          environmentId = "test")
+          .copy(
+            id = Some("access-request-id"),
+            decision = Some(AccessRequestDecision(now,"test-requested-by", None))
+          )
+
 
         val expected = Event.newEvent(
           entityId = "applicationId",
@@ -117,7 +123,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           ) *
         )
 
-        fixture.accessRequestsEventService.approve(approvalRequest, accessRequest, now).map {
+        fixture.accessRequestsEventService.approved(accessRequest).map {
           result =>
             verify(fixture.eventsService).log(expected)
             result mustBe()
@@ -141,7 +147,11 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           supportingInformation = "supporting information",
           requested = now,
           requestedBy = "test-requested-by",
-          environmentId = "test").copy(id = Some("access-request-id"))
+          environmentId = "test")
+          .copy(
+            id = Some("access-request-id"),
+            decision = Some(AccessRequestDecision(now,"test-requested-by", Some("some reason")))
+          )
 
         val expected = Event.newEvent(
           entityId = "applicationId",
@@ -159,7 +169,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           ) *
         )
 
-        fixture.accessRequestsEventService.reject(rejectionRequest, accessRequest, now).map {
+        fixture.accessRequestsEventService.rejected(accessRequest).map {
           result =>
             verify(fixture.eventsService).log(expected)
             result mustBe()
@@ -183,7 +193,10 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           supportingInformation = "supporting information",
           requested = now,
           requestedBy = "test-requested-by",
-          environmentId = "test").copy(id = Some("access-request-id"))
+          environmentId = "test")
+          .copy(
+            id = Some("access-request-id"),
+            decision = Some(AccessRequestDecision(now,"test-requested-by", None)))
 
 
         val expected = Event.newEvent(
@@ -202,7 +215,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           ) *
         )
 
-        fixture.accessRequestsEventService.cancel(cancelRequest, accessRequest, now).map {
+        fixture.accessRequestsEventService.cancelled(accessRequest).map {
           result =>
             verify(fixture.eventsService).log(expected)
             result mustBe()

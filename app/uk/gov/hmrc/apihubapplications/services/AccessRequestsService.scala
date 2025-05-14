@@ -50,7 +50,7 @@ class AccessRequestsService @Inject()(
     accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
       requests =>
         val emails = sendAccessRequestSubmittedEmails(request)
-        val events = accessRequestsEventService.create(request, requests)
+        val events = accessRequestsEventService.created(request, requests)
         for {
           _ <- emails
           _ <- events
@@ -91,15 +91,16 @@ class AccessRequestsService @Inject()(
   def approveAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
-        val approved = accessRequest
+        
+        val approvedRequest = accessRequest
           .setStatus(Approved)
           .setDecision(decisionRequest.copy(rejectedReason = None), clock)
 
         (for {
           application <- EitherT(searchService.findById(accessRequest.applicationId))
-          _ <- EitherT(accessRequestsRepository.update(approved))
-          _ <- EitherT.right(accessRequestsEventService.approve(decisionRequest, accessRequest, LocalDateTime.now(clock)))
-          _ <- EitherT(sendAccessApprovedEmails(accessRequest, application)).orElse(EitherT.rightT(())) // ignore email errors
+          _ <- EitherT(accessRequestsRepository.update(approvedRequest))
+          _ <- EitherT.right(accessRequestsEventService.approved(approvedRequest))
+          _ <- EitherT(sendAccessApprovedEmails(approvedRequest, application)).orElse(EitherT.rightT(())) // ignore email errors
           accessRequests <- EitherT.right(getAccessRequests(Some(accessRequest.applicationId), None))
           _ <- EitherT(scopeFixer.fix(application, accessRequests, hipEnvironments.forId(accessRequest.environmentId)))
         } yield ()).value
@@ -114,13 +115,16 @@ class AccessRequestsService @Inject()(
   def rejectAccessRequest(id: String, decisionRequest: AccessRequestDecisionRequest)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
+
+        val rejectedRequest = accessRequest
+          .setStatus(Rejected)
+          .setDecision(decisionRequest, clock)
+
         (for {
           application <- EitherT(searchService.findById(accessRequest.applicationId))
-          _ <- EitherT(accessRequestsRepository.update(accessRequest
-            .setStatus(Rejected)
-            .setDecision(decisionRequest, clock)))
-          _ <- EitherT.right(accessRequestsEventService.reject(decisionRequest, accessRequest, LocalDateTime.now(clock)))
-          _ <- EitherT(sendAccessRejectedEmails(accessRequest)).orElse(EitherT.rightT(())) // ignore email errors
+          _ <- EitherT(accessRequestsRepository.update(rejectedRequest))
+          _ <- EitherT.right(accessRequestsEventService.rejected(rejectedRequest))
+          _ <- EitherT(sendAccessRejectedEmails(rejectedRequest)).orElse(EitherT.rightT(())) // ignore email errors
         } yield ()).value
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
@@ -132,11 +136,13 @@ class AccessRequestsService @Inject()(
   def cancelAccessRequest(id: String, cancelRequest: AccessRequestCancelRequest)(implicit hc: HeaderCarrier) = {
     accessRequestsRepository.findById(id).flatMap {
       case Some(accessRequest) if accessRequest.status == Pending =>
+        
+        val cancelledRequest = accessRequest
+          .cancel(cancelRequest.toCancelled(clock))
+        
         (for {
-          _ <- EitherT(accessRequestsRepository.update(
-            accessRequest
-              .cancel(cancelRequest.toCancelled(clock))))
-          _ <- EitherT.right(accessRequestsEventService.cancel(cancelRequest, accessRequest, LocalDateTime.now(clock)))
+          _ <- EitherT(accessRequestsRepository.update(cancelledRequest))
+          _ <- EitherT.right(accessRequestsEventService.cancelled(cancelledRequest))
         } yield ()).value
       case Some(accessRequest) =>
         Future.successful(Left(raiseAccessRequestStatusInvalidException.forAccessRequest(accessRequest)))
@@ -150,12 +156,12 @@ class AccessRequestsService @Inject()(
       accessRequests => {
         Future.sequence(accessRequests.map(pendingAccessRequest => {
             val now = LocalDateTime.now(clock)
-            val cancelAccessRequest = pendingAccessRequest
+            val cancelledRequest = pendingAccessRequest
               .cancel(cancelled = now, cancelledBy = system)
             val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
             (for {
-              _ <- EitherT(accessRequestsRepository.update(cancelAccessRequest))
-              _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest, now))
+              _ <- EitherT(accessRequestsRepository.update(cancelledRequest))
+              _ <- EitherT.right(accessRequestsEventService.cancelled(cancelledRequest))
             } yield ()).value
           }))
           .map(useFirstApplicationsException).map {
@@ -172,12 +178,14 @@ class AccessRequestsService @Inject()(
         accessRequests => {
           Future.sequence(accessRequests.map(pendingAccessRequest => {
               val now = LocalDateTime.now(clock)
-              val cancelAccessRequest = pendingAccessRequest
+              
+              val cancelledRequest = pendingAccessRequest
                 .cancel(cancelled = now, cancelledBy = system)
+            
               val accessRequestAccessRequest: AccessRequestCancelRequest = AccessRequestCancelRequest(system)
               (for {
-                _ <- EitherT(accessRequestsRepository.update(cancelAccessRequest))
-                _ <- EitherT.right(accessRequestsEventService.cancel(accessRequestAccessRequest, cancelAccessRequest, now))
+                _ <- EitherT(accessRequestsRepository.update(cancelledRequest))
+                _ <- EitherT.right(accessRequestsEventService.cancelled(cancelledRequest))
               } yield ()).value
             }))
             .map(useFirstApplicationsException).map {
