@@ -55,12 +55,15 @@ class AccessRequestsEventService @Inject()(eventService: EventsService,
 
 
   def cancelled(accessRequest: AccessRequest): Future[Unit] = {
+
+    Console.println(s"OIYAF: $accessRequest")
+
     eventService.log(Event.newEvent(
       entityId = accessRequest.applicationId,
       entityType = Application,
       eventType = AccessRequestCancelledEvent,
-      user = accessRequest.decision.get.decidedBy,
-      timestamp = accessRequest.decision.get.decided,
+      user = accessRequest.cancelled.get.cancelledBy,
+      timestamp = accessRequest.cancelled.get.cancelled,
       description = s"Cancelled for ${accessRequest.apiName}",
       detail = s"This request for access to ${accessRequest.apiName} in the ${hipEnvironments.forId(accessRequest.environmentId).name} environment was cancelled.",
       parameters = asParameters(accessRequest) *
