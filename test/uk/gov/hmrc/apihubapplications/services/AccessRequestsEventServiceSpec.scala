@@ -196,7 +196,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
           environmentId = "test")
           .copy(
             id = Some("access-request-id"),
-            decision = Some(AccessRequestDecision(now,"test-requested-by", None)))
+            cancelled = Some(new AccessRequestCancelled(now, "test-requested-by")))
 
 
         val expected = Event.newEvent(
