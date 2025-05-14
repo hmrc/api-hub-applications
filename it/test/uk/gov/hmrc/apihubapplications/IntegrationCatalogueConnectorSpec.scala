@@ -118,6 +118,44 @@ class IntegrationCatalogueConnectorSpec
     }
   }
 
+  "findByPublisherRef" - {
+    "must place the correct request to Integration Catalogue and return the API when found" in {
+      val apiDetail = sampleApiDetail()
+
+      stubFor(
+        get(urlEqualTo(s"/integration-catalogue/integrations/publisher-reference/${apiDetail.publisherReference}"))
+          .withHeader("Accept", equalTo("application/json"))
+          .withHeader("Authorization", equalTo(appAuthToken))
+          .willReturn(
+            aResponse()
+              .withBody(Json.toJson(apiDetail).toString())
+          )
+      )
+
+      buildConnector().findByPublisherRef(apiDetail.publisherReference)(HeaderCarrier()).map {
+        result =>
+          result.value mustBe apiDetail
+      }
+    }
+
+    "must return ApiNotFoundException when the API cannot be found" in {
+      val publisherRef = "test-publisher-ref"
+
+      stubFor(
+        get(urlEqualTo(s"/integration-catalogue/integrations/publisher-reference/$publisherRef"))
+          .willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+      )
+
+      buildConnector().findByPublisherRef(publisherRef)(HeaderCarrier()).map {
+        result =>
+          result mustBe Left(ApiNotFoundException.forPublisherRef(publisherRef))
+      }
+    }
+  }
+
   "updateApiTeam" - {
     val teamId = "team1"
     val apiId = "apiId"

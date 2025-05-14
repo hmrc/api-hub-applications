@@ -42,6 +42,7 @@ import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.*
 import uk.gov.hmrc.apihubapplications.services.DeploymentsService
 import uk.gov.hmrc.apihubapplications.testhelpers.{ApiDetailGenerators, FakeHipEnvironments}
 import uk.gov.hmrc.apihubapplications.utils.CryptoUtils
+import uk.gov.hmrc.crypto.ApplicationCrypto
 
 import java.time.Instant
 import scala.concurrent.Future
@@ -271,11 +272,12 @@ class DeploymentsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.updateApi(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
+        when(fixture.deploymentsService.updateApi(eqTo(publisherRef), eqTo(redeploymentRequest), eqTo(testUserEmail))(any()))
           .thenReturn(Future.successful(Right(deploymentsResponse)))
 
         val result = route(fixture.application, request).value
@@ -290,11 +292,12 @@ class DeploymentsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.updateApi(eqTo(publisherRef), eqTo(redeploymentRequest))(any()))
+        when(fixture.deploymentsService.updateApi(eqTo(publisherRef), eqTo(redeploymentRequest), eqTo(testUserEmail))(any()))
           .thenReturn(Future.successful(Right(invalidOasResponse)))
 
         val result = route(fixture.application, request).value
@@ -309,7 +312,8 @@ class DeploymentsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(Json.obj())
 
@@ -324,11 +328,12 @@ class DeploymentsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.updateApi(any(), any())(any()))
+        when(fixture.deploymentsService.updateApi(any(), any(), any())(any()))
           .thenReturn(Future.successful(Left(ApimException.unexpectedResponse(500))))
 
         val result = route(fixture.application, request).value
@@ -343,15 +348,51 @@ class DeploymentsControllerSpec
       running(fixture.application) {
         val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
           .withHeaders(
-            CONTENT_TYPE -> "application/json"
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
           )
           .withBody(Json.toJson(redeploymentRequest))
 
-        when(fixture.deploymentsService.updateApi(any(), any())(any()))
+        when(fixture.deploymentsService.updateApi(any(), any(), any())(any()))
           .thenReturn(Future.successful(Left(ApimException.serviceNotFound(publisherRef))))
 
         val result = route(fixture.application, request).value
         status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 404 Not Found when the publisher ref does not identify an API in Integration Catalogue" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json",
+            userEmailHeader -> encrypt(fixture.crypto, testUserEmail)
+          )
+          .withBody(Json.toJson(redeploymentRequest))
+
+        when(fixture.deploymentsService.updateApi(any(), any(), any())(any()))
+          .thenReturn(Future.successful(Left(ApiNotFoundException.forPublisherRef(publisherRef))))
+
+        val result = route(fixture.application, request).value
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "must return 401 Unauthorized when the user email header is missing" in {
+      val fixture = buildFixture()
+
+      running(fixture.application) {
+        val request = FakeRequest(routes.DeploymentsController.update(publisherRef))
+          .withHeaders(
+            CONTENT_TYPE -> "application/json"
+          )
+          .withBody(Json.toJson(redeploymentRequest))
+
+        val result = route(fixture.application, request).value
+
+        status(result) mustBe UNAUTHORIZED
       }
     }
   }
@@ -702,9 +743,10 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoS
   implicit val materializer: Materializer = Materializer(ActorSystem())
 
   case class Fixture(
-                      application: PlayApplication,
-                      deploymentsService: DeploymentsService
-                    )
+    application: PlayApplication,
+    deploymentsService: DeploymentsService,
+    crypto: ApplicationCrypto
+  )
 
   def buildFixture(): Fixture = {
     val deploymentsService = mock[DeploymentsService]
@@ -718,10 +760,14 @@ object DeploymentsControllerSpec extends TableDrivenPropertyChecks with MockitoS
       )
       .build()
 
-    Fixture(application, deploymentsService)
+    val crypto = application.injector.instanceOf[ApplicationCrypto]
+
+    Fixture(application, deploymentsService, crypto)
   }
 
   val publisherRef = "test-publisher-ref"
+  val testUserEmail = "test-email"
+  val userEmailHeader = "Encrypted-User-Email"
 
   val redeploymentRequest: RedeploymentRequest = RedeploymentRequest(
     description = "test-description",

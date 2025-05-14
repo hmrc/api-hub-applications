@@ -39,7 +39,7 @@ class DeploymentsController @Inject()(
                                        deploymentsService: DeploymentsService,
                                        hipEnvironments: HipEnvironments,
                                        hipEnvironment: HipEnvironmentActionProvider
-                                     )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
+                                     )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging with UserEmailAwareness {
 
   def generate: Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
@@ -58,17 +58,21 @@ class DeploymentsController @Inject()(
 
   def update(publisherRef: String): Action[JsValue] = identify.compose(Action(parse.json)).async {
     implicit request =>
-      request.body.validate[RedeploymentRequest] match {
-        case JsSuccess(redeploymentRequest, _) => deploymentsService.updateApi(publisherRef, redeploymentRequest) map {
-          case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
-          case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
-          case Left(e: ApimException) if e.issue == ServiceNotFound => NotFound
-          case Left(e) => throw e
-        }
-        case e: JsError =>
-          logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
-          Future.successful(BadRequest)
-      }
+      withUserEmail(
+        userEmail =>
+          request.body.validate[RedeploymentRequest] match {
+            case JsSuccess(redeploymentRequest, _) => deploymentsService.updateApi(publisherRef, redeploymentRequest, userEmail) map {
+              case Right(response: InvalidOasResponse) => BadRequest(Json.toJson(response))
+              case Right(response: SuccessfulDeploymentsResponse) => Ok(Json.toJson(response))
+              case Left(_: ApiNotFoundException) => NotFound
+              case Left(e: ApimException) if e.issue == ServiceNotFound => NotFound
+              case Left(e) => throw e
+            }
+            case e: JsError =>
+              logger.warn(s"Error parsing request body: ${JsError.toJson(e)}")
+              Future.successful(BadRequest)
+          }
+      )
   }
 
   def getDeploymentStatus(publisherRef: String): Action[AnyContent] = identify.compose(Action).async {
