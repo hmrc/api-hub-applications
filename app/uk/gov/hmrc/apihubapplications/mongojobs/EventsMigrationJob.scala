@@ -21,7 +21,9 @@ import play.api.Logging
 import uk.gov.hmrc.apihubapplications.models.accessRequest.{AccessRequest, Approved, Cancelled, Rejected}
 import uk.gov.hmrc.apihubapplications.models.application.Application
 import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.mongojobs.EventsMigrationJob.MIGRATION_USER
 import uk.gov.hmrc.apihubapplications.services.{AccessRequestsEventService, AccessRequestsService, ApplicationsEventService, ApplicationsService, TeamsEventService, TeamsService}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 class EventsMigrationJob @Inject()(
@@ -32,9 +34,6 @@ class EventsMigrationJob @Inject()(
     accessRequestsEventService: AccessRequestsEventService,
     teamsEventService: TeamsEventService
 )(implicit ec: ExecutionContext) extends MongoJob with Logging {
-
-  private val MIGRATION_USER = "<migration>"
-  private val UNKNOWN = "<unknown>"
 
   override def run(): Future[Unit] = {
     logger.info("Event migration job is running")
@@ -149,4 +148,9 @@ class EventsMigrationJob @Inject()(
     })
   }
 
+}
+
+object EventsMigrationJob {
+  val MIGRATION_USER = "<migration>"
+  val UNKNOWN = "<unknown>"
 }
