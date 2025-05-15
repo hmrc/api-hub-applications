@@ -3,7 +3,6 @@ import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 0
 ThisBuild / scalaVersion := "3.5.0"
-PlayKeys.playDefaultPort := 15019
 
 lazy val microservice = Project("api-hub-applications", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
