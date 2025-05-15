@@ -24,6 +24,10 @@ object ApiNotFoundException {
     ApiNotFoundException(s"Cannot find API with Id $apiId")
   }
 
+  def forPublisherRef(publisherRef: String): ApiNotFoundException = {
+    ApiNotFoundException(s"Cannot find API with Publisher Ref $publisherRef")
+  }
+
   def forApplication(applicationId: String, apiId: String): ApiNotFoundException = {
     ApiNotFoundException(s"Cannot find API $apiId linked to application $applicationId")
   }

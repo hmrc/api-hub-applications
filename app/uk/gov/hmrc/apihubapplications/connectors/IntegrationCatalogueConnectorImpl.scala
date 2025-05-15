@@ -66,6 +66,18 @@ class IntegrationCatalogueConnectorImpl @Inject()(
       }
   }
 
+  override def findByPublisherRef(publisherRef: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, ApiDetail]] = {
+    httpClient.get(url"$baseUrl/integration-catalogue/integrations/publisher-reference/$publisherRef")
+      .setHeader(ACCEPT -> JSON)
+      .setHeader(AUTHORIZATION -> appAuthToken)
+      .execute[Either[UpstreamErrorResponse, ApiDetail]]
+      .map {
+        case Right(apiDetail) => Right(apiDetail)
+        case Left(e) if e.statusCode == NOT_FOUND => Left(raiseApiNotFoundException.forPublisherRef(publisherRef))
+        case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
+      }
+  }
+
   override def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     httpClient.put(url"$baseUrl/integration-catalogue/apis/$apiId/teams/$teamId")
       .setHeader((ACCEPT, JSON))
@@ -77,7 +89,6 @@ class IntegrationCatalogueConnectorImpl @Inject()(
         case Left(e) => Left(raiseIntegrationCatalogueException.unexpectedResponse(e.statusCode))
       }
   }
-
 
   override def removeApiTeam(apiId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
     httpClient.delete(url"$baseUrl/integration-catalogue/apis/$apiId/teams")

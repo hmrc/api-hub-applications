@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.apihubapplications.services
 
+import cats.data.EitherT
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.apihubapplications.config.{HipEnvironment, HipEnvironments}
@@ -26,8 +27,10 @@ import uk.gov.hmrc.apihubapplications.models.exception.{ApimException, Applicati
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus
 import uk.gov.hmrc.apihubapplications.models.requests.DeploymentStatus.{Deployed, NotDeployed, Unknown}
 import uk.gov.hmrc.apihubapplications.models.team.Team
+import uk.gov.hmrc.apihubapplications.utility.OasHelpers
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.{Clock, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -38,8 +41,10 @@ class DeploymentsService @Inject()(
                                     teamsService: TeamsService,
                                     metricsService: MetricsService,
                                     hipEnvironments: HipEnvironments,
-                                    autopublishConnector: AutopublishConnector
-                                  )(implicit ec: ExecutionContext) extends Logging {
+                                    autopublishConnector: AutopublishConnector,
+                                    eventService: ApiEventService,
+                                    clock: Clock
+                                  )(implicit ec: ExecutionContext) extends Logging with OasHelpers {
   private[services] val customUnknownDeploymentStatusMessage = "UNKNOWN_APIM_DEPLOYMENT_STATUS"
 
   def createApi(
@@ -52,10 +57,37 @@ class DeploymentsService @Inject()(
   }
 
   def updateApi(
-                           publisherRef: String,
-                           request: RedeploymentRequest
-                         )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
-    apimConnector.updateApi(publisherRef, request, hipEnvironments.deployTo)
+    publisherRef: String,
+    request: RedeploymentRequest,
+    userEmail: String
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
+    (for {
+      apiDetail <- EitherT(integrationCatalogueConnector.findByPublisherRef(publisherRef))
+      response <- EitherT(apimConnector.updateApi(publisherRef, request, hipEnvironments.deployTo))
+      _ <- EitherT.right(logUpdateApiEvent(apiDetail, request, response, userEmail)
+      )
+    } yield response).value
+  }
+
+  private def logUpdateApiEvent(
+    apiDetail: ApiDetail, 
+    request: RedeploymentRequest, 
+    response: DeploymentsResponse, 
+    userEmail: String
+  ): Future[Unit] = {
+    response match {
+      case success: SuccessfulDeploymentsResponse =>
+        eventService.update(
+          apiId = apiDetail.id,
+          hipEnvironment = hipEnvironments.deployTo,
+          oasVersion = oasVersion(request.oas).getOrElse("none"),
+          request = request,
+          response = success,
+          userEmail = userEmail,
+          timestamp = LocalDateTime.now(clock)
+        )
+      case _ => Future.successful(())
+    }
   }
 
   private def linkApiToTeam(
@@ -103,32 +135,77 @@ class DeploymentsService @Inject()(
   }
 
   def promoteAPI(
-                           publisherRef: String,
-                           environmentFrom: HipEnvironment,
-                           environmentTo: HipEnvironment,
-                           egress: String,
-                         )(implicit hc: HeaderCarrier): Future[Either[ApimException, DeploymentsResponse]] = {
-    apimConnector.promoteAPI(publisherRef, environmentFrom, environmentTo, egress)
+    publisherRef: String,
+    environmentFrom: HipEnvironment,
+    environmentTo: HipEnvironment,
+    egress: String,
+    userEmail: String
+  )(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, DeploymentsResponse]] = {
+    (for {
+      apiDetail <- EitherT(integrationCatalogueConnector.findByPublisherRef(publisherRef))
+      deployment <- EitherT.right(getDeployment(environmentFrom, publisherRef))
+      response <- EitherT(apimConnector.promoteAPI(publisherRef, environmentFrom, environmentTo, egress))
+      _ <- EitherT.right(
+        logPromoteApiEvent(
+          apiDetail = apiDetail,
+          environmentFrom = environmentFrom,
+          environmentTo = environmentTo,
+          egress = egress,
+          deployment = deployment,
+          response = response,
+          userEmail = userEmail
+        )
+      )
+    } yield response).value
   }
 
-  def updateApiTeam(apiId: String, teamId: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
-    integrationCatalogueConnector.findById(apiId) flatMap {
-      case Right(apiDetail) =>
-        resolveCurrentAndNewTeams(apiDetail, teamId) flatMap {
-          case Right(owningTeams) =>
-            integrationCatalogueConnector.updateApiTeam(apiId, teamId) flatMap {
-              case Right(()) => for {
-                  _ <- sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam)
-                  _ <- sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam)
-                } yield () match {
-                  case _ => Right(())
-                }
-              case Left(e) => Future.successful(Left(e))
-            }
-          case Left(e) => Future.successful(Left(e))
-        }
-      case Left(e) => Future.successful(Left(e))
+  private def logPromoteApiEvent(
+    apiDetail: ApiDetail,
+    environmentFrom: HipEnvironment,
+    environmentTo: HipEnvironment,
+    egress: String,
+    deployment: DeploymentStatus,
+    response: DeploymentsResponse,
+    userEmail: String
+  ): Future[Unit] = {
+    response match {
+      case success: SuccessfulDeploymentsResponse =>
+        eventService.promote(
+          apiId = apiDetail.id,
+          fromEnvironment = environmentFrom,
+          toEnvironment = environmentTo,
+          oasVersion = deployment match {
+            case Deployed(_, oasVersion) => oasVersion
+            case NotDeployed(_) => "not deployed"
+            case Unknown(_) => "unknown"
+          },
+          egress = egress,
+          response = success,
+          userEmail = userEmail,
+          timestamp = LocalDateTime.now(clock)
+        )
+      case _ => Future.successful(())
     }
+  }
+
+  def updateApiTeam(apiId: String, teamId: String, userEmail: String)(implicit hc: HeaderCarrier): Future[Either[ApplicationsException, Unit]] = {
+    (for {
+      apiDetail <- EitherT(integrationCatalogueConnector.findById(apiId))
+      owningTeams <- EitherT(resolveCurrentAndNewTeams(apiDetail, teamId))
+      _ <- EitherT(integrationCatalogueConnector.updateApiTeam(apiId, teamId))
+      _ <- EitherT.right(
+        eventService.changeTeam(
+          apiId = apiDetail.id,
+          newTeam = owningTeams.newTeam,
+          oldTeam = owningTeams.currentTeam,
+          userEmail = userEmail,
+          timestamp = LocalDateTime.now(clock)
+        )
+      )
+      _ <- EitherT.right(sendApiOwnershipChangedEmailToOldTeam(apiDetail, owningTeams.currentTeam, owningTeams.newTeam))
+      _ <- EitherT.right(sendApiOwnershipChangedEmailToNewTeam(apiDetail, owningTeams.newTeam))
+
+    } yield ()).value
   }
 
   private case class OwningTeams(currentTeam: Option[Team], newTeam: Team)

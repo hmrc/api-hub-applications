@@ -58,6 +58,10 @@ trait ExceptionRaising {
       log(ApiNotFoundException.forId(apiId))
     }
 
+    def forPublisherRef(publisherRef: String): ApiNotFoundException = {
+      log(ApiNotFoundException.forPublisherRef(publisherRef))
+    }
+
     def forApplication(applicationId: String, apiId: String): ApiNotFoundException = {
       log(ApiNotFoundException.forApplication(applicationId, apiId))
     }

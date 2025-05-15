@@ -17,14 +17,14 @@
 package uk.gov.hmrc.apihubapplications.services
 
 import org.mockito.ArgumentMatchers.{any, eq as eqTo}
-import org.mockito.Mockito.{never, times, verify, verifyNoMoreInteractions, when}
+import org.mockito.Mockito.{verify, when}
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.apihubapplications.models.application.{Api, Application, Creator, Credential, Endpoint}
 import uk.gov.hmrc.apihubapplications.models.application.ApplicationLenses.*
 import uk.gov.hmrc.apihubapplications.models.event
-import uk.gov.hmrc.apihubapplications.models.event.{ApiAdded, ApiRemoved, Created, CredentialCreated, CredentialRevoked, Deleted, Event, EventType, Parameter, Registered, ScopesFixed, TeamChanged}
+import uk.gov.hmrc.apihubapplications.models.event.{ApiAdded, ApiRemoved, CredentialCreated, CredentialRevoked, Deleted, Event, EventType, Parameter, Registered, ScopesFixed, TeamChanged}
 import uk.gov.hmrc.apihubapplications.models.team.Team
 import uk.gov.hmrc.apihubapplications.models.team.TeamLenses.*
 import uk.gov.hmrc.apihubapplications.models.team.TeamType.ConsumerTeam
