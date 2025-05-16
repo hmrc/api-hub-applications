@@ -50,7 +50,7 @@ class AccessRequestsService @Inject()(
     accessRequestsRepository.insert(request.toAccessRequests(clock)).flatMap {
       requests =>
         val emails = sendAccessRequestSubmittedEmails(request)
-        val events = accessRequestsEventService.created(request, requests)
+        val events = accessRequestsEventService.created(requests)
         for {
           _ <- emails
           _ <- events

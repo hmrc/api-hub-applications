@@ -77,7 +77,7 @@ class AccessRequestsEventServiceSpec extends AsyncFreeSpec with Matchers with Mo
         ) *
       )
 
-      fixture.accessRequestsEventService.created(accessRequestRequest, accessRequests).map {
+      fixture.accessRequestsEventService.created(accessRequests).map {
         result =>
           verify(fixture.eventsService).log(expected)
           result mustBe ()
